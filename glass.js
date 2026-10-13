@@ -51,8 +51,10 @@
       const im = f.querySelector("feImage");
       im.setAttribute("width", w); im.setAttribute("height", h);
       im.setAttribute("href", map(w, h, Math.min(r, h / 2), Math.min(bezel, h / 2)));
-      // Refraction only: no tint, no saturation boost, just enough blur to soften the bent pixels.
-      el.style.backdropFilter = el.style.webkitBackdropFilter = `url(#${id}) blur(0.6px)`;
+      // Refraction with no saturation boost. A frosted bar (data-frost, in px) blurs first so the rim
+      // still bends the frosted image; otherwise just enough blur to soften the bent pixels.
+      const frost = parseFloat(el.dataset.frost) || 0;
+      el.style.backdropFilter = el.style.webkitBackdropFilter = frost ? `blur(${frost}px) url(#${id})` : `url(#${id}) blur(0.6px)`;
       el.classList.add("glass-live");
     };
     new ResizeObserver(fit).observe(el);

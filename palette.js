@@ -107,7 +107,6 @@
       if (busy) requestAnimationFrame(step); else { render(true); }
     };
     requestAnimationFrame(step);
-    toneBar(next.map((c) => c.hex));
   }
   function paintCol(el, hex, final) {
     const on = textOn(hex);
@@ -148,7 +147,6 @@
     else st.cols.forEach((c, i) => { const el = have[i]; if (el.dataset.hex === c.hex && el.dataset.lock === String(c.lock) && shadesFor !== i && !el.querySelector(".pt-shades")) return; const n = document.createRange().createContextualFragment(colHTML(c, i)).firstElementChild; n.style.setProperty("--delay", i * 40 + "ms"); n.classList.add("swap"); el.replaceWith(n); });
     const keys = keysOf();
     [...colsEl.children].forEach((el, i) => { el.dataset.hex = st.cols[i].hex; el.dataset.lock = String(st.cols[i].lock); el.dataset.key = keys[i]; el.style.flexGrow = st.weighted ? weightOf(i, st.cols.length) : ""; });
-    toneBar(st.cols.map((c) => c.hex));
     syncBar(); root.dispatchEvent(new Event("palette-change"));
   }
   // Reorders (sort, undo, loading) glide each column to its new place.
@@ -186,7 +184,7 @@
       st.cols.splice(i + 1, 0, { hex: next ? C.mixOklab(c.hex, next, 0.5) : C.fromOklch(...((l) => [clamp(l[0] + 0.12, 0, 0.97), l[1], l[2]])(C.toOklch(c.hex))), lock: false });
       snap(); render(true); save(); growIn(i + 1);
     } else if (a === "edit") {
-      picker.open(b, c.hex, (v) => { c.hex = v; el.style.setProperty("--c", v); el.style.setProperty("--on", textOn(v)); el.querySelector(".pt-hex").textContent = v.slice(1).toUpperCase(); el.querySelector(".pt-name").textContent = C.name(v); toneBar(st.cols.map((x) => x.hex)); }, () => { snap(); render(); save(); }, [["Palette", st.cols.map((x) => x.hex)], ["Shades", shadeList(c.hex).filter((_, k) => k % 2 === 0)]]);
+      picker.open(b, c.hex, (v) => { c.hex = v; el.style.setProperty("--c", v); el.style.setProperty("--on", textOn(v)); el.querySelector(".pt-hex").textContent = v.slice(1).toUpperCase(); el.querySelector(".pt-name").textContent = C.name(v); }, () => { snap(); render(); save(); }, [["Palette", st.cols.map((x) => x.hex)], ["Shades", shadeList(c.hex).filter((_, k) => k % 2 === 0)]]);
     }
   });
   // Tints and shades fold back up before the column repaints.
@@ -249,24 +247,6 @@
   // Proportions: size columns by a 60-30-10 style split, the first color dominant and the last an accent.
   function weightOf(i, n) { const w = [60, 30, 10].concat(Array(8).fill(6)); if (n <= 3) return w[i]; const base = [44, 22, 12]; return i < 3 ? base[i] : 22 / (n - 3); }
 
-  // The glass bar takes no tint, so its ink follows the colors beneath it. Each control reads the column
-  // under its own center and takes whichever of light or dark ink reads better there, like text on
-  // real glass over a busy backdrop.
-  const bar = document.querySelector(".pt-bar");
-  const DARK = "#141414", inkOn = (hex) => (C.contrast(hex, "#ffffff") > C.contrast(hex, DARK) ? "#ffffff" : DARK);
-  function toneBar(hexes) {
-    const els = [...colsEl.children];
-    if (!bar.offsetWidth || els.length !== hexes.length) return;
-    const rects = els.map((el) => el.getBoundingClientRect());
-    for (const c of bar.children) {
-      if (c.classList.contains("primary")) continue;
-      const r = c.getBoundingClientRect(), x = r.left + r.width / 2;
-      let k = rects.findIndex((q) => x >= q.left && x < q.right);
-      if (k < 0) k = x < rects[0].left ? 0 : rects.length - 1;
-      c.style.setProperty("--glass-ink", inkOn(hexes[k]));
-    }
-  }
-  new ResizeObserver(() => toneBar(st.cols.map((c) => c.hex))).observe(colsEl);
 
   // ---------- bar ----------
   // Harmony picker: the trigger shows the chosen harmony as color dots; the menu lists every harmony
@@ -277,7 +257,7 @@
   $("ptModeMenu").onclick = (e) => { const b = e.target.closest("[data-m]"); if (!b) return; st.mode = b.dataset.m; $("ptModeMenu").hidden = true; root.UI?.tip.hide(); save(); syncBar(); generate(); };
   $("ptGen").onclick = generate;
   $("ptVary").onclick = vary;
-  $("ptWeights").onclick = () => { st.weighted = !st.weighted; save(); [...colsEl.children].forEach((el, i) => (el.style.flexGrow = st.weighted ? weightOf(i, st.cols.length) : "")); syncBar(); setTimeout(() => toneBar(st.cols.map((c) => c.hex)), 320); };
+  $("ptWeights").onclick = () => { st.weighted = !st.weighted; save(); [...colsEl.children].forEach((el, i) => (el.style.flexGrow = st.weighted ? weightOf(i, st.cols.length) : "")); syncBar(); };
   $("ptUndo").onclick = () => travel(-1);
   $("ptRedo").onclick = () => travel(1);
   $("ptSort").onclick = () => { st.cols.sort((a, b) => C.toOklch(a.hex)[0] - C.toOklch(b.hex)[0]); snap(); glide(() => render(true)); save(); };

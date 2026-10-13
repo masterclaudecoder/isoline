@@ -995,3 +995,9 @@ html.vt-local::view-transition-new(*) { animation: fade-in .32s ease both; }
 .fold-x[hidden] { opacity: 0; width: 0; padding-left: 0; padding-right: 0; }
 @starting-style { .fold-x:not([hidden]) { opacity: 0; width: 0; padding-left: 0; padding-right: 0; } }
 .cp-pals { max-height: 264px; overflow-y: auto; margin: 0 -4px; padding: 2px 4px; }
+
+/* The palette bar floats over any color, so it is smoked, frosted glass with white text: the dark frost
+   keeps white legible over light columns, and the rim still refracts. */
+.pt-bar.glass, .pt-bar.glass.glass-live { background: rgba(18, 18, 18, .56) !important; color: #fff; --glass-ink: #fff; }
+.pt-bar.glass:not(.glass-live) { -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.pt-bar.glass { box-shadow: inset 0 1px 0 rgba(255,255,255,.22), inset 0 -1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(0,0,0,.18), 0 12px 32px -12px rgba(0,0,0,.45) !important; }
