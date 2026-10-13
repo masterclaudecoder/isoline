@@ -1,0 +1,59 @@
+# Publishes the app to GitHub Pages. Before deploying, it captures a preview image for each library in
+# libs.js (tools/previews.mjs). Captured images are cached between runs, so only new libraries are fetched.
+name: Pages
+
+on:
+  push:
+    branches: [claude/dreamy-edison-0dx0xi]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Restore library previews
+        uses: actions/cache@v4
+        with:
+          path: previews
+          key: previews-${{ github.run_id }}
+          restore-keys: previews-
+      - name: Install capture tools
+        run: |
+          npm i --no-save --no-package-lock sharp@0.33.5 playwright@1.48.2
+          npx playwright install --with-deps chromium
+      - name: Capture library previews
+        run: node tools/previews.mjs
+      - name: Assemble site
+        run: |
+          mkdir _site
+          cp index.html logos.html style.css *.js _site/
+          cp -r previews _site/
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

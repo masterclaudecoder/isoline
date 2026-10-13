@@ -1259,7 +1259,9 @@
     $("accents").querySelector(".custom").classList.toggle("on", !ACCENTS.includes(P.accent));
     $("accents").querySelector(".custom").style.setProperty("--c", P.accent);
     if (painted) drawOverlay();
+    window.dispatchEvent(new Event("theme-change"));
   }
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => window.dispatchEvent(new Event("theme-change")));
   $("accents").innerHTML = ACCENTS.map((c) => `<button class="sw" data-c="${c}" style="background:${c}" aria-label="Accent ${c}"></button>`).join("") + `<button class="sw custom" aria-label="Custom accent"></button>`;
   $("accents").onclick = (e) => {
     const b = e.target.closest("[data-c]");
@@ -1781,7 +1783,8 @@
     if (doCommit && !draft) commit();
   }
   let lastWrap = "";
-  new ResizeObserver(() => { const key = wrap.clientWidth + "x" + wrap.clientHeight; if (painted && key !== lastWrap) { lastWrap = key; render(); } }).observe(wrap);
+  // A hidden studio has no size: skip it, or the preview would re-render at the 64px minimum.
+  new ResizeObserver(() => { if (!wrap.clientWidth || !wrap.clientHeight) return; const key = wrap.clientWidth + "x" + wrap.clientHeight; if (painted && key !== lastWrap) { lastWrap = key; render(); } }).observe(wrap);
 
   window.TopoBrand?.mount($("brand"), "isoline");
   applyTheme();
@@ -1808,10 +1811,15 @@
       update({ fade: true });
     },
     // The current design cropped to fill w x h, like object-fit: cover.
+    // Rendered fresh at the requested size, so it stays sharp whatever the studio canvas last drew.
     async snapshot(w, h) {
       const c = document.createElement("canvas"); c.width = w; c.height = h;
-      const x = c.getContext("2d"), sc = Math.max(w / S.w, h / S.h), dw = S.w * sc, dh = S.h * sc;
-      const src = current.raster ? fxCanvas : await rasterize(document.createElement("canvas"), current.svg, Math.round(dw), Math.round(dh));
+      const x = c.getContext("2d"), sc = Math.max(w / S.w, h / S.h), dw = Math.round(S.w * sc), dh = Math.round(S.h * sc);
+      let src;
+      if (isRaster(S) && TFX) {
+        const image = S.source === "contours" ? await rasterize(document.createElement("canvas"), T.buildSVG(S, { w: dw, h: dh }).svg, dw, dh) : null;
+        TFX.render(job(S, dw, dh, image)); src = thumbCanvas;
+      } else src = await rasterize(document.createElement("canvas"), current.svg || T.buildSVG(S).svg, dw, dh);
       x.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
       return c;
     },
