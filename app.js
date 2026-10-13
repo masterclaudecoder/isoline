@@ -1,5 +1,6 @@
 (() => {
   "use strict";
+  document.body.classList.add("boot");
   const T = window.Topo;
   const $ = (id) => document.getElementById(id);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -15,9 +16,9 @@
     ["wave", "Waves", "Distort", { amp: 14, length: 220, angle: 0 }, [{ k: "amp", label: "Amplitude", min: 0, max: 160, step: 0.5, fmt: px, rand: [6, 30] }, { k: "length", label: "Wavelength", min: 10, max: 1200, step: 5, log: true, fmt: px, rand: [120, 400] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }]],
     ["swirl", "Twirl", "Distort", { amount: 3, radius: 0.55, x: 0.5, y: 0.5 }, [{ k: "amount", label: "Turn", min: -12, max: 12, step: 0.05, fmt: f2, rand: [-5, 5] }, { k: "radius", label: "Radius", min: 0.05, max: 1.5, step: 0.01, fmt: f2, rand: [0.35, 0.9] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }]],
     ["kaleido", "Kaleidoscope", "Distort", { segments: 6, rotate: 0, zoom: 1 }, [{ k: "segments", label: "Segments", min: 2, max: 16, step: 1, hard: [2, 64], rand: [4, 10] }, { k: "rotate", label: "Rotate", min: 0, max: 360, step: 1, fmt: deg }, { k: "zoom", label: "Zoom", min: 0.3, max: 3, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.7, 1.6] }]],
-    ["glass", "Fluted glass", "Glass", { width: 44, angle: 90, strength: 0.9, frost: 0.2, light: 0.4 }, [{ k: "width", label: "Rib width", min: 4, max: 300, step: 1, log: true, fmt: px, rand: [24, 90] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }, { k: "strength", label: "Refraction", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.4] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.5] }, { k: "light", label: "Rib shading", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.2, 0.6] }]],
-    ["mesh", "Glass blocks", "Glass", { cell: 110, strength: 0.8, frost: 0.3, grout: 1 }, [{ k: "cell", label: "Block size", min: 12, max: 400, step: 1, log: true, fmt: px, rand: [60, 180] }, { k: "strength", label: "Refraction", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.2] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.1, 0.6] }, { k: "grout", label: "Seams", min: 0, max: 4, step: 0.05, fmt: f2, rand: [0.5, 1.5] }]],
-    ["lens", "Liquid glass", "Glass", { shape: "pill", size: 0.42, x: 0.5, y: 0.5, refraction: 0.9, frost: 0.2, rim: 0.45 }, [{ seg: "shape", options: [["circle", "Circle"], ["pill", "Pill"], ["square", "Square"]] }, { k: "size", label: "Size", min: 0.1, max: 1.2, step: 0.01, fmt: f2, rand: [0.3, 0.6] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.65] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.65] }, { k: "refraction", label: "Refraction", min: 0, max: 2.5, step: 0.01, fmt: f2, rand: [0.6, 1.3] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.4] }, { k: "rim", label: "Edge light", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.2, 0.6] }]],
+    ["glass", "Fluted glass", "Glass", { width: 44, angle: 90, strength: 0.9, frost: 0.2, light: 0.4 }, [{ k: "width", label: "Rib width", min: 4, max: 300, step: 1, log: true, fmt: px, rand: [24, 90] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }, { k: "strength", label: "Refraction", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.4] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.5] }, { k: "light", label: "Highlight", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.3, 0.7] }]],
+    ["mesh", "Glass blocks", "Glass", { cell: 120, strength: 0.7, frost: 0.25, grout: 1, rim: 0.6, disp: 0.5 }, [{ k: "cell", label: "Block size", min: 12, max: 400, step: 1, log: true, fmt: px, rand: [70, 180] }, { k: "strength", label: "Refraction", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.1, 0.5] }, { k: "grout", label: "Gap", min: 0, max: 4, step: 0.05, fmt: f2, rand: [0.5, 1.5] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
+    ["lens", "Liquid glass", "Glass", { shape: "pill", size: 0.42, x: 0.5, y: 0.5, refraction: 0.9, frost: 0.2, rim: 0.6, disp: 0.5 }, [{ seg: "shape", options: [["circle", "Circle"], ["pill", "Pill"], ["square", "Square"]] }, { k: "size", label: "Size", min: 0.1, max: 1.2, step: 0.01, fmt: f2, rand: [0.3, 0.6] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.65] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.65] }, { k: "refraction", label: "Refraction", min: 0, max: 2.5, step: 0.01, fmt: f2, rand: [0.6, 1.3] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.4] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
     ["blur", "Progressive blur", "Light", { amount: 32, dir: "bottom", start: 0.35 }, [{ seg: "dir", options: [["top", "Top"], ["bottom", "Bottom"], ["left", "Left"], ["right", "Right"], ["center", "Edges"], ["even", "Even"]] }, { k: "amount", label: "Blur", min: 0, max: 200, step: 0.5, fmt: px, rand: [16, 60] }, { k: "start", label: "Starts at", min: 0, max: 0.95, step: 0.01, fmt: pct, pct: true, rand: [0.25, 0.6] }]],
     ["bloom", "Glow", "Light", { threshold: 0.55, radius: 30, intensity: 0.9 }, [{ k: "threshold", label: "Threshold", min: 0, max: 0.95, step: 0.01, fmt: f2, rand: [0.35, 0.75] }, { k: "radius", label: "Radius", min: 2, max: 200, step: 1, log: true, fmt: px, rand: [16, 50] }, { k: "intensity", label: "Intensity", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.2] }]],
     ["emboss", "Relief", "Light", { strength: 1.2, angle: 135, depth: 2 }, [{ k: "strength", label: "Strength", min: 0, max: 5, step: 0.01, fmt: f2, rand: [0.8, 2.2] }, { k: "angle", label: "Light angle", min: 0, max: 360, step: 1, fmt: deg }, { k: "depth", label: "Depth", min: 0.5, max: 16, step: 0.5, fmt: px, rand: [1.5, 4] }]],
@@ -39,11 +40,10 @@
   const FX_IDS = FXC.map((f) => f[0]);
   const FX_DEFAULTS = Object.fromEntries(FXC.map(([id, , , d]) => [id, { on: false, ...d }]));
   const FX_CATS = [...new Set(FXC.map((f) => f[2]))];
-  const FX_LEDE = { Distort: "Bends the image.", Glass: "Refracts the image through glass.", Light: "Light, blur and depth.", Color: "Remaps colors.", Print: "Print and screen textures.", Stylize: "Breaks the image into marks.", Texture: "Surface texture." };
 
   // ---------- generators + palettes ----------
   const GENS = [
-    ["contours", "Contours", "Topographic lines, vector"],
+    ["contours", "Contours", "Topographic bands"],
     ["mesh", "Mesh", "Blended color points"],
     ["flow", "Flow", "Warped, flowing color"],
     ["noise", "Noise", "Clouds, ridges, cells"],
@@ -54,26 +54,55 @@
   const GEN_LABEL = Object.fromEntries(GENS.map((g) => [g[0], g[1]]));
   const NOISE_TYPES = [["clouds", "Clouds"], ["ridges", "Ridges"], ["billow", "Billow"], ["cells", "Cells"], ["veins", "Veins"], ["marble", "Marble"]];
   const NOISE_LABEL = Object.fromEntries(NOISE_TYPES);
-  // Contour palettes: [lines, blend, background]
-  const PALETTES = [
-    ["Paper", ["#2c2a26", "#b9b2a5", "#faf8f3"]], ["Bone", ["#1b1b1b", "#8a8378", "#f1ede4"]], ["Graphite", ["#d9d4ca", "#7d7a74", "#1c1d1f"]],
-    ["Sage", ["#34493b", "#8fa98b", "#e6eadf"]], ["Clay", ["#7d3f2a", "#d9a07f", "#efe2d3"]], ["Midnight", ["#aab8dc", "#5b6b9a", "#0e1424"]],
-    ["Ember", ["#f26b3a", "#ffd2a8", "#20120e"]], ["Ocean", ["#e9f1f5", "#6fa3c0", "#0d2433"]], ["Signal", ["#111111", "#5a0f1f", "#ef2b52"]],
+  // Palettes: [name, colors dark to light, contour roles [lines, blend, background] when they differ from the default pick]
+  const CURATED = [
+    ["Paper", ["#2c2a26", "#6f6a60", "#b9b2a5", "#faf8f3"], ["#2c2a26", "#b9b2a5", "#faf8f3"]],
+    ["Bone", ["#1b1b1b", "#4a4640", "#8a8378", "#f1ede4"], ["#1b1b1b", "#8a8378", "#f1ede4"]],
+    ["Graphite", ["#1c1d1f", "#3b3d41", "#7d7a74", "#d9d4ca"], ["#d9d4ca", "#7d7a74", "#1c1d1f"]],
+    ["Prism", ["#3557d6", "#7d5bd0", "#e0679a", "#f39a6b", "#f6d27a"], ["#3557d6", "#e0679a", "#fbf4ea"]],
+    ["Dusk", ["#1b1530", "#5b3b8c", "#e07a5f", "#f2cc8f"], ["#f2cc8f", "#e07a5f", "#1b1530"]],
+    ["Glacier", ["#0b1d2e", "#2e5e7e", "#9cc3d5", "#eef3f5"], ["#0b1d2e", "#9cc3d5", "#eef3f5"]],
+    ["Midnight", ["#0e1424", "#2a365c", "#5b6b9a", "#aab8dc"], ["#aab8dc", "#5b6b9a", "#0e1424"]],
+    ["Ember", ["#20120e", "#8c2f17", "#f26b3a", "#ffd2a8"], ["#f26b3a", "#ffd2a8", "#20120e"]],
+    ["Peach", ["#5a2a3c", "#e1665b", "#f3a683", "#f7e3d4"], ["#5a2a3c", "#e1665b", "#f7e3d4"]],
+    ["Sage", ["#1f2d24", "#34493b", "#8fa98b", "#e6eadf"], ["#34493b", "#8fa98b", "#e6eadf"]],
+    ["Clay", ["#4a2316", "#7d3f2a", "#d9a07f", "#efe2d3"], ["#7d3f2a", "#d9a07f", "#efe2d3"]],
+    ["Ocean", ["#0d2433", "#24506b", "#6fa3c0", "#e9f1f5"], ["#e9f1f5", "#6fa3c0", "#0d2433"]],
+    ["Iris", ["#15123a", "#4b3fd1", "#b8a8ff", "#f4f1ff"], ["#4b3fd1", "#b8a8ff", "#f4f1ff"]],
+    ["Signal", ["#111111", "#5a0f1f", "#ef2b52", "#ffd9de"], ["#111111", "#5a0f1f", "#ef2b52"]],
+    ["Citrus", ["#2b1d0e", "#c8551f", "#f0a830", "#fbe9c6"], ["#c8551f", "#f0a830", "#fbe9c6"]],
+    ["Moss", ["#101a14", "#2f4a37", "#8fa98b", "#e3e7d6"], ["#e3e7d6", "#8fa98b", "#101a14"]],
+    ["Lagoon", ["#05232b", "#0f6b6b", "#3fb6a8", "#d6f1e8"], ["#d6f1e8", "#3fb6a8", "#05232b"]],
+    ["Rose", ["#3b1f2b", "#a24d6b", "#e8a6b5", "#fbecef"], ["#3b1f2b", "#e8a6b5", "#fbecef"]],
+    ["Sand", ["#3d2f22", "#8b6f4e", "#d6bf98", "#f6efe2"], ["#3d2f22", "#d6bf98", "#f6efe2"]],
+    ["Aurora", ["#071a2f", "#1b6f8a", "#46c2a0", "#d7f59a"], ["#d7f59a", "#46c2a0", "#071a2f"]],
+    ["Plum", ["#1d0f24", "#552a6b", "#b8789f", "#f3dfe6"], ["#f3dfe6", "#b8789f", "#1d0f24"]],
+    ["Cobalt", ["#0a1640", "#1f3fbf", "#6f8cff", "#e6ebff"], ["#1f3fbf", "#6f8cff", "#e6ebff"]],
+    ["Terracotta", ["#2a1410", "#a3472d", "#e38b5d", "#f7dcc4"], ["#a3472d", "#e38b5d", "#f7dcc4"]],
+    ["Ink", ["#0d0d0f", "#3a3a40", "#a9a6a0", "#f1ede4"], ["#0d0d0f", "#a9a6a0", "#f1ede4"]],
   ];
-  const RAMPS = [
-    ["Caddis", ["#2f6fdb", "#6a9f7a", "#d8a51f", "#e2632a", "#c9302c"]],
-    ["Dusk", ["#1b1530", "#5b3b8c", "#e07a5f", "#f2cc8f"]],
-    ["Glacier", ["#0b1d2e", "#2e5e7e", "#9cc3d5", "#eef3f5"]],
-    ["Peach", ["#5a2a3c", "#e1665b", "#f3a683", "#f7e3d4"]],
-    ["Moss", ["#101a14", "#2f4a37", "#8fa98b", "#e3e7d6"]],
-    ["Ink", ["#0d0d0f", "#3a3a40", "#a9a6a0", "#f1ede4"]],
-    ["Iris", ["#15123a", "#4b3fd1", "#b8a8ff", "#f4f1ff"]],
-    ["Signal", ["#101114", "#ef2b52", "#ff9a76", "#f3f1ec"]],
-    ["Citrus", ["#2b1d0e", "#c8551f", "#f0a830", "#fbe9c6"]],
+  const BRANDS = [
+    ["Caddis", ["#2f6fdb", "#6a9f7a", "#d8a51f", "#e2632a", "#c9302c"], ["#2f6fdb", "#e2632a", "#f7f4ee"]],
+    ["Stripe", ["#0a2540", "#635bff", "#ef008f", "#ffba27", "#6ec3f4"], ["#635bff", "#6ec3f4", "#f6f9fc"]],
+    ["Figma", ["#a259ff", "#1abcfe", "#0acf83", "#ff7262", "#f24e1e"], ["#1e1e1e", "#a259ff", "#ffffff"]],
+    ["Slack", ["#4a154b", "#36c5f0", "#2eb67d", "#ecb22e", "#e01e5a"], ["#4a154b", "#36c5f0", "#ffffff"]],
+    ["Spotify", ["#121212", "#1a3d2a", "#1db954", "#1ed760"], ["#1db954", "#1a3d2a", "#121212"]],
+    ["Linear", ["#08090a", "#26283b", "#5e6ad2", "#b4bcd0", "#f7f8f8"], ["#b4bcd0", "#5e6ad2", "#08090a"]],
+    ["Discord", ["#23272a", "#5865f2", "#eb459e", "#fee75c", "#57f287"], ["#5865f2", "#eb459e", "#23272a"]],
+    ["Mailchimp", ["#241c15", "#007c89", "#ffe01b", "#fbeee0"], ["#241c15", "#007c89", "#ffe01b"]],
+    ["Airbnb", ["#92174d", "#bd1e59", "#d70466", "#e61e4d", "#ff385c"], ["#ff385c", "#bd1e59", "#ffffff"]],
+    ["Notion", ["#191919", "#37352f", "#9b9a97", "#f7f6f3"], ["#37352f", "#9b9a97", "#ffffff"]],
+    ["Dropbox", ["#1e1919", "#0061fe", "#c8dbfe", "#f7f5f2"], ["#0061fe", "#c8dbfe", "#f7f5f2"]],
+    ["Instagram", ["#405de6", "#833ab4", "#c13584", "#fd1d1d", "#fcaf45"], ["#c13584", "#fcaf45", "#ffffff"]],
   ];
-  const ramp = (n) => RAMPS.find((r) => r[0] === n)[1].slice();
-  const pal = (n) => PALETTES.find((p) => p[0] === n)[1];
-  const palState = (n) => { const [line, line2, bg] = pal(n); return { line, line2, bg }; };
+  const lum = (h) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  // Lines take the darkest color, the blend a middle one and the background the lightest.
+  const rolesOf = (cols) => { const o = cols.slice().sort((a, b) => lum(a) - lum(b)); return [o[0], o[Math.floor(o.length / 2)], o[o.length - 1]]; };
+  const PAL_GROUPS = [["Curated", CURATED], ["Brands", BRANDS]];
+  const PALS = PAL_GROUPS.flatMap(([group, list]) => list.map(([name, colors, roles]) => ({ name, group, colors, roles: roles || rolesOf(colors) })));
+  const PAL_BY = Object.fromEntries(PALS.map((p) => [p.name, p]));
+  const ramp = (n) => PAL_BY[n].colors.slice();
+  const palState = (n) => { const [line, line2, bg] = PAL_BY[n].roles; return { line, line2, bg }; };
 
   // ---------- defaults ----------
   const DEFAULTS = {
@@ -86,7 +115,7 @@
     levels: 20, gap: 18, bias: 0, weight: 1.2, swell: 0, swellSize: 260, taper: 0,
     indexEvery: 0, indexWeight: 2, smooth: 0.7, res: 4, minLen: 12,
     ...palState("Paper"), gradient: false, transparent: false, opacity: 1,
-    grad: { type: "flow", colors: ramp("Caddis"), points: [{ x: 0.18, y: 0.22 }, { x: 0.8, y: 0.2 }, { x: 0.72, y: 0.8 }, { x: 0.2, y: 0.84 }, { x: 0.48, y: 0.5 }], angle: -25, warp: 0.5, warpScale: 1.6, soft: 1.6, scale: 0.45, detail: 2, stretch: 1.8, contrast: 1, noise: "clouds" },
+    grad: { type: "flow", colors: ramp("Prism"), points: [{ x: 0.18, y: 0.22 }, { x: 0.8, y: 0.2 }, { x: 0.72, y: 0.8 }, { x: 0.2, y: 0.84 }, { x: 0.48, y: 0.5 }], angle: -25, warp: 0.5, warpScale: 1.6, soft: 1.6, scale: 0.45, detail: 2, stretch: 1.8, contrast: 1, noise: "clouds" },
     fx: clone(FX_DEFAULTS), fxOrder: [], ink: "#1b1b1b", paper: "#f1ede4",
     fmt: "svg", pngScale: 2,
   };
@@ -122,12 +151,15 @@
 
   // ---------- helpers ----------
   const gen = (st = S) => (st.source === "contours" ? "contours" : st.grad.type);
-  function setGen(id) { if (id === "contours") S.source = "contours"; else { S.source = "gradient"; S.grad.type = id; } sel = null; }
+  // Coming from a gradient, contours start as bands in that gradient's colors, as their preview shows.
+  const asContours = (st) => { if (st.source === "contours") return st; const own = PALS.find((p) => sameCols(p.colors, st.grad.colors)), [line, line2, bg] = own ? own.roles : rolesOf(st.grad.colors); return { ...st, source: "contours", mode: "bands", band: clamp(st.band, 0.35, 0.6), line, line2, bg, gradient: false, transparent: false, opacity: 1 }; };
+  function setGen(id) { if (id === "contours") Object.assign(S, asContours(S)); else { S.source = "gradient"; S.grad.type = id; } sel = null; }
   const linear = () => T.LINEAR.has(S.pattern);
   const activePoints = () => S.usePoints && S.points.length > 0;
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const newSeed = () => Math.floor(Math.random() * 999999);
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
   const toast = (msg) => { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2000); };
   const isRaster = (st) => st.source === "gradient" || st.fxOrder.some((id) => st.fx[id]?.on);
   const getPath = (o, p) => p.split(".").reduce((a, k) => (a == null ? a : a[k]), o);
@@ -157,7 +189,7 @@
     ["Fills", "Marble", { pattern: "lines", angle: 30, scale: 460, octaves: 2, warp: 0.2, liquify: 1.6, liqScale: 1.5, gap: 22, mode: "bands", band: 0.42, smooth: 0.5, ...palState("Graphite") }],
     ["Fills", "Terrace", { pattern: "terrain", scale: 900, octaves: 3, warp: 0.3, levels: 10, mode: "layers", smooth: 0.6, line: "#26382c", line2: "#e6eadf", bg: "#26382c" }],
     ["Fills", "Dune", { pattern: "blobs", usePoints: true, falloff: 1, warp: 0.35, octaves: 2, levels: 12, bias: 0.3, mode: "layers", smooth: 0.7, line: "#7d3f2a", line2: "#efe2d3", bg: "#7d3f2a" }],
-    ["Gradients", "Caddis", { ...G("flow", "Caddis", { scale: 0.45, detail: 2, warp: 0.5, stretch: 1.8, angle: -25, contrast: 1 }), fx: { grain: { amount: 0.12, size: 1.2, soft: true } } }],
+    ["Gradients", "Prism", { ...G("flow", "Prism", { scale: 0.45, detail: 2, warp: 0.5, stretch: 1.8, angle: -25, contrast: 1 }), fx: { grain: { amount: 0.12, size: 1.2, soft: true } } }],
     ["Gradients", "Glacier", { ...G("flow", "Glacier", { scale: 0.4, detail: 3, warp: 0.4, stretch: 2.4, angle: 10, contrast: 1 }), fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Gradients", "Dusk", { ...G("mesh", "Dusk", { warp: 0.6, warpScale: 1.3, soft: 1.8 }), fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Gradients", "Peach", { ...G("flow", "Peach", { scale: 0.55, detail: 2, warp: 0.6, stretch: 1.2, angle: 30, contrast: 0.9 }), fx: { blur: { amount: 36, dir: "top", start: 0.4 }, grain: { amount: 0.1, size: 1.2, soft: true } } }],
@@ -166,13 +198,13 @@
     ["Noise", "Veins", { ...G("noise", "Ink", { noise: "veins", scale: 1.6, detail: 2, warp: 0.4, stretch: 1, contrast: 1.1, angle: 0 }) }],
     ["Noise", "Stone", { ...G("noise", "Peach", { noise: "marble", scale: 0.6, detail: 3, warp: 0.5, stretch: 1, contrast: 1, angle: 15 }) }],
     ["Noise", "Clouds", { ...G("noise", "Glacier", { noise: "clouds", scale: 1, detail: 5, warp: 0.3, stretch: 1.4, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
-    ["Effects", "Fluted", { ...G("mesh", "Dusk", { warp: 0.6, warpScale: 1.3, soft: 1.8 }), fx: { glass: { width: 48, angle: 90, strength: 1, frost: 0.25, light: 0.4 }, grain: { amount: 0.06, size: 1.2, soft: true } } }],
-    ["Effects", "Glass blocks", { ...G("flow", "Caddis", { scale: 0.45, detail: 2, warp: 0.5, stretch: 1.8, angle: -25, contrast: 1 }), fx: { mesh: { cell: 120, strength: 0.8, frost: 0.3, grout: 1 } } }],
-    ["Effects", "Liquid glass", { ...G("mesh", "Iris", { warp: 0.6, warpScale: 1.3, soft: 1.6 }), fx: { lens: { shape: "pill", size: 0.42, refraction: 1, frost: 0.15, rim: 0.45 }, grain: { amount: 0.06, size: 1.2, soft: true } } }],
+    ["Effects", "Fluted", { ...G("mesh", "Dusk", { warp: 0.6, warpScale: 1.3, soft: 1.8 }), fx: { glass: { width: 48, angle: 90, strength: 1, frost: 0.25, light: 0.5 }, grain: { amount: 0.06, size: 1.2, soft: true } } }],
+    ["Effects", "Glass blocks", { ...G("flow", "Prism", { scale: 0.45, detail: 2, warp: 0.5, stretch: 1.8, angle: -25, contrast: 1 }), fx: { mesh: { cell: 130, strength: 0.7, frost: 0.25, grout: 1, rim: 0.6, disp: 0.5 } } }],
+    ["Effects", "Liquid glass", { pattern: "terrain", scale: 800, octaves: 2, warp: 0.35, levels: 22, weight: 1.6, smooth: 0.7, ...palState("Midnight"), fx: { lens: { shape: "pill", size: 0.42, refraction: 1.1, frost: 0.1, rim: 0.7, disp: 0.6 } } }],
     ["Effects", "Riso", { pattern: "blobs", usePoints: true, falloff: 1, warp: 0.3, levels: 12, mode: "layers", smooth: 0.7, line: "#1b1b1b", line2: "#ffffff", bg: "#1b1b1b", fx: { riso: { size: 7, offset: 4, grain: 0.3 } } }],
     ["Effects", "Engraved", { pattern: "terrain", scale: 900, octaves: 3, warp: 0.3, levels: 12, mode: "layers", smooth: 0.6, line: "#1b1b1b", line2: "#f1ede4", bg: "#1b1b1b", fx: { linescreen: { spacing: 7, angle: 30, mono: true } } }],
     ["Effects", "Relief", { pattern: "terrain", scale: 900, octaves: 3, warp: 0.3, levels: 12, mode: "layers", smooth: 0.6, line: "#b9b2a5", line2: "#faf8f3", bg: "#b9b2a5", fx: { emboss: { strength: 2.2, angle: 135, depth: 3 } } }],
-    ["Effects", "Halftone", { ...G("flow", "Caddis", { scale: 0.45, detail: 2, warp: 0.5, stretch: 1.8, angle: -25 }), fx: { halftone: { size: 10, angle: 30, mono: false } }, paper: "#f1ede4" }],
+    ["Effects", "Halftone", { ...G("flow", "Prism", { scale: 0.45, detail: 2, warp: 0.5, stretch: 1.8, angle: -25 }), fx: { halftone: { size: 10, angle: 30, mono: false } }, paper: "#f1ede4" }],
     ["Effects", "Duotone", { pattern: "lines", angle: 165, scale: 500, octaves: 2, warp: 0.4, gap: 28, mode: "bands", band: 0.5, smooth: 0.5, line: "#111111", line2: "#5a0f1f", bg: "#f1ede4", fx: { gradmap: { c1: "#15123a", c2: "#4b3fd1", c3: "#f4f1ff", mix: 1 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
   ];
   const resolved = new Map();
@@ -240,6 +272,92 @@
     update({ commit: false });
   }
   const syncHistory = () => { $("undo").disabled = hi <= 0; $("redo").disabled = hi >= hist.length - 1; };
+
+  // ---------- color math (OKLCH) ----------
+  const toLin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  const toGam = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
+  function toOklch(hex) {
+    const [r, g, b] = [1, 3, 5].map((i) => toLin(parseInt(hex.slice(i, i + 2), 16) / 255));
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b), q = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * q, a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * q, bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * q;
+    return [L, Math.hypot(a, bb), ((Math.atan2(bb, a) * 180) / Math.PI + 360) % 360];
+  }
+  // Out-of-gamut colors keep their lightness and hue and lose chroma until they fit.
+  function fromOklch(L, C, H) {
+    L = clamp(L, 0, 1);
+    const hr = (H * Math.PI) / 180;
+    for (let c = Math.max(0, C); ; c = Math.max(0, c - 0.004)) {
+      const a = c * Math.cos(hr), b = c * Math.sin(hr);
+      const l = Math.pow(L + 0.3963377774 * a + 0.2158037573 * b, 3), m = Math.pow(L - 0.1055613458 * a - 0.0638541728 * b, 3), q = Math.pow(L - 0.0894841775 * a - 1.291485548 * b, 3);
+      const rgb = [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * q, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * q, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * q];
+      if (c === 0 || rgb.every((v) => v > -0.0005 && v < 1.0005)) return "#" + rgb.map((v) => Math.round(clamp(toGam(clamp(v, 0, 1)), 0, 1) * 255).toString(16).padStart(2, "0")).join("");
+    }
+  }
+  const hsvToHex = (h, s, v) => { const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); }; return "#" + [f(5), f(3), f(1)].map((x) => Math.round(x * 255).toString(16).padStart(2, "0")).join(""); };
+  function hexToHsv(hex) {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(r, g, b), d = mx - Math.min(r, g, b);
+    let h = 0;
+    if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [(h * 60 + 360) % 360, mx ? d / mx : 0, mx];
+  }
+
+  // ---------- color picker ----------
+  // One shared popover: a saturation/brightness field, a hue strip, hex entry, palette swatches and, where supported, an eyedropper.
+  const picker = (() => {
+    const el = document.createElement("div");
+    el.className = "picker"; el.hidden = true;
+    el.innerHTML = `<div class="pk-sv"><i class="pk-knob"></i></div><div class="pk-hue"><i class="pk-knob"></i></div><div class="pk-row"><span class="pk-now"></span><input class="field mono pk-hex" spellcheck="false" aria-label="Hex"><button class="ib pk-drop" title="Pick from screen" aria-label="Pick from screen">${ic("pipette")}</button></div><div class="pk-sw"></div>`;
+    document.body.appendChild(el);
+    const sv = el.querySelector(".pk-sv"), hue = el.querySelector(".pk-hue"), hexIn = el.querySelector(".pk-hex"), now = el.querySelector(".pk-now"), swEl = el.querySelector(".pk-sw"), drop = el.querySelector(".pk-drop");
+    if (!window.EyeDropper) drop.hidden = true;
+    let hsv = [0, 0, 0], cur = null, anchor = null;
+    const paint = (fromHex) => {
+      const hex = hsvToHex(...hsv);
+      sv.style.background = `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${hsvToHex(hsv[0], 1, 1)})`;
+      sv.firstChild.style.cssText = `left:${hsv[1] * 100}%;top:${(1 - hsv[2]) * 100}%;background:${hex}`;
+      hue.firstChild.style.cssText = `left:${(hsv[0] / 360) * 100}%;background:${hsvToHex(hsv[0], 1, 1)}`;
+      now.style.background = hex;
+      if (!fromHex && document.activeElement !== hexIn) hexIn.value = hex;
+      return hex;
+    };
+    const emit = () => cur && cur.onInput(paint());
+    const dragOn = (area, fn) => area.addEventListener("pointerdown", (e) => {
+      e.preventDefault(); area.setPointerCapture(e.pointerId);
+      const move = (ev) => { const r = area.getBoundingClientRect(); fn(clamp((ev.clientX - r.left) / r.width, 0, 1), clamp((ev.clientY - r.top) / r.height, 0, 1)); emit(); };
+      move(e);
+      area.onpointermove = move;
+      area.onpointerup = area.onpointercancel = () => { area.onpointermove = null; cur?.onDone?.(); };
+    });
+    dragOn(sv, (x, y) => { hsv[1] = x; hsv[2] = 1 - y; });
+    dragOn(hue, (x) => { hsv[0] = Math.min(359.9, x * 360); });
+    hexIn.addEventListener("input", () => { const v = parseHex(hexIn.value); if (v) { hsv = hexToHsv(v); paint(true); cur?.onInput(v); } });
+    hexIn.addEventListener("keydown", (e) => { if (e.key === "Enter") close(); });
+    swEl.addEventListener("click", (e) => { const b = e.target.closest("[data-c]"); if (!b) return; hsv = hexToHsv(b.dataset.c); emit(); cur?.onDone?.(); });
+    drop.onclick = async () => { try { const r = await new window.EyeDropper().open(); hsv = hexToHsv(r.sRGBHex.slice(0, 7)); emit(); cur?.onDone?.(); } catch (e) {} };
+    function place() {
+      const r = anchor.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+      let x = r.left + r.width / 2 - w / 2, y = r.bottom + 8;
+      if (y + h > innerHeight - 8) y = Math.max(8, r.top - h - 8);
+      el.style.left = clamp(x, 8, innerWidth - w - 8) + "px"; el.style.top = y + "px";
+    }
+    function open(a, value, onInput, onDone, swatches = []) {
+      if (cur && anchor === a) { close(); return; }
+      close();
+      anchor = a; cur = { onInput, onDone };
+      hsv = hexToHsv(parseHex(value) || "#000000");
+      swEl.innerHTML = [...new Set(swatches)].slice(0, 10).map((c) => `<button class="sw xs" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join("");
+      swEl.hidden = !swatches.length;
+      el.hidden = false; paint(); place();
+      el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
+      a.classList.add("picking");
+    }
+    function close() { if (!cur) return; const d = cur.onDone; cur = null; el.hidden = true; anchor?.classList.remove("picking"); anchor = null; d?.(); }
+    document.addEventListener("pointerdown", (e) => { if (cur && !el.contains(e.target) && !anchor.contains(e.target)) close(); }, true);
+    addEventListener("resize", () => cur && place());
+    return { open, close, isOpen: () => !!cur };
+  })();
+  // Colors already in play, offered as quick picks in the picker.
+  const inPlay = () => [...(S.source === "contours" ? [S.line, S.line2, S.bg] : S.grad.colors), S.ink, S.paper];
 
   // ---------- control factories ----------
   const syncers = [], sliders = [];
@@ -326,13 +444,12 @@
     const row = document.createElement("div");
     row.className = "label-row color-row";
     const id = "c-" + Math.random().toString(36).slice(2, 8);
-    row.innerHTML = `<label class="label" for="${id}">${label}</label><input class="hex mono" id="${id}" spellcheck="false" autocomplete="off"><label class="sw sm" title="${label}"><input type="color" aria-label="${label}"></label>`;
-    const hex = row.querySelector(".hex"), ci = row.querySelector("input[type=color]"), sw = row.querySelector(".sw");
-    ci.addEventListener("input", () => { set(ci.value); update({ instant: true }); });
-    ci.addEventListener("change", () => commit());
+    row.innerHTML = `<label class="label" for="${id}">${label}</label><input class="hex mono" id="${id}" spellcheck="false" autocomplete="off"><button class="sw sm" title="${label}" aria-label="Pick ${label.toLowerCase()}"></button>`;
+    const hex = row.querySelector(".hex"), sw = row.querySelector(".sw");
+    sw.onclick = () => picker.open(sw, get(), (v) => { set(v); sw.style.background = v; update({ instant: true }); }, () => commit(), inPlay());
     hex.addEventListener("change", () => { const v = parseHex(hex.value); if (!v) { hex.value = get(); return; } set(v); update(); });
     hex.addEventListener("keydown", (e) => { if (e.key === "Enter") hex.blur(); });
-    syncers.push(() => { const v = get(); sw.style.background = v; ci.value = v; if (document.activeElement !== hex) hex.value = v; });
+    syncers.push(() => { const v = get(); sw.style.background = v; if (document.activeElement !== hex) hex.value = v; });
     host.appendChild(row);
   }
   function swatchRow(host, colors, get, set, isNone) {
@@ -344,19 +461,16 @@
       el.appendChild(b);
       return b;
     });
-    const custom = document.createElement("label");
-    custom.className = "sw custom"; custom.title = "Custom color";
-    custom.innerHTML = `<input type="color" aria-label="Custom color">`;
-    const ci = custom.querySelector("input");
-    ci.addEventListener("input", () => { set(ci.value); update({ instant: true }); });
-    ci.addEventListener("change", () => commit());
+    const custom = document.createElement("button");
+    custom.className = "sw custom"; custom.title = "Custom color"; custom.setAttribute("aria-label", "Custom color");
+    custom.onclick = () => picker.open(custom, get(), (v) => { set(v); update({ instant: true }); }, () => commit(), inPlay());
     el.appendChild(custom);
     syncers.push(() => {
       const none = isNone && isNone();
       let hit = false;
       btns.forEach((b, i) => { const on = colors[i] === get() && !none; b.classList.toggle("on", on); hit ||= on; });
       custom.classList.toggle("on", !hit && !none);
-      ci.value = get();
+      custom.style.setProperty("--c", get());
     });
   }
   function bindHex(id, get, set, isNone) {
@@ -389,8 +503,8 @@
     }
     if (id === "lines") return S.mode === "lines" ? ["Lines", `${f2(S.weight).replace(/\.?0+$/, "")}px · ${linear() ? S.gap + "px gap" : S.levels + " lines"}`] : S.mode === "bands" ? ["Bands", `${pct(S.band)} thick`] : ["Layers", `${linear() ? "Every " + S.gap + "px" : S.levels + " layers"}`];
     if (id === "colors") {
-      if (g === "contours") { const p = PALETTES.find(([, c]) => c[0] === S.line && c[2] === S.bg); return [p ? p[0] : "Custom", S.gradient || S.mode === "layers" ? "Blended" : "Two colors"]; }
-      const r = RAMPS.find(([, c]) => JSON.stringify(c) === JSON.stringify(S.grad.colors)); return [r ? r[0] : "Custom", `${S.grad.colors.length} colors`];
+      const p = currentPal();
+      return [p ? p.name : "Custom", g === "contours" ? (S.gradient || S.mode === "layers" ? "Blended" : "Two colors") : `${S.grad.colors.length} colors`];
     }
     return ["", ""];
   }
@@ -414,9 +528,17 @@
       const on = P.slot === "fx:" + id;
       html += `<div class="tile fx${on ? " on" : ""}" data-fx="${id}"><span class="grip" title="Drag to reorder" aria-label="Drag to reorder ${FXI[id].name}">${ic("grip")}</span><button class="tile-main" data-slot="fx:${id}"><span class="tile-th" data-th="fx:${id}"></span><span class="tile-text"><b>${FXI[id].name}</b><small>${FXI[id].cat}</small></span></button><button class="ib xs" data-remove="${id}" aria-label="Remove ${FXI[id].name}" title="Remove">${ic("x")}</button></div>`;
     });
-    html += `<button class="tile add${P.slot === "addfx" ? " on" : ""}" data-slot="addfx"><span class="tile-plus">${ic("plus")}</span><span class="tile-text"><b>Add effect</b><small>${S.fxOrder.length ? "Stack another on top" : "Glass, grain, print, blur and more"}</small></span></button></div></div>`;
+    html += `<button class="tile add${P.slot === "addfx" ? " on" : ""}" data-slot="addfx"><span class="tile-plus">${ic("plus")}</span><span class="tile-text"><b>Add effect</b><small>${S.fxOrder.length ? "Stack another" : "Glass, grain, print and more"}</small></span></button></div></div>`;
+    // FLIP: tiles that move glide to their new place; new ones grow in.
+    const keyOf = (n) => n.dataset.fx ? "fx:" + n.dataset.fx : n.dataset.slot;
+    const before = new Map([...el.querySelectorAll(".tile")].map((n) => [keyOf(n), n.getBoundingClientRect().top]));
     el.innerHTML = html;
     for (const [k, v] of Object.entries(slotThumbs)) { const t = el.querySelector(`[data-th="${k}"]`); if (t && v) t.appendChild(v.cloneNode(true)); }
+    if (before.size && !reduceMotion.matches) for (const n of el.querySelectorAll(".tile")) {
+      const top = before.get(keyOf(n)), now = n.getBoundingClientRect().top;
+      if (top == null) n.animate([{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" });
+      else if (Math.abs(top - now) > 1 && !n.classList.contains("dragging")) n.animate([{ transform: `translateY(${top - now}px)` }, { transform: "none" }], { duration: 280, easing: "cubic-bezier(.2,.8,.2,1)" });
+    }
     schedulePreviews(120);
   }
   $("slotList").addEventListener("click", (e) => {
@@ -449,6 +571,8 @@
 
   const PANEL_TITLE = { preset: "Preset", generator: "Generator", shape: "Shape", lines: "Lines", colors: "Colors", addfx: "Add effect" };
   function setSlot(id) {
+    picker.close();
+    if (id === "colors" && P.slot !== "colors") revealPalette();
     P.slot = id; savePrefs();
     syncUI();
     $("options").scrollTop = 0;
@@ -477,7 +601,7 @@
 
   // ---------- preset panel ----------
   const takeRow = $("takeRow");
-  takeRow.innerHTML = `<span class="take-label">Apply</span>` + Object.keys(LAYERS).map((L) => `<button class="tog" data-l="${L}">${ic("check")}${LAYER_NAMES[L]}</button>`).join("");
+  takeRow.innerHTML = `<span class="take-label">Apply</span><div class="multi" role="group" aria-label="Parts to apply">` + Object.keys(LAYERS).map((L) => `<button class="tog" data-l="${L}" aria-pressed="true"><span class="tick">${ic("check")}</span>${LAYER_NAMES[L]}</button>`).join("") + `</div>`;
   takeRow.onclick = (e) => {
     const b = e.target.closest("[data-l]");
     if (!b) return;
@@ -570,21 +694,82 @@
   ].forEach((c) => makeSlider($("lines"), { group: "lines", ...c }));
 
   // ---------- colors panel ----------
-  const palEl = $("palettes"), palBtns = [];
-  for (const [name, cols] of PALETTES) {
-    const b = document.createElement("button");
-    b.className = "pal"; b.dataset.gen = "contours";
-    b.innerHTML = `<span class="pal-sw" style="background:${cols[2]}"><i style="background:${cols[0]}"></i><i style="background:${cols[1]}"></i></span><span>${name}</span>`;
-    b.onclick = () => { Object.assign(S, { line: cols[0], line2: cols[1], bg: cols[2], transparent: false }); update(); };
-    palEl.appendChild(b); palBtns.push([b, () => S.line === cols[0] && S.bg === cols[2]]);
+  const PER_PAGE = 9;
+  const sameCols = (a, b) => a.length === b.length && a.every((c, i) => c === b[i]);
+  const palMatches = (p) => (gen() === "contours" ? S.line === p.roles[0] && S.bg === p.roles[2] : sameCols(S.grad.colors, p.colors));
+  const currentPal = () => PALS.find(palMatches);
+  function applyPal(cols, roles = rolesOf(cols)) {
+    if (gen() === "contours") Object.assign(S, { line: roles[0], line2: roles[1], bg: roles[2], transparent: false });
+    else setGradColors(cols.slice());
   }
-  for (const [name, cols] of RAMPS) {
-    const b = document.createElement("button");
-    b.className = "pal"; b.dataset.gen = "raster";
-    b.innerHTML = `<span class="pal-bar" style="background:linear-gradient(90deg,${cols.join(",")})"></span><span>${name}</span>`;
-    b.onclick = () => { setGradColors(cols.slice()); update(); };
-    palEl.appendChild(b); palBtns.push([b, () => JSON.stringify(S.grad.colors) === JSON.stringify(cols)]);
+  const palEl = $("palettes");
+  $("palTabs").innerHTML = PAL_GROUPS.map(([g]) => `<button data-v="${g}">${g}</button>`).join("");
+  P.palTab ||= "Curated"; P.palPage ||= 0;
+  const palList = () => PALS.filter((p) => p.group === P.palTab);
+  const pageCount = () => Math.ceil(palList().length / PER_PAGE);
+  let palKey = "";
+  function renderPalettes(dir = 0) {
+    const page = clamp(P.palPage, 0, pageCount() - 1), contours = gen() === "contours";
+    const key = [P.palTab, page, contours].join("|");
+    if (key !== palKey) {
+      palKey = key;
+      palEl.innerHTML = palList().slice(page * PER_PAGE, (page + 1) * PER_PAGE).map((p) => {
+        const sw = contours ? `<span class="pal-sw" style="background:${p.roles[2]}"><i style="background:${p.roles[0]}"></i><i style="background:${p.roles[1]}"></i></span>` : `<span class="pal-bar" style="background:linear-gradient(90deg,${p.colors.join(",")})"></span>`;
+        return `<button class="pal" data-name="${p.name}">${sw}<span>${p.name}</span></button>`;
+      }).join("");
+      if (dir) { palEl.classList.remove("from-l", "from-r"); void palEl.offsetWidth; palEl.classList.add(dir > 0 ? "from-r" : "from-l"); }
+    }
+    for (const b of palEl.children) b.classList.toggle("on", palMatches(PAL_BY[b.dataset.name]));
+    $("palDots").innerHTML = Array.from({ length: pageCount() }, (_, i) => `<i class="${i === page ? "on" : ""}"></i>`).join("");
+    $("palPrev").disabled = page <= 0; $("palNext").disabled = page >= pageCount() - 1;
+    for (const b of $("palTabs").children) b.classList.toggle("on", b.dataset.v === P.palTab);
   }
+  palEl.onclick = (e) => { const b = e.target.closest("[data-name]"); if (!b) return; const p = PAL_BY[b.dataset.name]; applyPal(p.colors, p.roles); update(); };
+  const turnPage = (d) => { const n = clamp(P.palPage + d, 0, pageCount() - 1); if (n === P.palPage) return; P.palPage = n; savePrefs(); renderPalettes(d); };
+  $("palPrev").onclick = () => turnPage(-1);
+  $("palNext").onclick = () => turnPage(1);
+  $("palTabs").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b || b.dataset.v === P.palTab) return; const d = b.dataset.v === "Brands" ? 1 : -1; P.palTab = b.dataset.v; P.palPage = 0; savePrefs(); renderPalettes(d); };
+  // Opening Colors shows the page holding the palette in use.
+  function revealPalette() { const p = currentPal(); if (!p) return; P.palTab = p.group; P.palPage = Math.floor(palList().indexOf(p) / PER_PAGE); }
+
+  // Palette builder: harmonies grown from the strongest color in play, plus the closest library palettes.
+  function suggestions() {
+    const cols = gen() === "contours" ? [S.line, S.line2, S.bg] : S.grad.colors;
+    const lch = cols.map(toOklch), [, C0, H] = lch.reduce((a, b) => (b[1] > a[1] ? b : a));
+    const C = Math.max(C0, 0.05), mk = (rows) => rows.map(([l, c, h]) => fromOklch(l, c, (h + 360) % 360));
+    const out = [
+      ["Tonal", mk([[0.24, C * 0.6, H], [0.42, C, H], [0.62, C, H], [0.8, C * 0.6, H], [0.95, C * 0.2, H]])],
+      ["Analogous", mk([[0.26, C * 0.8, H - 40], [0.46, C, H - 20], [0.64, C, H], [0.78, C * 0.9, H + 20], [0.93, C * 0.4, H + 40]])],
+      ["Opposite", mk([[0.24, C * 0.7, H], [0.5, C, H], [0.95, C * 0.15, H + 90], [0.66, C, H + 180], [0.84, C * 0.6, H + 180]])],
+      ["Triad", mk([[0.22, C * 0.4, H], [0.55, C, H], [0.68, C, H + 120], [0.76, C, H + 240], [0.96, C * 0.15, H]])],
+      ["Split", mk([[0.25, C * 0.6, H], [0.58, C, H], [0.7, C, H + 150], [0.8, C, H + 210], [0.95, C * 0.15, H]])],
+      ["Muted", mk([[0.22, C * 0.25, H], [0.42, C * 0.35, H + 10], [0.62, C * 0.4, H - 10], [0.8, C * 0.3, H], [0.94, C * 0.1, H]])],
+    ];
+    // Distance between palettes: each color's nearest match in the other, in OKLab.
+    const lab = (h) => { const [l, c, hh] = toOklch(h); return [l, c * Math.cos((hh * Math.PI) / 180), c * Math.sin((hh * Math.PI) / 180)]; };
+    const mine = cols.map(lab), dist = (p) => p.colors.map(lab).reduce((a, x) => a + Math.min(...mine.map((y) => Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]))), 0) / p.colors.length;
+    for (const p of PALS.filter((p) => !palMatches(p)).sort((a, b) => dist(a) - dist(b)).slice(0, 2)) out.push([p.name, p.colors, p.roles]);
+    return out;
+  }
+  let sugKey = "", sugList = [], sugT = 0;
+  function renderSuggest() {
+    const key = JSON.stringify([gen() === "contours", gen() === "contours" ? [S.line, S.line2, S.bg] : S.grad.colors]);
+    if (key === sugKey) return;
+    sugKey = key; sugList = suggestions();
+    const contours = gen() === "contours";
+    $("suggest").innerHTML = sugList.map(([name, cols, roles], i) => {
+      const r = roles || rolesOf(cols);
+      const sw = contours ? `<span class="sug-sw" style="background:${r[2]}"><i style="background:${r[0]}"></i><i style="background:${r[1]}"></i></span>` : `<span class="sug-sw">${cols.map((c) => `<i style="background:${c}"></i>`).join("")}</span>`;
+      return `<button class="sug" data-i="${i}" style="--i:${i}">${sw}<span>${name}</span></button>`;
+    }).join("");
+    if (contours) { $("addSug").innerHTML = ""; return; }
+    const base = toOklch(S.grad.colors[sel != null && S.grad.colors[sel] ? sel : S.grad.colors.length - 1]);
+    const adds = [[base[0] + 0.16, base[1] * 0.7, base[2]], [base[0] - 0.18, base[1], base[2]], [base[0], base[1], base[2] + 30], [base[0], base[1], base[2] - 30], [base[0], Math.max(base[1], 0.08), base[2] + 180], [0.95, 0.02, base[2]]].map(([l, c, h]) => fromOklch(clamp(l, 0.12, 0.97), c, (h + 360) % 360));
+    $("addSug").innerHTML = [...new Set(adds)].map((c) => `<button class="sw xs" data-c="${c}" style="background:${c}" title="Add ${c}" aria-label="Add ${c}"></button>`).join("");
+  }
+  $("suggest").onclick = (e) => { const b = e.target.closest("[data-i]"); if (!b) return; const [, cols, roles] = sugList[+b.dataset.i]; applyPal(cols, roles); update(); };
+  $("addSug").onclick = (e) => { const b = e.target.closest("[data-c]"); if (b) addStop(rnd(0.15, 0.85), rnd(0.15, 0.85), b.dataset.c); };
+
   function setGradColors(cols) {
     S.grad.colors = cols.slice(0, 8);
     while (S.grad.points.length < S.grad.colors.length) S.grad.points.push({ x: +rnd(0.1, 0.9).toFixed(3), y: +rnd(0.1, 0.9).toFixed(3) });
@@ -606,35 +791,40 @@
   bindHex("inkHex", () => S.ink, (v) => (S.ink = v));
   bindHex("paperHex", () => S.paper, (v) => (S.paper = v));
   function randomPalette() {
-    if (gen() !== "contours") { setGradColors(pick(RAMPS)[1].slice()); return; }
-    const [, [a, b, bg]] = pick(PALETTES);
-    Object.assign(S, { line: a, line2: b, bg, transparent: false });
+    const p = pick(PALS.filter((p) => !palMatches(p)));
+    applyPal(p.colors, p.roles);
   }
+  // Stops update in place when only their colors change, so swatches ease to the new color.
   function renderStops() {
-    const el = $("stops");
-    el.innerHTML = "";
-    S.grad.colors.forEach((c, i) => {
-      const item = document.createElement("div");
-      item.className = "stop" + (gen() === "mesh" && sel === i ? " on" : "");
-      item.innerHTML = `<label class="sw" style="background:${c}" title="${c}"><input type="color" value="${c}" aria-label="Color ${i + 1}"></label>${S.grad.colors.length > 2 ? `<button class="x" aria-label="Remove color ${i + 1}">${ic("x")}</button>` : ""}`;
-      const ci = item.querySelector("input");
-      ci.addEventListener("input", () => { S.grad.colors[i] = ci.value; item.querySelector(".sw").style.background = ci.value; update({ instant: true }); });
-      ci.addEventListener("change", () => commit());
-      item.querySelector(".x")?.addEventListener("click", () => { S.grad.colors.splice(i, 1); S.grad.points.splice(i, 1); sel = null; update(); });
-      el.appendChild(item);
-    });
-    if (S.grad.colors.length < 8) {
-      const add = document.createElement("button");
-      add.className = "stop-add"; add.title = "Add color"; add.setAttribute("aria-label", "Add color");
-      add.innerHTML = ic("plus");
-      add.onclick = () => addStop(rnd(0.15, 0.85), rnd(0.15, 0.85));
-      el.appendChild(add);
+    const el = $("stops"), cols = S.grad.colors, items = [...el.querySelectorAll(".stop")];
+    const canAdd = cols.length < 8, hasAdd = !!el.querySelector(".stop-add");
+    if (items.length === cols.length && canAdd === hasAdd && items.every((it) => it.querySelector(".x") ? cols.length > 2 : cols.length <= 2)) {
+      items.forEach((it, i) => { it.querySelector(".sw").style.background = cols[i]; it.classList.toggle("on", gen() === "mesh" && sel === i); });
+    } else {
+      const before = items.length;
+      el.innerHTML = "";
+      cols.forEach((c, i) => {
+        const item = document.createElement("div");
+        item.className = "stop" + (gen() === "mesh" && sel === i ? " on" : "") + (before && i >= before ? " fresh" : "");
+        item.innerHTML = `<button class="sw" style="background:${c}" aria-label="Edit color ${i + 1}"></button>${cols.length > 2 ? `<button class="x" aria-label="Remove color ${i + 1}">${ic("x")}</button>` : ""}`;
+        const sw = item.querySelector(".sw");
+        sw.onclick = () => picker.open(sw, S.grad.colors[i], (v) => { S.grad.colors[i] = v; sw.style.background = v; update({ instant: true }); }, () => commit(), inPlay());
+        item.querySelector(".x")?.addEventListener("click", () => { picker.close(); S.grad.colors.splice(i, 1); S.grad.points.splice(i, 1); sel = null; update(); });
+        el.appendChild(item);
+      });
+      if (canAdd) {
+        const add = document.createElement("button");
+        add.className = "stop-add"; add.title = "Add color"; add.setAttribute("aria-label", "Add color");
+        add.innerHTML = ic("plus");
+        add.onclick = () => addStop(rnd(0.15, 0.85), rnd(0.15, 0.85));
+        el.appendChild(add);
+      }
     }
-    $("stopCount").textContent = `${S.grad.colors.length} of 8`;
+    $("stopCount").textContent = `${cols.length} of 8`;
   }
-  function addStop(x, y) {
+  function addStop(x, y, color) {
     if (S.grad.colors.length >= 8) return toast("Up to 8 colors");
-    S.grad.colors.push(pick(pick(RAMPS)[1]));
+    S.grad.colors.push(color || pick(pick(PALS).colors));
     S.grad.points.push({ x: +x.toFixed(4), y: +y.toFixed(4) });
     sel = S.grad.colors.length - 1;
     update();
@@ -677,7 +867,7 @@
   for (const cat of FX_CATS) {
     const h = document.createElement("div");
     h.className = "sub-head";
-    h.innerHTML = `<h3 class="sub">${cat}</h3><span class="sub-note">${FX_LEDE[cat]}</span>`;
+    h.innerHTML = `<h3 class="sub">${cat}</h3>`;
     const grid = document.createElement("div");
     grid.className = "cards";
     for (const f of FXC.filter((x) => x[2] === cat)) {
@@ -972,7 +1162,7 @@
   document.addEventListener("keydown", (e) => {
     const typing = e.target.matches("input:not([type=range]):not([type=checkbox]), textarea");
     const mod = e.metaKey || e.ctrlKey;
-    if (e.key === "Escape") { closeMenus(); for (const m of document.querySelectorAll(".modal")) m.hidden = true; if (sel != null) { sel = null; syncUI(); drawOverlay(); } return; }
+    if (e.key === "Escape") { picker.close(); closeMenus(); for (const m of document.querySelectorAll(".modal")) m.hidden = true; if (sel != null) { sel = null; syncUI(); drawOverlay(); } return; }
     if (document.querySelector(".modal:not([hidden])")) return;
     if (mod && e.key.toLowerCase() === "z" && !typing) { e.preventDefault(); travel(e.shiftKey ? 1 : -1); return; }
     if (typing || mod || e.altKey) return;
@@ -1032,7 +1222,7 @@
   const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image, grad: st.source === "gradient" ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper });
   function fit() {
     const cs = getComputedStyle(wrap);
-    const aw = wrap.clientWidth - parseFloat(cs.paddingLeft) * 2, ah = wrap.clientHeight - parseFloat(cs.paddingTop) * 2;
+    const aw = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), ah = wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
     const sc = Math.min(aw / S.w, ah / S.h);
     art.style.width = Math.max(40, S.w * sc) + "px";
     art.style.height = Math.max(40, S.h * sc) + "px";
@@ -1084,13 +1274,23 @@
     while (queue.length) { const j = queue.shift(); try { await j(); } catch (e) {} await new Promise((r) => setTimeout(r, 0)); }
     pumping = false;
   }
+  // New thumbnails fade in over the old ones, which leave once the fade is done.
+  function swapIn(slot, node) {
+    const old = [...slot.children];
+    node.classList.add("fresh");
+    slot.appendChild(node);
+    const drop = () => old.forEach((o) => o.remove());
+    if (!old.length || reduceMotion.matches) drop();
+    else { node.addEventListener("animationend", drop, { once: true }); setTimeout(drop, 700); }
+    return node;
+  }
   function putCanvas(slot, src, w, h) {
-    let c = slot.querySelector("canvas");
-    if (!c) { slot.innerHTML = ""; c = document.createElement("canvas"); slot.appendChild(c); }
+    const c = document.createElement("canvas");
     c.width = w; c.height = h;
     c.getContext("2d").drawImage(src, 0, 0, w, h);
-    return c;
+    return swapIn(slot, c);
   }
+  const svgNode = (markup) => { const t = document.createElement("template"); t.innerHTML = markup.trim(); return t.content.firstChild; };
   // Render a state into a thumbnail slot at a 16:10 frame.
   // Contour previews zoom into the center so individual lines stay readable at thumbnail size.
   async function thumb(slot, st, w = 200) {
@@ -1098,8 +1298,7 @@
     if (!isRaster(s) || !TFX) {
       if (s.source !== "contours") { slot.innerHTML = ""; return null; }
       const z = 2, W = w * z, H = h * z;
-      slot.innerHTML = T.buildSVG(s, { w: W, h: H, res: 2.5 * z, minLen: 8 }).svg.replace(/^<svg([^>]*?) width="\d+" height="\d+" viewBox="[^"]*"/, `<svg$1 width="${w}" height="${h}" viewBox="${(W - w) / 2} ${(H - h) / 2} ${w} ${h}"`);
-      return slot.firstChild;
+      return swapIn(slot, svgNode(T.buildSVG(s, { w: W, h: H, res: 2.5 * z, minLen: 8 }).svg.replace(/^<svg([^>]*?) width="\d+" height="\d+" viewBox="[^"]*"/, `<svg$1 width="${w}" height="${h}" viewBox="${(W - w) / 2} ${(H - h) / 2} ${w} ${h}"`)));
     }
     const W = w * 2, H = h * 2;
     const image = s.source === "contours" ? await rasterize(thumbRaster, T.buildSVG(s, { w: W, h: H, res: 2.5 }).svg, W, H) : null;
@@ -1126,7 +1325,7 @@
     if (drag) return;
     const jobs = [];
     // Slot tile thumbnails first: they're always on screen.
-    const tileJob = (key, st) => jobs.push(async () => { const el = $("slotList").querySelector(`[data-th="${key}"]`); if (!el) return; const c = await thumb(el, st, 64); slotThumbs[key] = c ? c.cloneNode(true) : null; if (c && c.tagName === "CANVAS") { slotThumbs[key].getContext("2d").drawImage(c, 0, 0); } });
+    const tileJob = (key, st) => jobs.push(async () => { const el = $("slotList").querySelector(`[data-th="${key}"]`); if (!el) return; const c = await thumb(el, st, 64); slotThumbs[key] = c ? c.cloneNode(true) : null; if (c) slotThumbs[key].classList.remove("fresh"); if (c && c.tagName === "CANVAS") { slotThumbs[key].getContext("2d").drawImage(c, 0, 0); } });
     tileJob("preset", S);
     tileJob("generator", lightLines(noFx(S)));
     tileJob("shape", lightLines(mono(noFx(S))));
@@ -1137,7 +1336,7 @@
     });
     const p = panelOf(P.slot);
     if (p === "preset") for (const pc of presetCards) { if (!pc.done && !pc.el.hidden) jobs.push(async () => { await thumb(slotOf(pc.el), resolveLook(pc.look), 220); pc.done = true; }); }
-    if (p === "generator") for (const [id] of GENS) jobs.push(() => { const st = clone(noFx(S)); if (id === "contours") st.source = "contours"; else { st.source = "gradient"; st.grad.type = id; } return thumb(slotOf(genCards[id]), lightLines(st), 200); });
+    if (p === "generator") for (const [id] of GENS) jobs.push(() => { let st = clone(noFx(S)); if (id === "contours") st = asContours(st); else { st.source = "gradient"; st.grad.type = id; } return thumb(slotOf(genCards[id]), lightLines(st), 200); });
     if (p === "shape") {
       if (gen() === "contours") for (const pt of T.PATTERNS) jobs.push(() => thumb(slotOf(patCards[pt.id]), lightLines(mono({ ...noFx(S), pattern: pt.id })), 130));
       if (gen() === "noise") for (const [id] of NOISE_TYPES) jobs.push(() => thumb(slotOf(noiseCards[id]), { ...noFx(S), grad: { ...S.grad, noise: id } }, 130));
@@ -1152,7 +1351,6 @@
   }
 
   // ---------- animated changes ----------
-  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
   const INT_KEYS = new Set(["levels", "octaves", "indexEvery", "features", "matrix", "pix", "segments", "detail"]);
   const hexMix = (a, b, t) => "#" + [1, 3, 5].map((i) => Math.round(parseInt(a.substr(i, 2), 16) * (1 - t) + parseInt(b.substr(i, 2), 16) * t).toString(16).padStart(2, "0")).join("");
   function tween(a, b, e, key) {
@@ -1222,23 +1420,32 @@
   mirror.style.cssText = "position:absolute;visibility:hidden;width:auto;padding:0;white-space:pre;left:-9999px";
   document.body.appendChild(mirror);
   const measure = (text) => { mirror.style.fontSize = getComputedStyle($("w")).fontSize; mirror.textContent = text; return Math.ceil(mirror.getBoundingClientRect().width); };
-  let stopsKey = "", bodyFor = null;
+  let stopsKey = "", bodyFor = null, shownSlot = null;
+  // Opening a panel: the title and sections rise in, and cards follow in a short stagger.
+  function enterPanel(sec) {
+    if (!sec || reduceMotion.matches) return;
+    for (const el of [$("optHead"), sec]) { el.classList.remove("enter"); void el.offsetWidth; el.classList.add("enter"); }
+    [...sec.children].forEach((c, i) => c.style.setProperty("--i", Math.min(i, 8)));
+    for (const grid of sec.querySelectorAll(".cards, .palettes, .suggest")) [...grid.children].filter((c) => !c.hidden).forEach((c, i) => c.style.setProperty("--j", Math.min(i, 14)));
+  }
   function syncUI() {
     const g = gen();
     if (P.slot === "lines" && g !== "contours") P.slot = "shape";
     if (P.slot.startsWith("fx:") && !S.fxOrder.includes(fxOf())) P.slot = "addfx";
     const panel = panelOf(P.slot);
     for (const s of document.querySelectorAll(".panel-sec")) s.hidden = s.dataset.panel !== panel;
+    if (P.slot !== shownSlot) { shownSlot = P.slot; enterPanel(document.querySelector(`.panel-sec[data-panel="${panel}"]`)); }
     for (const s of document.querySelectorAll("[data-gen]")) s.hidden = s.dataset.gen === "raster" ? g === "contours" : s.dataset.gen !== g;
     const fid = fxOf();
     $("optTitle").textContent = fid ? FXI[fid].name : swapping && panel === "addfx" ? `Swap ${FXI[swapping].name}` : PANEL_TITLE[panel];
     optDice.title = optDice.ariaLabel = panel === "preset" ? "Surprise me" : `Randomize ${$("optTitle").textContent.toLowerCase()}`;
     if (fid !== bodyFor) { $("fxBodyHost").innerHTML = ""; if (fid) $("fxBodyHost").appendChild(fxBodies[fid]); bodyFor = fid; }
-    if (fid) $("fxLede").textContent = FX_LEDE[FXI[fid].cat] + ` Step ${S.fxOrder.indexOf(fid) + 1} of ${S.fxOrder.length}.`;
+    if (fid) $("fxLede").textContent = `${FXI[fid].cat} · ${S.fxOrder.indexOf(fid) + 1} of ${S.fxOrder.length}`;
     if (panel !== "addfx") swapping = null;
     syncers.forEach((f) => f());
-    for (const b of takeRow.querySelectorAll("[data-l]")) b.classList.toggle("on", !!P.take[b.dataset.l]);
+    for (const b of takeRow.querySelectorAll("[data-l]")) { b.classList.toggle("on", !!P.take[b.dataset.l]); b.setAttribute("aria-pressed", !!P.take[b.dataset.l]); }
     for (const b of $("presetFilter").children) b.classList.toggle("on", b.dataset.v === P.filter);
+    $("presetGrid").classList.toggle("filtered", P.filter !== "All");
     for (const pc of presetCards) { pc.el.hidden = P.filter !== "All" && pc.group !== P.filter; pc.el.classList.toggle("on", lookMatches(pc.look)); }
     for (const [id, c] of Object.entries(genCards)) c.classList.toggle("on", id === g);
     for (const [id, c] of Object.entries(patCards)) c.classList.toggle("on", id === S.pattern);
@@ -1246,8 +1453,7 @@
     for (const [id, c] of Object.entries(modeCards)) c.classList.toggle("on", id === S.mode);
     for (const [id, c] of Object.entries(fxCards)) c.classList.toggle("added", S.fxOrder.includes(id));
     varCards.forEach((c) => c.classList.toggle("on", c._seed === S.seed));
-    for (const b of palEl.children) b.hidden = b.dataset.gen === "raster" ? g === "contours" : g !== "contours";
-    for (const [b, is] of palBtns) b.classList.toggle("on", is());
+    if (panel === "colors") { renderPalettes(); clearTimeout(sugT); sugT = setTimeout(renderSuggest, sugKey ? 220 : 0); }
     $("line2Sw").classList.toggle("off", !S.gradient && S.mode !== "layers");
     $("lineLbl").textContent = S.mode === "lines" ? "Lines" : S.mode === "bands" ? "Bands" : "From";
     $("gradient").checked = S.gradient || S.mode === "layers";
@@ -1256,7 +1462,7 @@
     $("usePoints").checked = S.usePoints;
     $("showPoints").innerHTML = ic(S.showPoints ? "eye" : "eyeoff");
     $("seed").value = S.seed;
-    $("ptHint").textContent = selPoint() ? "Double-click a point to flip it into a dip. Delete removes it." : "Points push the terrain up into peaks. Double-click the canvas to add one, drag to move, scroll to resize.";
+    $("ptHint").textContent = selPoint() ? "Double-click to flip into a dip. Delete removes." : "Double-click the canvas to add a peak. Drag to move, scroll to resize.";
     $("gradHint").hidden = g !== "mesh";
     const sk = JSON.stringify([S.grad.colors, g === "mesh" ? sel : null]);
     if (sk !== stopsKey) { stopsKey = sk; renderStops(); }
@@ -1281,6 +1487,7 @@
   // First visit opens on a curated preset rather than an empty default.
   let firstVisit = true;
   try { firstVisit = !localStorage.getItem(STORE); } catch (e) {}
-  if (firstVisit) applyLook(PRESETS.find((p) => p[1] === "Caddis")[2]);
+  if (firstVisit) applyLook(PRESETS.find((p) => p[1] === "Prism")[2]);
   update({ commit: false });
+  setTimeout(() => document.body.classList.remove("boot"), 900);
 })();

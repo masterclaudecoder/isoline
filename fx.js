@@ -20,6 +20,31 @@ float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 vec2 dp() { return vUv * uRes / uK; }
 vec2 toUv(vec2 d) { return d * uK / uRes; }
 vec4 tex(vec2 uv) { return texture(uTex, clamp(uv, vec2(0.0), vec2(1.0))); }
+float sdBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
+// Frosted sample: n blur taps on a golden spiral, with red and blue pulled apart along disp.
+vec3 frostDisp(vec2 uv, float rad, vec2 disp, int n) {
+  vec3 c = vec3(0.0);
+  for (int i = 0; i < n; i++) {
+    float a = float(i) * 2.39996, r = n > 1 ? sqrt((float(i) + 0.5) / float(n)) * rad : 0.0;
+    vec2 q = uv + toUv(vec2(cos(a), sin(a)) * r);
+    c += vec3(tex(q + disp).r, tex(q).g, tex(q - disp).b);
+  }
+  return c / float(n);
+}
+// Liquid glass inside a shape. sd < 0 inside (in px), n is the outward normal, bez the bezel width.
+// The bezel samples from further out, so what sits just past the edge wraps into the rim.
+vec3 liquid(vec2 uv, float sd, vec2 n, float bez, float refr, float frost, float rim, float disp) {
+  float x = 1.0 - clamp(-sd / bez, 0.0, 1.0), bend = x * x * x * (1.0 + x);
+  float blur = frost + bend * refr * bez * 0.12;
+  vec3 c = frostDisp(uv + toUv(n * bend * refr * bez * 0.8), blur, toUv(n * bend * disp * bez * 0.035), blur > 0.5 ? 10 : 1);
+  float l = luma(c);
+  c = clamp(mix(vec3(l), c, 1.12), 0.0, 1.0);
+  c = mix(c, vec3(1.0), 0.05);
+  float facing = pow(abs(dot(n, normalize(vec2(-0.6, 0.8)))), 2.0), hair = max(1.1, 0.9 / uK);
+  c += rim * (0.85 * exp(sd / hair) * (0.2 + 0.8 * facing) + 0.1 * x * x * x * facing);
+  c *= 1.0 - 0.05 * x * x * (1.0 - facing);
+  return clamp(c, 0.0, 1.0);
+}
 `;
 
   const SHADERS = {
@@ -119,46 +144,40 @@ void main() {
 }`,
 
     glass: `uniform float uWidth; uniform float uAngle; uniform float uStr; uniform float uFrost; uniform float uLight;
-// Each rib is a half-cylinder lens. Four sub-pixel samples across the rib edge remove the stair-stepping.
-vec3 rib(vec2 d, vec2 nrm, out float l) {
-  l = fract(dot(d, nrm) / uWidth) - 0.5;
-  vec2 uv = vUv + toUv(nrm * sin(l * 3.14159) * uStr * uWidth * 0.5);
-  float fr = uFrost * uWidth * 0.35; vec3 c = vec3(0.0);
-  for (int i = 0; i < 6; i++) { float a = float(i) * 2.39996 + l * 7.0, r = sqrt((float(i) + 0.5) / 6.0) * fr; c += tex(uv + toUv(vec2(cos(a), sin(a)) * r)).rgb; }
-  return c / 6.0;
-}
+// Each rib is a half-cylinder lens. Four sub-pixel samples across the rib edge remove the stair-stepping;
+// a hairline catches the light on each rib's leading edge, and red and blue split slightly as they bend.
 void main() {
   vec2 dir = vec2(cos(uAngle), sin(uAngle)), nrm = vec2(-dir.y, dir.x);
-  vec3 acc = vec3(0.0); float l = 0.0, shade = 0.0;
+  int n = uFrost > 0.01 ? 6 : 1;
+  vec3 acc = vec3(0.0);
   for (int s = 0; s < 4; s++) {
     vec2 d = dp() + nrm * ((float(s) - 1.5) * 0.25 / uK);
-    float li; acc += rib(d, nrm, li);
-    shade += 1.0 - 0.18 * uLight * pow(abs(li * 2.0), 3.0) + 0.06 * uLight * (1.0 - smoothstep(0.0, 0.5, abs(li + 0.25)));
+    float l = fract(dot(d, nrm) / uWidth) - 0.5, bend = sin(l * 3.14159);
+    vec2 uv = vUv + toUv(nrm * bend * uStr * uWidth * 0.5);
+    vec3 c = frostDisp(uv, uFrost * uWidth * 0.3, toUv(nrm * bend * uStr * uWidth * 0.035), n);
+    float edge = (0.5 - abs(l)) * uWidth, hair = max(0.9, 0.9 / uK);
+    c *= 1.0 - 0.07 * uLight * l;
+    c += uLight * 0.22 * exp(-edge / hair) * (l < 0.0 ? 1.0 : 0.25);
+    acc += c;
   }
-  o = vec4(acc / 4.0 * (shade / 4.0), tex(vUv).a);
+  o = vec4(clamp(acc / 4.0, 0.0, 1.0), tex(vUv).a);
 }`,
 
-    mesh: `uniform float uCell; uniform float uStr; uniform float uFrost; uniform float uGrout;
-// Glass blocks: each cell magnifies its own patch of the image, with a softly rounded rim and thin grout lines.
-vec3 block(vec2 d, out float e) {
-  vec2 c = d / uCell, id = floor(c), l = fract(c) - 0.5;
-  e = max(abs(l.x), abs(l.y));
-  vec2 rim = sign(l) * smoothstep(0.3, 0.5, abs(l)) * 0.18;
-  vec2 src = (id + 0.5 + l * (1.0 - 0.45 * uStr) + rim * uStr) * uCell;
-  float fr = uFrost * uCell * 0.12; vec3 col = vec3(0.0);
-  for (int i = 0; i < 6; i++) { float a = float(i) * 2.39996, r = sqrt((float(i) + 0.5) / 6.0) * fr; col += tex(toUv(src + vec2(cos(a), sin(a)) * r)).rgb; }
-  return col / 6.0;
-}
+    mesh: `uniform float uCell; uniform float uStr; uniform float uFrost; uniform float uGrout; uniform float uRim; uniform float uDisp;
+// Glass blocks: a grid of rounded liquid-glass tiles, each magnifying its own patch, separated by a small gap.
 void main() {
-  vec3 acc = vec3(0.0); float edge = 0.0;
-  for (int s = 0; s < 4; s++) {
-    vec2 off = vec2(float(s & 1) - 0.5, float(s >> 1) - 0.5) * 0.5 / uK;
-    float e; acc += block(dp() + off, e);
-    edge += smoothstep(0.5 - uGrout * 0.04 - 0.004, 0.5, e);
-  }
-  vec3 col = acc / 4.0;
-  col *= 1.0 - 0.24 * (edge / 4.0);
-  o = vec4(col, tex(vUv).a);
+  vec2 d = dp(), id = floor(d / uCell), c = (id + 0.5) * uCell, p = d - c;
+  float gap = uGrout * uCell * 0.035, rad = uCell * 0.24;
+  vec2 hb = vec2(uCell * 0.5 - gap * 0.5);
+  float sd = sdBox(p, hb, rad);
+  vec2 n = normalize(vec2(sdBox(p + vec2(0.5, 0.0), hb, rad) - sdBox(p - vec2(0.5, 0.0), hb, rad), sdBox(p + vec2(0.0, 0.5), hb, rad) - sdBox(p - vec2(0.0, 0.5), hb, rad)) + 1e-6);
+  vec2 src = c + p * (1.0 - 0.16 * uStr);
+  vec3 inside = liquid(toUv(src), sd, n, uCell * 0.2, uStr, uFrost * uCell * 0.09, uRim, uDisp);
+  vec4 base = tex(vUv);
+  float shadow = 0.22 * exp(-max(sdBox(p + vec2(0.0, uCell * 0.02), hb, rad), 0.0) / (uCell * 0.05));
+  vec3 outside = base.rgb * (1.0 - shadow);
+  float aa = 0.75 / uK;
+  o = vec4(mix(outside, inside, smoothstep(aa, -aa, sd)), base.a);
 }`,
 
     pixel: `uniform float uSize; uniform float uBevel;
@@ -234,28 +253,24 @@ void main() {
   o = tex(toUv(c + r * vec2(cos(a), sin(a))));
 }`,
 
-    lens: `uniform float uShape; uniform float uSize; uniform float uRefr; uniform float uFrost; uniform float uRim; uniform vec2 uC;
-float box(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
+    lens: `uniform float uShape; uniform float uSize; uniform float uRefr; uniform float uFrost; uniform float uRim; uniform float uDisp; uniform vec2 uC;
+// Liquid glass: a flat pane whose rounded bezel bends what's behind it, with a frosted body,
+// a hairline highlight on the edges facing the light and a soft contact shadow.
 void main() {
   vec2 res = uRes / uK; float m = min(res.x, res.y);
   vec2 p = dp() - uC * res, hb; float rad;
   if (uShape < 0.5) { hb = vec2(uSize * m * 0.5); rad = hb.x; }
   else if (uShape < 1.5) { hb = vec2(uSize * m * 0.95, uSize * m * 0.3); rad = hb.y; }
-  else { hb = vec2(uSize * m * 0.5); rad = uSize * m * 0.14; }
-  float sd = box(p, hb, rad);
+  else { hb = vec2(uSize * m * 0.5); rad = uSize * m * 0.16; }
+  float sd = sdBox(p, hb, rad);
+  vec2 n = normalize(vec2(sdBox(p + vec2(0.5, 0.0), hb, rad) - sdBox(p - vec2(0.5, 0.0), hb, rad), sdBox(p + vec2(0.0, 0.5), hb, rad) - sdBox(p - vec2(0.0, 0.5), hb, rad)) + 1e-6);
+  float bez = min(min(hb.x, hb.y) * 0.6, m * 0.085);
   vec4 base = tex(vUv);
-  if (sd > 0.0) { float sh = exp(-sd / (m * 0.025)) * 0.16; o = vec4(base.rgb * (1.0 - sh), base.a); return; }
-  float depth = clamp(-sd / (m * 0.1 * uSize + 1.0), 0.0, 1.0);
-  vec2 g = vec2(box(p + vec2(1, 0), hb, rad) - box(p - vec2(1, 0), hb, rad), box(p + vec2(0, 1), hb, rad) - box(p - vec2(0, 1), hb, rad));
-  vec2 n = normalize(g + 1e-6);
-  float bend = pow(1.0 - depth, 2.5);
-  vec2 uv = vUv + toUv(-n * bend * uRefr * m * 0.07 - p * uRefr * 0.05);
-  float fr = uFrost * m * 0.025; vec3 col = vec3(0.0);
-  for (int i = 0; i < 12; i++) { float a = float(i) * 2.39996, rr = sqrt((float(i) + 0.5) / 12.0) * fr; col += tex(uv + toUv(vec2(cos(a), sin(a)) * rr)).rgb; }
-  col = mix(col / 12.0, vec3(1.0), 0.05);
-  float light = clamp(dot(n, normalize(vec2(-0.6, 0.8))), 0.0, 1.0);
-  col += uRim * pow(1.0 - depth, 7.0) * (0.25 + 0.75 * light);
-  o = vec4(col, 1.0);
+  float shadow = 0.16 * exp(-max(sdBox(p + vec2(0.0, m * 0.014), hb, rad), 0.0) / (m * 0.03));
+  vec3 outside = base.rgb * (1.0 - shadow);
+  vec3 inside = liquid(vUv, sd, n, bez, uRefr, uFrost * m * 0.03, uRim, uDisp);
+  float aa = 0.75 / uK;
+  o = vec4(mix(outside, inside, smoothstep(aa, -aa, sd)), base.a);
 }`,
 
     blur: `uniform float uAmt; uniform float uDir; uniform float uStart;
@@ -484,7 +499,7 @@ void main() {
       switch (id) {
         case "liquify": return { uAmt: e.amount, uScale: e.scale };
         case "glass": return { uWidth: e.width, uAngle: rad(e.angle), uStr: e.strength, uFrost: e.frost ?? 0.2, uLight: e.light ?? 0.5 };
-        case "mesh": return { uCell: e.cell, uStr: e.strength, uFrost: e.frost ?? 0.3, uGrout: e.grout ?? 1 };
+        case "mesh": return { uCell: e.cell, uStr: e.strength, uFrost: e.frost ?? 0.3, uGrout: e.grout ?? 1, uRim: e.rim ?? 0.6, uDisp: e.disp ?? 0.5 };
         case "pixel": return { uSize: e.size, uBevel: e.bevel };
         case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
         case "ascii": {
@@ -497,7 +512,7 @@ void main() {
         case "wave": return { uAmp: e.amp, uLen: e.length, uAngle: rad(e.angle) };
         case "swirl": return { uAmt: e.amount, uRad: e.radius, uC: [e.x, 1 - e.y] };
         case "kaleido": return { uSeg: e.segments, uRot: rad(e.rotate), uZoom: e.zoom };
-        case "lens": return { uShape: ["circle", "pill", "square"].indexOf(e.shape), uSize: e.size, uRefr: e.refraction, uFrost: e.frost, uRim: e.rim, uC: [e.x, 1 - e.y] };
+        case "lens": return { uShape: ["circle", "pill", "square"].indexOf(e.shape), uSize: e.size, uRefr: e.refraction, uFrost: e.frost, uRim: e.rim, uDisp: e.disp ?? 0.5, uC: [e.x, 1 - e.y] };
         case "blur": return { uAmt: e.amount, uDir: ["top", "bottom", "left", "right", "center", "even"].indexOf(e.dir), uStart: e.start };
         case "bloom": return { uThr: e.threshold, uRad: e.radius, uInt: e.intensity };
         case "emboss": return { uStr: e.strength, uAngle: rad(e.angle), uDepth: e.depth };

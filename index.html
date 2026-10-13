@@ -21,6 +21,8 @@
     <symbol id="i-up" viewBox="0 0 20 20"><path d="M10 12.5v-9M6.5 7 10 3.5 13.5 7"/><path d="M4 14v1.5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V14"/></symbol>
     <symbol id="i-chev" viewBox="0 0 20 20"><path d="m6 8 4 4 4-4"/></symbol>
     <symbol id="i-next" viewBox="0 0 20 20"><path d="m8 6 4 4-4 4"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 20 20"><path d="m12 6-4 4 4 4"/></symbol>
+    <symbol id="i-pipette" viewBox="0 0 20 20"><path d="m11.5 6 2.5 2.5"/><path d="M13 4.5a1.8 1.8 0 0 1 2.5 2.5L8 14.5l-3 .5.5-3Z"/></symbol>
     <symbol id="i-plus" viewBox="0 0 20 20"><path d="M10 4.5v11M4.5 10h11"/></symbol>
     <symbol id="i-x" viewBox="0 0 20 20"><path d="m6 6 8 8M14 6l-8 8"/></symbol>
     <symbol id="i-grip" viewBox="0 0 20 20"><g fill="currentColor" stroke="none"><circle cx="7.5" cy="6" r="1.1"/><circle cx="12.5" cy="6" r="1.1"/><circle cx="7.5" cy="10" r="1.1"/><circle cx="12.5" cy="10" r="1.1"/><circle cx="7.5" cy="14" r="1.1"/><circle cx="12.5" cy="14" r="1.1"/></g></symbol>
@@ -48,21 +50,15 @@
       <button class="ib" id="swap" title="Swap width and height" aria-label="Swap width and height"><svg class="ic"><use href="#i-swap"/></svg></button>
     </div>
     <div class="top-right">
-      <button class="ib" id="undo" title="Undo (⌘Z)" aria-label="Undo"><svg class="ic"><use href="#i-undo"/></svg></button>
-      <button class="ib" id="redo" title="Redo (⇧⌘Z)" aria-label="Redo"><svg class="ic"><use href="#i-redo"/></svg></button>
-      <span class="divider"></span>
-      <button class="btn" id="variation" title="Same look, new variation">Variation<kbd>R</kbd></button>
-      <button class="btn" id="surprise" title="A new look from the curated set">Surprise me<kbd>⇧R</kbd></button>
-      <span class="divider"></span>
       <div class="menu-wrap">
         <button class="ib lg" id="settingsBtn" title="Settings" aria-label="Settings" aria-haspopup="true"><svg class="ic"><use href="#i-sliders"/></svg></button>
         <div class="pop settings" id="settingsMenu" hidden>
           <label class="set-row" for="safe">
-            <span><b>Safe values</b><small>Randomizing stays in ranges that render cleanly.</small></span>
+            <span><b>Safe values</b><small>Randomize within clean ranges</small></span>
             <span class="switch"><input type="checkbox" id="safe"><span></span></span>
           </label>
           <label class="set-row" for="unlock">
-            <span><b>Unlock values</b><small>Type any number, past the slider limits.</small></span>
+            <span><b>Unlock values</b><small>Type past slider limits</small></span>
             <span class="switch"><input type="checkbox" id="unlock"><span></span></span>
           </label>
           <div class="set-sep"></div>
@@ -100,17 +96,15 @@
     </aside>
 
     <aside class="options scroll" id="options" aria-live="polite">
-      <div class="opt-head"><h2 class="col-title" id="optTitle"></h2><div class="gh-tools" id="optTools"></div></div>
+      <div class="opt-head" id="optHead"><h2 class="col-title" id="optTitle"></h2><div class="gh-tools" id="optTools"></div></div>
 
       <div class="panel-sec" data-panel="preset">
-        <p class="lede">Start from a preset. Turn parts off to keep yours and only take the rest.</p>
-        <div class="take-row" id="takeRow"></div>
+        <div class="take" id="takeRow"></div>
         <div class="seg filter" id="presetFilter"></div>
         <div class="cards" id="presetGrid"></div>
       </div>
 
       <div class="panel-sec" data-panel="generator">
-        <p class="lede">What draws the image. Contours export as vector SVG; the rest are pixel images.</p>
         <div class="cards" id="genGrid"></div>
       </div>
 
@@ -146,7 +140,7 @@
         </div>
         <div data-gen="raster">
           <div id="gradCtrls"></div>
-          <p class="hint" id="gradHint">Drag the color dots on the canvas to move them. Double-click to add one.</p>
+          <p class="hint" id="gradHint">Drag dots on the canvas. Double-click to add.</p>
         </div>
       </div>
 
@@ -157,8 +151,11 @@
       </div>
 
       <div class="panel-sec" data-panel="colors">
-        <h3 class="sub first">Palettes</h3>
-        <div class="palettes" id="palettes"></div>
+        <div class="pal-head">
+          <div class="seg sm tabs" id="palTabs"></div>
+          <div class="pager"><button class="ib xs" id="palPrev" aria-label="Previous palettes"><svg class="ic"><use href="#i-prev"/></svg></button><span class="dots" id="palDots"></span><button class="ib xs" id="palNext" aria-label="Next palettes"><svg class="ic"><use href="#i-next"/></svg></button></div>
+        </div>
+        <div class="pal-view"><div class="palettes" id="palettes"></div></div>
         <div data-gen="contours">
           <h3 class="sub">Colors</h3>
           <div class="label-row"><label class="label" for="lineHex" id="lineLbl">Lines</label><input class="hex mono" id="lineHex" spellcheck="false" autocomplete="off"></div>
@@ -180,9 +177,12 @@
         <div data-gen="raster">
           <div class="label-row stops-row"><h3 class="sub inline">Colors</h3><span class="val-static mono" id="stopCount"></span></div>
           <div class="stops" id="stops"></div>
+          <div class="label-row add-row"><span class="label">Add</span><div class="add-sug" id="addSug"></div></div>
         </div>
+        <h3 class="sub">Suggested</h3>
+        <div class="suggest" id="suggest"></div>
         <h3 class="sub">Effect inks</h3>
-        <p class="hint">Used by halftone, engrave, ASCII and dither when they're set to ink only.</p>
+        <p class="hint">For ink-only print effects.</p>
         <div class="label-row"><label class="label" for="inkHex">Ink</label><input class="hex mono" id="inkHex" spellcheck="false" autocomplete="off"></div>
         <div class="swatches" id="inkSw"></div>
         <div class="label-row"><label class="label" for="paperHex">Paper</label><input class="hex mono" id="paperHex" spellcheck="false" autocomplete="off"></div>
@@ -199,7 +199,6 @@
       </div>
 
       <div class="panel-sec" data-panel="addfx">
-        <p class="lede">Effects run in the order they're stacked in the Effects slot. Each one is previewed on your current design.</p>
         <div id="fxGallery"></div>
       </div>
     </aside>
@@ -212,6 +211,13 @@
           <svg class="overlay" id="ov"></svg>
         </div>
         <div class="stage-meta mono"><span class="kind" id="kind">SVG</span><span id="ms"></span></div>
+        <div class="stage-bar" role="toolbar" aria-label="Canvas">
+          <button class="ib" id="undo" title="Undo (⌘Z)" aria-label="Undo"><svg class="ic"><use href="#i-undo"/></svg></button>
+          <button class="ib" id="redo" title="Redo (⇧⌘Z)" aria-label="Redo"><svg class="ic"><use href="#i-redo"/></svg></button>
+          <span class="bar-sep"></span>
+          <button class="bar-btn" id="variation" title="Same look, new variation">Variation<kbd>R</kbd></button>
+          <button class="bar-btn" id="surprise" title="A new look from the presets">Surprise<kbd>⇧R</kbd></button>
+        </div>
       </div>
     </section>
   </main>
