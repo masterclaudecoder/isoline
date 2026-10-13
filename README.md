@@ -1,11 +1,13 @@
-# Contour Studio
+# Topographic
 
-Topographic line pattern generator for Figma. Static site — open `index.html` or serve the folder (`python3 -m http.server`).
+Topographic line patterns for Figma. Static site: open `index.html` or serve the folder (`python3 -m http.server`).
 
-- Nine patterns: Terrain, Ridges, Flow, Peaks, Islands, Rings, Strata, Waves, Dunes
-- One-click looks: Classic, Uniform (all lines one width), Strata (straight lines with a few bends and rings), Swell (lines that bulge and taper)
-- Any canvas size, scale, detail, warp, seed
-- Line count, spacing, weight, swell, taper, bold index lines, smoothing, grid precision, speck cleanup
-- Solid or blended stroke colors, any background or transparent
-- **Copy for Figma** puts clean SVG on the clipboard — paste with ⌘V. Also exports SVG and 2× PNG.
-- `R` rolls a new seed. Settings persist locally.
+- **Patterns:** Blobs, Terrain, Flow, Rings, Ridges, Dunes, Lines, Strata, Waves
+- **Looks:** Soft, Bold, Orbit, Night, Stripes, Strata, Swell, Spectrum
+- **Points:** double-click the canvas to add a peak, drag to move, scroll or drag the handle to resize, double-click a point to turn it into a dip. Points shape every pattern; Blobs and Rings are built from them.
+- **Lines:** count or pixel gap, bias, weight up to 40px, swell, taper, accent lines, smoothing, grid precision, cleanup
+- **Randomize:** `R` new seed, `⇧R` everything, plus a dice on every control and section
+- **Export:** SVG or PNG (1–4×) with file size, or `C` to copy SVG and paste into Figma
+- `⌘Z` / `⇧⌘Z` undo and redo
+
+`logos.html` shows the logo concepts. Files: `engine.js` (field, contours, smoothing, SVG; no DOM), `brand.js` (logo concepts), `app.js` (UI).

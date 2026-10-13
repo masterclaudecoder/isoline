@@ -2,38 +2,58 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Contour Studio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Topographic</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main class="app">
   <aside class="panel" id="panel">
-    <section class="group">
-      <h2>Pattern</h2>
+    <div class="brand" id="brand"></div>
+
+    <section class="group" data-group="pattern">
+      <div class="gh"><h2>Pattern</h2><div class="gh-tools"></div></div>
       <div class="patterns" id="patterns"></div>
       <div class="looks" id="looks"></div>
     </section>
-    <section class="group">
-      <h2>Shape</h2>
+
+    <section class="group" data-group="points">
+      <div class="gh">
+        <h2>Points</h2>
+        <div class="gh-tools">
+          <button class="ib" id="showPoints" title="Show handles" aria-label="Show handles"><i data-lucide="eye"></i></button>
+          <label class="switch" title="Use points"><input type="checkbox" id="usePoints"><span></span></label>
+        </div>
+      </div>
+      <div class="pt-actions">
+        <button class="btn sm" id="addPoint"><i data-lucide="plus"></i>Add</button>
+        <button class="btn sm" id="scatter"><i data-lucide="sparkles"></i>Scatter</button>
+        <button class="btn sm ghost" id="clearPoints"><i data-lucide="trash-2"></i>Clear</button>
+      </div>
+      <p class="hint" id="ptHint">Double-click canvas to add. Drag to move. Scroll to resize.</p>
+      <div id="pointCtrls"></div>
+    </section>
+
+    <section class="group" data-group="shape">
+      <div class="gh"><h2>Shape</h2><div class="gh-tools"></div></div>
       <div id="shape"></div>
       <div class="seed-row">
         <label class="label" for="seed">Seed</label>
         <input class="field mono" id="seed" type="number" min="0" max="999999">
-        <button class="btn icon" id="dice" title="New seed (R)" aria-label="New seed">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/></svg>
-        </button>
       </div>
     </section>
-    <section class="group">
-      <h2>Lines</h2>
+
+    <section class="group" data-group="lines">
+      <div class="gh"><h2>Lines</h2><div class="gh-tools"></div></div>
       <div id="lines"></div>
     </section>
-    <section class="group">
-      <h2>Color</h2>
+
+    <section class="group" data-group="color">
+      <div class="gh"><h2>Color</h2><div class="gh-tools"></div></div>
       <div class="label-row"><span class="label">Stroke</span></div>
       <div class="swatches" id="lineSw"></div>
       <div class="label-row">
@@ -43,7 +63,7 @@
       <div class="swatches" id="line2Sw"></div>
       <div class="label-row">
         <span class="label">Background</span>
-        <label class="switch" title="Transparent"><input type="checkbox" id="transparent"><span></span><em>None</em></label>
+        <label class="switch" title="Transparent"><em>None</em><input type="checkbox" id="transparent"><span></span></label>
       </div>
       <div class="swatches" id="bgSw"></div>
       <div id="color"></div>
@@ -56,21 +76,49 @@
         <input class="dim" id="w" type="number" min="64" max="8000" aria-label="Width">
         <span class="times">×</span>
         <input class="dim" id="h" type="number" min="64" max="8000" aria-label="Height">
-        <div class="presets" id="presets"></div>
+        <div class="menu-wrap">
+          <button class="btn sm" id="sizeBtn" aria-haspopup="true"><span id="sizeName">Custom</span><i data-lucide="chevron-down"></i></button>
+          <div class="pop" id="sizeMenu" hidden></div>
+        </div>
+        <button class="ib" id="swap" title="Swap width and height" aria-label="Swap width and height"><i data-lucide="arrow-left-right"></i></button>
       </div>
       <div class="actions">
-        <button class="btn" id="png">PNG</button>
-        <button class="btn" id="svg">SVG</button>
-        <button class="btn primary" id="copy">Copy for Figma</button>
+        <button class="ib" id="undo" title="Undo (⌘Z)" aria-label="Undo"><i data-lucide="undo-2"></i></button>
+        <button class="ib" id="redo" title="Redo (⇧⌘Z)" aria-label="Redo"><i data-lucide="redo-2"></i></button>
+        <button class="btn" id="randomize"><i data-lucide="dices"></i>Randomize<kbd>R</kbd></button>
+        <button class="btn" id="shuffle"><i data-lucide="shuffle"></i>Randomize all<kbd>⇧R</kbd></button>
+        <div class="menu-wrap">
+          <button class="btn primary" id="exportBtn" aria-haspopup="true">Export<i data-lucide="chevron-down"></i></button>
+          <div class="pop export" id="exportMenu" hidden>
+            <div class="seg" id="fmt">
+              <button data-v="svg">SVG</button><button data-v="png">PNG</button>
+            </div>
+            <div class="seg" id="pngScale" hidden>
+              <button data-v="1">1×</button><button data-v="2">2×</button><button data-v="3">3×</button><button data-v="4">4×</button>
+            </div>
+            <label class="label" for="fname">File</label>
+            <input class="field mono" id="fname" spellcheck="false">
+            <dl class="facts" id="facts"></dl>
+            <div class="ex-actions">
+              <button class="btn" id="copy"><i data-lucide="copy"></i>Copy SVG<kbd>C</kbd></button>
+              <button class="btn primary" id="download"><i data-lucide="download"></i>Download</button>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
-    <div class="canvas-wrap">
-      <div class="artboard" id="art"></div>
+    <div class="canvas-wrap" id="wrap">
+      <div class="artboard" id="art">
+        <div class="art-svg" id="artSvg"></div>
+        <svg class="overlay" id="ov"></svg>
+      </div>
+      <span class="ms mono" id="ms"></span>
     </div>
-    <footer class="meta mono" id="meta"></footer>
   </section>
 </main>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status"></div>
+<script src="engine.js"></script>
+<script src="brand.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
