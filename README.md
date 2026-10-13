@@ -3,9 +3,22 @@
 Topographic patterns, gradients and effects for Figma. Static site: open `index.html` or serve the folder (`python3 -m http.server`).
 
 ## Pages
-The home page (`#/`) links to two tools. Moving between pages is a seamless transition: the top bar stays put, and each tool's preview morphs into the tool.
-- **Studio** (`#/studio`): the pattern, gradient and effects editor described below.
-- **Palettes** (`#/palettes`): a palette generator. Space generates new colors for every unlocked column, using OKLCH harmonies (auto, analogous, monochrome, complement, triad, split, pastel, vivid, earthy). Each column shows its nearest color name and its contrast. You can lock a column, edit it, pick a tint or shade, drag it to reorder, add one between or remove one. You can also sort by lightness and undo. Export copies hex codes, CSS variables, JSON or a share link (`#/palettes/2f6fdb-...`), or downloads a PNG. **Use in Studio** applies the palette to the studio. Saved palettes also appear under a Saved tab in the studio's Colors panel.
+The home page (`#/`) shows three tools as large cards. Moving between pages is a seamless transition: the top bar stays put, pages crossfade, a tool's preview morphs into the tool, and floating bars pull up from the bottom once their page lands.
+- **Studio** (`#/studio`): the pattern, gradient, effects and motion editor described below. Each step ends with a button to the next one.
+- **Palettes** (`#/palettes`):
+  - Space generates new colors for every unlocked column, using OKLCH harmonies (auto, analogous, monochrome, complement, triad, split, pastel, vivid, earthy).
+  - New colors sweep across the columns as a wave, with the hex codes rolling through the in-between values.
+  - The harmony wheel in the mode button plots each color's hue.
+  - V (Vary) nudges colors instead of replacing them, and the proportions toggle sizes the columns 60-30-10.
+  - Columns show their nearest name and contrast, and can be locked, edited, shaded, reordered, added or removed.
+  - Export copies hex codes, CSS variables, JSON or a share link (`#/palettes/2f6fdb-...`), or downloads a PNG. **Use in Studio** applies the palette there.
+  - The bar is liquid glass: it bends what's behind its edges in Chromium browsers, and is frosted elsewhere.
+- **Components** (`#/components`) has two modes:
+  - **Libraries:** a directory of 120 UI, headless, animation, effects, icon, chart, form, 3D, styling and font libraries, filterable by framework and category, with picks first.
+  - **Builder:** design tokens for type (Google Fonts pairings, any Google or installed font, or your own uploaded font files), color, spacing, radius, elevation and motion, plus editable design rules. A live component sheet and four landing layouts show every change. Export copies CSS variables, a Tailwind v4 theme, JSON tokens, or a design or build brief for AI agents.
+
+## Agents
+**For AI** in the top bar copies a design brief, a build handoff or the agent guide for whatever page is open. Agents can drive the whole app through `window.Isoline`: `studio`, `palettes`, `components`, `color`, `go` and `guide()`. The guide is also embedded in the page as `#isoline-agent-guide`.
 
 ## How it works
 The left column is the build, made of one slot per layer: **Preset → Generator → Shape → Lines → Colors → Effects**. Click a slot to open its options in the middle column; every choice there has a live preview of your current design. Effects stack: `+ Add effect` adds another, the count badge shows how many there are, drag the grip to reorder them, and × removes one.
@@ -28,7 +41,7 @@ The Motion slot makes the design loop seamlessly:
 - **Flow:** contour lines flow outward, or a gradient's colors sway.
 - **Breathe:** the warp swells and settles.
 
-Play previews the loop on the canvas. **Export MP4** renders every frame at an exact timestamp using the browser's video encoder (H.264, or VP9 where H.264 isn't available) and [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (MIT). Browsers without WebCodecs record a WebM in real time.
+Each motion has a loop length, amplitude and seed, plus loop, ping-pong or once playback, forward or reverse, and easing. The easing is a preset or a custom cubic bezier you drag. Effects with randomness have their own seed. Play previews the loop on the canvas. Video is a format in the Export menu, alongside SVG and PNG, and every export shows its progress. **Export MP4** renders every frame at an exact timestamp using the browser's video encoder (H.264, or VP9 where H.264 isn't available) and [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (MIT). Browsers without WebCodecs record a WebM in real time.
 
 ## Lines (contours only)
 Lines (strokes), Bands (filled stripes, PewDiePie-style) or Layers (stacked fills). Count or gap, bias, weight, swell, taper, accent lines, smoothing and cleanup.
@@ -59,6 +72,9 @@ Files:
 - `app.js`: the studio.
 - `palette.js`: the palette tool.
 - `shell.js`: pages and transitions.
+- `components.js`: the library directory and token builder.
+- `agent.js`: the agent API and briefs.
+- `glass.js`: liquid glass bars.
 - `brand.js`: the logo.
 - `mp4-muxer.js`: vendored MP4 muxer.
 

@@ -49,8 +49,51 @@
     });
     if (!flip) fresh.sort((a, b) => C.toOklch(a)[0] - C.toOklch(b)[0]);
     let j = 0;
-    st.cols = st.cols.map((c) => (c.lock ? c : { hex: fresh[j++], lock: false }));
-    snap(); render(); save();
+    morph(st.cols.map((c) => (c.lock ? c : { hex: fresh[j++], lock: false })));
+  }
+  // Vary: nudge every unlocked color a little in hue, lightness and chroma, keeping the palette's character.
+  function vary() {
+    morph(st.cols.map((c) => {
+      if (c.lock) return c;
+      const [L, Ch, H] = C.toOklch(c.hex);
+      return { hex: C.fromOklch(clamp(L + rnd(-0.05, 0.05), 0.12, 0.98), Ch * rnd(0.85, 1.15), (H + rnd(-14, 14) + 360) % 360), lock: false };
+    }));
+  }
+  // New colors sweep across the columns as a wave: each column blends to its new color in OKLab while
+  // its hex rolls through the in-between values, then the name settles.
+  let morphing = 0;
+  function morph(next) {
+    const prev = st.cols.map((c) => c.hex);
+    st.cols = next; snap(); save();
+    const els = [...colsEl.children];
+    if (els.length !== next.length || matchMedia("(prefers-reduced-motion: reduce)").matches) { render(true); return; }
+    const tok = ++morphing, t0 = performance.now(), dur = 560, gap = 70;
+    els.forEach((el, i) => { if (prev[i] !== next[i].hex) el.classList.add("morphing"); });
+    const step = (now) => {
+      if (tok !== morphing) return;
+      let busy = false;
+      els.forEach((el, i) => {
+        if (prev[i] === next[i].hex) return;
+        const t = clamp((now - t0 - i * gap) / dur, 0, 1), e = 1 - Math.pow(1 - t, 3);
+        if (t < 1) busy = true;
+        paintCol(el, t >= 1 ? next[i].hex : C.mixOklab(prev[i], next[i].hex, e), t >= 1);
+      });
+      if (busy) requestAnimationFrame(step); else { render(true); }
+    };
+    requestAnimationFrame(step);
+    drawWheel(next.map((c) => c.hex));
+  }
+  function paintCol(el, hex, final) {
+    const on = textOn(hex);
+    el.style.setProperty("--c", hex); el.style.setProperty("--on", on);
+    el.querySelector(".pt-hex").textContent = hex.slice(1).toUpperCase();
+    if (final) { el.querySelector(".pt-name").textContent = C.name(hex); el.querySelector(".pt-ratio").textContent = `Contrast ${C.contrast(hex, on).toFixed(1)}`; el.classList.remove("morphing"); }
+  }
+  // Harmony wheel: each color as a dot at its hue, further out the more chromatic it is.
+  function drawWheel(hexes) {
+    const w = $("ptWheel");
+    if (!w.children.length || w.children.length !== hexes.length) w.innerHTML = hexes.map(() => "<i></i>").join("");
+    hexes.forEach((h, i) => { const [, c, hh] = C.toOklch(h), r = Math.min(1, c / 0.2) * 7, a = (hh * Math.PI) / 180; const d = w.children[i]; d.style.background = h; d.style.translate = `${(Math.cos(a) * r).toFixed(1)}px ${(-Math.sin(a) * r).toFixed(1)}px`; });
   }
 
   // ---------- columns ----------
@@ -80,7 +123,8 @@
     const have = [...colsEl.children];
     if (all || have.length !== st.cols.length) colsEl.innerHTML = st.cols.map(colHTML).join("");
     else st.cols.forEach((c, i) => { const el = have[i]; if (el.dataset.hex === c.hex && el.dataset.lock === String(c.lock) && shadesFor !== i && !el.querySelector(".pt-shades")) return; const n = document.createRange().createContextualFragment(colHTML(c, i)).firstElementChild; n.style.setProperty("--delay", i * 40 + "ms"); n.classList.add("swap"); el.replaceWith(n); });
-    [...colsEl.children].forEach((el, i) => { el.dataset.hex = st.cols[i].hex; el.dataset.lock = String(st.cols[i].lock); });
+    [...colsEl.children].forEach((el, i) => { el.dataset.hex = st.cols[i].hex; el.dataset.lock = String(st.cols[i].lock); el.style.flexGrow = st.weighted ? weightOf(i, st.cols.length) : ""; });
+    drawWheel(st.cols.map((c) => c.hex));
     syncBar(); root.dispatchEvent(new Event("palette-change"));
   }
   colsEl.addEventListener("click", async (e) => {
@@ -123,10 +167,15 @@
     addEventListener("pointermove", move); addEventListener("pointerup", up);
   });
 
+  // Proportions: size columns by a 60-30-10 style split, the first color dominant and the last an accent.
+  function weightOf(i, n) { const w = [60, 30, 10].concat(Array(8).fill(6)); if (n <= 3) return w[i]; const base = [44, 22, 12]; return i < 3 ? base[i] : 22 / (n - 3); }
+
   // ---------- bar ----------
   $("ptModeMenu").innerHTML = MODES.map(([k, l]) => `<button class="opt" data-m="${k}"><span>${l}</span></button>`).join("");
   $("ptModeMenu").onclick = (e) => { const b = e.target.closest("[data-m]"); if (!b) return; st.mode = b.dataset.m; $("ptModeMenu").hidden = true; save(); syncBar(); generate(); };
   $("ptGen").onclick = generate;
+  $("ptVary").onclick = vary;
+  $("ptWeights").onclick = () => { st.weighted = !st.weighted; save(); render(true); };
   $("ptUndo").onclick = () => travel(-1);
   $("ptRedo").onclick = () => travel(1);
   $("ptSort").onclick = () => { st.cols.sort((a, b) => C.toOklch(a.hex)[0] - C.toOklch(b.hex)[0]); snap(); render(true); save(); };
@@ -137,6 +186,7 @@
     $("ptUndo").disabled = hi <= 0; $("ptRedo").disabled = hi >= hist.length - 1;
     const isSaved = saved.some((p) => p.colors.join() === st.cols.map((c) => c.hex).join());
     $("ptSavedBtn").classList.toggle("on", isSaved);
+    $("ptWeights").classList.toggle("on", !!st.weighted);
   }
   function renderSaved() {
     const cur = st.cols.map((c) => c.hex).join();
@@ -180,6 +230,7 @@
   document.addEventListener("keydown", (e) => {
     if (root.Shell?.route !== "palettes" || e.target.matches("input, textarea")) return;
     if (e.code === "Space") { e.preventDefault(); generate(); }
+    else if (e.key.toLowerCase() === "v" && !e.metaKey && !e.ctrlKey) vary();
     else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { e.preventDefault(); travel(e.shiftKey ? 1 : -1); }
   });
 
@@ -197,6 +248,10 @@
   root.Palettes = {
     colors: () => st.cols.map((c) => c.hex),
     saved: () => saved.slice(),
+    generate(mode) { if (mode && MODES.some((m) => m[0] === mode)) st.mode = mode; generate(); return st.cols.map((c) => c.hex); },
+    vary() { vary(); return st.cols.map((c) => c.hex); },
+    lock(i, on = true) { if (st.cols[i]) { st.cols[i].lock = on; render(true); save(); } },
+    modes: () => MODES.map((m) => m[0]),
     load(hexes) { st.cols = hexes.slice(0, 10).map((hex) => ({ hex, lock: false })); snap(); render(true); save(); },
     onShow(hash) { if (fromHash(hash)) { snap(); render(true); save(); } },
   };

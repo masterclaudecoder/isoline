@@ -5,9 +5,9 @@
 (function (root) {
   "use strict";
   const $ = (id) => document.getElementById(id);
-  const ORDER = { home: 0, studio: 1, palettes: 2 };
+  const ORDER = { home: 0, studio: 1, palettes: 2, components: 3 };
   const reduce = matchMedia("(prefers-reduced-motion: reduce)");
-  const parse = (h) => (h.startsWith("#/palettes") ? "palettes" : h.startsWith("#/studio") ? "studio" : "home");
+  const parse = (h) => (h.startsWith("#/palettes") ? "palettes" : h.startsWith("#/studio") ? "studio" : h.startsWith("#/components") ? "components" : "home");
   const hashFor = (r) => (r === "home" ? "#/" : "#/" + r);
   let route = null;
 
@@ -18,8 +18,17 @@
     for (const el of document.querySelectorAll("[data-for]")) el.hidden = el.dataset.for !== r;
     document.body.dataset.route = r;
     if (r === "studio") root.Studio?.onShow();
-    if (r === "palettes") root.Palettes?.onShow(location.hash);
+    if (r === "palettes") {
+      root.Palettes?.onShow(location.hash);
+      // Columns rise in one after another, then the bar pulls up beneath them.
+      const pt = document.querySelector(".pt");
+      [...pt.querySelectorAll(".pt-col")].forEach((c, i) => c.style.setProperty("--k", i));
+      pt.style.setProperty("--n", pt.querySelectorAll(".pt-col").length);
+      pt.classList.remove("enter"); void pt.offsetWidth; pt.classList.add("enter");
+      clearTimeout(pt._t); pt._t = setTimeout(() => pt.classList.remove("enter"), 1600);
+    }
     if (r === "home") paintHome();
+    if (r === "components") root.Components?.onShow();
   }
   function go(r, push = true) {
     if (r === route) return;
@@ -27,7 +36,12 @@
     const from = route, dir = ORDER[r] >= ORDER[from] ? "fwd" : "back";
     document.documentElement.dataset.dir = dir;
     if (reduce.matches || from == null) return show(r);
-    if (document.startViewTransition) { document.startViewTransition(() => show(r)); return; }
+    if (document.startViewTransition) {
+      const html = document.documentElement;
+      html.classList.add("vt");
+      document.startViewTransition(() => show(r)).finished.finally(() => html.classList.remove("vt"));
+      return;
+    }
     // Fallback: the old page eases out, then the new one eases in.
     const old = document.querySelector(`.page[data-page="${from}"]`);
     old.classList.add("leaving");
@@ -38,8 +52,10 @@
   async function paintHome() {
     const pal = root.Palettes?.colors() || [];
     $("homePalette").innerHTML = pal.map((c) => `<i style="background:${c}"></i>`).join("");
+    root.Components?.preview($("homeComponents"));
     const host = $("homeStudio");
-    const c = await root.Studio?.snapshot(560, 350);
+    const r = host.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+    const c = await root.Studio?.snapshot(Math.round((r.width || 560) * dpr), Math.round((r.height || 350) * dpr));
     if (c) { host.innerHTML = ""; host.appendChild(c); }
   }
 

@@ -46,18 +46,20 @@
   ];
   const FXI = Object.fromEntries(FXC.map(([id, name, cat, d, p]) => [id, { id, name, cat, d, p }]));
   const FX_IDS = FXC.map((f) => f[0]);
-  const FX_DEFAULTS = Object.fromEntries(FXC.map(([id, , , d]) => [id, { on: false, ...d }]));
+  // Effects with randomness get their own seed; 0 follows the design's seed.
+  const SEEDED = new Set(["liquify", "voronoi", "grain", "water", "paper", "riso", "rays"]);
+  const FX_DEFAULTS = Object.fromEntries(FXC.map(([id, , , d]) => [id, { on: false, ...d, ...(SEEDED.has(id) ? { seed: 0 } : {}) }]));
   const FX_CATS = [...new Set(FXC.map((f) => f[2]))];
 
   // ---------- generators + palettes ----------
   const GENS = [
-    ["contours", "Contours", "Topographic bands"],
-    ["mesh", "Mesh", "Blended color points"],
-    ["flow", "Flow", "Warped, flowing color"],
-    ["noise", "Noise", "Clouds, ridges, cells"],
-    ["linear", "Linear", "Straight gradient"],
-    ["radial", "Radial", "From the center out"],
-    ["conic", "Conic", "Around the center"],
+    ["contours", "Contours", "Lines and bands"],
+    ["mesh", "Mesh", "Soft color points"],
+    ["flow", "Flow", "Warped color fields"],
+    ["noise", "Noise", "Clouds, ridges and cells"],
+    ["linear", "Linear", "Straight blend"],
+    ["radial", "Radial", "Blend from the center"],
+    ["conic", "Conic", "Blend around a point"],
   ];
   const GEN_LABEL = Object.fromEntries(GENS.map((g) => [g[0], g[1]]));
   const NOISE_TYPES = [["clouds", "Clouds"], ["ridges", "Ridges"], ["billow", "Billow"], ["cells", "Cells"], ["veins", "Veins"], ["marble", "Marble"], ["neuro", "Neuro"], ["ring", "Smoke ring"]];
@@ -134,7 +136,7 @@
     grad: { type: "flow", colors: ramp("Prism"), points: [{ x: 0.18, y: 0.22 }, { x: 0.8, y: 0.2 }, { x: 0.72, y: 0.8 }, { x: 0.2, y: 0.84 }, { x: 0.48, y: 0.5 }], angle: -25, warp: 0.5, warpScale: 1.6, soft: 1.6, scale: 0.45, detail: 2, stretch: 1.8, contrast: 1, noise: "clouds" },
     fx: clone(FX_DEFAULTS), fxOrder: [], ink: "#1b1b1b", paper: "#f1ede4",
     fmt: "svg", pngScale: 2,
-    motion: { type: "still", dur: 6, amt: 0.5 }, vid: { size: 1080, fps: 30, loops: 1 },
+    motion: { type: "still", dur: 6, amt: 0.5, mode: "loop", dir: 1, ease: "linear", bez: [0.42, 0, 0.58, 1], seed: 0 }, vid: { size: 1080, fps: 30, loops: 1 },
   };
   const STORE = "isoline-v4", PREFS = "isoline-prefs-v4";
   function withDefaults(src) {
@@ -409,24 +411,29 @@
   // ---------- slots (left column) ----------
   // Each layer of the design is a slot showing its current pick. Clicking opens its choices.
   const slotWhen = { lines: () => gen() === "contours" };
+  // Tile copy: the title names what is chosen; the subtitle lists its key settings as plain facts.
+  const PRESET_KIND = { Lines: "Line preset", Fills: "Fill preset", Gradients: "Gradient preset", Noise: "Noise preset", Effects: "Effect preset" };
   function slotInfo(id) {
-    const g = gen();
-    if (id === "preset") { const p = currentPreset(); return [p ? p[1] : "Custom", p ? p[0] : "Edited"]; }
-    if (id === "generator") return [GEN_LABEL[g], GENS.find((x) => x[0] === g)[2]];
+    const g = gen(), gr = S.grad, sc = (v) => f2(v) + "×";
+    if (id === "preset") { const p = currentPreset(); return p ? [p[1], PRESET_KIND[p[0]]] : ["Custom", "Your own settings"]; }
+    if (id === "generator") return [GEN_LABEL[g], g === "contours" ? "Vector, SVG output" : "Raster, PNG output"];
     if (id === "shape") {
-      if (g === "contours") return [patLabel(S.pattern), activePoints() ? `${S.points.length} points, seed ${S.seed}` : `Seed ${S.seed}`];
-      if (g === "noise") return [NOISE_LABEL[S.grad.noise], `Seed ${S.seed}`];
-      if (g === "mesh") return [`${S.grad.colors.length} color points`, `Warp ${f2(S.grad.warp)}`];
-      return [`${GEN_LABEL[g]} form`, `Seed ${S.seed}`];
+      if (g === "contours") return [patLabel(S.pattern), activePoints() ? `${S.points.length} points, seed ${S.seed}` : `Scale ${S.scale}px, seed ${S.seed}`];
+      if (g === "noise") return [NOISE_LABEL[gr.noise], `Scale ${sc(gr.scale)}, seed ${S.seed}`];
+      if (g === "flow") return ["Flow field", `Scale ${sc(gr.scale)}, seed ${S.seed}`];
+      if (g === "mesh") return ["Mesh", `${gr.colors.length} points, softness ${f2(gr.soft)}`];
+      if (g === "radial") return ["Radial", `Warp ${f2(gr.warp)}`];
+      return [GEN_LABEL[g], `Angle ${gr.angle}°, warp ${f2(gr.warp)}`];
     }
-    if (id === "lines") return S.mode === "lines" ? ["Lines", `${f2(S.weight).replace(/\.?0+$/, "")}px, ${linear() ? S.gap + "px gap" : S.levels + " lines"}`] : S.mode === "bands" ? ["Bands", `${pct(S.band)} thick`] : ["Layers", `${linear() ? "Every " + S.gap + "px" : S.levels + " layers"}`];
+    if (id === "lines") return S.mode === "lines" ? ["Lines", `${f2(S.weight).replace(/\.?0+$/, "")}px weight, ${linear() ? S.gap + "px gap" : S.levels + " lines"}`] : S.mode === "bands" ? ["Bands", `${pct(S.band)} thick, ${linear() ? S.gap + "px gap" : S.levels + " bands"}`] : ["Layers", linear() ? `${S.gap}px gap` : `${S.levels} layers`];
     if (id === "colors") {
-      const p = currentPal();
-      const n = inksOf().length;
+      const p = currentPal(), n = inksOf().length;
       return [p ? p.name : "Custom", g === "contours" ? `${n} colors${S.gradient || S.mode === "layers" ? ", blended" : ""}` : `${n} colors`];
     }
     return ["", ""];
   }
+  // An effect tile's subtitle is its first setting and value, like "Rib width 44px".
+  function fxFact(id) { const p = FXI[id].p.find((q) => q.k); if (!p) return FXI[id].cat; const v = S.fx[id][p.k]; return `${p.label} ${p.fmt ? p.fmt(v) : v}`; }
   const slotColors = () => (gen() === "contours" ? (S.gradient || S.mode === "layers" || S.mids.length ? [S.bg, S.line, ...S.mids, S.line2] : [S.bg, S.line]) : S.grad.colors);
   // The build column is built once and patched in place, so selection, text and colors can transition.
   let slotKey = "";
@@ -455,11 +462,11 @@
   function fxTile(id) {
     const t = document.createElement("div");
     t.className = "tile fx"; t.dataset.fx = id;
-    t.innerHTML = `<span class="grip" title="Drag to reorder" aria-label="Drag to reorder ${FXI[id].name}">${ic("grip")}</span><button class="tile-main" data-slot="fx:${id}"><span class="tile-th" data-th="fx:${id}"></span><span class="tile-text"><b>${FXI[id].name}</b><small>${FXI[id].cat}</small></span></button><button class="ib xs" data-remove="${id}" aria-label="Remove ${FXI[id].name}" title="Remove">${ic("x")}</button>`;
+    t.innerHTML = `<span class="grip" title="Drag to reorder" aria-label="Drag to reorder ${FXI[id].name}">${ic("grip")}</span><button class="tile-main" data-slot="fx:${id}"><span class="tile-th" data-th="fx:${id}"></span><span class="tile-text"><b>${FXI[id].name}</b><small></small></span></button><button class="ib xs" data-remove="${id}" aria-label="Remove ${FXI[id].name}" title="Remove">${ic("x")}</button>`;
     return t;
   }
   function renderSlots() {
-    const key = JSON.stringify([gen(), S.fxOrder, P.slot, ...SLOT_DEFS.map(([id]) => slotInfo(id)), slotColors(), S.motion]);
+    const key = JSON.stringify([gen(), S.fxOrder, P.slot, ...SLOT_DEFS.map(([id]) => slotInfo(id)), slotColors(), S.motion, S.fxOrder.map(fxFact)]);
     if (key === slotKey) return;
     slotKey = key;
     const tiles = () => [...slotList.querySelectorAll(".tile")];
@@ -488,8 +495,9 @@
       t.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.95)" }], { duration: 200, easing: EASE }).onfinish = () => t.remove();
     }
     addTile.classList.toggle("on", P.slot === "addfx");
-    { const t = motionSlot.querySelector(".tile"), m = S.motion; t.classList.toggle("on", P.slot === "motion"); t.classList.toggle("live", m.type !== "still"); setText(t.querySelector("b"), MOTION_NAME[m.type]); setText(t.querySelector("small"), m.type === "still" ? "Add a loop" : `${m.dur}s loop`); }
-    setText(addTile.querySelector("small"), S.fxOrder.length ? "Stack another" : "Glass, grain, print and more");
+    { const t = motionSlot.querySelector(".tile"), m = S.motion; t.classList.toggle("on", P.slot === "motion"); t.classList.toggle("live", m.type !== "still"); setText(t.querySelector("b"), MOTION_NAME[m.type]); setText(t.querySelector("small"), m.type === "still" ? "No motion" : `${m.dur}s, ${{ loop: "looping", pingpong: "ping-pong", once: "once" }[m.mode]}`); }
+    setText(addTile.querySelector("small"), S.fxOrder.length ? `${S.fxOrder.length} applied` : "None applied");
+    for (const t of fxTiles.querySelectorAll("[data-fx]")) setText(t.querySelector("small"), fxFact(t.dataset.fx));
     const n = String(S.fxOrder.length);
     countEl.hidden = !S.fxOrder.length;
     if (countEl.textContent !== n) { countEl.textContent = n; if (animOK()) countEl.animate([{ transform: "scale(.4)" }, { transform: "scale(1.15)" }, { transform: "none" }], { duration: 320, easing: EASE }); }
@@ -853,6 +861,7 @@
         body.appendChild(row);
       } else fxSliders[id].push(makeSlider(body, { group: "fx-" + id, label: p.label, min: p.min, max: p.max, step: p.step, log: p.log, fmt: p.fmt, pct: p.pct, rand: p.rand, hard: p.hard, get: () => e()[p.k], set: (v) => (e()[p.k] = v) }));
     }
+    if (SEEDED.has(id)) fxSliders[id].push(makeSlider(body, { group: "fx-" + id, label: "Seed", min: 0, max: 9999, step: 1, fmt: (v) => (v ? String(v) : "Design"), rand: [1, 9999], get: () => e().seed || 0, set: (v) => (e().seed = v) }));
     fxBodies[id] = body;
   }
   const randomizeFx = (id) => { for (const c of fxSliders[id]) c.set(randomValue(c)); };
@@ -970,39 +979,95 @@
     S.usePoints = true; sel = null;
   }
 
+  // ---------- next step ----------
+  // Each panel ends with a way on to the next layer; the last step opens Export.
+  const STEP_ORDER = () => ["preset", "generator", "shape", ...(gen() === "contours" ? ["lines"] : []), "colors", "addfx", "motion"];
+  function nextOf(slot) {
+    const p = panelOf(slot) === "effect" ? "addfx" : slot, order = STEP_ORDER(), i = order.indexOf(p);
+    return i < 0 || i === order.length - 1 ? "export" : order[i + 1];
+  }
+  $("nextBtn").onclick = () => { const n = nextOf(P.slot); if (n === "export") { closeMenus(); $("exportBtn").click(); } else setSlot(n); };
+  function syncNext() {
+    const n = nextOf(P.slot);
+    $("nextLbl").textContent = n === "export" ? "Export" : `Next: ${PANEL_TITLE[n]}`;
+    $("nextSub").textContent = n === "addfx" ? "Optional" : n === "motion" ? "Optional" : "";
+  }
+
   // ---------- motion ----------
   // Every motion loops: drift moves the field round a circle, flow slides the contour levels (or sways a
   // gradient's colors) by whole steps, breathe swells and settles the warp.
   const MOTION_NAME = { still: "Still", drift: "Drift", flow: "Flow", breathe: "Breathe" };
   const MOTION_HINT = { still: "Pick a motion to make a loop.", drift: "The pattern glides round in a loop.", flow: "Lines flow outward; gradient colors sway.", breathe: "The warp swells and settles." };
+  // Time shaping: ping-pong runs forward then back, reverse flips direction, and the easing curve
+  // (a preset or your own cubic bezier) sets the pace inside each pass.
+  const EASES = { linear: [0, 0, 1, 1], ease: [0.25, 0.1, 0.25, 1], in: [0.42, 0, 1, 1], out: [0, 0, 0.58, 1], inout: [0.42, 0, 0.58, 1] };
+  function bezier(x, [x1, y1, x2, y2]) {
+    const B = (t, a, b) => 3 * a * t * (1 - t) ** 2 + 3 * b * t * t * (1 - t) + t ** 3;
+    let lo = 0, hi = 1, t = x;
+    for (let i = 0; i < 24; i++) { t = (lo + hi) / 2; if (B(t, x1, x2) < x) lo = t; else hi = t; }
+    return B(t, y1, y2);
+  }
+  function motionT(raw, m = S.motion) {
+    let u = m.mode === "pingpong" ? 1 - Math.abs(1 - 2 * raw) : raw;
+    u = bezier(u, m.ease === "custom" ? m.bez : EASES[m.ease] || EASES.linear);
+    return m.dir < 0 ? 1 - u : u;
+  }
+  const seedFrac = (n) => (n ? (n * 0.6180339887) % 1 : 0);
   function motionState(st, t) {
     const m = st.motion;
     if (!m || m.type === "still") return st;
-    const o = { ...st, _t: t }, tw = 2 * Math.PI * t, a = m.amt;
+    const off = seedFrac(m.seed), o = { ...st, _t: (t + off) % 1 }, tw = 2 * Math.PI * t, a = m.amt, a0 = off * 2 * Math.PI;
     if (st.source === "contours") {
-      if (m.type === "drift") { const R = a * st.scale * 0.5; o.driftX = R * Math.cos(tw); o.driftY = R * Math.sin(tw); }
+      if (m.type === "drift") { const R = a * st.scale * 0.5; o.driftX = R * Math.cos(tw + a0); o.driftY = R * Math.sin(tw + a0); }
       // Cycling inks need a whole cycle of steps per loop, or the colors would jump at the seam.
       else if (m.type === "flow") { const cyc = st.mids?.length && !st.gradient && st.mode !== "layers" ? st.mids.length + 2 : 1; o.phase = t * cyc * Math.max(1, Math.round(a * 4)); }
-      else o.warp = Math.max(st.warp, 0.15) * (1 + 0.9 * a * Math.sin(tw));
+      // Breathe zooms gently and lets the warp swell a little; changing the warp hard would rebuild the shape every frame.
+      else { const w = Math.sin(tw + a0); o.scale = st.scale * (1 + 0.07 * a * w); o.warp = st.warp * (1 + 0.25 * a * w); }
     }
     return o;
   }
   makeSeg($("motionType"), () => S.motion.type, (v) => { S.motion.type = v; if (v === "still") stopPlay(); });
+  const moving = () => S.motion.type !== "still";
   [
-    { label: "Loop length", ...bindKey(() => S.motion, "dur"), min: 2, max: 30, step: 0.5, fmt: (v) => v + "s", rand: [4, 10], when: () => S.motion.type !== "still" },
-    { label: "Amount", ...bindKey(() => S.motion, "amt"), min: 0.05, max: 1, step: 0.01, fmt: f2, rand: [0.3, 0.7], when: () => S.motion.type !== "still" },
+    { label: "Loop length", ...bindKey(() => S.motion, "dur"), min: 1, max: 30, step: 0.5, fmt: (v) => v + "s", rand: [4, 10], when: moving },
+    { label: "Amplitude", ...bindKey(() => S.motion, "amt"), min: 0.05, max: 1, step: 0.01, fmt: f2, rand: [0.3, 0.7], when: moving },
+    { label: "Seed", ...bindKey(() => S.motion, "seed"), min: 0, max: 9999, step: 1, fmt: (v) => (v ? String(v) : "Off"), rand: [1, 9999], when: moving },
   ].forEach((c) => makeSlider($("motionCtrls"), { group: "motion", ...c }));
+  makeSeg($("motionMode"), () => S.motion.mode, (v) => (S.motion.mode = v));
+  makeSeg($("motionDir"), () => S.motion.dir, (v) => (S.motion.dir = v));
+  makeSeg($("motionEase"), () => S.motion.ease, (v) => (S.motion.ease = v));
+  // Custom easing: drag the two handles of the cubic bezier.
+  const bz = $("bezier");
+  function drawBezier() {
+    const [x1, y1, x2, y2] = S.motion.ease === "custom" ? S.motion.bez : EASES[S.motion.ease] || EASES.linear;
+    const X = (v) => 12 + v * 136, Y = (v) => 108 - v * 96;
+    bz.innerHTML = `<rect x="12" y="12" width="136" height="96" rx="6" class="bz-box"/><path d="M${X(0)} ${Y(0)}L${X(x1)} ${Y(y1)}M${X(1)} ${Y(1)}L${X(x2)} ${Y(y2)}" class="bz-arm"/><path d="M${X(0)} ${Y(0)}C${X(x1)} ${Y(y1)} ${X(x2)} ${Y(y2)} ${X(1)} ${Y(1)}" class="bz-curve"/><circle cx="${X(x1)}" cy="${Y(y1)}" r="6" class="bz-h" data-h="0"/><circle cx="${X(x2)}" cy="${Y(y2)}" r="6" class="bz-h" data-h="1"/>`;
+    $("bezVals").textContent = `cubic-bezier(${[x1, y1, x2, y2].map((v) => +v.toFixed(2)).join(", ")})`;
+  }
+  bz.addEventListener("pointerdown", (e) => {
+    const h = e.target.closest(".bz-h"); if (!h) return;
+    e.preventDefault();
+    if (S.motion.ease !== "custom") { S.motion.bez = (EASES[S.motion.ease] || EASES.linear).slice(); S.motion.ease = "custom"; }
+    const k = +h.dataset.h, move = (ev) => {
+      const r = bz.getBoundingClientRect(), x = clamp((((ev.clientX - r.left) / r.width) * 160 - 12) / 136, 0, 1), y = clamp((108 - ((ev.clientY - r.top) / r.height) * 120) / 96, -0.5, 1.5);
+      S.motion.bez[k * 2] = +x.toFixed(3); S.motion.bez[k * 2 + 1] = +y.toFixed(3); drawBezier(); syncUI();
+    };
+    const up = () => { removeEventListener("pointermove", move); removeEventListener("pointerup", up); update({ instant: true }); };
+    addEventListener("pointermove", move); addEventListener("pointerup", up);
+  });
+  syncers.push(() => { $("motionMore").hidden = !moving(); if (moving()) drawBezier(); });
   makeSeg($("vidSize"), () => S.vid.size, (v) => (S.vid.size = v));
   makeSeg($("vidFps"), () => S.vid.fps, (v) => (S.vid.fps = v));
   makeSeg($("vidLoops"), () => S.vid.loops, (v) => (S.vid.loops = v));
-  let playing = false, playRaf = 0, playT0 = 0, playBusy = false;
+  let playing = false, playRaf = 0, playT0 = 0, playBusy = false, playSlow = false;
   function playFrame(now) {
     if (!playing) return;
     playRaf = requestAnimationFrame(playFrame);
     if (playBusy) return;
     playBusy = true;
-    const t = (((now - playT0) / 1000) % S.motion.dur) / S.motion.dur;
-    paint(motionState(S, t), S.source === "contours").then(() => (playBusy = false));
+    const raw = (((now - playT0) / 1000) % S.motion.dur) / S.motion.dur, t0 = performance.now();
+    // Full detail while it keeps up; a lighter grid only when frames get slow.
+    paint(motionState(S, motionT(raw)), playSlow && S.source === "contours").then(() => { playSlow = performance.now() - t0 > 110; playBusy = false; });
   }
   function startPlay() { if (S.motion.type === "still") { S.motion.type = "drift"; update(); } playing = true; playT0 = performance.now(); cancelAnimationFrame(playRaf); playRaf = requestAnimationFrame(playFrame); syncPlay(); }
   function stopPlay() { if (!playing) return; playing = false; cancelAnimationFrame(playRaf); syncPlay(); render(); }
@@ -1022,22 +1087,20 @@
     if (exporting) return;
     if (S.motion.type === "still") { S.motion.type = "drift"; update(); }
     stopPlay();
-    const even = (v) => Math.max(2, Math.round(v / 2) * 2);
-    const sc = Math.min(S.vid.size / Math.min(S.w, S.h), 3840 / Math.max(S.w, S.h));
-    const W = even(S.w * sc), H = even(S.h * sc), fps = S.vid.fps, frames = Math.round(S.motion.dur * S.vid.loops * fps);
+    const [W, H] = vidDims(), fps = S.vid.fps, frames = Math.round(S.motion.dur * S.vid.loops * fps);
     const job0 = { cancel: false }; exporting = job0;
-    $("vidProgress").hidden = false; $("vidCancel").hidden = false; $("vidExport").disabled = true;
-    const bar = $("vidProgress").firstChild, frameCanvas = document.createElement("canvas");
+    setProg("Preparing", 0); $("exCancel").hidden = false; $("download").disabled = true;
+    const frameCanvas = document.createElement("canvas");
     frameCanvas.width = W; frameCanvas.height = H;
     const fctx = frameCanvas.getContext("2d");
     async function drawFrame(i) {
-      const st = motionState(S, (i / fps / S.motion.dur) % 1);
+      const st = motionState(S, motionT(S.motion.mode === "once" ? Math.min(1, i / Math.max(1, frames - 1)) : (i / fps / S.motion.dur) % 1));
       if (isRaster(st) && FXR) {
         const image = st.source === "contours" ? await rasterize(rasterCanvas, T.buildSVG(st, { w: W, h: H }).svg, W, H) : null;
         FXR.render(job(st, W, H, image));
         fctx.drawImage(fxCanvas, 0, 0, W, H);
       } else await rasterize(frameCanvas, T.buildSVG(st, { w: W, h: H }).svg, W, H);
-      bar.style.width = ((i + 1) / frames) * 100 + "%";
+      setProg(`Frame ${i + 1} of ${frames}`, ((i + 1) / frames) * 0.96);
     }
     try {
       let blob;
@@ -1062,7 +1125,7 @@
           while (enc.encodeQueueSize > 4) await new Promise((r) => setTimeout(r, 5));
         }
         if (failed) throw failed;
-        if (!job0.cancel) { await enc.flush(); muxer.finalize(); blob = new Blob([muxer.target.buffer], { type: "video/mp4" }); }
+        if (!job0.cancel) { setProg("Finishing the file", 0.98); await enc.flush(); muxer.finalize(); blob = new Blob([muxer.target.buffer], { type: "video/mp4" }); }
         enc.close();
       } else {
         const stream = frameCanvas.captureStream(0), track = stream.getVideoTracks()[0], chunks = [];
@@ -1075,21 +1138,20 @@
           await drawFrame(i); track.requestFrame();
           next += 1000 / fps; await new Promise((r) => setTimeout(r, Math.max(0, next - performance.now())));
         }
-        rec.stop(); await done;
+        setProg("Finishing the file", 0.98); rec.stop(); await done;
         if (!job0.cancel) blob = new Blob(chunks, { type: "video/webm" });
       }
-      if (blob) await download(blob, `${autoName()}-${S.motion.type}.${blob.type === "video/mp4" ? "mp4" : "webm"}`, "Video saved");
+      if (blob) { setProg("Saving", 1); await download(blob, `${fileName()}.${blob.type === "video/mp4" ? "mp4" : "webm"}`, "Video saved"); }
       else if (job0.cancel) toast("Export cancelled");
     } catch (e) {
       toast("This browser couldn't encode the video. Try a smaller size.");
     } finally {
       exporting = null;
-      $("vidProgress").hidden = true; $("vidCancel").hidden = true; $("vidExport").disabled = false; bar.style.width = "0";
+      hideProg(); $("exCancel").hidden = true; $("download").disabled = false;
       render();
     }
   }
-  $("vidExport").onclick = exportVideo;
-  $("vidCancel").onclick = () => exporting && (exporting.cancel = true);
+  $("exCancel").onclick = () => exporting && (exporting.cancel = true);
 
   // ---------- canvas overlay ----------
   const art = $("art"), artSvg = $("artSvg"), fxCanvas = $("fx"), ov = $("ov"), wrap = $("wrap");
@@ -1251,55 +1313,80 @@
   }
   const autoName = () => `isoline-${gen() === "contours" ? S.pattern : gen()}-${S.w}x${S.h}-${S.seed}`;
   const fmtBytes = (n) => (n < 1048576 ? Math.max(1, Math.round(n / 1024)) + " KB" : (n / 1048576).toFixed(1) + " MB");
-  const exportFmt = () => (isRaster(S) ? "png" : S.fmt);
-  function svgPng(scale) {
-    return new Promise((resolve, reject) => {
-      const img = new Image(), url = URL.createObjectURL(new Blob([current.svg], { type: "image/svg+xml" }));
-      img.onload = () => {
-        const sc = Math.min(scale, 16000 / Math.max(S.w, S.h)), c = document.createElement("canvas");
-        c.width = Math.round(S.w * sc); c.height = Math.round(S.h * sc);
-        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-        URL.revokeObjectURL(url);
-        c.toBlob((b) => (b ? resolve(b) : reject()), "image/png");
-      };
-      img.onerror = reject;
-      img.src = url;
-    });
+  const exportFmt = () => (S.fmt === "video" ? "video" : isRaster(S) ? "png" : S.fmt);
+  // Progress: every export reports what it is doing and how far along it is.
+  function setProg(label, f) {
+    $("exProg").hidden = false;
+    $("exProg").querySelector("i").style.width = Math.round(f * 100) + "%";
+    $("exProgLbl").textContent = label; $("exProgPct").textContent = Math.round(f * 100) + "%";
   }
-  async function rasterPng(scale) {
+  const hideProg = () => { $("exProg").hidden = true; $("exProg").querySelector("i").style.width = "0"; };
+  const step = (on, label, f) => { on?.(label, f); return new Promise((r) => requestAnimationFrame(() => r())); };
+  async function svgPng(scale, on) {
+    await step(on, "Drawing the pattern", 0.15);
+    const sc = Math.min(scale, 16000 / Math.max(S.w, S.h)), c = document.createElement("canvas");
+    await rasterize(c, current.svg, Math.round(S.w * sc), Math.round(S.h * sc));
+    await step(on, "Compressing the PNG", 0.6);
+    const b = await new Promise((r) => c.toBlob(r, "image/png"));
+    if (!b) throw new Error("png");
+    return b;
+  }
+  async function rasterPng(scale, on) {
     if (!FXR) throw new Error("no webgl");
     const sc = Math.min(scale, FXR.maxSize / Math.max(S.w, S.h)), w = Math.round(S.w * sc), h = Math.round(S.h * sc);
+    await step(on, "Drawing the pattern", 0.1);
     const image = S.source === "contours" ? await rasterize(rasterCanvas, current.svg, w, h) : null;
+    await step(on, S.fxOrder.length ? `Applying ${S.fxOrder.length === 1 ? "the effect" : S.fxOrder.length + " effects"}` : "Rendering", 0.35);
     FXR.render(job(S, w, h, image));
+    await step(on, "Compressing the PNG", 0.65);
     const blob = await new Promise((r) => fxCanvas.toBlob(r, "image/png"));
     render(false);
     return blob;
   }
-  const pngBlob = (scale) => (isRaster(S) ? rasterPng(scale) : svgPng(scale));
+  const pngBlob = (scale, on) => (isRaster(S) ? rasterPng(scale, on) : svgPng(scale, on));
   let pngCache = null, exportTok = 0;
+  const vidDims = () => { const even = (v) => Math.max(2, Math.round(v / 2) * 2), sc = Math.min(S.vid.size / Math.min(S.w, S.h), 3840 / Math.max(S.w, S.h)); return [even(S.w * sc), even(S.h * sc)]; };
   function refreshExport() {
     const raster = isRaster(S), fmt = exportFmt();
+    exportTok++;
     for (const b of $("fmt").children) { b.classList.toggle("on", b.dataset.v === fmt); b.disabled = raster && b.dataset.v === "svg"; }
-    $("rasterNote").hidden = !raster;
+    $("rasterNote").hidden = !raster || fmt === "video";
     for (const b of $("pngScale").children) b.classList.toggle("on", +b.dataset.v === S.pngScale);
     $("pngScale").hidden = fmt !== "png";
+    $("vidOpts").hidden = fmt !== "video";
+    $("vidNote").hidden = fmt !== "video" || S.motion.type !== "still";
+    $("copy").hidden = fmt === "video";
     $("copyLbl").textContent = raster ? "Copy PNG" : "Copy SVG";
+    $("dlLbl").textContent = fmt === "video" ? (canMp4() ? "Export MP4" : "Export WebM") : "Download";
     if (!$("fname").dataset.edited) $("fname").value = autoName();
-    const dims = fmt === "png" ? `${S.w * S.pngScale} × ${S.h * S.pngScale}` : `${S.w} × ${S.h}`;
-    const facts = (size) => ($("facts").innerHTML = `<dt>Dimensions</dt><dd>${dims}</dd><dt>File size</dt><dd>${size}</dd>`);
-    if (fmt === "svg") { facts(fmtBytes(new Blob([current.svg]).size)); return; }
-    facts("…");
+    let dims = fmt === "png" ? `${S.w * S.pngScale} × ${S.h * S.pngScale}` : `${S.w} × ${S.h}`;
+    const facts = (rows) => ($("facts").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join(""));
+    if (fmt === "video") {
+      const [W, H] = vidDims(), secs = S.motion.dur * S.vid.loops, mb = (W * H * S.vid.fps * 0.12 * secs) / 8 / 1048576;
+      facts([["Dimensions", `${W} × ${H}`], ["Length", `${secs}s, ${Math.round(secs * S.vid.fps)} frames`], ["File size", `About ${mb < 1 ? mb.toFixed(1) : Math.round(mb)} MB`]]);
+      return;
+    }
+    if (fmt === "svg") { facts([["Dimensions", dims], ["File size", fmtBytes(new Blob([current.svg]).size)]]); return; }
+    facts([["Dimensions", dims], ["File size", "Measuring"]]);
     const tok = ++exportTok, key = JSON.stringify(S);
-    pngBlob(S.pngScale).then((b) => { if (tok !== exportTok) return; pngCache = { key, blob: b }; facts(fmtBytes(b.size)); }).catch(() => facts("Unknown"));
+    pngBlob(S.pngScale).then((b) => { if (tok !== exportTok) return; pngCache = { key, blob: b }; facts([["Dimensions", dims], ["File size", fmtBytes(b.size)]]); }).catch(() => facts([["Dimensions", dims], ["File size", "Unknown"]]));
   }
   $("fname").oninput = (e) => { e.target.dataset.edited = e.target.value ? "1" : ""; };
   $("fmt").onclick = (e) => { const b = e.target.closest("button"); if (b && !b.disabled) { S.fmt = b.dataset.v; save(); refreshExport(); } };
   $("pngScale").onclick = (e) => { const v = e.target.closest("button")?.dataset.v; if (v) { S.pngScale = +v; save(); refreshExport(); } };
-  const fileName = () => ($("fname").value.trim() || autoName()).replace(/\.(svg|png)$/i, "");
+  for (const id of ["vidSize", "vidFps", "vidLoops"]) $(id).addEventListener("click", () => setTimeout(refreshExport));
+  const fileName = () => ($("fname").value.trim() || autoName()).replace(/\.(svg|png|mp4|webm)$/i, "");
   $("download").onclick = async () => {
-    if (exportFmt() === "svg") return download(new Blob([current.svg], { type: "image/svg+xml" }), fileName() + ".svg", "SVG saved");
-    const blob = pngCache?.key === JSON.stringify(S) ? pngCache.blob : await pngBlob(S.pngScale);
-    download(blob, fileName() + ".png", "PNG saved");
+    const fmt = exportFmt();
+    if (fmt === "video") return exportVideo();
+    if (fmt === "svg") { setProg("Saving", 1); await download(new Blob([current.svg], { type: "image/svg+xml" }), fileName() + ".svg", "SVG saved"); setTimeout(hideProg, 600); return; }
+    $("download").disabled = true;
+    try {
+      const blob = pngCache?.key === JSON.stringify(S) ? (setProg("Ready", 0.9), pngCache.blob) : await pngBlob(S.pngScale, setProg);
+      setProg("Saving", 1);
+      await download(blob, fileName() + ".png", "PNG saved");
+    } catch (e) { toast("Couldn't make the PNG. Try a smaller scale."); }
+    $("download").disabled = false; setTimeout(hideProg, 600);
   };
   async function copyOut() {
     if (!isRaster(S)) {
@@ -1641,7 +1728,7 @@
     $("sizeName").textContent = presetName();
     $("safe").checked = P.safe; $("unlock").checked = P.unlock;
     $("motionHint").textContent = MOTION_HINT[S.motion.type];
-    $("vidLbl").textContent = canMp4() ? "Export MP4" : "Export WebM";
+    syncNext();
     syncPlay();
     syncHistory();
   }
@@ -1680,13 +1767,31 @@
       P.slot = "colors";
       update({ fade: true });
     },
+    // The current design cropped to fill w x h, like object-fit: cover.
     async snapshot(w, h) {
       const c = document.createElement("canvas"); c.width = w; c.height = h;
-      const x = c.getContext("2d"), sh = (S.h / S.w) * w, oy = (h - sh) / 2;
-      if (current.raster) x.drawImage(fxCanvas, 0, Math.max(0, -oy) * (fxCanvas.height / sh), fxCanvas.width, fxCanvas.height - Math.max(0, -oy) * 2 * (fxCanvas.height / sh), 0, Math.max(0, oy), w, Math.min(h, sh));
-      else { const img = await rasterize(document.createElement("canvas"), current.svg, w, Math.round(sh)); x.drawImage(img, 0, oy); }
+      const x = c.getContext("2d"), sc = Math.max(w / S.w, h / S.h), dw = S.w * sc, dh = S.h * sc;
+      const src = current.raster ? fxCanvas : await rasterize(document.createElement("canvas"), current.svg, Math.round(dw), Math.round(dh));
+      x.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
       return c;
     },
     onShow() { lastWrap = ""; fit(); render(); },
+    // For agents and scripts: read and change the design, and get its exports.
+    state: () => clone(S),
+    apply(partial) { S = withDefaults({ ...clone(S), ...partial, grad: { ...S.grad, ...(partial?.grad || {}) }, fx: { ...S.fx, ...(partial?.fx || {}) } }); sel = null; update({ fade: true }); return clone(S); },
+    presets: () => PRESETS.map(([group, name]) => ({ group, name })),
+    usePreset(name) { const p = PRESETS.find((x) => x[1].toLowerCase() === String(name).toLowerCase()); if (!p) return false; applyLook(p[2]); update({ fade: true }); return true; },
+    variation() { variation(); update({ fade: true }); },
+    surprise,
+    svg: () => current.svg,
+    png: (scale = 1) => pngBlob(scale),
+    generators: () => GENS.map(([id, name, what]) => ({ id, name, what })),
+    effects: () => FXC.map(([id, name, cat, d]) => ({ id, name, category: cat, defaults: d })),
+    describe() {
+      const g = gen(), cols = gen() === "contours" ? [S.bg, ...inksOf()] : inksOf();
+      const named = cols.map((c) => `${c} (${window.Color.name(c)})`).join(", ");
+      const fx = S.fxOrder.map((id) => `${FXI[id].name} (${fxFact(id)})`).join(", ") || "none";
+      return `${S.w} by ${S.h}px. ${GEN_LABEL[g]} generator${g === "contours" ? `, ${patLabel(S.pattern)} pattern drawn as ${S.mode}` : g === "noise" ? `, ${NOISE_LABEL[S.grad.noise]} noise` : ""}. Colors: ${named}. Effects: ${fx}. Motion: ${S.motion.type === "still" ? "none" : `${S.motion.type}, ${S.motion.dur}s ${S.motion.mode}`}.`;
+    },
   };
 })();

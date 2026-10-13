@@ -32,6 +32,7 @@
     <symbol id="i-sort" viewBox="0 0 20 20"><path d="M5 4.5v11M2.5 13 5 15.5 7.5 13M10.5 6h7M10.5 10h5M10.5 14h3"/></symbol>
     <symbol id="i-heart" viewBox="0 0 20 20"><path d="M10 16s-6-3.6-6-8.2A3.3 3.3 0 0 1 10 6a3.3 3.3 0 0 1 6 1.8C16 12.4 10 16 10 16Z"/></symbol>
     <symbol id="i-shades" viewBox="0 0 20 20"><rect x="4" y="3.5" width="12" height="13" rx="2.5"/><path d="M4 7.8h12M4 12.2h12"/></symbol>
+    <symbol id="i-columns" viewBox="0 0 20 20"><rect x="3.5" y="4" width="13" height="12" rx="2"/><path d="M10.5 4v12M14 4v12"/></symbol>
     <symbol id="i-prev" viewBox="0 0 20 20"><path d="m12 6-4 4 4 4"/></symbol>
     <symbol id="i-pipette" viewBox="0 0 20 20"><path d="m11.5 6 2.5 2.5"/><path d="M13 4.5a1.8 1.8 0 0 1 2.5 2.5L8 14.5l-3 .5.5-3Z"/></symbol>
     <symbol id="i-plus" viewBox="0 0 20 20"><path d="M10 4.5v11M4.5 10h11"/></symbol>
@@ -60,6 +61,7 @@
       </div>
       <button class="ib" id="swap" title="Swap width and height" aria-label="Swap width and height"><svg class="ic"><use href="#i-swap"/></svg></button>
     </div>
+    <div class="cp-top" data-for="components"><div class="seg" id="cpMode"><button data-v="libraries">Libraries</button><button data-v="builder">Builder</button></div></div>
     <div class="top-right">
       <div class="menu-wrap">
         <button class="ib lg" id="settingsBtn" title="Settings" aria-label="Settings" aria-haspopup="true"><svg class="ic"><use href="#i-sliders"/></svg></button>
@@ -86,17 +88,25 @@
       <div class="menu-wrap" data-for="studio">
         <button class="btn primary" id="exportBtn" aria-haspopup="true">Export<svg class="ic chev"><use href="#i-chev"/></svg></button>
         <div class="pop export" id="exportMenu" hidden>
-          <div class="seg" id="fmt"><button data-v="svg">SVG</button><button data-v="png">PNG</button></div>
+          <div class="seg" id="fmt"><button data-v="svg">SVG</button><button data-v="png">PNG</button><button data-v="video">Video</button></div>
           <p class="note" id="rasterNote" hidden>Gradients, noise and effects export as PNG.</p>
           <div class="seg" id="pngScale" hidden>
             <button data-v="1">1×</button><button data-v="2">2×</button><button data-v="3">3×</button><button data-v="4">4×</button>
           </div>
+          <div class="ex-grid" id="vidOpts" hidden>
+            <span class="label">Size</span><div class="seg sm" id="vidSize"><button data-v="720">720p</button><button data-v="1080">1080p</button><button data-v="1440">1440p</button></div>
+            <span class="label">Frame rate</span><div class="seg sm" id="vidFps"><button data-v="24">24</button><button data-v="30">30</button><button data-v="60">60</button></div>
+            <span class="label">Loops</span><div class="seg sm" id="vidLoops"><button data-v="1">1</button><button data-v="2">2</button><button data-v="4">4</button></div>
+          </div>
+          <p class="note" id="vidNote" hidden>Still designs export as a gentle drift. Pick a motion in the Motion step for more control.</p>
           <label class="label" for="fname">File</label>
           <input class="field mono" id="fname" spellcheck="false">
           <dl class="facts" id="facts"></dl>
+          <div class="ex-prog" id="exProg" hidden><div class="progress"><i></i></div><div class="ex-prog-row"><span id="exProgLbl"></span><span class="mono" id="exProgPct"></span></div></div>
           <div class="ex-actions">
             <button class="btn" id="copy"><svg class="ic"><use href="#i-copy"/></svg><span id="copyLbl">Copy SVG</span></button>
-            <button class="btn primary" id="download"><svg class="ic"><use href="#i-down"/></svg>Download</button>
+            <button class="btn" id="exCancel" hidden>Cancel</button>
+            <button class="btn primary" id="download"><svg class="ic"><use href="#i-down"/></svg><span id="dlLbl">Download</span></button>
           </div>
         </div>
       </div>
@@ -105,12 +115,10 @@
 
   <div class="pages">
   <section class="page home" data-page="home" hidden>
-    <div class="home-in">
-      <h1 class="home-title">Tools</h1>
-      <div class="tools">
-        <a class="tool" href="#/studio" data-go="studio"><span class="tool-prev" id="homeStudio"></span><span class="tool-text"><b>Studio</b><small>Topographic lines, gradients, noise and effects for Figma</small></span><svg class="ic go"><use href="#i-next"/></svg></a>
-        <a class="tool" href="#/palettes" data-go="palettes"><span class="tool-prev" id="homePalette"></span><span class="tool-text"><b>Palettes</b><small>Generate, name, save and export color palettes</small></span><svg class="ic go"><use href="#i-next"/></svg></a>
-      </div>
+    <div class="bento">
+      <a class="tool big" href="#/studio" data-go="studio"><span class="tool-prev" id="homeStudio"></span><span class="tool-text"><b>Studio</b><small>Patterns, gradients, effects and motion</small></span><svg class="ic go"><use href="#i-next"/></svg></a>
+      <a class="tool" href="#/palettes" data-go="palettes"><span class="tool-prev" id="homePalette"></span><span class="tool-text"><b>Palettes</b><small>Palettes, color names and contrast</small></span><svg class="ic go"><use href="#i-next"/></svg></a>
+      <a class="tool" href="#/components" data-go="components"><span class="tool-prev comp-prev" id="homeComponents"></span><span class="tool-text"><b>Components</b><small>Libraries, tokens and layouts</small></span><svg class="ic go"><use href="#i-next"/></svg></a>
     </div>
   </section>
 
@@ -209,20 +217,23 @@
         <div class="seg wrap4" id="motionType"><button data-v="still">Still</button><button data-v="drift">Drift</button><button data-v="flow">Flow</button><button data-v="breathe">Breathe</button></div>
         <p class="hint" id="motionHint"></p>
         <div id="motionCtrls"></div>
-        <button class="btn play-btn" id="playBtn"><svg class="ic"><use href="#i-play"/></svg><span>Play</span></button>
-        <h3 class="sub">Export video</h3>
-        <div class="ex-grid">
-          <span class="label">Size</span><div class="seg sm" id="vidSize"><button data-v="720">720p</button><button data-v="1080">1080p</button><button data-v="1440">1440p</button></div>
-          <span class="label">Frame rate</span><div class="seg sm" id="vidFps"><button data-v="24">24</button><button data-v="30">30</button><button data-v="60">60</button></div>
-          <span class="label">Loops</span><div class="seg sm" id="vidLoops"><button data-v="1">1</button><button data-v="2">2</button><button data-v="4">4</button></div>
+        <div id="motionMore">
+          <div class="ex-grid motion-grid">
+            <span class="label">Playback</span><div class="seg sm" id="motionMode"><button data-v="loop">Loop</button><button data-v="pingpong">Ping-pong</button><button data-v="once">Once</button></div>
+            <span class="label">Direction</span><div class="seg sm" id="motionDir"><button data-v="1">Forward</button><button data-v="-1">Reverse</button></div>
+          </div>
+          <h3 class="sub">Easing</h3>
+          <div class="seg sm wrap" id="motionEase"><button data-v="linear">Linear</button><button data-v="ease">Ease</button><button data-v="in">In</button><button data-v="out">Out</button><button data-v="inout">In and out</button><button data-v="custom">Custom</button></div>
+          <svg class="bezier" id="bezier" viewBox="0 0 160 120" aria-label="Easing curve, drag the handles"></svg>
+          <p class="hint mono" id="bezVals"></p>
         </div>
-        <div class="progress" id="vidProgress" hidden><i></i></div>
-        <div class="fx-actions"><button class="btn primary" id="vidExport"><svg class="ic"><use href="#i-down"/></svg><span id="vidLbl">Export MP4</span></button><button class="btn ghost" id="vidCancel" hidden>Cancel</button></div>
+        <button class="btn play-btn" id="playBtn"><svg class="ic"><use href="#i-play"/></svg><span>Play</span></button>
       </div>
 
       <div class="panel-sec" data-panel="addfx">
         <div id="fxGallery"></div>
       </div>
+      <div class="next-step"><button class="btn next-btn" id="nextBtn"><span id="nextLbl">Next</span><small id="nextSub"></small><svg class="ic"><use href="#i-next"/></svg></button></div>
     </aside>
 
     <section class="stage">
@@ -233,7 +244,7 @@
           <svg class="overlay" id="ov"></svg>
         </div>
         <div class="stage-meta mono"><span class="kind" id="kind">SVG</span><span id="ms"></span></div>
-        <div class="stage-bar" role="toolbar" aria-label="Canvas">
+        <div class="stage-bar glass" role="toolbar" aria-label="Canvas">
           <button class="ib" id="undo" title="Undo (⌘Z)" aria-label="Undo"><svg class="ic"><use href="#i-undo"/></svg></button>
           <button class="ib" id="redo" title="Redo (⇧⌘Z)" aria-label="Redo"><svg class="ic"><use href="#i-redo"/></svg></button>
           <button class="ib" id="barPlay" title="Play motion" aria-label="Play motion" hidden><svg class="ic"><use href="#i-play"/></svg></button>
@@ -247,17 +258,19 @@
 
   <section class="page pt" data-page="palettes" hidden>
     <div class="pt-cols" id="ptCols"></div>
-    <div class="pt-bar" role="toolbar" aria-label="Palette">
+    <div class="pt-bar glass" role="toolbar" aria-label="Palette">
+      <button class="ib" id="ptUndo" title="Undo (⌘Z)" aria-label="Undo"><svg class="ic"><use href="#i-undo"/></svg></button>
+      <button class="ib" id="ptRedo" title="Redo (⇧⌘Z)" aria-label="Redo"><svg class="ic"><use href="#i-redo"/></svg></button>
+      <span class="bar-sep"></span>
       <button class="bar-btn" id="ptGen">Generate<kbd>Space</kbd></button>
+      <button class="bar-btn" id="ptVary" title="Small changes to the unlocked colors">Vary<kbd>V</kbd></button>
       <div class="menu-wrap up">
-        <button class="bar-btn" id="ptModeBtn" aria-haspopup="true"><span id="ptMode">Auto</span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+        <button class="bar-btn" id="ptModeBtn" aria-haspopup="true"><span class="pt-wheel" id="ptWheel"></span><span id="ptMode">Auto</span><svg class="ic chev"><use href="#i-chev"/></svg></button>
         <div class="pop" id="ptModeMenu" hidden></div>
       </div>
       <span class="bar-sep"></span>
-      <button class="ib" id="ptUndo" title="Undo (⌘Z)" aria-label="Undo"><svg class="ic"><use href="#i-undo"/></svg></button>
-      <button class="ib" id="ptRedo" title="Redo (⇧⌘Z)" aria-label="Redo"><svg class="ic"><use href="#i-redo"/></svg></button>
       <button class="ib" id="ptSort" title="Sort by lightness" aria-label="Sort by lightness"><svg class="ic"><use href="#i-sort"/></svg></button>
-      <span class="bar-sep"></span>
+      <button class="ib" id="ptWeights" title="Show proportions (60-30-10)" aria-label="Show proportions"><svg class="ic"><use href="#i-columns"/></svg></button>
       <div class="menu-wrap up">
         <button class="bar-btn" id="ptSavedBtn" aria-haspopup="true"><svg class="ic"><use href="#i-heart"/></svg>Saved</button>
         <div class="pop pt-saved" id="ptSavedMenu" hidden></div>
@@ -274,6 +287,11 @@
       </div>
       <button class="btn primary sm" id="ptUse">Use in Studio<svg class="ic"><use href="#i-next"/></svg></button>
     </div>
+  </section>
+
+  <section class="page cp" data-page="components" hidden>
+    <div class="cp-lib" id="cpLib"></div>
+    <div class="cp-build" id="cpBuild" hidden></div>
   </section>
   </div>
 </div>
@@ -311,6 +329,9 @@
 <script src="fx.js"></script>
 <script src="app.js"></script>
 <script src="palette.js"></script>
+<script src="components.js"></script>
 <script src="shell.js"></script>
+<script src="agent.js"></script>
+<script src="glass.js"></script>
 </body>
 </html>

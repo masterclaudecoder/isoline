@@ -227,8 +227,11 @@ void main() {
   vec4 c = tex(vUv + toUv(g * uAmt * uScale * 0.06));
   // Caustics: thin bright lines where a second, warped field crosses its midpoint.
   float f = fbm(q * 1.6 + g * 0.35 + vec2(2.3, 8.1));
-  float caustic = pow(1.0 - smoothstep(0.0, 0.06, abs(f - 0.5)), 2.0);
-  o = vec4(clamp(c.rgb + uCaustic * 0.35 * caustic * (0.6 + 0.4 * c.rgb), 0.0, 1.0), c.a);
+  // The line width follows the screen-space rate of change, so lines stay smooth at any scale or color.
+  float wdt = max(0.05, fwidth(f) * 1.5);
+  float caustic = pow(1.0 - smoothstep(0.0, wdt, abs(f - 0.5)), 2.0);
+  vec3 light = vec3(uCaustic * 0.4 * caustic);
+  o = vec4(1.0 - (1.0 - c.rgb) * (1.0 - clamp(light, 0.0, 1.0)), c.a);
 }`,
 
     cmyk: `uniform float uSize; uniform float uAngle; uniform vec3 uPaper;
@@ -692,7 +695,7 @@ void main() {
         const e = job.fx[id];
         if (!e || !e.on || !SHADERS[id]) continue;
         const out = targets.list[ping];
-        draw(id, input, out.f, effectUniforms(id, e, ink, paper), w, h, k, job.seed);
+        draw(id, input, out.f, effectUniforms(id, e, ink, paper), w, h, k, e.seed ? e.seed : job.seed);
         input = out.t; ping = 1 - ping;
       }
       draw("copy", input, null, {}, w, h, k, job.seed);
