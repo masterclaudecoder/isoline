@@ -52,7 +52,7 @@
     ["Atlassian Design System", "https://atlassian.design", "Atlassian's components and guidelines", [R], "Components"],
     ["Radix Primitives", "https://www.radix-ui.com/primitives", "Unstyled, accessible building blocks", [R], "Headless"],
     ["Base UI", "https://base-ui.com", "Unstyled components from the Radix and MUI teams", [R], "Headless"],
-    ["React Aria", "https://react-spectrum.adobe.com/react-aria", "Adobe's accessible hooks and components", [R], "Headless"],
+    ["React Aria", "https://react-aria.adobe.com", "Adobe's accessible hooks and components", [R], "Headless"],
     ["Headless UI", "https://headlessui.com", "Unstyled components from Tailwind Labs", [R, V], "Headless"],
     ["Ark UI", "https://ark-ui.com", "Headless components on state machines", [R, V, SO, SV], "Headless"],
     ["Reka UI", "https://reka-ui.com", "Headless Vue components, formerly Radix Vue", [V], "Headless"],

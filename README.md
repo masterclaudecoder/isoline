@@ -2,7 +2,7 @@
 
 Topographic patterns, palettes and design tokens. Static site: open `index.html` or serve the folder (`python3 -m http.server`).
 
-Live at **https://masterclaudecoder.github.io/topographic/**. Every push to the main branch deploys it through GitHub Actions (`.github/workflows/pages.yml`), which also captures the library previews.
+Live at **https://masterclaudecoder.github.io/topographic/**. Every push to the main branch deploys it through GitHub Actions (`.github/workflows/pages.yml`). The workflow also captures previews for new libraries and commits them to `previews/`. Pages has to be switched on once in the repository settings (Settings, Pages, Source: GitHub Actions).
 
 ## Pages
 The home page (`#/`) shows three tools as large cards. Moving between pages is a seamless transition: the top bar stays put, pages crossfade, a tool's preview morphs into the tool, and floating bars pull up from the bottom once their page lands.
@@ -16,7 +16,7 @@ The home page (`#/`) shows three tools as large cards. Moving between pages is a
   - Export copies hex codes, CSS variables, JSON or a share link (`#/palettes/2f6fdb-...`), or downloads a PNG. **Use in Studio** applies the palette there.
   - The bar is smoked, frosted glass with white text, so it stays legible over any color. In Chromium browsers its rim also bends what's behind it.
 - **Components** (`#/components`) has two modes:
-  - **Libraries:** a directory of about 120 UI, headless, animation, effects, icon, chart, form, 3D, styling and font libraries, filterable by framework, category and search. Each card is a window onto the site. At deploy time `tools/previews.mjs` saves each library's own OpenGraph banner, or a screenshot of its page when it has none, into `previews/`. Copies without those files (like the single-file build) fall back to the [11ty OpenGraph image service](https://www.11ty.dev/docs/services/opengraph/), then to a pane drawn from the site's icon. Picks come first, then one section per category.
+  - **Libraries:** a directory of about 120 UI, headless, animation, effects, icon, chart, form, 3D, styling and font libraries, filterable by framework, category and search. Each card is a window onto the site. At deploy time `tools/previews.mjs` saves each library's own OpenGraph banner, or a screenshot of its page when it has none, into `previews/` (kept in the repository). Copies without those files (like the single-file build) fall back to the [11ty OpenGraph image service](https://www.11ty.dev/docs/services/opengraph/), then to a pane drawn from the site's icon. Picks come first, then one section per category.
   - **Builder:** design tokens for type, color, spacing, radius, elevation and motion, plus editable design rules. Fonts are picked from searchable menus that show each font in its own face, group a catalog by kind and suggest what pairs with the other font. You can also type any Google or installed font, or upload your own files. A live component sheet (stats with sparklines, a chart, team list, form, command menu, notifications, table, buttons) and four full landing pages (hero, centered, features, pricing) show every change. Landings render at desktop width and scale to fit. Until you change a color, the kit wears Isoline's own colors and follows the app's theme and accent, and the home page card shows the hero landing. Export copies CSS variables, a Tailwind v4 theme, JSON tokens, or a design or build brief for AI agents.
 
 ## Agents

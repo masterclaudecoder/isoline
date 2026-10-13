@@ -1,5 +1,6 @@
 # Publishes the app to GitHub Pages. Before deploying, it captures a preview image for each library in
-# libs.js (tools/previews.mjs). Captured images are cached between runs, so only new libraries are fetched.
+# libs.js (tools/previews.mjs) and commits new ones to previews/, so later runs only fetch what's new.
+# Pages must be enabled once in the repository settings, with GitHub Actions as the source.
 name: Pages
 
 on:
@@ -8,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -23,27 +24,29 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - name: Restore library previews
-        uses: actions/cache@v4
-        with:
-          path: previews
-          key: previews-${{ github.run_id }}
-          restore-keys: previews-
+          node-version: 22
       - name: Install capture tools
         run: |
           npm i --no-save --no-package-lock sharp@0.33.5 playwright@1.48.2
           npx playwright install --with-deps chromium
       - name: Capture library previews
         run: node tools/previews.mjs
+      # Pushes made with the workflow's own token don't start another run.
+      - name: Commit new previews
+        run: |
+          git add previews
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Update library previews"
+            git push
+          fi
       - name: Assemble site
         run: |
           mkdir _site
           cp index.html logos.html style.css *.js _site/
           cp -r previews _site/
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
