@@ -127,10 +127,6 @@
   "src": "previews/skeleton.jpg",
   "kind": "og"
  },
- "flowbite-svelte": {
-  "src": "previews/flowbite-svelte.jpg",
-  "kind": "shot"
- },
  "angular-material": {
   "src": "previews/angular-material.jpg",
   "kind": "og"
@@ -345,10 +341,6 @@
  },
  "d3": {
   "src": "previews/d3.jpg",
-  "kind": "shot"
- },
- "observable-plot": {
-  "src": "previews/observable-plot.jpg",
   "kind": "shot"
  },
  "react-hook-form": {
