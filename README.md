@@ -1,4 +1,4 @@
-# Topographic
+# Isoline
 
 Topographic line patterns for Figma. Static site: open `index.html` or serve the folder (`python3 -m http.server`).
 
@@ -10,4 +10,4 @@ Topographic line patterns for Figma. Static site: open `index.html` or serve the
 - **Export:** SVG or PNG (1–4×) with file size, or `C` to copy SVG and paste into Figma
 - `⌘Z` / `⇧⌘Z` undo and redo
 
-`logos.html` shows the logo concepts. Files: `engine.js` (field, contours, smoothing, SVG; no DOM), `brand.js` (logo concepts), `app.js` (UI).
+`logos.html` shows the logo concepts; the app uses Isoline. Files: `engine.js` (field, contours, smoothing, SVG; no DOM), `brand.js` (logo concepts), `app.js` (UI).

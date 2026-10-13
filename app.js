@@ -366,7 +366,7 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     toast(done);
   }
-  const autoName = () => `topographic-${S.pattern}-${S.w}x${S.h}-${S.seed}`;
+  const autoName = () => `isoline-${S.pattern}-${S.w}x${S.h}-${S.seed}`;
   const fmtBytes = (n) => (n < 1048576 ? Math.max(1, Math.round(n / 1024)) + " KB" : (n / 1048576).toFixed(1) + " MB");
   function pngBlob() {
     return new Promise((resolve, reject) => {

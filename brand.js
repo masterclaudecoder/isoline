@@ -75,15 +75,16 @@
     },
     {
       id: "isoline", name: "Isoline",
-      note: "Alternative name: the cartographer's word for a contour line. Mark is a lens of lines bending around a point.",
+      note: "Alternative name: the cartographer's word for a contour line. Lines part around a single point, mirrored so the point sits dead center.",
       html: () => {
-        const body = draw({ pattern: "lines", angle: 0, gap: 11, weight: 4.2, smooth: 0.6, falloff: 1.2, points: [{ x: 0.56, y: 0.44, r: 26, s: 1.9 }], minLen: 10 }, [120, 120]);
-        return `<svg class="lg-mark" viewBox="0 0 120 120" aria-hidden="true"><defs><clipPath id="lens"><circle cx="60" cy="60" r="56"/></clipPath></defs><g clip-path="url(#lens)">${body}</g><circle cx="${0.56 * 120}" cy="${0.44 * 120}" r="6" fill="${ACCENT}"/></svg><span class="lg-word" style="${wordStyle}">isoline</span>`;
+        // Draw the top half, then mirror it: the lines open evenly above and below the dot.
+        const body = draw({ pattern: "lines", angle: 0, gap: 12, weight: 4.2, smooth: 0.6, falloff: 1.2, points: [{ x: 0.5, y: 0.5, r: 22, s: 1.3 }], minLen: 14 }, [120, 120]);
+        return `<svg class="lg-mark" viewBox="0 0 120 120" aria-hidden="true"><defs><clipPath id="iso-lens"><circle cx="60" cy="60" r="56"/></clipPath><clipPath id="iso-half"><rect width="120" height="60"/></clipPath></defs><g clip-path="url(#iso-lens)"><g clip-path="url(#iso-half)">${body}</g><g transform="matrix(1 0 0 -1 0 120)"><g clip-path="url(#iso-half)">${body}</g></g></g><circle cx="60" cy="60" r="7.5" fill="${ACCENT}" stroke="#fff" stroke-width="3"/></svg><span class="lg-word" style="${wordStyle}">isoline</span>`;
       },
     },
   ];
 
-  function mount(el, id = "isoline-o") {
+  function mount(el, id = "isoline") {
     const c = concepts.find((x) => x.id === id) || concepts[0];
     el.innerHTML = c.html();
     el.dataset.logo = c.id;
