@@ -78,7 +78,7 @@
       note: "Alternative name: the cartographer's word for a contour line. Mark is a lens of lines bending around a point.",
       html: () => {
         const body = draw({ pattern: "lines", angle: 0, gap: 11, weight: 4.2, smooth: 0.6, falloff: 1.2, points: [{ x: 0.5, y: 0.44, r: 26, s: 1.9 }], minLen: 10 }, [120, 120]);
-        return `<svg class="lg-mark" viewBox="0 0 120 120" aria-hidden="true"><defs><clipPath id="iso-lens"><circle cx="60" cy="60" r="56"/></clipPath></defs><g clip-path="url(#iso-lens)">${body}</g><circle cx="60" cy="66" r="7.5" fill="${ACCENT}" stroke="#fff" stroke-width="3"/></svg><span class="lg-word" style="${wordStyle}">isoline</span>`;
+        return `<svg class="lg-mark" viewBox="0 0 120 120" aria-hidden="true"><defs><clipPath id="iso-lens"><circle cx="60" cy="60" r="56"/></clipPath></defs><g clip-path="url(#iso-lens)">${body}</g><circle cx="60" cy="70" r="7.5" fill="${ACCENT}" stroke="#fff" stroke-width="3"/></svg><span class="lg-word" style="${wordStyle}">isoline</span>`;
       },
     },
   ];
