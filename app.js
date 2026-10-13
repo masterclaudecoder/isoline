@@ -4,8 +4,9 @@
   // ---------- state ----------
   const DEFAULTS = {
     w: 1440, h: 900, pattern: "terrain",
-    scale: 620, octaves: 3, warp: 0.45, seed: 4821,
-    levels: 20, weight: 1, indexEvery: 5, indexWeight: 2.2, smooth: 0.6, res: 4, minLen: 8,
+    scale: 620, octaves: 3, warp: 0.45, seed: 4821, angle: 0, features: 6, bump: 1.6, bumpSize: 160,
+    levels: 20, spread: 0, weight: 1, swell: 0, swellSize: 220, taper: 0,
+    indexEvery: 5, indexWeight: 2.2, smooth: 0.6, res: 4, minLen: 8,
     line: "#2b2b2b", line2: "#e8572a", gradient: false,
     bg: "#ffffff", transparent: false, opacity: 1,
   };
@@ -16,7 +17,15 @@
   const PATTERNS = [
     ["terrain", "Terrain"], ["ridges", "Ridges"], ["flow", "Flow"],
     ["peaks", "Peaks"], ["islands", "Islands"], ["rings", "Rings"],
+    ["strata", "Strata"], ["waves", "Waves"], ["dunes", "Dunes"],
   ];
+  const ANGLED = ["flow", "strata", "waves", "dunes"];
+  const LOOKS = {
+    Classic: { pattern: "terrain", scale: 620, octaves: 3, warp: 0.45, levels: 20, spread: 0, weight: 1, swell: 0, taper: 0, indexEvery: 5, indexWeight: 2.2, smooth: 0.6 },
+    Uniform: { weight: 1.2, swell: 0, taper: 0, indexEvery: 0 },
+    Strata: { pattern: "strata", angle: 0, scale: 1000, octaves: 2, warp: 0.05, features: 4, bump: 2.6, bumpSize: 85, levels: 64, spread: 0, weight: 1.3, swell: 0, taper: 0, indexEvery: 0, smooth: 0.6 },
+    Swell: { weight: 1.4, swell: 0.65, swellSize: 260, taper: 140, indexEvery: 0, smooth: 0.6 },
+  };
   const PRESETS = [[1440, 900], [1920, 1080], [1080, 1080], [1080, 1350], [390, 844], [2560, 1440]];
   const LINE_COLORS = ["#2b2b2b", "#8a8780", "#e8572a", "#3a5bd9", "#1f9e78", "#e0a21b", "#d9487a", "#ffffff"];
   const BG_COLORS = ["#ffffff", "#f4f1ea", "#efe4da", "#e9eef5", "#16171a", "#0f1b33", "#1d2b24"];
@@ -77,12 +86,17 @@
       for (let k = 0; k < o; k++) { const r = 1 - Math.abs(noise(x * q, y * q)); sum += a * r * r; norm += a; a *= 0.5; q *= 2.03; }
       return sum / norm;
     };
-    const peaks = [];
-    const nPeaks = 6 + Math.floor(rand() * 8);
-    for (let k = 0; k < nPeaks; k++) {
+    const k = w / s.w;
+    const peaks = [], feats = [];
+    for (let i = 0; i < Math.max(1, s.features); i++) {
       peaks.push({ x: rand(), y: rand(), r: (0.5 + rand() * 1.1) * sc, a: (0.5 + rand() * 0.7) * (rand() < 0.2 ? -0.6 : 1) });
     }
-    const ang = rand() * Math.PI, ca = Math.cos(ang), sa = Math.sin(ang);
+    for (let i = 0; i < s.features; i++) {
+      const r = s.bumpSize * k * (0.6 + rand() * 0.8);
+      feats.push({ x: rand() * w, y: rand() * h, r2: 2 * r * r, a: r * (0.7 + rand() * 0.6) * (rand() < 0.3 ? -1 : 1) });
+    }
+    // angle is the direction lines run; the field gradient is perpendicular to it
+    const ang = ((s.angle + 90) * Math.PI) / 180, ca = Math.cos(ang), sa = Math.sin(ang);
     const cx = (0.3 + rand() * 0.4) * w, cy = (0.3 + rand() * 0.4) * h;
     const diag = Math.hypot(w, h) / 2;
 
@@ -98,6 +112,21 @@
         let val;
         switch (s.pattern) {
           case "ridges": val = ridged(u, v, oct); break;
+          case "strata": {
+            const px = u * sc, py = v * sc;
+            val = px * ca + py * sa;
+            for (const f of feats) {
+              const dx = px - f.x, dy = py - f.y;
+              val += s.bump * f.a * Math.exp(-(dx * dx + dy * dy) / f.r2);
+            }
+            break;
+          }
+          case "waves":
+            val = (u * ca + v * sa) * 1.6 + s.bump * fbm(u * 0.5, v * 0.5, oct);
+            break;
+          case "dunes":
+            val = 1 - Math.abs(Math.sin((u * ca + v * sa) * 1.6 + s.bump * 1.2 * fbm(u * 0.4, v * 0.4, oct)));
+            break;
           case "flow": {
             const d = u * ca + v * sa;
             val = Math.sin(d * 2.4 + fbm(u * 0.45, v * 0.45, oct) * 2.2);
@@ -236,29 +265,91 @@
   const hex = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
   const mix = (a, b, t) => "#" + hex(a).map((v, i) => Math.round(v + (hex(b)[i] - v) * t).toString(16).padStart(2, "0")).join("");
 
+  // Insert points so no segment is longer than `step`, giving width changes room to show.
+  function resample(p, closed, step) {
+    const n = p.length, out = [], segs = closed ? n : n - 1;
+    for (let i = 0; i < segs; i++) {
+      const a = p[i], b = p[(i + 1) % n];
+      out.push(a);
+      const m = Math.floor(Math.hypot(b[0] - a[0], b[1] - a[1]) / step);
+      for (let j = 1; j < m; j++) out.push([a[0] + ((b[0] - a[0]) * j) / m, a[1] + ((b[1] - a[1]) * j) / m]);
+    }
+    if (!closed) out.push(p[n - 1]);
+    return out;
+  }
+
+  // Variable-width line drawn as a filled outline. widthAt(x, y, distFromStart, distFromEnd) -> px.
+  function outlinePath(p, closed, widthAt, tension) {
+    const n = p.length;
+    if (n < 2) return "";
+    const len = [0];
+    for (let i = 1; i < n; i++) len.push(len[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
+    const total = len[n - 1];
+    const Lp = [], Rp = [], tan = [];
+    for (let i = 0; i < n; i++) {
+      const a = closed ? p[(i - 1 + n) % n] : p[Math.max(0, i - 1)];
+      const b = closed ? p[(i + 1) % n] : p[Math.min(n - 1, i + 1)];
+      let tx = b[0] - a[0], ty = b[1] - a[1];
+      const tl = Math.hypot(tx, ty) || 1;
+      tx /= tl; ty /= tl;
+      const hw = Math.max(0.04, widthAt(p[i][0], p[i][1], len[i], total - len[i])) / 2;
+      Lp.push([p[i][0] - ty * hw, p[i][1] + tx * hw]);
+      Rp.push([p[i][0] + ty * hw, p[i][1] - tx * hw]);
+      tan.push([tx, ty, hw]);
+    }
+    if (closed) return toPath(Lp, true, tension) + toPath(Rp.reverse(), true, tension);
+    const [sx, sy, sh] = tan[0], [ex, ey, eh] = tan[n - 1];
+    const ring = [...Lp, [p[n - 1][0] + ex * eh, p[n - 1][1] + ey * eh], ...Rp.reverse(), [p[0][0] - sx * sh, p[0][1] - sy * sh]];
+    return toPath(ring, true, tension);
+  }
+
   // ---------- render ----------
   function buildSVG(s, opts = {}) {
     const w = opts.w || s.w, h = opts.h || s.h;
     const k = w / s.w;
     const field = buildField(s, w, h, opts.res || s.res);
     let body = "", paths = 0;
+    // Swell or taper means width varies along a line, which SVG strokes can't do: draw filled outlines instead.
+    const filled = s.swell > 0 || s.taper > 0;
+    const swellNoise = makeNoise(s.seed + 7919);
+    const swellLen = Math.max(4, s.swellSize * k), taperLen = s.taper * k;
+    const onEdge = ([x, y]) => x < 0.5 || y < 0.5 || x > w - 0.5 || y > h - 0.5;
+    const gamma = Math.pow(2, s.spread);
     for (let L = 0; L < s.levels; L++) {
-      const t = (L + 1) / (s.levels + 1);
+      const t = Math.pow((L + 1) / (s.levels + 1), gamma);
       const isIndex = s.indexEvery > 0 && (L + 1) % s.indexEvery === 0;
       const lines = contour(field, t);
+      const sw = Math.round(s.weight * (isIndex ? s.indexWeight : 1) * Math.max(k, 0.5) * 100) / 100;
       let d = "";
       for (const ln of lines) {
         if (ln.p.length < (opts.minLen ?? s.minLen)) continue;
-        d += toPath(simplify(ln.p, 0.35 * Math.max(k, 0.3)), ln.closed, s.smooth);
+        const pts = simplify(ln.p, 0.35 * Math.max(k, 0.3));
+        if (filled) {
+          const a = ln.p[0], b = ln.p[ln.p.length - 1];
+          const tapA = !ln.closed && !onEdge(a), tapB = !ln.closed && !onEdge(b);
+          d += outlinePath(resample(pts, ln.closed, Math.max(2, swellLen / 8)), ln.closed, (x, y, d0, d1) => {
+            let f = 1;
+            if (s.swell > 0) {
+              const m = Math.min(1, Math.max(0, 0.5 + 0.8 * swellNoise(x / swellLen, y / swellLen)));
+              f = 1 + s.swell * (0.2 + 3.2 * m * m * m - 1);
+            }
+            if (taperLen > 0) {
+              const e = Math.min(tapA ? d0 : Infinity, tapB ? d1 : Infinity) / taperLen;
+              if (e < 1) f *= e * e * (3 - 2 * e);
+            }
+            return sw * f;
+          }, s.smooth);
+        } else {
+          d += toPath(pts, ln.closed, s.smooth);
+        }
         paths++;
       }
       if (!d) continue;
       const color = s.gradient ? mix(s.line, s.line2, s.levels > 1 ? L / (s.levels - 1) : 0) : s.line;
-      const sw = Math.round(s.weight * (isIndex ? s.indexWeight : 1) * Math.max(k, 0.5) * 100) / 100;
-      body += `<path d="${d}" stroke="${color}" stroke-width="${sw}"/>`;
+      body += filled ? `<path d="${d}" fill="${color}"/>` : `<path d="${d}" fill="none" stroke="${color}" stroke-width="${sw}"/>`;
     }
     const bg = s.transparent ? "" : `<rect width="${w}" height="${h}" fill="${s.bg}"/>`;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${bg}<g fill="none" stroke-linecap="round" stroke-linejoin="round"${s.opacity < 1 ? ` stroke-opacity="${s.opacity}"` : ""}>${body}</g></svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${bg}<g stroke-linecap="round" stroke-linejoin="round"${s.opacity < 1 ? ` opacity="${s.opacity}"` : ""}>${body}</g></svg>`;
     return { svg, paths };
   }
 
@@ -271,12 +362,20 @@
       ["scale", "Scale", 60, 1400, 10, (v) => v + "px"],
       ["octaves", "Detail", 1, 7, 1],
       ["warp", "Warp", 0, 3, 0.05, (v) => v.toFixed(2)],
+      ["angle", "Angle", 0, 180, 1, (v) => v + "°", () => ANGLED.includes(S.pattern)],
+      ["features", "Features", 0, 30, 1, (v) => v, () => ["strata", "peaks"].includes(S.pattern)],
+      ["bump", "Bulge", 0, 4, 0.05, (v) => v.toFixed(2), () => ["strata", "waves", "dunes"].includes(S.pattern)],
+      ["bumpSize", "Bulge size", 30, 700, 5, (v) => v + "px", () => S.pattern === "strata"],
     ],
     lines: [
-      ["levels", "Count", 3, 90, 1],
-      ["weight", "Weight", 0.25, 6, 0.05, (v) => v.toFixed(2)],
+      ["levels", "Count", 3, 160, 1],
+      ["spread", "Spacing", -2, 2, 0.05, (v) => (v === 0 ? "Even" : v.toFixed(2))],
+      ["weight", "Weight", 0.25, 8, 0.05, (v) => v.toFixed(2)],
+      ["swell", "Swell", 0, 1, 0.01, (v) => (v ? Math.round(v * 100) + "%" : "Off")],
+      ["swellSize", "Swell size", 20, 900, 5, (v) => v + "px", () => S.swell > 0],
+      ["taper", "Taper", 0, 600, 5, (v) => (v ? v + "px" : "Off")],
       ["indexEvery", "Bold every", 0, 12, 1, (v) => (v ? v : "Off")],
-      ["indexWeight", "Bold weight", 1, 5, 0.1, (v) => v.toFixed(1) + "×"],
+      ["indexWeight", "Bold weight", 1, 5, 0.1, (v) => v.toFixed(1) + "×", () => S.indexEvery > 0],
       ["smooth", "Smooth", 0, 1, 0.05, (v) => v.toFixed(2)],
       ["res", "Grid", 2, 14, 1, (v) => v + "px"],
       ["minLen", "Clean", 2, 80, 1],
@@ -285,14 +384,14 @@
   };
   const sliderEls = {};
   for (const [host, list] of Object.entries(SLIDERS)) {
-    for (const [key, label, min, max, step, fmt = (v) => v] of list) {
+    for (const [key, label, min, max, step, fmt = (v) => v, when] of list) {
       const row = document.createElement("div");
       row.className = "ctrl";
       row.innerHTML = `<div class="label-row"><label class="label" for="s-${key}">${label}</label><span class="val"></span></div><input id="s-${key}" type="range" min="${min}" max="${max}" step="${step}">`;
       const input = row.querySelector("input"), val = row.querySelector(".val");
       const paint = () => { input.style.setProperty("--p", ((input.value - min) / (max - min)) * 100 + "%"); val.textContent = fmt(+input.value); };
       input.addEventListener("input", () => { S[key] = +input.value; paint(); update(); });
-      sliderEls[key] = () => { input.value = S[key]; paint(); };
+      sliderEls[key] = () => { input.value = S[key]; paint(); if (when) row.hidden = !when(); };
       $(host).appendChild(row);
     }
   }
@@ -307,14 +406,20 @@
     $("patterns").appendChild(b);
     patBtns[id] = b;
   }
+  for (const name of Object.keys(LOOKS)) {
+    const b = document.createElement("button");
+    b.className = "chip"; b.textContent = name;
+    b.onclick = () => { Object.assign(S, LOOKS[name]); update(); };
+    $("looks").appendChild(b);
+  }
   let thumbKey = "";
   function drawThumbs() {
-    const key = [S.seed, S.warp, S.octaves, S.scale, S.w, S.h].join();
+    const key = [S.seed, S.warp, S.octaves, S.scale, S.w, S.h, S.angle, S.features, S.bump, S.bumpSize].join();
     if (key === thumbKey) return;
     thumbKey = key;
     const tw = 120, th = 80;
     for (const [id] of PATTERNS) {
-      const ts = { ...S, pattern: id, levels: 12, gradient: false, transparent: false, bg: "#ffffff", line: "#3a3936", weight: 0.9, indexEvery: 0, opacity: 1, smooth: 0.5 };
+      const ts = { ...S, pattern: id, levels: 12, spread: 0, swell: 0, taper: 0, gradient: false, transparent: false, bg: "#ffffff", line: "#3a3936", weight: 0.9, indexEvery: 0, opacity: 1, smooth: 0.5 };
       patBtns[id].querySelector(".th").innerHTML = buildSVG(ts, { w: tw, h: th, res: 2, minLen: 3 }).svg;
     }
   }
@@ -381,7 +486,6 @@
     $("seed").value = S.seed;
     for (const k of ["w", "h"]) { const el = $(k); el.value = S[k]; el.style.width = measure(el, String(S[k])) + 10 + "px"; }
     presetBtns.forEach((b, i) => b.classList.toggle("on", PRESETS[i][0] === S.w && PRESETS[i][1] === S.h));
-    $("s-indexWeight").disabled = !S.indexEvery;
   }
 
   // fit artboard to stage
@@ -413,13 +517,26 @@
   // ---------- export ----------
   const toast = (html) => { const t = $("toast"); t.innerHTML = html; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 1800); };
   const fname = (ext) => `topo-${S.pattern}-${S.w}x${S.h}-${S.seed}.${ext}`;
-  const download = (blob, name) => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
+  // Inside a claude.ai artifact, files go through the viewer's save prompt; elsewhere a plain link download.
+  let saver = null;
+  window.claude?.use?.("downloads").then((d) => (saver = d)).catch(() => {});
+  async function download(blob, name, done) {
+    if (saver) {
+      try { await saver.save({ filename: name, data: blob }); toast(done); }
+      catch (e) { if (e?.code !== "declined") toast("Couldn't save the file here. Use Copy for Figma."); }
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast(done);
+  }
 
   $("copy").onclick = async () => {
     try { await navigator.clipboard.writeText(current.svg); toast("Copied. <i>⌘V</i> in Figma."); }
-    catch (e) { download(new Blob([current.svg], { type: "image/svg+xml" }), fname("svg")); toast("Clipboard blocked. Saved SVG."); }
+    catch (e) { download(new Blob([current.svg], { type: "image/svg+xml" }), fname("svg"), "Clipboard blocked. SVG saved."); }
   };
-  $("svg").onclick = () => { download(new Blob([current.svg], { type: "image/svg+xml" }), fname("svg")); toast("SVG saved."); };
+  $("svg").onclick = () => download(new Blob([current.svg], { type: "image/svg+xml" }), fname("svg"), "SVG saved.");
   $("png").onclick = () => {
     const img = new Image(), url = URL.createObjectURL(new Blob([current.svg], { type: "image/svg+xml" }));
     img.onload = () => {
@@ -428,7 +545,7 @@
       c.width = Math.round(S.w * scale); c.height = Math.round(S.h * scale);
       c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
       URL.revokeObjectURL(url);
-      c.toBlob((b) => { download(b, fname("png")); toast(`PNG saved at <i>${scale}×</i>.`); });
+      c.toBlob((b) => download(b, fname("png"), `PNG saved at <i>${+scale.toFixed(2)}×</i>.`));
     };
     img.src = url;
   };

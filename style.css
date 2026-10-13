@@ -28,7 +28,7 @@ button, input { font: inherit; color: inherit; }
   display: grid;
   grid-template-columns: 340px 1fr;
   gap: 16px;
-  height: 100vh;
+  height: 100%;
   padding: 16px;
 }
 
@@ -208,3 +208,7 @@ input[type=range]::-moz-range-thumb {
   .presets { margin-left: 0; width: 100%; }
   .meta .kbd { display: none; }
 }
+
+.looks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.looks .chip { font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 7px 12px; }
+.looks .chip:hover { color: var(--accent); }
