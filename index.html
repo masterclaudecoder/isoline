@@ -54,15 +54,17 @@
 
     <section class="group" data-group="color">
       <div class="gh"><h2>Color</h2><div class="gh-tools"></div></div>
-      <div class="label-row"><span class="label">Stroke</span></div>
+      <div class="label-row"><label class="label" for="lineHex">Stroke</label><input class="hex mono" id="lineHex" spellcheck="false" autocomplete="off"></div>
       <div class="swatches" id="lineSw"></div>
       <div class="label-row">
-        <span class="label">Blend to</span>
+        <label class="label" for="line2Hex">Blend to</label>
+        <input class="hex mono" id="line2Hex" spellcheck="false" autocomplete="off">
         <label class="switch"><input type="checkbox" id="gradient"><span></span></label>
       </div>
       <div class="swatches" id="line2Sw"></div>
       <div class="label-row">
-        <span class="label">Background</span>
+        <label class="label" for="bgHex">Background</label>
+        <input class="hex mono" id="bgHex" spellcheck="false" autocomplete="off">
         <label class="switch" title="Transparent"><em>None</em><input type="checkbox" id="transparent"><span></span></label>
       </div>
       <div class="swatches" id="bgSw"></div>

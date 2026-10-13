@@ -6,6 +6,8 @@ Topographic line patterns for Figma. Static site: open `index.html` or serve the
 - **Looks:** Soft, Bold, Orbit, Night, Stripes, Strata, Swell, Spectrum
 - **Points:** double-click the canvas to add a peak, drag to move, scroll or drag the handle to resize, double-click a point to turn it into a dip. Points shape every pattern; Blobs and Rings are built from them.
 - **Lines:** count or pixel gap, bias, weight up to 40px, swell, taper, accent lines, smoothing, grid precision, cleanup
+- **Exact values:** click any value next to a slider to type it (units optional, ↑↓ to nudge, ⇧ for ×10); hex fields for colors
+- **Animation:** changes morph the lines; pattern, seed and size changes crossfade (off with reduced motion)
 - **Randomize:** `R` new seed, `⇧R` everything, plus a dice on every control and section
 - **Export:** SVG or PNG (1–4×) with file size, or `C` to copy SVG and paste into Figma
 - `⌘Z` / `⇧⌘Z` undo and redo

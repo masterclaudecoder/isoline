@@ -4,6 +4,7 @@
   const $ = (id) => document.getElementById(id);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const ACCENT = "#e8572a";
+  const HEX_IN = /^#[0-9a-f]{6}$/;
 
   // ---------- state ----------
   const DEFAULTS = {
@@ -101,7 +102,7 @@
       { key: "gap", label: "Gap", min: 2, max: 200, step: 0.5, log: true, fmt: (v) => v + "px", rand: [8, 48], when: linear },
       { key: "bias", label: "Bias", min: -2, max: 2, step: 0.05, fmt: (v) => (v === 0 ? "Even" : v.toFixed(2)), rand: [-1, 1], when: () => !linear() },
       { key: "weight", label: "Weight", min: 0.25, max: 40, step: 0.05, log: true, fmt: (v) => v.toFixed(2) + "px", rand: [0.75, 8] },
-      { key: "swell", label: "Swell", min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + "%" : "Off"), rand: [0, 0.8] },
+      { key: "swell", label: "Swell", pct: true, min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + "%" : "Off"), rand: [0, 0.8] },
       { key: "swellSize", label: "Swell size", min: 20, max: 900, step: 5, log: true, fmt: (v) => v + "px", rand: [120, 500], when: () => S.swell > 0 },
       { key: "taper", label: "Taper", min: 0, max: 600, step: 5, fmt: (v) => (v ? v + "px" : "Off"), rand: [0, 250] },
       { key: "indexEvery", label: "Accent every", min: 0, max: 12, step: 1, fmt: (v) => (v ? v : "Off"), rand: [0, 8] },
@@ -110,7 +111,7 @@
       { key: "res", label: "Grid", min: 2, max: 12, step: 1, fmt: (v) => v + "px", rand: [3, 5] },
       { key: "minLen", label: "Clean", min: 0, max: 300, step: 1, fmt: (v) => (v ? v + "px" : "Off"), rand: [0, 60] },
     ],
-    color: [{ key: "opacity", label: "Opacity", min: 0.05, max: 1, step: 0.01, fmt: (v) => Math.round(v * 100) + "%", rand: [0.3, 1] }],
+    color: [{ key: "opacity", label: "Opacity", pct: true, min: 0.05, max: 1, step: 0.01, fmt: (v) => Math.round(v * 100) + "%", rand: [0.3, 1] }],
   };
   const hosts = { points: "pointCtrls", shape: "shape", lines: "lines", color: "color" };
   const roundStep = (v, c) => +clamp(Math.round(v / c.step) * c.step, c.min, c.max).toFixed(4);
@@ -129,17 +130,38 @@
       const id = `s-${group}-${c.key}`;
       const row = document.createElement("div");
       row.className = "ctrl";
-      row.innerHTML = `<div class="label-row"><label class="label" for="${id}">${c.label}</label><span class="val"></span><button class="ib xs" title="Randomize ${c.label.toLowerCase()}" aria-label="Randomize ${c.label.toLowerCase()}"><i data-lucide="dice-5"></i></button></div><input id="${id}" type="range">`;
-      const input = row.querySelector("input"), val = row.querySelector(".val");
+      row.innerHTML = `<div class="label-row"><label class="label" for="${id}">${c.label}</label><input class="val" type="text" inputmode="decimal" spellcheck="false" autocomplete="off" aria-label="${c.label} value"><button class="ib xs" title="Randomize ${c.label.toLowerCase()}" aria-label="Randomize ${c.label.toLowerCase()}"><i data-lucide="dice-5"></i></button></div><input id="${id}" type="range">`;
+      const input = row.querySelector("input[type=range]"), val = row.querySelector(".val");
       const L = Math.log(c.max / c.min);
       const toVal = (x) => (c.log ? roundStep(c.min * Math.exp((x / 1000) * L), c) : +x);
       const fromVal = (v) => (c.log ? (1000 * Math.log(Math.max(v, c.min) / c.min)) / L : v);
       if (c.log) { input.min = 0; input.max = 1000; input.step = 1; } else { input.min = c.min; input.max = c.max; input.step = c.step; }
       const paint = (v) => {
         input.style.setProperty("--p", ((input.value - input.min) / (input.max - input.min)) * 100 + "%");
-        val.textContent = c.fmt(v);
+        if (document.activeElement !== val) val.value = c.fmt(v);
       };
-      input.addEventListener("input", () => { const v = toVal(input.value); c.set(v); paint(v); update(); });
+      input.addEventListener("input", () => { const v = toVal(input.value); c.set(v); paint(v); update({ instant: true }); });
+      // Typed values: accepts "700", "700px", "45°", "60%", "off".
+      const commitTyped = () => {
+        const txt = val.value.trim().toLowerCase();
+        let n = /^(off|even|none)$/.test(txt) ? 0 : parseFloat(txt.replace(/[^0-9.+\-e]/g, ""));
+        if (!Number.isFinite(n) || (c.when && !c.when())) { val.value = c.fmt(c.get()); return; }
+        if (c.pct) n /= 100;
+        c.set(roundStep(n, c)); update();
+        val.value = c.fmt(c.get());
+      };
+      val.addEventListener("focus", () => requestAnimationFrame(() => val.select()));
+      val.addEventListener("change", commitTyped);
+      val.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); val.blur(); }
+        else if (e.key === "Escape") { val.value = c.fmt(c.get()); val.blur(); }
+        else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+          e.preventDefault();
+          const step = (c.pct ? 0.01 : c.step) * (e.shiftKey ? 10 : 1) * (e.key === "ArrowUp" ? 1 : -1);
+          c.set(roundStep(c.get() + step, c)); update({ instant: true });
+          val.value = c.fmt(c.get()); val.select();
+        }
+      });
       row.querySelector("button").onclick = () => { if (c.when && !c.when()) return; c.set(randomValue(c)); update(); };
       c.sync = () => {
         const vis = !c.when || c.when();
@@ -226,7 +248,7 @@
     custom.className = "sw custom"; custom.title = "Custom color";
     custom.innerHTML = `<input type="color" aria-label="Custom color">`;
     const ci = custom.querySelector("input");
-    ci.addEventListener("input", () => { S[key] = ci.value; if (key === "bg") S.transparent = false; update(); });
+    ci.addEventListener("input", () => { S[key] = ci.value; if (key === "bg") S.transparent = false; update({ instant: true }); });
     el.appendChild(custom);
     return () => {
       const none = key === "bg" && S.transparent;
@@ -237,13 +259,25 @@
     };
   }
   const swatchSync = [swatchRow("lineSw", LINE_COLORS, "line"), swatchRow("line2Sw", LINE_COLORS, "line2"), swatchRow("bgSw", BG_COLORS, "bg")];
+  for (const [id, key] of [["lineHex", "line"], ["line2Hex", "line2"], ["bgHex", "bg"]]) {
+    const el = $(id);
+    el.addEventListener("focus", () => requestAnimationFrame(() => el.select()));
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter") el.blur(); if (e.key === "Escape") { el.value = S[key]; el.blur(); } });
+    el.addEventListener("change", () => {
+      let v = el.value.trim().replace(/^#?/, "#").toLowerCase();
+      if (/^#[0-9a-f]{3}$/.test(v)) v = "#" + [...v.slice(1)].map((ch) => ch + ch).join("");
+      if (!HEX_IN.test(v)) { el.value = S[key]; return; }
+      S[key] = v; if (key === "bg") S.transparent = false; update();
+    });
+    swatchSync.push(() => { if (document.activeElement !== el) el.value = key === "bg" && S.transparent ? "none" : S[key]; });
+  }
   $("gradient").onchange = (e) => { S.gradient = e.target.checked; update(); };
   $("transparent").onchange = (e) => { S.transparent = e.target.checked; update(); };
   $("seed").onchange = (e) => { S.seed = clamp(Math.floor(+e.target.value || 0), 0, 999999); update(); };
 
   // ---------- points ----------
   $("usePoints").onchange = (e) => { S.usePoints = e.target.checked; if (S.usePoints && !S.points.length) S.points = structuredClone(DEFAULTS.points); update(); };
-  $("showPoints").onclick = () => { S.showPoints = !S.showPoints; update({ commit: false }); };
+  $("showPoints").onclick = () => { S.showPoints = !S.showPoints; update({ commit: false, instant: true }); };
   $("addPoint").onclick = () => addPoint(rnd(0.2, 0.8), rnd(0.2, 0.8));
   $("clearPoints").onclick = () => { S.points = []; sel = null; update(); };
   $("scatter").onclick = () => scatter();
@@ -264,7 +298,7 @@
 
   // ---------- canvas overlay (point handles) ----------
   const art = $("art"), artSvg = $("artSvg"), ov = $("ov"), wrap = $("wrap");
-  function drawOverlay() {
+  function drawOverlay(st = S) {
     ov.setAttribute("viewBox", `0 0 ${S.w} ${S.h}`);
     const show = S.usePoints && S.showPoints;
     ov.classList.toggle("off", !show);
@@ -272,7 +306,7 @@
     const u = S.w / Math.max(1, art.clientWidth);
     const ns = 'vector-effect="non-scaling-stroke"';
     let out = "";
-    S.points.forEach((p, i) => {
+    st.points.forEach((p, i) => {
       const x = p.x * S.w, y = p.y * S.h, on = i === sel;
       out += `<circle cx="${x}" cy="${y}" r="${p.r}" fill="none" stroke="${on ? ACCENT : "rgba(120,120,120,.55)"}" stroke-width="1" stroke-dasharray="3 4" ${ns} pointer-events="none"/>`;
       if (on) out += `<line x1="${x}" y1="${y}" x2="${x + p.r}" y2="${y}" stroke="${ACCENT}" stroke-width="1" ${ns} pointer-events="none"/><circle class="rs" data-i="${i}" cx="${x + p.r}" cy="${y}" r="${6 * u}" fill="#fff" stroke="${ACCENT}" stroke-width="1.5" ${ns}/>`;
@@ -300,7 +334,7 @@
     else p.r = Math.round(clamp(Math.hypot(x - p.x * S.w, y - p.y * S.h), 10, 1400));
     drawOverlay(); syncUI(); render(true);
   });
-  const endDrag = () => { if (!drag) return; drag = null; ov.classList.remove("dragging"); update(); };
+  const endDrag = () => { if (!drag) return; drag = null; ov.classList.remove("dragging"); update({ instant: true }); };
   ov.addEventListener("pointerup", endDrag);
   ov.addEventListener("pointercancel", endDrag);
   ov.addEventListener("dblclick", (e) => {
@@ -318,7 +352,7 @@
     const p = S.points[sel];
     p.r = Math.round(clamp(p.r * Math.exp(-e.deltaY * 0.0015), 10, 1400));
     drawOverlay(); syncUI(); render(true);
-    clearTimeout(wheelT); wheelT = setTimeout(() => update(), 180);
+    clearTimeout(wheelT); wheelT = setTimeout(() => update({ instant: true }), 180);
   }, { passive: false });
 
   // ---------- size ----------
@@ -481,18 +515,73 @@
   }
   new ResizeObserver(() => { fit(); drawOverlay(); }).observe(wrap);
 
+  let anim = 0, painted = null;
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  function paint(st, draft) {
+    const t0 = performance.now();
+    const r = T.buildSVG(st, draft ? { res: Math.max(st.res * 2, 7) } : {});
+    artSvg.innerHTML = r.svg;
+    art.classList.toggle("clear", st.transparent);
+    $("ms").textContent = `${Math.round(performance.now() - t0)} ms`;
+    painted = structuredClone(st);
+    fit(); drawOverlay(st);
+    return r;
+  }
   function render(draft = false) {
-    cancelAnimationFrame(raf);
+    cancelAnimationFrame(raf); cancelAnimationFrame(anim); anim = 0;
     raf = requestAnimationFrame(() => {
-      const t0 = performance.now();
-      const r = T.buildSVG(S, draft ? { res: Math.max(S.res * 2, 7) } : {});
-      artSvg.innerHTML = r.svg;
-      art.classList.toggle("clear", S.transparent);
-      if (!draft) current = r;
-      $("ms").textContent = `${Math.round(performance.now() - t0)} ms`;
-      fit(); drawOverlay();
-      if (!draft) drawThumbs();
+      const r = paint(S, draft);
+      if (!draft) { current = r; drawThumbs(); }
     });
+  }
+
+  // ---------- animated changes ----------
+  // Numeric changes morph the lines (draft frames, then one full render); discrete jumps crossfade.
+  const HEX = /^#[0-9a-f]{6}$/i;
+  const INT_KEYS = new Set(["levels", "octaves", "indexEvery", "features"]);
+  const DISCRETE = ["pattern", "seed", "usePoints", "w", "h", "transparent", "gradient"];
+  const hexMix = (a, b, t) => "#" + [1, 3, 5].map((i) => Math.round(parseInt(a.substr(i, 2), 16) * (1 - t) + parseInt(b.substr(i, 2), 16) * t).toString(16).padStart(2, "0")).join("");
+  function tween(a, b, e) {
+    const m = { ...b };
+    for (const k in b) {
+      const x = a[k], y = b[k];
+      if (k === "res") continue;
+      if (typeof x === "number" && typeof y === "number") m[k] = INT_KEYS.has(k) ? Math.round(x + (y - x) * e) : x + (y - x) * e;
+      else if (typeof x === "string" && HEX.test(x) && HEX.test(y)) m[k] = hexMix(x, y, e);
+    }
+    m.points = b.points.map((p, i) => {
+      const q = a.points[i] || p;
+      return { x: q.x + (p.x - q.x) * e, y: q.y + (p.y - q.y) * e, r: q.r + (p.r - q.r) * e, s: q.s + (p.s - q.s) * e };
+    });
+    return m;
+  }
+  function crossfade() {
+    const ghost = document.createElement("div");
+    ghost.className = "art-ghost";
+    ghost.innerHTML = artSvg.innerHTML;
+    art.insertBefore(ghost, ov);
+    requestAnimationFrame(() => requestAnimationFrame(() => (ghost.style.opacity = "0")));
+    setTimeout(() => ghost.remove(), 450);
+  }
+  function animateFrom(from) {
+    const to = structuredClone(S);
+    if (!from || reduceMotion.matches) return render();
+    if (DISCRETE.some((k) => from[k] !== to[k]) || from.points.length !== to.points.length) {
+      cancelAnimationFrame(raf); cancelAnimationFrame(anim); anim = 0;
+      crossfade();
+      const r = paint(S, false);
+      current = r; drawThumbs();
+      return;
+    }
+    cancelAnimationFrame(raf); cancelAnimationFrame(anim);
+    const t0 = performance.now(), dur = 420;
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / dur);
+      if (t >= 1) { anim = 0; render(); return; }
+      paint(tween(from, to, 1 - Math.pow(1 - t, 3)), true);
+      anim = requestAnimationFrame(step);
+    };
+    anim = requestAnimationFrame(step);
   }
 
   const mirror = document.createElement("span");
@@ -521,9 +610,10 @@
   }
   document.fonts?.ready.then(() => syncUI());
 
-  function update({ draft = false, commit: doCommit = true } = {}) {
+  function update({ draft = false, commit: doCommit = true, instant = false } = {}) {
     if (sel != null && !S.points[sel]) sel = null;
-    syncUI(); save(); render(draft);
+    syncUI(); save();
+    if (draft || instant || !painted) render(draft); else animateFrom(painted);
     if (doCommit && !draft) commit();
   }
 
