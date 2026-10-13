@@ -163,12 +163,13 @@ void main() {
   o = vec4(clamp(acc / 4.0, 0.0, 1.0), tex(vUv).a);
 }`,
 
-    mesh: `uniform float uCell; uniform float uStr; uniform float uFrost; uniform float uGrout; uniform float uRim; uniform float uDisp;
+    mesh: `uniform float uCell; uniform float uStr; uniform float uFrost; uniform float uGrout; uniform float uRim; uniform float uDisp; uniform float uRad;
 // Glass blocks: a grid of rounded liquid-glass tiles, each magnifying its own patch, separated by a small gap.
 void main() {
   vec2 d = dp(), id = floor(d / uCell), c = (id + 0.5) * uCell, p = d - c;
-  float gap = uGrout * uCell * 0.035, rad = uCell * 0.24;
+  float gap = uGrout * uCell * 0.035;
   vec2 hb = vec2(uCell * 0.5 - gap * 0.5);
+  float rad = clamp(uRad, 0.0, 0.5) * 2.0 * hb.x;
   float sd = sdBox(p, hb, rad);
   vec2 n = normalize(vec2(sdBox(p + vec2(0.5, 0.0), hb, rad) - sdBox(p - vec2(0.5, 0.0), hb, rad), sdBox(p + vec2(0.0, 0.5), hb, rad) - sdBox(p - vec2(0.0, 0.5), hb, rad)) + 1e-6);
   vec2 src = c + p * (1.0 - 0.16 * uStr);
@@ -499,7 +500,7 @@ void main() {
       switch (id) {
         case "liquify": return { uAmt: e.amount, uScale: e.scale };
         case "glass": return { uWidth: e.width, uAngle: rad(e.angle), uStr: e.strength, uFrost: e.frost ?? 0.2, uLight: e.light ?? 0.5 };
-        case "mesh": return { uCell: e.cell, uStr: e.strength, uFrost: e.frost ?? 0.3, uGrout: e.grout ?? 1, uRim: e.rim ?? 0.6, uDisp: e.disp ?? 0.5 };
+        case "mesh": return { uCell: e.cell, uStr: e.strength, uFrost: e.frost ?? 0.3, uGrout: e.grout ?? 1, uRim: e.rim ?? 0.6, uDisp: e.disp ?? 0.5, uRad: e.radius ?? 0.25 };
         case "pixel": return { uSize: e.size, uBevel: e.bevel };
         case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
         case "ascii": {

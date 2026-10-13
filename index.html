@@ -157,36 +157,24 @@
         </div>
         <div class="pal-view"><div class="palettes" id="palettes"></div></div>
         <div data-gen="contours">
-          <h3 class="sub">Colors</h3>
-          <div class="label-row"><label class="label" for="lineHex" id="lineLbl">Lines</label><input class="hex mono" id="lineHex" spellcheck="false" autocomplete="off"></div>
-          <div class="swatches" id="lineSw"></div>
-          <div class="label-row">
-            <label class="label" for="line2Hex">Blend to</label>
-            <input class="hex mono" id="line2Hex" spellcheck="false" autocomplete="off">
-            <label class="switch"><input type="checkbox" id="gradient" aria-label="Blend colors"><span></span></label>
+          <h3 class="sub">Your colors</h3>
+          <div class="roles" id="roles"></div>
+          <div class="toggles">
+            <label class="switch"><input type="checkbox" id="gradient" aria-label="Blend lines"><span></span><em>Blend</em></label>
+            <label class="switch"><input type="checkbox" id="transparent" aria-label="Transparent background"><span></span><em>Transparent</em></label>
           </div>
-          <div class="swatches" id="line2Sw"></div>
-          <div class="label-row">
-            <label class="label" for="bgHex">Background</label>
-            <input class="hex mono" id="bgHex" spellcheck="false" autocomplete="off">
-            <label class="switch" title="Transparent"><em>None</em><input type="checkbox" id="transparent" aria-label="Transparent background"><span></span></label>
-          </div>
-          <div class="swatches" id="bgSw"></div>
           <div id="color"></div>
         </div>
         <div data-gen="raster">
-          <div class="label-row stops-row"><h3 class="sub inline">Colors</h3><span class="val-static mono" id="stopCount"></span></div>
+          <div class="sub-head"><h3 class="sub">Your colors</h3><span class="val-static mono" id="stopCount"></span></div>
           <div class="stops" id="stops"></div>
-          <div class="label-row add-row"><span class="label">Add</span><div class="add-sug" id="addSug"></div></div>
         </div>
         <h3 class="sub">Suggested</h3>
         <div class="suggest" id="suggest"></div>
-        <h3 class="sub">Effect inks</h3>
-        <p class="hint">For ink-only print effects.</p>
-        <div class="label-row"><label class="label" for="inkHex">Ink</label><input class="hex mono" id="inkHex" spellcheck="false" autocomplete="off"></div>
-        <div class="swatches" id="inkSw"></div>
-        <div class="label-row"><label class="label" for="paperHex">Paper</label><input class="hex mono" id="paperHex" spellcheck="false" autocomplete="off"></div>
-        <div class="swatches" id="paperSw"></div>
+        <div id="inkSec">
+          <h3 class="sub">Print inks</h3>
+          <div class="roles" id="inks"></div>
+        </div>
       </div>
 
       <div class="panel-sec" data-panel="effect">

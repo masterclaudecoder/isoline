@@ -13,14 +13,14 @@ The left column is the build, made of one slot per layer: **Preset → Generator
 - **Linear, Radial, Conic** gradients.
 
 ## Colors
-Curated and brand palettes, paged. Below them, a palette builder: edit any color with the built-in picker (with an eyedropper where the browser has one). Add suggested colors, or apply a suggested palette (tonal, analogous, opposite, triad, split, muted, or the closest library palettes).
+Curated and brand palettes, paged. Below them are your colors as circles; each opens the built-in picker, which shows the colors in use, suggested neighbours and an eyedropper where the browser has one. Suggested palettes (tonal, analogous, opposite, triad, muted and the closest library palette) follow. Print inks appear only when an ink-only print effect is in the stack.
 
 ## Lines (contours only)
 Lines (strokes), Bands (filled stripes, PewDiePie-style) or Layers (stacked fills). Count or gap, bias, weight, swell, taper, accent lines, smoothing and cleanup.
 
 ## Effects (WebGL2, run top to bottom)
 - **Distort:** liquify, waves, twirl, kaleidoscope
-- **Glass** (iOS-style: bezel refraction, frost, hairline highlights, slight dispersion): fluted glass, glass blocks, liquid glass
+- **Glass** (glass blocks have a corner radius; iOS-style: bezel refraction, frost, hairline highlights, slight dispersion): fluted glass, glass blocks, liquid glass
 - **Light:** progressive blur, glow, relief, vignette
 - **Color:** gradient map, posterize
 - **Print:** halftone, engrave, risograph, dither

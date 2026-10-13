@@ -17,7 +17,7 @@
     ["swirl", "Twirl", "Distort", { amount: 3, radius: 0.55, x: 0.5, y: 0.5 }, [{ k: "amount", label: "Turn", min: -12, max: 12, step: 0.05, fmt: f2, rand: [-5, 5] }, { k: "radius", label: "Radius", min: 0.05, max: 1.5, step: 0.01, fmt: f2, rand: [0.35, 0.9] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }]],
     ["kaleido", "Kaleidoscope", "Distort", { segments: 6, rotate: 0, zoom: 1 }, [{ k: "segments", label: "Segments", min: 2, max: 16, step: 1, hard: [2, 64], rand: [4, 10] }, { k: "rotate", label: "Rotate", min: 0, max: 360, step: 1, fmt: deg }, { k: "zoom", label: "Zoom", min: 0.3, max: 3, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.7, 1.6] }]],
     ["glass", "Fluted glass", "Glass", { width: 44, angle: 90, strength: 0.9, frost: 0.2, light: 0.4 }, [{ k: "width", label: "Rib width", min: 4, max: 300, step: 1, log: true, fmt: px, rand: [24, 90] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }, { k: "strength", label: "Refraction", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.4] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.5] }, { k: "light", label: "Highlight", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.3, 0.7] }]],
-    ["mesh", "Glass blocks", "Glass", { cell: 120, strength: 0.7, frost: 0.25, grout: 1, rim: 0.6, disp: 0.5 }, [{ k: "cell", label: "Block size", min: 12, max: 400, step: 1, log: true, fmt: px, rand: [70, 180] }, { k: "strength", label: "Refraction", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.1, 0.5] }, { k: "grout", label: "Gap", min: 0, max: 4, step: 0.05, fmt: f2, rand: [0.5, 1.5] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
+    ["mesh", "Glass blocks", "Glass", { cell: 120, radius: 0.25, strength: 0.7, frost: 0.25, grout: 1, rim: 0.6, disp: 0.5 }, [{ k: "cell", label: "Block size", min: 12, max: 400, step: 1, log: true, fmt: px, rand: [70, 180] }, { k: "radius", label: "Corner radius", min: 0, max: 0.5, step: 0.01, fmt: pct, pct: true, rand: [0.12, 0.35] }, { k: "strength", label: "Refraction", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.1, 0.5] }, { k: "grout", label: "Gap", min: 0, max: 4, step: 0.05, fmt: f2, rand: [0.5, 1.5] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
     ["lens", "Liquid glass", "Glass", { shape: "pill", size: 0.42, x: 0.5, y: 0.5, refraction: 0.9, frost: 0.2, rim: 0.6, disp: 0.5 }, [{ seg: "shape", options: [["circle", "Circle"], ["pill", "Pill"], ["square", "Square"]] }, { k: "size", label: "Size", min: 0.1, max: 1.2, step: 0.01, fmt: f2, rand: [0.3, 0.6] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.65] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.65] }, { k: "refraction", label: "Refraction", min: 0, max: 2.5, step: 0.01, fmt: f2, rand: [0.6, 1.3] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.4] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
     ["blur", "Progressive blur", "Light", { amount: 32, dir: "bottom", start: 0.35 }, [{ seg: "dir", options: [["top", "Top"], ["bottom", "Bottom"], ["left", "Left"], ["right", "Right"], ["center", "Edges"], ["even", "Even"]] }, { k: "amount", label: "Blur", min: 0, max: 200, step: 0.5, fmt: px, rand: [16, 60] }, { k: "start", label: "Starts at", min: 0, max: 0.95, step: 0.01, fmt: pct, pct: true, rand: [0.25, 0.6] }]],
     ["bloom", "Glow", "Light", { threshold: 0.55, radius: 30, intensity: 0.9 }, [{ k: "threshold", label: "Threshold", min: 0, max: 0.95, step: 0.01, fmt: f2, rand: [0.35, 0.75] }, { k: "radius", label: "Radius", min: 2, max: 200, step: 1, log: true, fmt: px, rand: [16, 50] }, { k: "intensity", label: "Intensity", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.2] }]],
@@ -345,7 +345,7 @@
       close();
       anchor = a; cur = { onInput, onDone };
       hsv = hexToHsv(parseHex(value) || "#000000");
-      swEl.innerHTML = [...new Set(swatches)].slice(0, 10).map((c) => `<button class="sw xs" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join("");
+      swEl.innerHTML = swatches.map(([label, cols]) => `<div class="pk-group"><span>${label}</span><div>${[...new Set(cols)].slice(0, 8).map((c) => `<button class="sw xs" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join("")}</div></div>`).join("");
       swEl.hidden = !swatches.length;
       el.hidden = false; paint(); place();
       el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
@@ -357,7 +357,10 @@
     return { open, close, isOpen: () => !!cur };
   })();
   // Colors already in play, offered as quick picks in the picker.
-  const inPlay = () => [...(S.source === "contours" ? [S.line, S.line2, S.bg] : S.grad.colors), S.ink, S.paper];
+  const inPlay = () => (S.source === "contours" ? [S.line, S.line2, S.bg] : S.grad.colors);
+  // Colors that sit well next to one: lighter, darker, its neighbours on the wheel, its opposite and a soft near-white.
+  const variants = (hex) => { const [l, c, h] = toOklch(hex); return [[l + 0.16, c * 0.7, h], [l - 0.18, c, h], [l, c, h + 30], [l, c, h - 30], [l, Math.max(c, 0.08), h + 180], [0.95, 0.02, h]].map(([a, b, d]) => fromOklch(clamp(a, 0.12, 0.97), b, (d + 360) % 360)); };
+  const swatchesFor = (hex) => [["In use", inPlay()], ["Try", variants(parseHex(hex) || "#808080")]];
 
   // ---------- control factories ----------
   const syncers = [], sliders = [];
@@ -446,39 +449,11 @@
     const id = "c-" + Math.random().toString(36).slice(2, 8);
     row.innerHTML = `<label class="label" for="${id}">${label}</label><input class="hex mono" id="${id}" spellcheck="false" autocomplete="off"><button class="sw sm" title="${label}" aria-label="Pick ${label.toLowerCase()}"></button>`;
     const hex = row.querySelector(".hex"), sw = row.querySelector(".sw");
-    sw.onclick = () => picker.open(sw, get(), (v) => { set(v); sw.style.background = v; update({ instant: true }); }, () => commit(), inPlay());
+    sw.onclick = () => picker.open(sw, get(), (v) => { set(v); sw.style.background = v; update({ instant: true }); }, () => commit(), swatchesFor(get()));
     hex.addEventListener("change", () => { const v = parseHex(hex.value); if (!v) { hex.value = get(); return; } set(v); update(); });
     hex.addEventListener("keydown", (e) => { if (e.key === "Enter") hex.blur(); });
     syncers.push(() => { const v = get(); sw.style.background = v; if (document.activeElement !== hex) hex.value = v; });
     host.appendChild(row);
-  }
-  function swatchRow(host, colors, get, set, isNone) {
-    const el = $(host);
-    const btns = colors.map((c) => {
-      const b = document.createElement("button");
-      b.className = "sw"; b.style.background = c; b.title = c; b.setAttribute("aria-label", c);
-      b.onclick = () => { set(c); update(); };
-      el.appendChild(b);
-      return b;
-    });
-    const custom = document.createElement("button");
-    custom.className = "sw custom"; custom.title = "Custom color"; custom.setAttribute("aria-label", "Custom color");
-    custom.onclick = () => picker.open(custom, get(), (v) => { set(v); update({ instant: true }); }, () => commit(), inPlay());
-    el.appendChild(custom);
-    syncers.push(() => {
-      const none = isNone && isNone();
-      let hit = false;
-      btns.forEach((b, i) => { const on = colors[i] === get() && !none; b.classList.toggle("on", on); hit ||= on; });
-      custom.classList.toggle("on", !hit && !none);
-      custom.style.setProperty("--c", get());
-    });
-  }
-  function bindHex(id, get, set, isNone) {
-    const el = $(id);
-    el.addEventListener("focus", () => requestAnimationFrame(() => el.select()));
-    el.addEventListener("keydown", (e) => { if (e.key === "Enter") el.blur(); if (e.key === "Escape") { el.value = get(); el.blur(); } });
-    el.addEventListener("change", () => { const v = parseHex(el.value); if (!v) { el.value = get(); return; } set(v); update(); });
-    syncers.push(() => { if (document.activeElement !== el) el.value = isNone && isNone() ? "none" : get(); });
   }
   function card(label, onClick, sub = "") {
     const b = document.createElement("button");
@@ -509,35 +484,72 @@
     return ["", ""];
   }
   const slotColors = () => (gen() === "contours" ? (S.gradient || S.mode === "layers" ? [S.bg, S.line, S.line2] : [S.bg, S.line]) : S.grad.colors);
+  // The build column is built once and patched in place, so selection, text and colors can transition.
   let slotKey = "";
-  const slotThumbs = {};
+  const SLOT_DEFS = [["preset", "Preset"], ["generator", "Generator"], ["shape", "Shape"], ["lines", "Lines"], ["colors", "Colors"]];
+  const slotEls = {};
+  const slotList = $("slotList");
+  for (const [id, label] of SLOT_DEFS) {
+    const wrap = document.createElement("div");
+    wrap.className = "slot";
+    wrap.innerHTML = `<div class="slot-label">${label}</div><button class="tile" data-slot="${id}"><span class="tile-th" data-th="${id}">${id === "colors" ? `<span class="tile-sw"></span>` : ""}</span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
+    slotList.appendChild(wrap); slotEls[id] = wrap;
+  }
+  const fxSlot = document.createElement("div");
+  fxSlot.className = "slot";
+  fxSlot.innerHTML = `<div class="slot-label">Effects<span class="count" hidden></span></div><div class="fx-tiles" id="fxTiles"><button class="tile add" data-slot="addfx"><span class="tile-plus">${ic("plus")}</span><span class="tile-text"><b>Add effect</b><small></small></span></button></div>`;
+  slotList.appendChild(fxSlot);
+  const fxTiles = fxSlot.querySelector(".fx-tiles"), addTile = fxSlot.querySelector(".tile.add"), countEl = fxSlot.querySelector(".count");
+  const EASE = "cubic-bezier(.2,.8,.2,1)";
+  const animOK = () => !reduceMotion.matches && !document.body.classList.contains("boot");
+  // Text that changes fades in rather than snapping.
+  function setText(el, v) { if (el.textContent === v) return; el.textContent = v; if (animOK()) el.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 240, easing: EASE }); }
+  function fxTile(id) {
+    const t = document.createElement("div");
+    t.className = "tile fx"; t.dataset.fx = id;
+    t.innerHTML = `<span class="grip" title="Drag to reorder" aria-label="Drag to reorder ${FXI[id].name}">${ic("grip")}</span><button class="tile-main" data-slot="fx:${id}"><span class="tile-th" data-th="fx:${id}"></span><span class="tile-text"><b>${FXI[id].name}</b><small>${FXI[id].cat}</small></span></button><button class="ib xs" data-remove="${id}" aria-label="Remove ${FXI[id].name}" title="Remove">${ic("x")}</button>`;
+    return t;
+  }
   function renderSlots() {
-    const key = JSON.stringify([gen(), S.fxOrder, P.slot, ...["preset", "generator", "shape", "lines", "colors"].map(slotInfo), slotColors()]);
+    const key = JSON.stringify([gen(), S.fxOrder, P.slot, ...SLOT_DEFS.map(([id]) => slotInfo(id)), slotColors()]);
     if (key === slotKey) return;
     slotKey = key;
-    const el = $("slotList");
-    const tile = (id, [title, sub], thumb) => `<button class="tile${P.slot === id ? " on" : ""}" data-slot="${id}"><span class="tile-th" data-th="${id}">${thumb || ""}</span><span class="tile-text"><b>${title}</b><small>${sub}</small></span>${ic("next", "go")}</button>`;
-    const sw = (cols) => `<span class="tile-sw">${cols.map((c) => `<i style="background:${c}"></i>`).join("")}</span>`;
-    let html = "";
-    for (const [id, label] of [["preset", "Preset"], ["generator", "Generator"], ["shape", "Shape"], ["lines", "Lines"], ["colors", "Colors"]]) {
-      if (slotWhen[id] && !slotWhen[id]()) continue;
-      html += `<div class="slot"><div class="slot-label">${label}</div>${tile(id, slotInfo(id), id === "colors" ? sw(slotColors()) : "")}</div>`;
+    const tiles = () => [...slotList.querySelectorAll(".tile")];
+    const keyOf = (n) => (n.dataset.fx ? "fx:" + n.dataset.fx : n.dataset.slot);
+    const before = new Map(tiles().map((n) => [keyOf(n), n.getBoundingClientRect().top]));
+    for (const [id] of SLOT_DEFS) {
+      const wrap = slotEls[id], t = wrap.querySelector(".tile"), [title, sub] = slotInfo(id);
+      const show = !slotWhen[id] || slotWhen[id]();
+      if (wrap.hidden === show) { wrap.hidden = !show; if (show && animOK()) wrap.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260 }); }
+      t.classList.toggle("on", P.slot === id);
+      setText(t.querySelector("b"), title); setText(t.querySelector("small"), sub);
     }
-    html += `<div class="slot"><div class="slot-label">Effects${S.fxOrder.length ? `<span class="count">${S.fxOrder.length}</span>` : ""}</div><div class="fx-tiles" id="fxTiles">`;
-    S.fxOrder.forEach((id) => {
-      const on = P.slot === "fx:" + id;
-      html += `<div class="tile fx${on ? " on" : ""}" data-fx="${id}"><span class="grip" title="Drag to reorder" aria-label="Drag to reorder ${FXI[id].name}">${ic("grip")}</span><button class="tile-main" data-slot="fx:${id}"><span class="tile-th" data-th="fx:${id}"></span><span class="tile-text"><b>${FXI[id].name}</b><small>${FXI[id].cat}</small></span></button><button class="ib xs" data-remove="${id}" aria-label="Remove ${FXI[id].name}" title="Remove">${ic("x")}</button></div>`;
-    });
-    html += `<button class="tile add${P.slot === "addfx" ? " on" : ""}" data-slot="addfx"><span class="tile-plus">${ic("plus")}</span><span class="tile-text"><b>Add effect</b><small>${S.fxOrder.length ? "Stack another" : "Glass, grain, print and more"}</small></span></button></div></div>`;
-    // FLIP: tiles that move glide to their new place; new ones grow in.
-    const keyOf = (n) => n.dataset.fx ? "fx:" + n.dataset.fx : n.dataset.slot;
-    const before = new Map([...el.querySelectorAll(".tile")].map((n) => [keyOf(n), n.getBoundingClientRect().top]));
-    el.innerHTML = html;
-    for (const [k, v] of Object.entries(slotThumbs)) { const t = el.querySelector(`[data-th="${k}"]`); if (t && v) t.appendChild(v.cloneNode(true)); }
-    if (before.size && !reduceMotion.matches) for (const n of el.querySelectorAll(".tile")) {
-      const top = before.get(keyOf(n)), now = n.getBoundingClientRect().top;
-      if (top == null) n.animate([{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" });
-      else if (Math.abs(top - now) > 1 && !n.classList.contains("dragging")) n.animate([{ transform: `translateY(${top - now}px)` }, { transform: "none" }], { duration: 280, easing: "cubic-bezier(.2,.8,.2,1)" });
+    // Color tile: same number of colors eases each one; a new count rebuilds the strip.
+    const sw = slotEls.colors.querySelector(".tile-sw"), cols = slotColors();
+    if (sw.children.length === cols.length) [...sw.children].forEach((i, n) => (i.style.background = cols[n]));
+    else sw.innerHTML = cols.map((c) => `<i style="background:${c}"></i>`).join("");
+    // Effects: keep existing tiles, add new ones, let removed ones collapse out.
+    const have = new Map([...fxTiles.querySelectorAll("[data-fx]")].filter((n) => !n.classList.contains("leaving")).map((n) => [n.dataset.fx, n]));
+    const fresh = new Set();
+    for (const id of S.fxOrder) { let t = have.get(id); if (!t) { t = fxTile(id); fresh.add(id); } fxTiles.insertBefore(t, addTile); t.classList.toggle("on", P.slot === "fx:" + id); have.delete(id); }
+    for (const t of have.values()) {
+      if (!animOK()) { t.remove(); continue; }
+      t.classList.add("leaving");
+      fxTiles.appendChild(t);
+      t.style.position = "absolute"; t.style.width = fxTiles.clientWidth + "px"; t.style.top = (before.get("fx:" + t.dataset.fx) - fxTiles.getBoundingClientRect().top) + "px";
+      t.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.95)" }], { duration: 200, easing: EASE }).onfinish = () => t.remove();
+    }
+    addTile.classList.toggle("on", P.slot === "addfx");
+    setText(addTile.querySelector("small"), S.fxOrder.length ? "Stack another" : "Glass, grain, print and more");
+    const n = String(S.fxOrder.length);
+    countEl.hidden = !S.fxOrder.length;
+    if (countEl.textContent !== n) { countEl.textContent = n; if (animOK()) countEl.animate([{ transform: "scale(.4)" }, { transform: "scale(1.15)" }, { transform: "none" }], { duration: 320, easing: EASE }); }
+    // FLIP: tiles that moved glide to their new place; new ones grow in.
+    if (animOK()) for (const t of tiles()) {
+      if (t.classList.contains("leaving") || t.offsetParent === null) continue;
+      const k = keyOf(t), top = before.get(k), now = t.getBoundingClientRect().top;
+      if (fresh.has(t.dataset.fx)) t.animate([{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 280, easing: EASE });
+      else if (top != null && Math.abs(top - now) > 1 && !t.classList.contains("dragging")) t.animate([{ transform: `translateY(${top - now}px)` }, { transform: "none" }], { duration: 300, easing: EASE });
     }
     schedulePreviews(120);
   }
@@ -561,7 +573,7 @@
       if (idx < 0) idx = items.length;
       const cur = S.fxOrder.indexOf(id);
       if (idx > cur) idx--;
-      if (idx !== cur) { S.fxOrder.splice(cur, 1); S.fxOrder.splice(idx, 0, id); slotKey = ""; renderSlots(); mark(); update({ instant: true, commit: false }); }
+      if (idx !== cur) { S.fxOrder.splice(cur, 1); S.fxOrder.splice(idx, 0, id); renderSlots(); update({ instant: true, commit: false }); }
     };
     const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); $("slotList").querySelector(".dragging")?.classList.remove("dragging"); commit(); };
     window.addEventListener("pointermove", move);
@@ -694,7 +706,7 @@
   ].forEach((c) => makeSlider($("lines"), { group: "lines", ...c }));
 
   // ---------- colors panel ----------
-  const PER_PAGE = 9;
+  const PER_PAGE = 6;
   const sameCols = (a, b) => a.length === b.length && a.every((c, i) => c === b[i]);
   const palMatches = (p) => (gen() === "contours" ? S.line === p.roles[0] && S.bg === p.roles[2] : sameCols(S.grad.colors, p.colors));
   const currentPal = () => PALS.find(palMatches);
@@ -742,13 +754,12 @@
       ["Analogous", mk([[0.26, C * 0.8, H - 40], [0.46, C, H - 20], [0.64, C, H], [0.78, C * 0.9, H + 20], [0.93, C * 0.4, H + 40]])],
       ["Opposite", mk([[0.24, C * 0.7, H], [0.5, C, H], [0.95, C * 0.15, H + 90], [0.66, C, H + 180], [0.84, C * 0.6, H + 180]])],
       ["Triad", mk([[0.22, C * 0.4, H], [0.55, C, H], [0.68, C, H + 120], [0.76, C, H + 240], [0.96, C * 0.15, H]])],
-      ["Split", mk([[0.25, C * 0.6, H], [0.58, C, H], [0.7, C, H + 150], [0.8, C, H + 210], [0.95, C * 0.15, H]])],
       ["Muted", mk([[0.22, C * 0.25, H], [0.42, C * 0.35, H + 10], [0.62, C * 0.4, H - 10], [0.8, C * 0.3, H], [0.94, C * 0.1, H]])],
     ];
     // Distance between palettes: each color's nearest match in the other, in OKLab.
     const lab = (h) => { const [l, c, hh] = toOklch(h); return [l, c * Math.cos((hh * Math.PI) / 180), c * Math.sin((hh * Math.PI) / 180)]; };
     const mine = cols.map(lab), dist = (p) => p.colors.map(lab).reduce((a, x) => a + Math.min(...mine.map((y) => Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]))), 0) / p.colors.length;
-    for (const p of PALS.filter((p) => !palMatches(p)).sort((a, b) => dist(a) - dist(b)).slice(0, 2)) out.push([p.name, p.colors, p.roles]);
+    for (const p of PALS.filter((p) => !palMatches(p)).sort((a, b) => dist(a) - dist(b)).slice(0, 1)) out.push([p.name, p.colors, p.roles]);
     return out;
   }
   let sugKey = "", sugList = [], sugT = 0;
@@ -762,34 +773,29 @@
       const sw = contours ? `<span class="sug-sw" style="background:${r[2]}"><i style="background:${r[0]}"></i><i style="background:${r[1]}"></i></span>` : `<span class="sug-sw">${cols.map((c) => `<i style="background:${c}"></i>`).join("")}</span>`;
       return `<button class="sug" data-i="${i}" style="--i:${i}">${sw}<span>${name}</span></button>`;
     }).join("");
-    if (contours) { $("addSug").innerHTML = ""; return; }
-    const base = toOklch(S.grad.colors[sel != null && S.grad.colors[sel] ? sel : S.grad.colors.length - 1]);
-    const adds = [[base[0] + 0.16, base[1] * 0.7, base[2]], [base[0] - 0.18, base[1], base[2]], [base[0], base[1], base[2] + 30], [base[0], base[1], base[2] - 30], [base[0], Math.max(base[1], 0.08), base[2] + 180], [0.95, 0.02, base[2]]].map(([l, c, h]) => fromOklch(clamp(l, 0.12, 0.97), c, (h + 360) % 360));
-    $("addSug").innerHTML = [...new Set(adds)].map((c) => `<button class="sw xs" data-c="${c}" style="background:${c}" title="Add ${c}" aria-label="Add ${c}"></button>`).join("");
   }
   $("suggest").onclick = (e) => { const b = e.target.closest("[data-i]"); if (!b) return; const [, cols, roles] = sugList[+b.dataset.i]; applyPal(cols, roles); update(); };
-  $("addSug").onclick = (e) => { const b = e.target.closest("[data-c]"); if (b) addStop(rnd(0.15, 0.85), rnd(0.15, 0.85), b.dataset.c); };
 
   function setGradColors(cols) {
     S.grad.colors = cols.slice(0, 8);
     while (S.grad.points.length < S.grad.colors.length) S.grad.points.push({ x: +rnd(0.1, 0.9).toFixed(3), y: +rnd(0.1, 0.9).toFixed(3) });
     S.grad.points = S.grad.points.slice(0, S.grad.colors.length);
   }
-  const LINE_COLORS = ["#1b1b1b", "#2c2a26", "#8a8378", "#f26b3a", "#ef2b52", "#34493b", "#5b6b9a", "#f1ede4"];
-  const BG_COLORS = ["#faf8f3", "#f1ede4", "#e6eadf", "#efe2d3", "#1c1d1f", "#0e1424", "#ef2b52"];
-  swatchRow("lineSw", LINE_COLORS, () => S.line, (v) => (S.line = v));
-  swatchRow("line2Sw", LINE_COLORS, () => S.line2, (v) => (S.line2 = v));
-  swatchRow("bgSw", BG_COLORS, () => S.bg, (v) => { S.bg = v; S.transparent = false; }, () => S.transparent);
-  bindHex("lineHex", () => S.line, (v) => (S.line = v));
-  bindHex("line2Hex", () => S.line2, (v) => (S.line2 = v));
-  bindHex("bgHex", () => S.bg, (v) => { S.bg = v; S.transparent = false; }, () => S.transparent);
+  // Color circles: one per role (contours, print inks) or per stop (gradients). Each opens the picker.
+  function roleRow(host, roles) {
+    const el = $(host);
+    el.innerHTML = roles.map(([key, label]) => `<div class="role" data-k="${key}"><button class="sw lg" aria-label="${label} color"></button><span>${label}</span></div>`).join("");
+    for (const [key, label, onSet] of roles) {
+      const sw = el.querySelector(`[data-k="${key}"] .sw`);
+      sw.onclick = () => picker.open(sw, S[key], (v) => { S[key] = v; onSet?.(); sw.style.background = v; update({ instant: true }); }, () => commit(), swatchesFor(S[key]));
+    }
+    syncers.push(() => { for (const [key] of roles) el.querySelector(`[data-k="${key}"] .sw`).style.background = S[key]; });
+  }
+  roleRow("roles", [["line", "Lines"], ["line2", "Blend"], ["bg", "Background", () => (S.transparent = false)]]);
+  roleRow("inks", [["ink", "Ink"], ["paper", "Paper"]]);
   $("gradient").onchange = (e) => { S.gradient = e.target.checked; update(); };
   $("transparent").onchange = (e) => { S.transparent = e.target.checked; update(); };
   makeSlider($("color"), { group: "color", label: "Opacity", ...k("opacity"), pct: true, min: 0.05, max: 1, step: 0.01, fmt: pct, rand: [0.5, 1], hard: [0, 1] });
-  swatchRow("inkSw", ["#1b1b1b", "#2c2a26", "#f26b3a", "#4b3fd1", "#34493b", "#ffffff"], () => S.ink, (v) => (S.ink = v));
-  swatchRow("paperSw", ["#f1ede4", "#faf8f3", "#efe2d3", "#e6eadf", "#1c1d1f", "#0e1424"], () => S.paper, (v) => (S.paper = v));
-  bindHex("inkHex", () => S.ink, (v) => (S.ink = v));
-  bindHex("paperHex", () => S.paper, (v) => (S.paper = v));
   function randomPalette() {
     const p = pick(PALS.filter((p) => !palMatches(p)));
     applyPal(p.colors, p.roles);
@@ -808,7 +814,7 @@
         item.className = "stop" + (gen() === "mesh" && sel === i ? " on" : "") + (before && i >= before ? " fresh" : "");
         item.innerHTML = `<button class="sw" style="background:${c}" aria-label="Edit color ${i + 1}"></button>${cols.length > 2 ? `<button class="x" aria-label="Remove color ${i + 1}">${ic("x")}</button>` : ""}`;
         const sw = item.querySelector(".sw");
-        sw.onclick = () => picker.open(sw, S.grad.colors[i], (v) => { S.grad.colors[i] = v; sw.style.background = v; update({ instant: true }); }, () => commit(), inPlay());
+        sw.onclick = () => picker.open(sw, S.grad.colors[i], (v) => { S.grad.colors[i] = v; sw.style.background = v; update({ instant: true }); }, () => commit(), swatchesFor(S.grad.colors[i]));
         item.querySelector(".x")?.addEventListener("click", () => { picker.close(); S.grad.colors.splice(i, 1); S.grad.points.splice(i, 1); sel = null; update(); });
         el.appendChild(item);
       });
@@ -816,7 +822,7 @@
         const add = document.createElement("button");
         add.className = "stop-add"; add.title = "Add color"; add.setAttribute("aria-label", "Add color");
         add.innerHTML = ic("plus");
-        add.onclick = () => addStop(rnd(0.15, 0.85), rnd(0.15, 0.85));
+        add.onclick = () => addStop(rnd(0.15, 0.85), rnd(0.15, 0.85), variants(S.grad.colors[S.grad.colors.length - 1])[2]);
         el.appendChild(add);
       }
     }
@@ -1325,14 +1331,14 @@
     if (drag) return;
     const jobs = [];
     // Slot tile thumbnails first: they're always on screen.
-    const tileJob = (key, st) => jobs.push(async () => { const el = $("slotList").querySelector(`[data-th="${key}"]`); if (!el) return; const c = await thumb(el, st, 64); slotThumbs[key] = c ? c.cloneNode(true) : null; if (c) slotThumbs[key].classList.remove("fresh"); if (c && c.tagName === "CANVAS") { slotThumbs[key].getContext("2d").drawImage(c, 0, 0); } });
+    const tileJob = (key, st) => jobs.push(async () => { const el = $("slotList").querySelector(`[data-th="${key}"]`); if (!el) return; await thumb(el, st, 64); });
     tileJob("preset", S);
     tileJob("generator", lightLines(noFx(S)));
     tileJob("shape", lightLines(mono(noFx(S))));
     if (gen() === "contours") tileJob("lines", lightLines(noFx(S)));
     if (TFX && S.fxOrder.length) jobs.push(async () => {
       await effectBase(128, 80);
-      for (const id of S.fxOrder) { const el = $("slotList").querySelector(`[data-th="fx:${id}"]`); if (!el) continue; const c = putCanvas(el, fxThumb(id, 128, 80), 128, 80); const copy = document.createElement("canvas"); copy.width = 128; copy.height = 80; copy.getContext("2d").drawImage(c, 0, 0); slotThumbs["fx:" + id] = copy; }
+      for (const id of S.fxOrder) { const el = $("slotList").querySelector(`[data-th="fx:${id}"]`); if (!el) continue; putCanvas(el, fxThumb(id, 128, 80), 128, 80); }
     });
     const p = panelOf(P.slot);
     if (p === "preset") for (const pc of presetCards) { if (!pc.done && !pc.el.hidden) jobs.push(async () => { await thumb(slotOf(pc.el), resolveLook(pc.look), 220); pc.done = true; }); }
@@ -1454,8 +1460,10 @@
     for (const [id, c] of Object.entries(fxCards)) c.classList.toggle("added", S.fxOrder.includes(id));
     varCards.forEach((c) => c.classList.toggle("on", c._seed === S.seed));
     if (panel === "colors") { renderPalettes(); clearTimeout(sugT); sugT = setTimeout(renderSuggest, sugKey ? 220 : 0); }
-    $("line2Sw").classList.toggle("off", !S.gradient && S.mode !== "layers");
-    $("lineLbl").textContent = S.mode === "lines" ? "Lines" : S.mode === "bands" ? "Bands" : "From";
+    $("roles").querySelector('[data-k="line2"]').classList.toggle("off", !S.gradient && S.mode !== "layers");
+    $("roles").querySelector('[data-k="bg"]').classList.toggle("off", S.transparent);
+    $("roles").querySelector('[data-k="line"] span').textContent = S.mode === "lines" ? "Lines" : S.mode === "bands" ? "Bands" : "From";
+    $("inkSec").hidden = !S.fxOrder.some((id) => ["halftone", "linescreen", "ascii", "dither"].includes(id) && S.fx[id].mono);
     $("gradient").checked = S.gradient || S.mode === "layers";
     $("gradient").disabled = S.mode === "layers";
     $("transparent").checked = S.transparent;
