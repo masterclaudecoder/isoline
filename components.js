@@ -249,7 +249,10 @@
   // for copies of the app that run without them, such as the single-file build.
   let local = {};
   const shots = (l) => [...(local[root.ISO_SLUG(l.name)] ? [local[root.ISO_SLUG(l.name)]] : []), `https://v1.opengraph.11ty.dev/${enc(l.url)}/small/`, `https://v1.screenshot.11ty.dev/${enc(l.url)}/opengraph/`];
-  fetch("previews/index.json").then((r) => (r.ok ? r.json() : {})).then((m) => { local = Object.fromEntries(Object.entries(m || {}).map(([k, v]) => [k, v.src])); if (Object.keys(local).length && !lib.hidden && $("cpResults").children.length) renderLibs(); }).catch(() => {});
+  // Next to the page when served from the repo or GitHub Pages; from the published site otherwise.
+  const SITE = "https://masterclaudecoder.github.io/topographic/";
+  const loadIndex = (base) => fetch(base + "previews/index.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((m) => Object.fromEntries(Object.entries(m || {}).map(([k, v]) => [k, base + v.src])));
+  loadIndex("").catch(() => loadIndex(SITE)).then((m) => { local = m; if (Object.keys(local).length && !lib.hidden && $("cpResults").children.length) renderLibs(); }).catch(() => {});
   const favicon = (l, sz = 64) => `https://www.google.com/s2/favicons?domain=${enc(hostOf(l.url))}&sz=${sz}`;
   const tintOf = (name) => { let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
   const fwText = (fw) => { const n = fw.map((f) => (f === ANY ? "Any framework" : f)); return n.length > 3 ? `${n.slice(0, 3).join(", ")} and ${n.length - 3} more` : n.join(", "); };
