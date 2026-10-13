@@ -28,6 +28,30 @@ vec4 tex(vec2 uv) { return texture(uTex, clamp(uv, vec2(0.0), vec2(1.0))); }
     gradient: `
 uniform int uType; uniform int uN; uniform vec3 uCol[8]; uniform vec2 uPt[8];
 uniform float uWarp; uniform float uWarpScale; uniform float uSoft; uniform float uAngle;
+uniform float uScale; uniform float uDetail; uniform float uStretch; uniform float uContrast; uniform int uNoise;
+vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec3 permute(vec3 x) { return mod289(((x * 34.0) + 1.0) * x); }
+float snoise(vec2 v) {
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+  vec2 i = floor(v + dot(v, C.yy)), x0 = v - i + dot(i, C.xx);
+  vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz; x12.xy -= i1;
+  i = mod289(i);
+  vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+  vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0); m = m * m; m = m * m;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0, h = abs(x) - 0.5, ox = floor(x + 0.5), a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+  vec3 g; g.x = a0.x * x0.x + h.x * x0.y; g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+float sfbm(vec2 p) { float a = 0.5, r = 0.0; for (int i = 0; i < 8; i++) { if (float(i) >= uDetail) break; r += a * snoise(p); p = p * 2.02 + vec2(17.3, 9.1); a *= 0.5; } return r; }
+vec2 cellPt(vec2 c) { return vec2(hash(c), hash(c + 19.19)); }
+vec2 worley(vec2 p) {
+  vec2 i = floor(p), f = fract(p); float f1 = 8.0, f2 = 8.0;
+  for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 g = vec2(float(x), float(y)); float d = length(g + cellPt(i + g) - f); if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) f2 = d; }
+  return vec2(f1, f2);
+}
 vec3 lin(vec3 c) { return pow(c, vec3(2.2)); }
 vec3 srgb(vec3 c) { return pow(max(c, 0.0), vec3(1.0 / 2.2)); }
 vec3 toLab(vec3 c) {
@@ -51,7 +75,28 @@ void main() {
   vec2 p = vec2(vUv.x, 1.0 - vUv.y);
   if (uWarp > 0.0) { vec2 q = p * a * uWarpScale; p += uWarp * 0.3 * (vec2(fbm(q + vec2(1.7, 9.2)), fbm(q + vec2(8.3, 2.8))) - 0.5); }
   vec3 lab;
-  if (uType == 0) {
+  if (uType >= 4) {
+    // Flow and noise generators: a rotated, stretched simplex field mapped through the color ramp.
+    float ca = cos(uAngle), sa = sin(uAngle);
+    vec2 q = mat2(ca, -sa, sa, ca) * ((p - 0.5) * a);
+    q.x /= max(uStretch, 0.05);
+    q = q * uScale + uSeed * vec2(1.37, 2.91);
+    float v;
+    if (uType == 4) {
+      vec2 w1 = vec2(sfbm(q), sfbm(q + vec2(5.2, 1.3)));
+      vec2 w2 = vec2(sfbm(q + uWarp * 1.2 * w1 + vec2(1.7, 9.2)), sfbm(q + uWarp * 1.2 * w1 + vec2(8.3, 2.8)));
+      v = sfbm(q + uWarp * 1.2 * w2) * 0.75 + 0.5;
+    } else {
+      q += uWarp * vec2(sfbm(q + vec2(3.1, 7.7)), sfbm(q + vec2(9.4, 1.2)));
+      if (uNoise == 0) v = sfbm(q) * 0.6 + 0.5;
+      else if (uNoise == 1) { float am = 0.5, r = 0.0; vec2 pp = q; for (int i = 0; i < 8; i++) { if (float(i) >= uDetail) break; float n = 1.0 - abs(snoise(pp)); r += am * n * n; pp = pp * 2.02 + 17.0; am *= 0.5; } v = r * 1.1; }
+      else if (uNoise == 2) { float am = 0.5, r = 0.0; vec2 pp = q; for (int i = 0; i < 8; i++) { if (float(i) >= uDetail) break; r += am * abs(snoise(pp)); pp = pp * 2.02 + 17.0; am *= 0.5; } v = r * 1.6; }
+      else if (uNoise == 3) v = worley(q * 1.5).x;
+      else if (uNoise == 4) { vec2 w = worley(q * 1.5); v = 1.0 - smoothstep(0.0, 0.35, w.y - w.x); }
+      else v = 0.5 + 0.5 * sin(q.x * 4.0 + sfbm(q) * 5.0);
+    }
+    lab = ramp(clamp((v - 0.5) * uContrast + 0.5, 0.0, 1.0));
+  } else if (uType == 0) {
     vec3 acc = vec3(0.0); float ws = 0.0;
     for (int i = 0; i < 8; i++) { if (i >= uN) break; vec2 d = (p - uPt[i]) * a; float w = 1.0 / pow(dot(d, d) + 0.0004, uSoft); acc += toLab(lin(uCol[i])) * w; ws += w; }
     lab = acc / ws;
@@ -73,27 +118,47 @@ void main() {
   o = tex(vUv + toUv(off * uAmt * uScale * 0.5));
 }`,
 
-    glass: `uniform float uWidth; uniform float uAngle; uniform float uStr; uniform float uShine;
+    glass: `uniform float uWidth; uniform float uAngle; uniform float uStr; uniform float uFrost; uniform float uLight;
+// Each rib is a half-cylinder lens. Four sub-pixel samples across the rib edge remove the stair-stepping.
+vec3 rib(vec2 d, vec2 nrm, out float l) {
+  l = fract(dot(d, nrm) / uWidth) - 0.5;
+  vec2 uv = vUv + toUv(nrm * sin(l * 3.14159) * uStr * uWidth * 0.5);
+  float fr = uFrost * uWidth * 0.35; vec3 c = vec3(0.0);
+  for (int i = 0; i < 6; i++) { float a = float(i) * 2.39996 + l * 7.0, r = sqrt((float(i) + 0.5) / 6.0) * fr; c += tex(uv + toUv(vec2(cos(a), sin(a)) * r)).rgb; }
+  return c / 6.0;
+}
 void main() {
   vec2 dir = vec2(cos(uAngle), sin(uAngle)), nrm = vec2(-dir.y, dir.x);
-  float x = dot(dp(), nrm) / uWidth, l = fract(x) - 0.5;
-  vec4 c = tex(vUv + toUv(nrm * l * uStr * uWidth));
-  float e = abs(l * 2.0);
-  c.rgb *= 1.0 - 0.28 * uShine * pow(e, 3.0);
-  c.rgb += uShine * 0.35 * pow(clamp(1.0 - abs(l + 0.22) * 5.0, 0.0, 1.0), 2.0);
-  c.rgb += uShine * 0.12 * smoothstep(0.42, 0.5, e);
-  o = c;
+  vec3 acc = vec3(0.0); float l = 0.0, shade = 0.0;
+  for (int s = 0; s < 4; s++) {
+    vec2 d = dp() + nrm * ((float(s) - 1.5) * 0.25 / uK);
+    float li; acc += rib(d, nrm, li);
+    shade += 1.0 - 0.18 * uLight * pow(abs(li * 2.0), 3.0) + 0.06 * uLight * (1.0 - smoothstep(0.0, 0.5, abs(li + 0.25)));
+  }
+  o = vec4(acc / 4.0 * (shade / 4.0), tex(vUv).a);
 }`,
 
-    mesh: `uniform float uCell; uniform float uStr; uniform float uBevel;
+    mesh: `uniform float uCell; uniform float uStr; uniform float uFrost; uniform float uGrout;
+// Glass blocks: each cell magnifies its own patch of the image, with a softly rounded rim and thin grout lines.
+vec3 block(vec2 d, out float e) {
+  vec2 c = d / uCell, id = floor(c), l = fract(c) - 0.5;
+  e = max(abs(l.x), abs(l.y));
+  vec2 rim = sign(l) * smoothstep(0.3, 0.5, abs(l)) * 0.18;
+  vec2 src = (id + 0.5 + l * (1.0 - 0.45 * uStr) + rim * uStr) * uCell;
+  float fr = uFrost * uCell * 0.12; vec3 col = vec3(0.0);
+  for (int i = 0; i < 6; i++) { float a = float(i) * 2.39996, r = sqrt((float(i) + 0.5) / 6.0) * fr; col += tex(toUv(src + vec2(cos(a), sin(a)) * r)).rgb; }
+  return col / 6.0;
+}
 void main() {
-  vec2 d = dp() / uCell, l = fract(d) - 0.5;
-  vec4 c = tex(vUv - toUv(l * uStr * uCell * 0.6));
-  float e = max(abs(l.x), abs(l.y)), bev = smoothstep(0.34, 0.5, e);
-  float light = dot(normalize(l + 1e-5), normalize(vec2(-1.0, 1.0)));
-  c.rgb += bev * uBevel * light * 0.3;
-  c.rgb += uBevel * 0.18 * pow(clamp(1.0 - length(l - vec2(-0.18, 0.18)) * 3.0, 0.0, 1.0), 3.0);
-  o = c;
+  vec3 acc = vec3(0.0); float edge = 0.0;
+  for (int s = 0; s < 4; s++) {
+    vec2 off = vec2(float(s & 1) - 0.5, float(s >> 1) - 0.5) * 0.5 / uK;
+    float e; acc += block(dp() + off, e);
+    edge += smoothstep(0.5 - uGrout * 0.04 - 0.004, 0.5, e);
+  }
+  vec3 col = acc / 4.0;
+  col *= 1.0 - 0.24 * (edge / 4.0);
+  o = vec4(col, tex(vUv).a);
 }`,
 
     pixel: `uniform float uSize; uniform float uBevel;
@@ -294,11 +359,13 @@ void main() {
   o = vec4(tex(vUv + off).r, c.g, tex(vUv - off).b, c.a);
 }`,
 
-    grain: `uniform float uAmt; uniform float uSize; uniform float uMono;
+    grain: `uniform float uAmt; uniform float uSize; uniform float uMono; uniform float uSoft;
 void main() {
   vec4 c = tex(vUv);
   vec2 g = floor(dp() / uSize) + uSeed * 0.37;
-  float n = hash(g) - 0.5;
+  // Film grain averages a few samples (softer, rounder clumps); fine grain is one hash per cell.
+  float n = uSoft > 0.5 ? (hash(g) + hash(g + 0.5) + vnoise(dp() / uSize * 0.7) - 1.5) / 1.4 : hash(g) - 0.5;
+  n *= 1.0 - 0.5 * abs(luma(c.rgb) - 0.5);
   vec3 nn = uMono > 0.5 ? vec3(n) : vec3(n, hash(g + 7.1) - 0.5, hash(g + 3.3) - 0.5);
   c.rgb += nn * uAmt * 0.7;
   o = c;
@@ -400,12 +467,12 @@ void main() {
       for (const [u, v] of Object.entries(uniforms)) {
         const l = loc(u);
         if (l == null) continue;
-        if (u === "uType" || u === "uN") gl.uniform1i(l, v);
+        if (u === "uType" || u === "uN" || u === "uNoise") gl.uniform1i(l, v);
         else if (typeof v === "number") gl.uniform1f(l, v);
         else if (v.length === 3 && typeof v[0] === "number") gl.uniform3fv(l, v);
         else if (v.length === 2 && typeof v[0] === "number") gl.uniform2fv(l, v);
-        else if (u === "uCol") gl.uniform3fv(l, v.flat());
-        else if (u === "uPt") gl.uniform2fv(l, v.flat());
+        else if (u === "uCol" && v.length) gl.uniform3fv(l, v.flat());
+        else if (u === "uPt" && v.length) gl.uniform2fv(l, v.flat());
       }
       gl.bindBuffer(gl.ARRAY_BUFFER, buf);
       gl.enableVertexAttribArray(0);
@@ -416,8 +483,8 @@ void main() {
     function effectUniforms(id, e, ink, paper) {
       switch (id) {
         case "liquify": return { uAmt: e.amount, uScale: e.scale };
-        case "glass": return { uWidth: e.width, uAngle: rad(e.angle), uStr: e.strength, uShine: e.shine };
-        case "mesh": return { uCell: e.cell, uStr: e.strength, uBevel: e.bevel };
+        case "glass": return { uWidth: e.width, uAngle: rad(e.angle), uStr: e.strength, uFrost: e.frost ?? 0.2, uLight: e.light ?? 0.5 };
+        case "mesh": return { uCell: e.cell, uStr: e.strength, uFrost: e.frost ?? 0.3, uGrout: e.grout ?? 1 };
         case "pixel": return { uSize: e.size, uBevel: e.bevel };
         case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
         case "ascii": {
@@ -441,7 +508,7 @@ void main() {
         case "riso": return { uSize: e.size, uOff: e.offset, uGrain: e.grain, uInkA: hex3(e.inkA), uInkB: hex3(e.inkB), uPaper: hex3(e.paper) };
         case "voronoi": return { uCell: e.cell, uEdge: e.edge };
         case "scan": return { uSpace: e.spacing, uStr: e.strength };
-        case "grain": return { uAmt: e.amount, uSize: e.size, uMono: e.mono ? 1 : 0 };
+        case "grain": return { uAmt: e.amount, uSize: e.size, uMono: e.mono ? 1 : 0, uSoft: e.soft ? 1 : 0 };
       }
       return {};
     }
@@ -457,7 +524,9 @@ void main() {
       if (job.grad) {
         const g = job.grad, n = Math.min(8, g.colors.length);
         draw("gradient", srcTex, targets.list[0].f, {
-          uType: ["mesh", "linear", "radial", "conic"].indexOf(g.type), uN: n,
+          uType: ["mesh", "linear", "radial", "conic", "flow", "noise"].indexOf(g.type), uN: n,
+          uScale: g.scale ?? 1.2, uDetail: g.detail ?? 3, uStretch: g.stretch ?? 1, uContrast: g.contrast ?? 1,
+          uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble"].indexOf(g.noise || "clouds"),
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
           uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle),
         }, w, h, k, job.seed);
