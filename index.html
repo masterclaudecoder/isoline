@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contour Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="app">
+  <aside class="panel" id="panel">
+    <section class="group">
+      <h2>Pattern</h2>
+      <div class="patterns" id="patterns"></div>
+    </section>
+    <section class="group">
+      <h2>Shape</h2>
+      <div id="shape"></div>
+      <div class="seed-row">
+        <label class="label" for="seed">Seed</label>
+        <input class="field mono" id="seed" type="number" min="0" max="999999">
+        <button class="btn icon" id="dice" title="New seed (R)" aria-label="New seed">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/></svg>
+        </button>
+      </div>
+    </section>
+    <section class="group">
+      <h2>Lines</h2>
+      <div id="lines"></div>
+    </section>
+    <section class="group">
+      <h2>Color</h2>
+      <div class="label-row"><span class="label">Stroke</span></div>
+      <div class="swatches" id="lineSw"></div>
+      <div class="label-row">
+        <span class="label">Blend to</span>
+        <label class="switch"><input type="checkbox" id="gradient"><span></span></label>
+      </div>
+      <div class="swatches" id="line2Sw"></div>
+      <div class="label-row">
+        <span class="label">Background</span>
+        <label class="switch" title="Transparent"><input type="checkbox" id="transparent"><span></span><em>None</em></label>
+      </div>
+      <div class="swatches" id="bgSw"></div>
+      <div id="color"></div>
+    </section>
+  </aside>
+
+  <section class="stage">
+    <header class="bar">
+      <div class="size">
+        <input class="dim" id="w" type="number" min="64" max="8000" aria-label="Width">
+        <span class="times">×</span>
+        <input class="dim" id="h" type="number" min="64" max="8000" aria-label="Height">
+        <div class="presets" id="presets"></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="png">PNG</button>
+        <button class="btn" id="svg">SVG</button>
+        <button class="btn primary" id="copy">Copy for Figma</button>
+      </div>
+    </header>
+    <div class="canvas-wrap">
+      <div class="artboard" id="art"></div>
+    </div>
+    <footer class="meta mono" id="meta"></footer>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
