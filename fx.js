@@ -57,6 +57,8 @@ vec3 liquid(vec2 uv, float sd, vec2 n, float bez, float refr, float frost, float
 uniform int uType; uniform int uN; uniform vec3 uCol[8]; uniform vec2 uPt[8];
 uniform float uWarp; uniform float uWarpScale; uniform float uSoft; uniform float uAngle;
 uniform float uScale; uniform float uDetail; uniform float uStretch; uniform float uContrast; uniform int uNoise;
+// Motion (all loop over uTime 0..1): 1 drift, 2 color flow, 3 breathe.
+uniform float uTime; uniform int uMotion; uniform float uMotAmt;
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec3 permute(vec3 x) { return mod289(((x * 34.0) + 1.0) * x); }
@@ -100,6 +102,7 @@ vec3 fromLab(vec3 c) {
   return vec3(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
 }
 vec3 ramp(float t) {
+  if (uMotion == 2) t += 0.22 * uMotAmt * sin(6.2831853 * uTime);
   t = clamp(t, 0.0, 1.0) * float(uN - 1);
   int i = min(int(floor(t)), uN - 2); float f = t - float(i); f = f * f * (3.0 - 2.0 * f);
   return mix(toLab(lin(uCol[i])), toLab(lin(uCol[i + 1])), f);
@@ -107,21 +110,25 @@ vec3 ramp(float t) {
 void main() {
   vec2 a = vec2(uRes.x / uRes.y, 1.0);
   vec2 p = vec2(vUv.x, 1.0 - vUv.y);
-  if (uWarp > 0.0) { vec2 q = p * a * uWarpScale; p += uWarp * 0.3 * (vec2(fbm(q + vec2(1.7, 9.2)), fbm(q + vec2(8.3, 2.8))) - 0.5); }
+  float tw = 6.2831853 * uTime;
+  vec2 drift = uMotion == 1 ? uMotAmt * vec2(cos(tw), sin(tw)) : vec2(0.0);
+  float warp = uWarp * (uMotion == 3 ? 1.0 + 0.8 * uMotAmt * sin(tw) : 1.0);
+  if (uType >= 1 && uType <= 3) p += drift * 0.03;
+  if (warp > 0.0) { vec2 q = p * a * uWarpScale + drift * 0.6; p += warp * 0.3 * (vec2(fbm(q + vec2(1.7, 9.2)), fbm(q + vec2(8.3, 2.8))) - 0.5); }
   vec3 lab;
   if (uType >= 4) {
     // Flow and noise generators: a rotated, stretched simplex field mapped through the color ramp.
     float ca = cos(uAngle), sa = sin(uAngle);
     vec2 q = mat2(ca, -sa, sa, ca) * ((p - 0.5) * a);
     q.x /= max(uStretch, 0.05);
-    q = q * uScale + uSeed * vec2(1.37, 2.91);
+    q = q * uScale + uSeed * vec2(1.37, 2.91) + drift * 0.9;
     float v;
     if (uType == 4) {
       vec2 w1 = vec2(sfbm(q), sfbm(q + vec2(5.2, 1.3)));
-      vec2 w2 = vec2(sfbm(q + uWarp * 1.2 * w1 + vec2(1.7, 9.2)), sfbm(q + uWarp * 1.2 * w1 + vec2(8.3, 2.8)));
-      v = sfbm(q + uWarp * 1.2 * w2) * 0.75 + 0.5;
+      vec2 w2 = vec2(sfbm(q + warp * 1.2 * w1 + vec2(1.7, 9.2)), sfbm(q + warp * 1.2 * w1 + vec2(8.3, 2.8)));
+      v = sfbm(q + warp * 1.2 * w2) * 0.75 + 0.5;
     } else {
-      q += uWarp * vec2(sfbm(q + vec2(3.1, 7.7)), sfbm(q + vec2(9.4, 1.2)));
+      q += warp * vec2(sfbm(q + vec2(3.1, 7.7)), sfbm(q + vec2(9.4, 1.2)));
       if (uNoise == 0) v = sfbm(q) * 0.6 + 0.5;
       else if (uNoise == 1) { float am = 0.5, r = 0.0; vec2 pp = q; for (int i = 0; i < 8; i++) { if (float(i) >= uDetail) break; float n = 1.0 - abs(snoise(pp)); r += am * n * n; pp = pp * 2.02 + 17.0; am *= 0.5; } v = r * 1.1; }
       else if (uNoise == 2) { float am = 0.5, r = 0.0; vec2 pp = q; for (int i = 0; i < 8; i++) { if (float(i) >= uDetail) break; r += am * abs(snoise(pp)); pp = pp * 2.02 + 17.0; am *= 0.5; } v = r * 1.6; }
@@ -129,12 +136,12 @@ void main() {
       else if (uNoise == 4) { vec2 w = worley(q * 1.5); v = 1.0 - smoothstep(0.0, 0.35, w.y - w.x); }
       else if (uNoise == 5) v = 0.5 + 0.5 * sin(q.x * 4.0 + sfbm(q) * 5.0);
       else if (uNoise == 6) { float nn = neuro(q * 0.5); v = clamp(1.2 * pow(nn, 3.0) + pow(nn, 10.0) - 0.1, 0.0, 1.0); }
-      else { vec2 c = (p - 0.5) * a; float ang = atan(c.y, c.x), r = length(c) / 0.36; float n = snoise(vec2(cos(ang), sin(ang)) * 0.9 / max(uScale, 0.1) + uSeed * 0.37) * (0.2 + uWarp * 0.3) + 0.08 * snoise(vec2(cos(ang), sin(ang)) * 2.4 + uSeed); v = exp(-pow((r - 1.0 - n) / (0.1 + 0.12 / max(uStretch, 0.3)), 2.0)) * (0.85 + 0.15 * sfbm(q * 2.0)); }
+      else { vec2 c = (p - 0.5) * a; float ang = atan(c.y, c.x), r = length(c) / 0.36; float n = snoise(vec2(cos(ang), sin(ang)) * 0.9 / max(uScale, 0.1) + uSeed * 0.37) * (0.2 + warp * 0.3) + 0.08 * snoise(vec2(cos(ang), sin(ang)) * 2.4 + uSeed); v = exp(-pow((r - 1.0 - n) / (0.1 + 0.12 / max(uStretch, 0.3)), 2.0)) * (0.85 + 0.15 * sfbm(q * 2.0)); }
     }
     lab = ramp(clamp((v - 0.5) * uContrast + 0.5, 0.0, 1.0));
   } else if (uType == 0) {
     vec3 acc = vec3(0.0); float ws = 0.0;
-    for (int i = 0; i < 8; i++) { if (i >= uN) break; vec2 d = (p - uPt[i]) * a; float w = 1.0 / pow(dot(d, d) + 0.0004, uSoft); acc += toLab(lin(uCol[i])) * w; ws += w; }
+    for (int i = 0; i < 8; i++) { if (i >= uN) break; vec2 orb = uMotion == 1 ? 0.07 * uMotAmt * vec2(cos(tw + float(i) * 2.1), sin(tw + float(i) * 1.3)) : vec2(0.0); vec2 d = (p - uPt[i] - orb) * a; float w = 1.0 / pow(dot(d, d) + 0.0004, uSoft); acc += toLab(lin(uCol[i])) * w; ws += w; }
     lab = acc / ws;
   } else {
     vec2 c = (p - 0.5) * a; float t;
@@ -601,7 +608,7 @@ void main() {
       for (const [u, v] of Object.entries(uniforms)) {
         const l = loc(u);
         if (l == null) continue;
-        if (u === "uType" || u === "uN" || u === "uNoise") gl.uniform1i(l, v);
+        if (u === "uType" || u === "uN" || u === "uNoise" || u === "uMotion") gl.uniform1i(l, v);
         else if (typeof v === "number") gl.uniform1f(l, v);
         else if (v.length === 3 && typeof v[0] === "number") gl.uniform3fv(l, v);
         else if (v.length === 2 && typeof v[0] === "number") gl.uniform2fv(l, v);
@@ -671,6 +678,7 @@ void main() {
           uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring"].indexOf(g.noise || "clouds"),
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
           uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle),
+          uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5,
         }, w, h, k, job.seed);
         input = targets.list[0].t; ping = 1;
       } else {

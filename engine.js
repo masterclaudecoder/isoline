@@ -89,12 +89,14 @@
       return v;
     };
     const ang = ((s.angle + 90) * Math.PI) / 180, ca = Math.cos(ang), sa = Math.sin(ang);
+    // Motion: the whole field can be offset (drift), in output pixels scaled to this render.
+    const driftX = (s.driftX || 0) * k, driftY = (s.driftY || 0) * k;
     const smk = 40 * k;
 
     let min = Infinity, max = -Infinity;
     for (let j = 0; j < ny; j++) {
       for (let i = 0; i < nx; i++) {
-        let px = i * sx, py = j * sy;
+        let px = i * sx + driftX, py = j * sy + driftY;
         if (s.liquify > 0) {
           // Two-level domain warp: the noise is itself displaced by noise, which gives the liquid swirls.
           const ls = Math.max(4, sc * (s.liqScale || 1)), u0 = px / ls, v0 = py / ls;
@@ -362,6 +364,16 @@
 
   const hex = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
   const mix = (a, b, t) => "#" + hex(a).map((v, i) => Math.round(v + (hex(b)[i] - v) * t).toString(16).padStart(2, "0")).join("");
+  // Contour colors: lines, any middle colors, then the blend color. With middle colors, blended looks
+  // run a smooth ramp through all of them and plain strokes cycle through them level by level.
+  function inkFor(s, pos, i, blend) {
+    const inks = [s.line, ...(s.mids || []), s.line2];
+    const t = Math.min(1, Math.max(0, pos));
+    if (inks.length === 2) return blend ? mix(s.line, s.line2, t) : s.line;
+    if (!blend) return inks[((i % inks.length) + inks.length) % inks.length];
+    const f = t * (inks.length - 1), k = Math.min(inks.length - 2, Math.floor(f));
+    return mix(inks[k], inks[k + 1], f - k);
+  }
 
   // ---------- render ----------
   function buildSVG(s, opts = {}) {
@@ -372,13 +384,18 @@
     const levels = [];
     if (lin) {
       const gap = Math.max(0.5, s.gap * k);
-      for (let i = Math.floor(field.min / gap) + 1; i * gap < field.max && levels.length < 900; i++) {
-        levels.push({ t: i * gap, idx: i, pos: (i * gap - field.min) / span });
+      // phase slides every level up by that many steps; at a whole number the set of lines matches phase 0.
+      const ph = s.phase || 0;
+      for (let i = Math.floor(field.min / gap - ph); (i + ph) * gap < field.max && levels.length < 900; i++) {
+        const t = (i + ph) * gap;
+        if (t <= field.min) continue;
+        levels.push({ t, idx: i, pos: (t - field.min) / span });
       }
     } else {
-      const g = Math.pow(2, s.bias);
-      for (let L = 0; L < s.levels; L++) {
-        const tn = Math.pow((L + 1) / (s.levels + 1), g);
+      const g = Math.pow(2, s.bias), ph = s.phase || 0;
+      for (let L = ph ? -Math.ceil(ph) : 0; L < s.levels; L++) {
+        const tn = Math.pow((L + 1 + ph) / (s.levels + 1), g);
+        if (tn <= 0 || tn >= 1) continue;
         levels.push({ t: field.min + tn * span, idx: L + 1, pos: tn });
       }
     }
@@ -407,7 +424,7 @@
       const band = Math.max(0.02, Math.min(0.98, s.band ?? 0.5));
       levels.forEach((lv, i) => {
         const next = levels[i + 1] ? levels[i + 1].t : lv.t + (i > 0 ? lv.t - levels[i - 1].t : span / 10);
-        const color = mode === "layers" || s.gradient ? mix(s.line, s.line2, Math.min(1, Math.max(0, lv.pos))) : s.line;
+        const color = inkFor(s, lv.pos, i, mode === "layers" || s.gradient);
         const d = mode === "layers" ? ringsAt(lv.t) : ringsAt(lv.t) + ringsAt(lv.t + band * (next - lv.t));
         if (d) { body += `<path d="${d}" fill="${color}" fill-rule="evenodd"/>`; count++; }
       });
@@ -443,7 +460,7 @@
         count++;
       }
       if (!d) continue;
-      const color = s.gradient ? mix(s.line, s.line2, Math.min(1, Math.max(0, lv.pos))) : s.line;
+      const color = inkFor(s, lv.pos, lv.idx - 1, s.gradient);
       body += filled ? `<path d="${d}" fill="${color}"/>` : `<path d="${d}" fill="none" stroke="${color}" stroke-width="${sw}"/>`;
     }
     const bg = s.transparent ? "" : `<rect width="${w}" height="${h}" fill="${s.bg}"/>`;

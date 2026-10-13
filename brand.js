@@ -13,6 +13,15 @@
   const draw = (o, size, opts = {}) => inner(T.buildSVG({ ...base, ...o, w: size[0], h: size[1] }, opts).svg);
   // Color the n-th contour (0 = first drawn) with the accent.
   const accentNth = (body, n, color = ACCENT) => { let i = -1; return body.replace(/stroke="#1c1c1e"/g, (m) => (++i === n ? `stroke="${color}"` : m)); };
+  // The Isoline mark keeps the line that wraps the point and every other band above it, so it reads at small sizes.
+  // Paths are ranked by where they cross the vertical centre; slivers above `top` are dropped.
+  function thinAbove(body, dotY, top) {
+    const yAt = (d) => { let best = null; for (const m of d.matchAll(/(-?\d+(?:\.\d+)?)[ ,](-?\d+(?:\.\d+)?)/g)) { const x = +m[1], y = +m[2]; if (!best || Math.abs(x - 60) < Math.abs(best[0] - 60)) best = [x, y]; } return best ? best[1] : 0; };
+    const paths = [...body.matchAll(/<path[^>]*d="([^"]*)"[^>]*\/>/g)].map((m) => ({ m: m[0], y: yAt(m[1]) }));
+    const above = paths.filter((p) => p.y < dotY).sort((a, b) => b.y - a.y).filter((p, i) => i % 2 === 0 && p.y > top);
+    const below = paths.filter((p) => p.y >= dotY).filter((_, i) => i % 2 === 0);
+    return `<g stroke-linecap="round" stroke-linejoin="round">${[...above, ...below].map((p) => p.m).join("")}</g>`;
+  }
   const wordStyle = `font-family:'Instrument Sans',system-ui,sans-serif;font-weight:600;font-stretch:88%;letter-spacing:-0.02em`;
 
   // Organic concentric glyph sized to replace a lowercase "o".
@@ -77,7 +86,7 @@
       id: "isoline", name: "Isoline",
       note: "Alternative name: the cartographer's word for a contour line. Mark is a lens of lines bending around a point.",
       html: () => {
-        const body = draw({ pattern: "lines", angle: 0, gap: 11, weight: 4.2, smooth: 0.6, falloff: 1.2, points: [{ x: 0.5, y: 0.44, r: 26, s: 1.9 }], minLen: 10 }, [120, 120]);
+        const body = thinAbove(draw({ pattern: "lines", angle: 0, gap: 11, weight: 6, smooth: 0.6, falloff: 1.2, points: [{ x: 0.5, y: 0.44, r: 26, s: 1.9 }], minLen: 10 }, [120, 120]), 62.5, 8);
         return `<svg class="lg-mark" viewBox="0 0 120 120" aria-hidden="true"><defs><clipPath id="iso-lens"><circle cx="60" cy="60" r="56"/></clipPath></defs><g clip-path="url(#iso-lens)">${body}</g><circle cx="60" cy="70" r="7.5" fill="${ACCENT}" stroke="#fff" stroke-width="3"/></svg><span class="lg-word" style="${wordStyle}">isoline</span>`;
       },
     },
@@ -85,7 +94,8 @@
 
   function mount(el, id = "isoline") {
     const c = concepts.find((x) => x.id === id) || concepts[0];
-    el.innerHTML = c.html();
+    // In the app the mark follows the theme: ink takes the text color and the dot's ring the panel color.
+    el.innerHTML = c.html().replace(/#1c1c1e/g, "currentColor").replace(/stroke="#fff"/g, 'style="stroke:var(--panel)"');
     el.dataset.logo = c.id;
   }
 

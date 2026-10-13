@@ -5,7 +5,7 @@
   const $ = (id) => document.getElementById(id);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const clone = (o) => JSON.parse(JSON.stringify(o));
-  const ACCENT = "#e8572a";
+  const accentNow = () => getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#e8572a";
   const HEX = /^#[0-9a-f]{6}$/i;
   const px = (v) => v + "px", deg = (v) => v + "°", f2 = (v) => (+v).toFixed(2), pct = (v) => Math.round(v * 100) + "%";
   const ic = (name, cls = "") => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
@@ -89,19 +89,19 @@
     ["Terracotta", ["#2a1410", "#a3472d", "#e38b5d", "#f7dcc4"], ["#a3472d", "#e38b5d", "#f7dcc4"]],
     ["Ink", ["#0d0d0f", "#3a3a40", "#a9a6a0", "#f1ede4"], ["#0d0d0f", "#a9a6a0", "#f1ede4"]],
   ];
+  // Brand palettes, from each company's brand pages where published (Slack, Spotify, Discord, Dropbox) and
+  // otherwise from the values design references agree on (Figma, Stripe, Linear, Mailchimp, Airbnb).
   const BRANDS = [
     ["Caddis", ["#2f6fdb", "#6a9f7a", "#d8a51f", "#e2632a", "#c9302c"], ["#2f6fdb", "#e2632a", "#f7f4ee"]],
-    ["Stripe", ["#0a2540", "#635bff", "#ef008f", "#ffba27", "#6ec3f4"], ["#635bff", "#6ec3f4", "#f6f9fc"]],
+    ["Slack", ["#4a154b", "#36c5f0", "#2eb67d", "#ecb22e", "#e01e5a"], ["#4a154b", "#36c5f0", "#f4ede4"]],
     ["Figma", ["#a259ff", "#1abcfe", "#0acf83", "#ff7262", "#f24e1e"], ["#1e1e1e", "#a259ff", "#ffffff"]],
-    ["Slack", ["#4a154b", "#36c5f0", "#2eb67d", "#ecb22e", "#e01e5a"], ["#4a154b", "#36c5f0", "#ffffff"]],
-    ["Spotify", ["#121212", "#1a3d2a", "#1db954", "#1ed760"], ["#1db954", "#1a3d2a", "#121212"]],
-    ["Linear", ["#08090a", "#26283b", "#5e6ad2", "#b4bcd0", "#f7f8f8"], ["#b4bcd0", "#5e6ad2", "#08090a"]],
-    ["Discord", ["#23272a", "#5865f2", "#eb459e", "#fee75c", "#57f287"], ["#5865f2", "#eb459e", "#23272a"]],
-    ["Mailchimp", ["#241c15", "#007c89", "#ffe01b", "#fbeee0"], ["#241c15", "#007c89", "#ffe01b"]],
-    ["Airbnb", ["#92174d", "#bd1e59", "#d70466", "#e61e4d", "#ff385c"], ["#ff385c", "#bd1e59", "#ffffff"]],
-    ["Notion", ["#191919", "#37352f", "#9b9a97", "#f7f6f3"], ["#37352f", "#9b9a97", "#ffffff"]],
-    ["Dropbox", ["#1e1919", "#0061fe", "#c8dbfe", "#f7f5f2"], ["#0061fe", "#c8dbfe", "#f7f5f2"]],
-    ["Instagram", ["#405de6", "#833ab4", "#c13584", "#fd1d1d", "#fcaf45"], ["#c13584", "#fcaf45", "#ffffff"]],
+    ["Spotify", ["#191414", "#1ed760", "#ffffff"], ["#1ed760", "#ffffff", "#191414"]],
+    ["Discord", ["#000000", "#5865f2", "#e0e3ff"], ["#5865f2", "#e0e3ff", "#000000"]],
+    ["Dropbox", ["#1e1919", "#0061fe", "#f7f5f2"], ["#0061fe", "#1e1919", "#f7f5f2"]],
+    ["Stripe", ["#0a2540", "#635bff", "#f6f9fc"], ["#635bff", "#0a2540", "#f6f9fc"]],
+    ["Linear", ["#08090a", "#5e6ad2", "#f7f8f8"], ["#5e6ad2", "#f7f8f8", "#08090a"]],
+    ["Mailchimp", ["#241c15", "#ffe01b", "#ffffff"], ["#241c15", "#ffffff", "#ffe01b"]],
+    ["Airbnb", ["#222222", "#484848", "#ff385c", "#ffffff"], ["#ff385c", "#222222", "#ffffff"]],
   ];
   const lum = (h) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
   // Lines take the darkest color, the blend a middle one and the background the lightest.
@@ -127,13 +127,14 @@
     scale: 900, octaves: 2, warp: 0.35, liquify: 0, liqScale: 1.5, seed: 4821, angle: 0, features: 5, bump: 2.4, bumpSize: 90,
     points: [{ x: 0.3, y: 0.42, r: 300, s: 1 }, { x: 0.63, y: 0.6, r: 240, s: 1 }, { x: 0.8, y: 0.28, r: 160, s: 0.8 }],
     usePoints: false, showPoints: true, falloff: 1.2,
-    mode: "lines", band: 0.5,
+    mode: "lines", band: 0.5, mids: [],
     levels: 20, gap: 18, bias: 0, weight: 1.2, swell: 0, swellSize: 260, taper: 0,
     indexEvery: 0, indexWeight: 2, smooth: 0.7, res: 4, minLen: 12,
     ...palState("Paper"), gradient: false, transparent: false, opacity: 1,
     grad: { type: "flow", colors: ramp("Prism"), points: [{ x: 0.18, y: 0.22 }, { x: 0.8, y: 0.2 }, { x: 0.72, y: 0.8 }, { x: 0.2, y: 0.84 }, { x: 0.48, y: 0.5 }], angle: -25, warp: 0.5, warpScale: 1.6, soft: 1.6, scale: 0.45, detail: 2, stretch: 1.8, contrast: 1, noise: "clouds" },
     fx: clone(FX_DEFAULTS), fxOrder: [], ink: "#1b1b1b", paper: "#f1ede4",
     fmt: "svg", pngScale: 2,
+    motion: { type: "still", dur: 6, amt: 0.5 }, vid: { size: 1080, fps: 30, loops: 1 },
   };
   const STORE = "isoline-v4", PREFS = "isoline-prefs-v4";
   function withDefaults(src) {
@@ -143,6 +144,7 @@
       if (!(key in src)) continue;
       if (key === "fx") { for (const id of FX_IDS) out.fx[id] = { ...FX_DEFAULTS[id], ...(src.fx?.[id] || {}) }; }
       else if (key === "grad") out.grad = { ...out.grad, ...src.grad };
+      else if (key === "motion" || key === "vid") out[key] = { ...out[key], ...src[key] };
       else out[key] = src[key];
     }
     if (!T.PATTERNS.some((p) => p.id === out.pattern)) out.pattern = DEFAULTS.pattern;
@@ -168,7 +170,7 @@
   // ---------- helpers ----------
   const gen = (st = S) => (st.source === "contours" ? "contours" : st.grad.type);
   // Coming from a gradient, contours start as bands in that gradient's colors, as their preview shows.
-  const asContours = (st) => { if (st.source === "contours") return st; const own = PALS.find((p) => sameCols(p.colors, st.grad.colors)), [line, line2, bg] = own ? own.roles : rolesOf(st.grad.colors); return { ...st, source: "contours", mode: "bands", band: clamp(st.band, 0.35, 0.6), line, line2, bg, gradient: false, transparent: false, opacity: 1 }; };
+  const asContours = (st) => { if (st.source === "contours") return st; const own = PALS.find((p) => sameCols(p.colors, st.grad.colors)), [line, line2, bg] = own ? own.roles : rolesOf(st.grad.colors); return { ...st, source: "contours", mode: "bands", band: clamp(st.band, 0.35, 0.6), line, line2, mids: [], bg, gradient: false, transparent: false, opacity: 1 }; };
   function setGen(id) { if (id === "contours") Object.assign(S, asContours(S)); else { S.source = "gradient"; S.grad.type = id; } sel = null; }
   const linear = () => T.LINEAR.has(S.pattern);
   const activePoints = () => S.usePoints && S.points.length > 0;
@@ -245,7 +247,7 @@
   const LAYERS = {
     shape: ["source", "pattern", "scale", "octaves", "warp", "liquify", "liqScale", "angle", "features", "bump", "bumpSize", "usePoints", "falloff", "grad.type", "grad.warp", "grad.warpScale", "grad.soft", "grad.angle", "grad.scale", "grad.detail", "grad.stretch", "grad.contrast", "grad.noise"],
     style: ["mode", "band", "levels", "gap", "bias", "weight", "swell", "swellSize", "taper", "indexEvery", "indexWeight", "smooth"],
-    color: ["line", "line2", "gradient", "bg", "transparent", "opacity", "grad.colors", "ink", "paper"],
+    color: ["line", "line2", "mids", "gradient", "bg", "transparent", "opacity", "grad.colors", "ink", "paper"],
     effects: ["fx", "fxOrder"],
   };
   const LAYER_NAMES = { shape: "Shape", style: "Lines", color: "Colors", effects: "Effects" };
@@ -294,91 +296,11 @@
   }
   const syncHistory = () => { $("undo").disabled = hi <= 0; $("redo").disabled = hi >= hist.length - 1; };
 
-  // ---------- color math (OKLCH) ----------
-  const toLin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
-  const toGam = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
-  function toOklch(hex) {
-    const [r, g, b] = [1, 3, 5].map((i) => toLin(parseInt(hex.slice(i, i + 2), 16) / 255));
-    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b), q = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-    const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * q, a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * q, bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * q;
-    return [L, Math.hypot(a, bb), ((Math.atan2(bb, a) * 180) / Math.PI + 360) % 360];
-  }
-  // Out-of-gamut colors keep their lightness and hue and lose chroma until they fit.
-  function fromOklch(L, C, H) {
-    L = clamp(L, 0, 1);
-    const hr = (H * Math.PI) / 180;
-    for (let c = Math.max(0, C); ; c = Math.max(0, c - 0.004)) {
-      const a = c * Math.cos(hr), b = c * Math.sin(hr);
-      const l = Math.pow(L + 0.3963377774 * a + 0.2158037573 * b, 3), m = Math.pow(L - 0.1055613458 * a - 0.0638541728 * b, 3), q = Math.pow(L - 0.0894841775 * a - 1.291485548 * b, 3);
-      const rgb = [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * q, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * q, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * q];
-      if (c === 0 || rgb.every((v) => v > -0.0005 && v < 1.0005)) return "#" + rgb.map((v) => Math.round(clamp(toGam(clamp(v, 0, 1)), 0, 1) * 255).toString(16).padStart(2, "0")).join("");
-    }
-  }
-  const hsvToHex = (h, s, v) => { const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); }; return "#" + [f(5), f(3), f(1)].map((x) => Math.round(x * 255).toString(16).padStart(2, "0")).join(""); };
-  function hexToHsv(hex) {
-    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(r, g, b), d = mx - Math.min(r, g, b);
-    let h = 0;
-    if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
-    return [(h * 60 + 360) % 360, mx ? d / mx : 0, mx];
-  }
-
-  // ---------- color picker ----------
-  // One shared popover: a saturation/brightness field, a hue strip, hex entry, palette swatches and, where supported, an eyedropper.
-  const picker = (() => {
-    const el = document.createElement("div");
-    el.className = "picker"; el.hidden = true;
-    el.innerHTML = `<div class="pk-sv"><i class="pk-knob"></i></div><div class="pk-hue"><i class="pk-knob"></i></div><div class="pk-row"><span class="pk-now"></span><input class="field mono pk-hex" spellcheck="false" aria-label="Hex"><button class="ib pk-drop" title="Pick from screen" aria-label="Pick from screen">${ic("pipette")}</button></div><div class="pk-sw"></div>`;
-    document.body.appendChild(el);
-    const sv = el.querySelector(".pk-sv"), hue = el.querySelector(".pk-hue"), hexIn = el.querySelector(".pk-hex"), now = el.querySelector(".pk-now"), swEl = el.querySelector(".pk-sw"), drop = el.querySelector(".pk-drop");
-    if (!window.EyeDropper) drop.hidden = true;
-    let hsv = [0, 0, 0], cur = null, anchor = null;
-    const paint = (fromHex) => {
-      const hex = hsvToHex(...hsv);
-      sv.style.background = `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${hsvToHex(hsv[0], 1, 1)})`;
-      sv.firstChild.style.cssText = `left:${hsv[1] * 100}%;top:${(1 - hsv[2]) * 100}%;background:${hex}`;
-      hue.firstChild.style.cssText = `left:${(hsv[0] / 360) * 100}%;background:${hsvToHex(hsv[0], 1, 1)}`;
-      now.style.background = hex;
-      if (!fromHex && document.activeElement !== hexIn) hexIn.value = hex;
-      return hex;
-    };
-    const emit = () => cur && cur.onInput(paint());
-    const dragOn = (area, fn) => area.addEventListener("pointerdown", (e) => {
-      e.preventDefault(); area.setPointerCapture(e.pointerId);
-      const move = (ev) => { const r = area.getBoundingClientRect(); fn(clamp((ev.clientX - r.left) / r.width, 0, 1), clamp((ev.clientY - r.top) / r.height, 0, 1)); emit(); };
-      move(e);
-      area.onpointermove = move;
-      area.onpointerup = area.onpointercancel = () => { area.onpointermove = null; cur?.onDone?.(); };
-    });
-    dragOn(sv, (x, y) => { hsv[1] = x; hsv[2] = 1 - y; });
-    dragOn(hue, (x) => { hsv[0] = Math.min(359.9, x * 360); });
-    hexIn.addEventListener("input", () => { const v = parseHex(hexIn.value); if (v) { hsv = hexToHsv(v); paint(true); cur?.onInput(v); } });
-    hexIn.addEventListener("keydown", (e) => { if (e.key === "Enter") close(); });
-    swEl.addEventListener("click", (e) => { const b = e.target.closest("[data-c]"); if (!b) return; hsv = hexToHsv(b.dataset.c); emit(); cur?.onDone?.(); });
-    drop.onclick = async () => { try { const r = await new window.EyeDropper().open(); hsv = hexToHsv(r.sRGBHex.slice(0, 7)); emit(); cur?.onDone?.(); } catch (e) {} };
-    function place() {
-      const r = anchor.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
-      let x = r.left + r.width / 2 - w / 2, y = r.bottom + 8;
-      if (y + h > innerHeight - 8) y = Math.max(8, r.top - h - 8);
-      el.style.left = clamp(x, 8, innerWidth - w - 8) + "px"; el.style.top = y + "px";
-    }
-    function open(a, value, onInput, onDone, swatches = []) {
-      if (cur && anchor === a) { close(); return; }
-      close();
-      anchor = a; cur = { onInput, onDone };
-      hsv = hexToHsv(parseHex(value) || "#000000");
-      swEl.innerHTML = swatches.map(([label, cols]) => `<div class="pk-group"><span>${label}</span><div>${[...new Set(cols)].slice(0, 8).map((c) => `<button class="sw xs" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join("")}</div></div>`).join("");
-      swEl.hidden = !swatches.length;
-      el.hidden = false; paint(); place();
-      el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
-      a.classList.add("picking");
-    }
-    function close() { if (!cur) return; const d = cur.onDone; cur = null; el.hidden = true; anchor?.classList.remove("picking"); anchor = null; d?.(); }
-    document.addEventListener("pointerdown", (e) => { if (cur && !el.contains(e.target) && !anchor.contains(e.target)) close(); }, true);
-    addEventListener("resize", () => cur && place());
-    return { open, close, isOpen: () => !!cur };
-  })();
+  // ---------- color ----------
+  const { toOklch, fromOklch } = window.Color;
+  const picker = window.ColorPicker;
   // Colors already in play, offered as quick picks in the picker.
-  const inPlay = () => (S.source === "contours" ? [S.line, S.line2, S.bg] : S.grad.colors);
+  const inPlay = () => (S.source === "contours" ? [S.bg, S.line, ...(S.mids || []), S.line2] : S.grad.colors);
   // Colors that sit well next to one: lighter, darker, its neighbours on the wheel, its opposite and a soft near-white.
   const variants = (hex) => { const [l, c, h] = toOklch(hex); return [[l + 0.16, c * 0.7, h], [l - 0.18, c, h], [l, c, h + 30], [l, c, h - 30], [l, Math.max(c, 0.08), h + 180], [0.95, 0.02, h]].map(([a, b, d]) => fromOklch(clamp(a, 0.12, 0.97), b, (d + 360) % 360)); };
   const swatchesFor = (hex) => [["In use", inPlay()], ["Try", variants(parseHex(hex) || "#808080")]];
@@ -492,19 +414,20 @@
     if (id === "preset") { const p = currentPreset(); return [p ? p[1] : "Custom", p ? p[0] : "Edited"]; }
     if (id === "generator") return [GEN_LABEL[g], GENS.find((x) => x[0] === g)[2]];
     if (id === "shape") {
-      if (g === "contours") return [patLabel(S.pattern), activePoints() ? `${S.points.length} points · seed ${S.seed}` : `Seed ${S.seed}`];
+      if (g === "contours") return [patLabel(S.pattern), activePoints() ? `${S.points.length} points, seed ${S.seed}` : `Seed ${S.seed}`];
       if (g === "noise") return [NOISE_LABEL[S.grad.noise], `Seed ${S.seed}`];
       if (g === "mesh") return [`${S.grad.colors.length} color points`, `Warp ${f2(S.grad.warp)}`];
       return [`${GEN_LABEL[g]} form`, `Seed ${S.seed}`];
     }
-    if (id === "lines") return S.mode === "lines" ? ["Lines", `${f2(S.weight).replace(/\.?0+$/, "")}px · ${linear() ? S.gap + "px gap" : S.levels + " lines"}`] : S.mode === "bands" ? ["Bands", `${pct(S.band)} thick`] : ["Layers", `${linear() ? "Every " + S.gap + "px" : S.levels + " layers"}`];
+    if (id === "lines") return S.mode === "lines" ? ["Lines", `${f2(S.weight).replace(/\.?0+$/, "")}px, ${linear() ? S.gap + "px gap" : S.levels + " lines"}`] : S.mode === "bands" ? ["Bands", `${pct(S.band)} thick`] : ["Layers", `${linear() ? "Every " + S.gap + "px" : S.levels + " layers"}`];
     if (id === "colors") {
       const p = currentPal();
-      return [p ? p.name : "Custom", g === "contours" ? (S.gradient || S.mode === "layers" ? "Blended" : "Two colors") : `${S.grad.colors.length} colors`];
+      const n = inksOf().length;
+      return [p ? p.name : "Custom", g === "contours" ? `${n} colors${S.gradient || S.mode === "layers" ? ", blended" : ""}` : `${n} colors`];
     }
     return ["", ""];
   }
-  const slotColors = () => (gen() === "contours" ? (S.gradient || S.mode === "layers" ? [S.bg, S.line, S.line2] : [S.bg, S.line]) : S.grad.colors);
+  const slotColors = () => (gen() === "contours" ? (S.gradient || S.mode === "layers" || S.mids.length ? [S.bg, S.line, ...S.mids, S.line2] : [S.bg, S.line]) : S.grad.colors);
   // The build column is built once and patched in place, so selection, text and colors can transition.
   let slotKey = "";
   const SLOT_DEFS = [["preset", "Preset"], ["generator", "Generator"], ["shape", "Shape"], ["lines", "Lines"], ["colors", "Colors"]];
@@ -521,10 +444,14 @@
   fxSlot.innerHTML = `<div class="slot-label">Effects<span class="count" hidden></span></div><div class="fx-tiles" id="fxTiles"><button class="tile add" data-slot="addfx"><span class="tile-plus">${ic("plus")}</span><span class="tile-text"><b>Add effect</b><small></small></span></button></div>`;
   slotList.appendChild(fxSlot);
   const fxTiles = fxSlot.querySelector(".fx-tiles"), addTile = fxSlot.querySelector(".tile.add"), countEl = fxSlot.querySelector(".count");
+  const motionSlot = document.createElement("div");
+  motionSlot.className = "slot";
+  motionSlot.innerHTML = `<div class="slot-label">Motion</div><button class="tile" data-slot="motion"><span class="tile-th motion-th">${ic("wave")}</span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
+  slotList.appendChild(motionSlot);
   const EASE = "cubic-bezier(.2,.8,.2,1)";
   const animOK = () => !reduceMotion.matches && !document.body.classList.contains("boot");
   // Text that changes fades in rather than snapping.
-  function setText(el, v) { if (el.textContent === v) return; el.textContent = v; if (animOK()) el.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 240, easing: EASE }); }
+  function setText(el, v) { if (el.textContent === v) return; el.textContent = v; if (animOK()) el.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 200 + Math.random() * 90, easing: EASE }); }
   function fxTile(id) {
     const t = document.createElement("div");
     t.className = "tile fx"; t.dataset.fx = id;
@@ -532,7 +459,7 @@
     return t;
   }
   function renderSlots() {
-    const key = JSON.stringify([gen(), S.fxOrder, P.slot, ...SLOT_DEFS.map(([id]) => slotInfo(id)), slotColors()]);
+    const key = JSON.stringify([gen(), S.fxOrder, P.slot, ...SLOT_DEFS.map(([id]) => slotInfo(id)), slotColors(), S.motion]);
     if (key === slotKey) return;
     slotKey = key;
     const tiles = () => [...slotList.querySelectorAll(".tile")];
@@ -561,6 +488,7 @@
       t.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.95)" }], { duration: 200, easing: EASE }).onfinish = () => t.remove();
     }
     addTile.classList.toggle("on", P.slot === "addfx");
+    { const t = motionSlot.querySelector(".tile"), m = S.motion; t.classList.toggle("on", P.slot === "motion"); t.classList.toggle("live", m.type !== "still"); setText(t.querySelector("b"), MOTION_NAME[m.type]); setText(t.querySelector("small"), m.type === "still" ? "Add a loop" : `${m.dur}s loop`); }
     setText(addTile.querySelector("small"), S.fxOrder.length ? "Stack another" : "Glass, grain, print and more");
     const n = String(S.fxOrder.length);
     countEl.hidden = !S.fxOrder.length;
@@ -569,8 +497,8 @@
     if (animOK()) for (const t of tiles()) {
       if (t.classList.contains("leaving") || t.offsetParent === null) continue;
       const k = keyOf(t), top = before.get(k), now = t.getBoundingClientRect().top;
-      if (fresh.has(t.dataset.fx)) t.animate([{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 280, easing: EASE });
-      else if (top != null && Math.abs(top - now) > 1 && !t.classList.contains("dragging")) t.animate([{ transform: `translateY(${top - now}px)` }, { transform: "none" }], { duration: 300, easing: EASE });
+      if (fresh.has(t.dataset.fx)) t.animate([{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 250 + Math.random() * 90, easing: EASE });
+      else if (top != null && Math.abs(top - now) > 1 && !t.classList.contains("dragging")) t.animate([{ transform: `translateY(${top - now}px)` }, { transform: "none" }], { duration: 260 + Math.random() * 90, easing: EASE });
     }
     schedulePreviews(120);
   }
@@ -602,7 +530,7 @@
     window.addEventListener("pointercancel", up);
   });
 
-  const PANEL_TITLE = { preset: "Preset", generator: "Generator", shape: "Shape", lines: "Lines", colors: "Colors", addfx: "Add effect" };
+  const PANEL_TITLE = { preset: "Preset", generator: "Generator", shape: "Shape", lines: "Lines", colors: "Colors", addfx: "Add effect", motion: "Motion" };
   function setSlot(id) {
     picker.close();
     if (id === "colors" && P.slot !== "colors") revealPalette();
@@ -727,128 +655,169 @@
   ].forEach((c) => makeSlider($("lines"), { group: "lines", ...c }));
 
   // ---------- colors panel ----------
+  // One color model for both kinds of generator: contours have a background plus inks (lines, any middle
+  // colors, blend); gradients have their color stops. Palettes resample to however many colors you have.
   const PER_PAGE = 6;
   const sameCols = (a, b) => a.length === b.length && a.every((c, i) => c === b[i]);
-  const palMatches = (p) => (gen() === "contours" ? S.line === p.roles[0] && S.bg === p.roles[2] : sameCols(S.grad.colors, p.colors));
+  const inksOf = (st = S) => (st.source === "contours" ? [st.line, ...(st.mids || []), st.line2] : st.grad.colors);
+  function setInks(arr) {
+    if (gen() === "contours") { S.line = arr[0]; S.line2 = arr[arr.length - 1]; S.mids = arr.slice(1, -1); }
+    else setGradColors(arr);
+  }
+  const toLab = (h) => { const [l, c, hh] = toOklch(h); return [l, c * Math.cos((hh * Math.PI) / 180), c * Math.sin((hh * Math.PI) / 180)]; };
+  const fromLab = ([l, a, b]) => fromOklch(l, Math.hypot(a, b), ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360);
+  // n colors from a list: evenly picked when there are enough, otherwise blended between neighbours in OKLab.
+  function sampleN(list, n) {
+    if (list.length === n) return list.slice();
+    if (n === 1) return [list[0]];
+    if (list.length > n) return Array.from({ length: n }, (_, i) => list[Math.round((i * (list.length - 1)) / (n - 1))]);
+    const labs = list.map(toLab);
+    return Array.from({ length: n }, (_, i) => {
+      const f = (i * (labs.length - 1)) / (n - 1), k = Math.min(labs.length - 2, Math.floor(f)), t = f - k;
+      return i === 0 ? list[0] : i === n - 1 ? list[list.length - 1] : fromLab(labs[k].map((v, j) => v + (labs[k + 1][j] - v) * t));
+    });
+  }
+  // A palette fitted to the current design: { bg, inks } for contours, { inks } for gradients.
+  function fitPal(p, n = inksOf().length) {
+    if (gen() !== "contours") return { inks: sampleN(p.colors, n) };
+    const roles = p.roles || rolesOf(p.colors), bg = roles[2];
+    if (n === 2) return { bg, inks: [roles[0], roles[1]] };
+    const d = (h) => Math.abs(lum(h) - lum(bg));
+    const rest = [...new Set(p.colors.filter((c) => c !== bg))].sort((a, b) => d(b) - d(a));
+    if (!rest.includes(roles[0])) rest.unshift(roles[0]);
+    return { bg, inks: sampleN(rest, n) };
+  }
+  const palMatches = (p) => { const f = fitPal(p); return sameCols(f.inks, inksOf()) && (!f.bg || f.bg === S.bg); };
   const currentPal = () => PALS.find(palMatches);
-  function applyPal(cols, roles = rolesOf(cols)) {
-    if (gen() === "contours") Object.assign(S, { line: roles[0], line2: roles[1], bg: roles[2], transparent: false });
-    else setGradColors(cols.slice());
+  function applyPal(p) {
+    const f = fitPal(p);
+    if (f.bg) { S.bg = f.bg; S.transparent = false; }
+    setInks(f.inks);
   }
-  const palEl = $("palettes");
-  $("palTabs").innerHTML = PAL_GROUPS.map(([g]) => `<button data-v="${g}">${g}</button>`).join("");
-  P.palTab ||= "Curated"; P.palPage ||= 0;
-  const palList = () => PALS.filter((p) => p.group === P.palTab);
-  const pageCount = () => Math.ceil(palList().length / PER_PAGE);
-  let palKey = "";
-  function renderPalettes(dir = 0) {
-    const page = clamp(P.palPage, 0, pageCount() - 1), contours = gen() === "contours";
-    const key = [P.palTab, page, contours].join("|");
-    if (key !== palKey) {
-      palKey = key;
-      palEl.innerHTML = palList().slice(page * PER_PAGE, (page + 1) * PER_PAGE).map((p) => {
-        const sw = contours ? `<span class="pal-sw" style="background:${p.roles[2]}"><i style="background:${p.roles[0]}"></i><i style="background:${p.roles[1]}"></i></span>` : `<span class="pal-bar" style="background:linear-gradient(90deg,${p.colors.join(",")})"></span>`;
-        return `<button class="pal" data-name="${p.name}">${sw}<span>${p.name}</span></button>`;
-      }).join("");
-      if (dir) { palEl.classList.remove("from-l", "from-r"); void palEl.offsetWidth; palEl.classList.add(dir > 0 ? "from-r" : "from-l"); }
-    }
-    for (const b of palEl.children) b.classList.toggle("on", palMatches(PAL_BY[b.dataset.name]));
-    $("palDots").innerHTML = Array.from({ length: pageCount() }, (_, i) => `<i class="${i === page ? "on" : ""}"></i>`).join("");
-    $("palPrev").disabled = page <= 0; $("palNext").disabled = page >= pageCount() - 1;
-    for (const b of $("palTabs").children) b.classList.toggle("on", b.dataset.v === P.palTab);
-  }
-  palEl.onclick = (e) => { const b = e.target.closest("[data-name]"); if (!b) return; const p = PAL_BY[b.dataset.name]; applyPal(p.colors, p.roles); update(); };
-  const turnPage = (d) => { const n = clamp(P.palPage + d, 0, pageCount() - 1); if (n === P.palPage) return; P.palPage = n; savePrefs(); renderPalettes(d); };
-  $("palPrev").onclick = () => turnPage(-1);
-  $("palNext").onclick = () => turnPage(1);
-  $("palTabs").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b || b.dataset.v === P.palTab) return; const d = b.dataset.v === "Brands" ? 1 : -1; P.palTab = b.dataset.v; P.palPage = 0; savePrefs(); renderPalettes(d); };
-  // Opening Colors shows the page holding the palette in use.
-  function revealPalette() { const p = currentPal(); if (!p) return; P.palTab = p.group; P.palPage = Math.floor(palList().indexOf(p) / PER_PAGE); }
-
-  // Palette builder: harmonies grown from the strongest color in play, plus the closest library palettes.
+  // Harmonies grown from the strongest color in play, plus the closest library palettes.
   function suggestions() {
-    const cols = gen() === "contours" ? [S.line, S.line2, S.bg] : S.grad.colors;
+    const cols = gen() === "contours" ? [S.bg, ...inksOf()] : inksOf();
     const lch = cols.map(toOklch), [, C0, H] = lch.reduce((a, b) => (b[1] > a[1] ? b : a));
     const C = Math.max(C0, 0.05), mk = (rows) => rows.map(([l, c, h]) => fromOklch(l, c, (h + 360) % 360));
     const out = [
       ["Tonal", mk([[0.24, C * 0.6, H], [0.42, C, H], [0.62, C, H], [0.8, C * 0.6, H], [0.95, C * 0.2, H]])],
       ["Analogous", mk([[0.26, C * 0.8, H - 40], [0.46, C, H - 20], [0.64, C, H], [0.78, C * 0.9, H + 20], [0.93, C * 0.4, H + 40]])],
-      ["Opposite", mk([[0.24, C * 0.7, H], [0.5, C, H], [0.95, C * 0.15, H + 90], [0.66, C, H + 180], [0.84, C * 0.6, H + 180]])],
+      ["Opposite", mk([[0.24, C * 0.7, H], [0.5, C, H], [0.66, C, H + 180], [0.84, C * 0.6, H + 180], [0.95, C * 0.15, H + 90]])],
       ["Triad", mk([[0.22, C * 0.4, H], [0.55, C, H], [0.68, C, H + 120], [0.76, C, H + 240], [0.96, C * 0.15, H]])],
       ["Muted", mk([[0.22, C * 0.25, H], [0.42, C * 0.35, H + 10], [0.62, C * 0.4, H - 10], [0.8, C * 0.3, H], [0.94, C * 0.1, H]])],
-    ];
-    // Distance between palettes: each color's nearest match in the other, in OKLab.
-    const lab = (h) => { const [l, c, hh] = toOklch(h); return [l, c * Math.cos((hh * Math.PI) / 180), c * Math.sin((hh * Math.PI) / 180)]; };
-    const mine = cols.map(lab), dist = (p) => p.colors.map(lab).reduce((a, x) => a + Math.min(...mine.map((y) => Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]))), 0) / p.colors.length;
-    for (const p of PALS.filter((p) => !palMatches(p)).sort((a, b) => dist(a) - dist(b)).slice(0, 1)) out.push([p.name, p.colors, p.roles]);
+    ].map(([name, colors]) => ({ name, colors, group: "Suggested" }));
+    const mine = cols.map(toLab), dist = (p) => p.colors.map(toLab).reduce((a, x) => a + Math.min(...mine.map((y) => Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]))), 0) / p.colors.length;
+    for (const p of PALS.filter((p) => !palMatches(p)).sort((a, b) => dist(a) - dist(b)).slice(0, 1)) out.push({ ...p, group: "Suggested" });
     return out;
   }
-  let sugKey = "", sugList = [], sugT = 0;
-  function renderSuggest() {
-    const key = JSON.stringify([gen() === "contours", gen() === "contours" ? [S.line, S.line2, S.bg] : S.grad.colors]);
-    if (key === sugKey) return;
-    sugKey = key; sugList = suggestions();
-    const contours = gen() === "contours";
-    $("suggest").innerHTML = sugList.map(([name, cols, roles], i) => {
-      const r = roles || rolesOf(cols);
-      const sw = contours ? `<span class="sug-sw" style="background:${r[2]}"><i style="background:${r[0]}"></i><i style="background:${r[1]}"></i></span>` : `<span class="sug-sw">${cols.map((c) => `<i style="background:${c}"></i>`).join("")}</span>`;
-      return `<button class="sug" data-i="${i}" style="--i:${i}">${sw}<span>${name}</span></button>`;
-    }).join("");
+  const palEl = $("palettes");
+  // Palettes saved in the palette tool get their own tab.
+  const savedPals = () => (window.Palettes?.saved() || []).map((p) => ({ name: p.name, colors: p.colors, group: "Saved" }));
+  const tabs = () => ["Suggested", ...PAL_GROUPS.map(([g]) => g), ...(savedPals().length ? ["Saved"] : [])];
+  function renderTabs() { $("palTabs").innerHTML = tabs().map((g) => `<button data-v="${g}">${g}</button>`).join(""); if (!tabs().includes(P.palTab)) P.palTab = "Curated"; palKey = ""; }
+  addEventListener("palettes-saved", () => { renderTabs(); if (panelOf(P.slot) === "colors") renderPalettes(); });
+  P.palTab ||= "Curated"; P.palPage ||= 0;
+  let sugList = [];
+  const palList = () => (P.palTab === "Suggested" ? sugList : P.palTab === "Saved" ? savedPals() : PALS.filter((p) => p.group === P.palTab));
+  const pageCount = () => Math.max(1, Math.ceil(palList().length / PER_PAGE));
+  let palKey = "", shown = [];
+  renderTabs();
+  function renderPalettes(dir = 0) {
+    const page = clamp(P.palPage, 0, pageCount() - 1), contours = gen() === "contours";
+    const key = JSON.stringify([P.palTab, page, contours, inksOf().length, P.palTab === "Suggested" ? sugList.map((p) => p.colors) : 0]);
+    if (key !== palKey) {
+      palKey = key;
+      shown = palList().slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+      palEl.innerHTML = shown.map((p, i) => {
+        const f = fitPal(p);
+        const sw = contours ? `<span class="pal-sw" style="background:${f.bg}">${f.inks.map((c) => `<i style="background:${c}"></i>`).join("")}</span>` : `<span class="pal-bar" style="background:linear-gradient(90deg,${f.inks.join(",")})"></span>`;
+        return `<button class="pal" data-i="${i}">${sw}<span>${p.name}</span></button>`;
+      }).join("");
+      if (dir) { palEl.classList.remove("from-l", "from-r"); void palEl.offsetWidth; palEl.classList.add(dir > 0 ? "from-r" : "from-l"); }
+    }
+    [...palEl.children].forEach((b, i) => b.classList.toggle("on", !!shown[i] && palMatches(shown[i])));
+    $("palDots").innerHTML = Array.from({ length: pageCount() }, (_, i) => `<i class="${i === page ? "on" : ""}"></i>`).join("");
+    $("palPrev").disabled = page <= 0; $("palNext").disabled = page >= pageCount() - 1;
+    $("palDots").parentElement.style.visibility = pageCount() > 1 ? "" : "hidden";
+    for (const b of $("palTabs").children) b.classList.toggle("on", b.dataset.v === P.palTab);
   }
-  $("suggest").onclick = (e) => { const b = e.target.closest("[data-i]"); if (!b) return; const [, cols, roles] = sugList[+b.dataset.i]; applyPal(cols, roles); update(); };
+  palEl.onclick = (e) => { const b = e.target.closest("[data-i]"); if (!b) return; applyPal(shown[+b.dataset.i]); update(); };
+  const turnPage = (d) => { const n = clamp(P.palPage + d, 0, pageCount() - 1); if (n === P.palPage) return; P.palPage = n; savePrefs(); renderPalettes(d); };
+  $("palPrev").onclick = () => turnPage(-1);
+  $("palNext").onclick = () => turnPage(1);
+  $("palTabs").onclick = (e) => {
+    const b = e.target.closest("[data-v]"); if (!b || b.dataset.v === P.palTab) return;
+    const d = tabs().indexOf(b.dataset.v) > tabs().indexOf(P.palTab) ? 1 : -1;
+    if (b.dataset.v === "Suggested") sugList = suggestions();
+    P.palTab = b.dataset.v; P.palPage = 0; savePrefs(); renderPalettes(d);
+  };
+  // Opening Colors shows the page holding the palette in use, and fresh suggestions.
+  function revealPalette() {
+    renderTabs();
+    sugList = suggestions();
+    const p = currentPal(); if (!p) return;
+    P.palTab = p.group; P.palPage = Math.floor(palList().indexOf(p) / PER_PAGE);
+  }
 
   function setGradColors(cols) {
     S.grad.colors = cols.slice(0, 8);
     while (S.grad.points.length < S.grad.colors.length) S.grad.points.push({ x: +rnd(0.1, 0.9).toFixed(3), y: +rnd(0.1, 0.9).toFixed(3) });
     S.grad.points = S.grad.points.slice(0, S.grad.colors.length);
   }
-  // Color circles: one per role (contours, print inks) or per stop (gradients). Each opens the picker.
+  // Your colors: a background circle (contours) and a circle per ink or stop. Circles update in place
+  // when only their colors change, so they ease to the new color; adding or removing rebuilds the row.
+  const MAX_INKS = () => (gen() === "contours" ? 6 : 8);
+  function renderMine() {
+    const el = $("mine"), contours = gen() === "contours", inks = inksOf();
+    const shape = JSON.stringify([contours, inks.length, MAX_INKS()]);
+    const blendOff = contours && inks.length === 2 && !S.gradient && S.mode !== "layers";
+    if (el.dataset.shape === shape) {
+      if (contours) el.querySelector('[data-k="bg"] .sw').style.background = S.bg;
+      el.querySelectorAll("[data-ink]").forEach((it) => { const i = +it.dataset.ink; it.querySelector(".sw").style.background = inks[i]; it.classList.toggle("on", gen() === "mesh" && sel === i); it.classList.toggle("off", blendOff && i === 1); });
+      el.querySelector('[data-k="bg"]')?.classList.toggle("off", S.transparent);
+    } else {
+      const before = el.dataset.shape ? el.querySelectorAll("[data-ink]").length : inks.length;
+      el.dataset.shape = shape;
+      let html = contours ? `<div class="stop bgc" data-k="bg"><button class="sw" style="background:${S.bg}" aria-label="Background color"></button><span>Background</span></div><span class="mine-sep"></span>` : "";
+      html += inks.map((c, i) => `<div class="stop${i >= before ? " fresh" : ""}" data-ink="${i}"><button class="sw" style="background:${c}" aria-label="Edit color ${i + 1}"></button>${inks.length > 2 ? `<button class="x" aria-label="Remove color ${i + 1}">${ic("x")}</button>` : ""}</div>`).join("");
+      if (inks.length < MAX_INKS()) html += `<button class="stop-add" title="Add color" aria-label="Add color">${ic("plus")}</button>`;
+      el.innerHTML = html;
+      renderMine();
+    }
+    $("stopCount").textContent = contours ? `${inks.length} ${inks.length === 1 ? "color" : "colors"} + background` : `${inks.length} of 8`;
+  }
+  $("mine").addEventListener("click", (e) => {
+    const bg = e.target.closest('[data-k="bg"] .sw');
+    if (bg) return picker.open(bg, S.bg, (v) => { S.bg = v; S.transparent = false; bg.style.background = v; update({ instant: true }); }, () => commit(), swatchesFor(S.bg));
+    const x = e.target.closest(".x");
+    if (x) { picker.close(); const i = +x.closest("[data-ink]").dataset.ink; if (gen() === "contours") { const a = inksOf(); a.splice(i, 1); setInks(a); } else { S.grad.colors.splice(i, 1); S.grad.points.splice(i, 1); } sel = null; update(); return; }
+    if (e.target.closest(".stop-add")) {
+      const a = inksOf();
+      if (gen() === "contours") {
+        // A new ink lands between the last two, or beside the first when they match.
+        const [p, q] = a.slice(-2), mid = p === q ? variants(a[0])[2] : sampleN([p, q], 3)[1];
+        a.splice(a.length - 1, 0, mid); setInks(a); update();
+      }
+      else addStop(rnd(0.15, 0.85), rnd(0.15, 0.85), variants(a[a.length - 1])[2]);
+      return;
+    }
+    const sw = e.target.closest("[data-ink] .sw");
+    if (sw) { const i = +sw.parentElement.dataset.ink; picker.open(sw, inksOf()[i], (v) => { const a = inksOf(); a[i] = v; setInks(a); sw.style.background = v; update({ instant: true }); }, () => commit(), swatchesFor(inksOf()[i])); }
+  });
   function roleRow(host, roles) {
     const el = $(host);
     el.innerHTML = roles.map(([key, label]) => `<div class="role" data-k="${key}"><button class="sw lg" aria-label="${label} color"></button><span>${label}</span></div>`).join("");
-    for (const [key, label, onSet] of roles) {
+    for (const [key] of roles) {
       const sw = el.querySelector(`[data-k="${key}"] .sw`);
-      sw.onclick = () => picker.open(sw, S[key], (v) => { S[key] = v; onSet?.(); sw.style.background = v; update({ instant: true }); }, () => commit(), swatchesFor(S[key]));
+      sw.onclick = () => picker.open(sw, S[key], (v) => { S[key] = v; sw.style.background = v; update({ instant: true }); }, () => commit(), swatchesFor(S[key]));
     }
     syncers.push(() => { for (const [key] of roles) el.querySelector(`[data-k="${key}"] .sw`).style.background = S[key]; });
   }
-  roleRow("roles", [["line", "Lines"], ["line2", "Blend"], ["bg", "Background", () => (S.transparent = false)]]);
   roleRow("inks", [["ink", "Ink"], ["paper", "Paper"]]);
   $("gradient").onchange = (e) => { S.gradient = e.target.checked; update(); };
   $("transparent").onchange = (e) => { S.transparent = e.target.checked; update(); };
   makeSlider($("color"), { group: "color", label: "Opacity", ...k("opacity"), pct: true, min: 0.05, max: 1, step: 0.01, fmt: pct, rand: [0.5, 1], hard: [0, 1] });
-  function randomPalette() {
-    const p = pick(PALS.filter((p) => !palMatches(p)));
-    applyPal(p.colors, p.roles);
-  }
-  // Stops update in place when only their colors change, so swatches ease to the new color.
-  function renderStops() {
-    const el = $("stops"), cols = S.grad.colors, items = [...el.querySelectorAll(".stop")];
-    const canAdd = cols.length < 8, hasAdd = !!el.querySelector(".stop-add");
-    if (items.length === cols.length && canAdd === hasAdd && items.every((it) => it.querySelector(".x") ? cols.length > 2 : cols.length <= 2)) {
-      items.forEach((it, i) => { it.querySelector(".sw").style.background = cols[i]; it.classList.toggle("on", gen() === "mesh" && sel === i); });
-    } else {
-      const before = items.length;
-      el.innerHTML = "";
-      cols.forEach((c, i) => {
-        const item = document.createElement("div");
-        item.className = "stop" + (gen() === "mesh" && sel === i ? " on" : "") + (before && i >= before ? " fresh" : "");
-        item.innerHTML = `<button class="sw" style="background:${c}" aria-label="Edit color ${i + 1}"></button>${cols.length > 2 ? `<button class="x" aria-label="Remove color ${i + 1}">${ic("x")}</button>` : ""}`;
-        const sw = item.querySelector(".sw");
-        sw.onclick = () => picker.open(sw, S.grad.colors[i], (v) => { S.grad.colors[i] = v; sw.style.background = v; update({ instant: true }); }, () => commit(), swatchesFor(S.grad.colors[i]));
-        item.querySelector(".x")?.addEventListener("click", () => { picker.close(); S.grad.colors.splice(i, 1); S.grad.points.splice(i, 1); sel = null; update(); });
-        el.appendChild(item);
-      });
-      if (canAdd) {
-        const add = document.createElement("button");
-        add.className = "stop-add"; add.title = "Add color"; add.setAttribute("aria-label", "Add color");
-        add.innerHTML = ic("plus");
-        add.onclick = () => addStop(rnd(0.15, 0.85), rnd(0.15, 0.85), variants(S.grad.colors[S.grad.colors.length - 1])[2]);
-        el.appendChild(add);
-      }
-    }
-    $("stopCount").textContent = `${cols.length} of 8`;
-  }
+  function randomPalette() { applyPal(pick(PALS.filter((p) => !palMatches(p)))); }
   function addStop(x, y, color) {
     if (S.grad.colors.length >= 8) return toast("Up to 8 colors");
     S.grad.colors.push(color || pick(pick(PALS).colors));
@@ -963,6 +932,7 @@
   }
   // Surprise: half the time a whole preset; otherwise the shape and lines of one preset, a random palette
   // and the effects of another (or none). Then a variation on top, so repeats still differ.
+  const NO_FX = {};
   function surprise() {
     const others = PRESETS.filter((p) => !lookMatches(p[2]));
     const a = pick(others)[2];
@@ -970,7 +940,10 @@
     else {
       applyLook(a, ["shape", "style"]);
       randomPalette();
-      applyLook(Math.random() < 0.35 ? resolveLook({}) : pick(others)[2], ["effects"]);
+      const r = Math.random();
+      if (r < 0.25) applyLook(NO_FX, ["effects"]);
+      else if (r < 0.6) applyLook(pick(others.filter((p) => p[2].fx))[2], ["effects"]);
+      else randomEffects();
     }
     variation();
     update({ fade: true });
@@ -997,6 +970,127 @@
     S.usePoints = true; sel = null;
   }
 
+  // ---------- motion ----------
+  // Every motion loops: drift moves the field round a circle, flow slides the contour levels (or sways a
+  // gradient's colors) by whole steps, breathe swells and settles the warp.
+  const MOTION_NAME = { still: "Still", drift: "Drift", flow: "Flow", breathe: "Breathe" };
+  const MOTION_HINT = { still: "Pick a motion to make a loop.", drift: "The pattern glides round in a loop.", flow: "Lines flow outward; gradient colors sway.", breathe: "The warp swells and settles." };
+  function motionState(st, t) {
+    const m = st.motion;
+    if (!m || m.type === "still") return st;
+    const o = { ...st, _t: t }, tw = 2 * Math.PI * t, a = m.amt;
+    if (st.source === "contours") {
+      if (m.type === "drift") { const R = a * st.scale * 0.5; o.driftX = R * Math.cos(tw); o.driftY = R * Math.sin(tw); }
+      // Cycling inks need a whole cycle of steps per loop, or the colors would jump at the seam.
+      else if (m.type === "flow") { const cyc = st.mids?.length && !st.gradient && st.mode !== "layers" ? st.mids.length + 2 : 1; o.phase = t * cyc * Math.max(1, Math.round(a * 4)); }
+      else o.warp = Math.max(st.warp, 0.15) * (1 + 0.9 * a * Math.sin(tw));
+    }
+    return o;
+  }
+  makeSeg($("motionType"), () => S.motion.type, (v) => { S.motion.type = v; if (v === "still") stopPlay(); });
+  [
+    { label: "Loop length", ...bindKey(() => S.motion, "dur"), min: 2, max: 30, step: 0.5, fmt: (v) => v + "s", rand: [4, 10], when: () => S.motion.type !== "still" },
+    { label: "Amount", ...bindKey(() => S.motion, "amt"), min: 0.05, max: 1, step: 0.01, fmt: f2, rand: [0.3, 0.7], when: () => S.motion.type !== "still" },
+  ].forEach((c) => makeSlider($("motionCtrls"), { group: "motion", ...c }));
+  makeSeg($("vidSize"), () => S.vid.size, (v) => (S.vid.size = v));
+  makeSeg($("vidFps"), () => S.vid.fps, (v) => (S.vid.fps = v));
+  makeSeg($("vidLoops"), () => S.vid.loops, (v) => (S.vid.loops = v));
+  let playing = false, playRaf = 0, playT0 = 0, playBusy = false;
+  function playFrame(now) {
+    if (!playing) return;
+    playRaf = requestAnimationFrame(playFrame);
+    if (playBusy) return;
+    playBusy = true;
+    const t = (((now - playT0) / 1000) % S.motion.dur) / S.motion.dur;
+    paint(motionState(S, t), S.source === "contours").then(() => (playBusy = false));
+  }
+  function startPlay() { if (S.motion.type === "still") { S.motion.type = "drift"; update(); } playing = true; playT0 = performance.now(); cancelAnimationFrame(playRaf); playRaf = requestAnimationFrame(playFrame); syncPlay(); }
+  function stopPlay() { if (!playing) return; playing = false; cancelAnimationFrame(playRaf); syncPlay(); render(); }
+  function syncPlay() {
+    for (const b of [$("playBtn"), $("barPlay")]) b.querySelector("use").setAttribute("href", playing ? "#i-pause" : "#i-play");
+    $("playBtn").querySelector("span").textContent = playing ? "Pause" : "Play";
+    $("barPlay").title = playing ? "Pause motion" : "Play motion";
+    $("barPlay").hidden = S.motion.type === "still";
+  }
+  $("playBtn").onclick = $("barPlay").onclick = () => (playing ? stopPlay() : startPlay());
+
+  // Video export renders every frame at an exact timestamp. Browsers with WebCodecs get an H.264 MP4;
+  // others record a WebM in real time.
+  let exporting = null;
+  const canMp4 = () => typeof window.VideoEncoder === "function" && window.Mp4Muxer;
+  async function exportVideo() {
+    if (exporting) return;
+    if (S.motion.type === "still") { S.motion.type = "drift"; update(); }
+    stopPlay();
+    const even = (v) => Math.max(2, Math.round(v / 2) * 2);
+    const sc = Math.min(S.vid.size / Math.min(S.w, S.h), 3840 / Math.max(S.w, S.h));
+    const W = even(S.w * sc), H = even(S.h * sc), fps = S.vid.fps, frames = Math.round(S.motion.dur * S.vid.loops * fps);
+    const job0 = { cancel: false }; exporting = job0;
+    $("vidProgress").hidden = false; $("vidCancel").hidden = false; $("vidExport").disabled = true;
+    const bar = $("vidProgress").firstChild, frameCanvas = document.createElement("canvas");
+    frameCanvas.width = W; frameCanvas.height = H;
+    const fctx = frameCanvas.getContext("2d");
+    async function drawFrame(i) {
+      const st = motionState(S, (i / fps / S.motion.dur) % 1);
+      if (isRaster(st) && FXR) {
+        const image = st.source === "contours" ? await rasterize(rasterCanvas, T.buildSVG(st, { w: W, h: H }).svg, W, H) : null;
+        FXR.render(job(st, W, H, image));
+        fctx.drawImage(fxCanvas, 0, 0, W, H);
+      } else await rasterize(frameCanvas, T.buildSVG(st, { w: W, h: H }).svg, W, H);
+      bar.style.width = ((i + 1) / frames) * 100 + "%";
+    }
+    try {
+      let blob;
+      if (canMp4()) {
+        // H.264 first (plays everywhere, Figma included), then VP9 in MP4 where H.264 encoding is missing.
+        const base = { width: W, height: H, bitrate: Math.round(W * H * fps * 0.12), framerate: fps };
+        let pick = null;
+        for (const [codec, mux] of [["avc1.640033", "avc"], ["avc1.4d0033", "avc"], ["vp09.00.40.08", "vp9"]]) {
+          try { if ((await VideoEncoder.isConfigSupported({ ...base, codec })).supported) { pick = [codec, mux]; break; } } catch (e) {}
+        }
+        if (!pick) throw new Error("no encoder");
+        const muxer = new Mp4Muxer.Muxer({ target: new Mp4Muxer.ArrayBufferTarget(), video: { codec: pick[1], width: W, height: H, frameRate: fps }, fastStart: "in-memory" });
+        let failed = null;
+        const enc = new VideoEncoder({ output: (chunk, meta) => muxer.addVideoChunk(chunk, meta), error: (e) => (failed = e) });
+        enc.configure({ ...base, codec: pick[0] });
+        for (let i = 0; i < frames; i++) {
+          if (job0.cancel || failed) break;
+          await drawFrame(i);
+          const vf = new VideoFrame(frameCanvas, { timestamp: Math.round((i * 1e6) / fps), duration: Math.round(1e6 / fps) });
+          enc.encode(vf, { keyFrame: i % (fps * 2) === 0 });
+          vf.close();
+          while (enc.encodeQueueSize > 4) await new Promise((r) => setTimeout(r, 5));
+        }
+        if (failed) throw failed;
+        if (!job0.cancel) { await enc.flush(); muxer.finalize(); blob = new Blob([muxer.target.buffer], { type: "video/mp4" }); }
+        enc.close();
+      } else {
+        const stream = frameCanvas.captureStream(0), track = stream.getVideoTracks()[0], chunks = [];
+        const rec = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported("video/webm;codecs=vp9") ? "video/webm;codecs=vp9" : "video/webm", videoBitsPerSecond: 12e6 });
+        rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+        const done = new Promise((r) => (rec.onstop = r));
+        rec.start();
+        let next = performance.now();
+        for (let i = 0; i < frames && !job0.cancel; i++) {
+          await drawFrame(i); track.requestFrame();
+          next += 1000 / fps; await new Promise((r) => setTimeout(r, Math.max(0, next - performance.now())));
+        }
+        rec.stop(); await done;
+        if (!job0.cancel) blob = new Blob(chunks, { type: "video/webm" });
+      }
+      if (blob) await download(blob, `${autoName()}-${S.motion.type}.${blob.type === "video/mp4" ? "mp4" : "webm"}`, "Video saved");
+      else if (job0.cancel) toast("Export cancelled");
+    } catch (e) {
+      toast("This browser couldn't encode the video. Try a smaller size.");
+    } finally {
+      exporting = null;
+      $("vidProgress").hidden = true; $("vidCancel").hidden = true; $("vidExport").disabled = false; bar.style.width = "0";
+      render();
+    }
+  }
+  $("vidExport").onclick = exportVideo;
+  $("vidCancel").onclick = () => exporting && (exporting.cancel = true);
+
   // ---------- canvas overlay ----------
   const art = $("art"), artSvg = $("artSvg"), fxCanvas = $("fx"), ov = $("ov"), wrap = $("wrap");
   const handleList = (st = S) => (st.source === "gradient" ? (st.grad.type === "mesh" ? st.grad.points : null) : st.usePoints && st.showPoints ? st.points : null);
@@ -1005,7 +1099,7 @@
     const grad = st.source === "gradient", list = handleList(st);
     ov.classList.toggle("off", !list);
     if (!list) { ov.innerHTML = ""; return; }
-    const u = S.w / Math.max(1, art.clientWidth), ns = 'vector-effect="non-scaling-stroke"';
+    const u = S.w / Math.max(1, art.clientWidth), ns = 'vector-effect="non-scaling-stroke"', ACCENT = accentNow();
     let out = "";
     list.forEach((p, i) => {
       const x = p.x * S.w, y = p.y * S.h, on = i === sel;
@@ -1090,6 +1184,29 @@
   const closeModal = (id) => ($(id).hidden = true);
   for (const m of document.querySelectorAll(".modal")) m.addEventListener("pointerdown", (e) => { if (e.target === m) m.hidden = true; });
 
+  // ---------- theme + accent ----------
+  const ACCENTS = ["#e8572a", "#3557d6", "#6d4ce0", "#2f7d5b", "#d6457a", "#c08a2b"];
+  P.theme ||= "system"; P.accent ||= ACCENTS[0];
+  function applyTheme() {
+    const r = document.documentElement;
+    if (P.theme === "system") delete r.dataset.theme; else r.dataset.theme = P.theme;
+    r.style.setProperty("--accent", P.accent);
+    r.style.setProperty("--on-accent", window.Color.contrast(P.accent, "#ffffff") < 2.6 ? "#1c1c1e" : "#ffffff");
+    for (const b of $("theme").children) b.classList.toggle("on", b.dataset.v === P.theme);
+    for (const b of $("accents").querySelectorAll("[data-c]")) b.classList.toggle("on", b.dataset.c === P.accent);
+    $("accents").querySelector(".custom").classList.toggle("on", !ACCENTS.includes(P.accent));
+    $("accents").querySelector(".custom").style.setProperty("--c", P.accent);
+    if (painted) drawOverlay();
+  }
+  $("accents").innerHTML = ACCENTS.map((c) => `<button class="sw" data-c="${c}" style="background:${c}" aria-label="Accent ${c}"></button>`).join("") + `<button class="sw custom" aria-label="Custom accent"></button>`;
+  $("accents").onclick = (e) => {
+    const b = e.target.closest("[data-c]");
+    if (b) { P.accent = b.dataset.c; savePrefs(); applyTheme(); return; }
+    const c = e.target.closest(".custom");
+    if (c) picker.open(c, P.accent, (v) => { P.accent = v; applyTheme(); }, () => savePrefs(), [["Palette", inPlay()]]);
+  };
+  $("theme").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P.theme = b.dataset.v; savePrefs(); applyTheme(); };
+
   // ---------- settings ----------
   $("safe").onchange = (e) => { P.safe = e.target.checked; savePrefs(); toast(P.safe ? "Safe values on" : "Safe values off. Randomizing uses the full ranges."); };
   $("unlock").onchange = (e) => {
@@ -1173,7 +1290,7 @@
     if (fmt === "svg") { facts(fmtBytes(new Blob([current.svg]).size)); return; }
     facts("…");
     const tok = ++exportTok, key = JSON.stringify(S);
-    pngBlob(S.pngScale).then((b) => { if (tok !== exportTok) return; pngCache = { key, blob: b }; facts(fmtBytes(b.size)); }).catch(() => facts("—"));
+    pngBlob(S.pngScale).then((b) => { if (tok !== exportTok) return; pngCache = { key, blob: b }; facts(fmtBytes(b.size)); }).catch(() => facts("Unknown"));
   }
   $("fname").oninput = (e) => { e.target.dataset.edited = e.target.value ? "1" : ""; };
   $("fmt").onclick = (e) => { const b = e.target.closest("button"); if (b && !b.disabled) { S.fmt = b.dataset.v; save(); refreshExport(); } };
@@ -1194,19 +1311,20 @@
   $("copy").onclick = copyOut;
 
   // ---------- keyboard ----------
-  const SLOT_KEYS = ["preset", "generator", "shape", "lines", "colors", "addfx"];
+  const SLOT_KEYS = ["preset", "generator", "shape", "lines", "colors", "addfx", "motion"];
   document.addEventListener("keydown", (e) => {
     const typing = e.target.matches("input:not([type=range]):not([type=checkbox]), textarea");
     const mod = e.metaKey || e.ctrlKey;
     if (e.key === "Escape") { picker.close(); closeMenus(); for (const m of document.querySelectorAll(".modal")) m.hidden = true; if (sel != null) { sel = null; syncUI(); drawOverlay(); } return; }
     if (document.querySelector(".modal:not([hidden])")) return;
+    if (window.Shell && window.Shell.route !== "studio") return;
     if (mod && e.key.toLowerCase() === "z" && !typing) { e.preventDefault(); travel(e.shiftKey ? 1 : -1); return; }
     if (typing || mod || e.altKey) return;
     const key = e.key.toLowerCase();
     if (key === "r") { e.preventDefault(); if (e.shiftKey) surprise(); else { variation(); update({ fade: true }); } }
     else if (key === "c") copyOut();
     else if (key === "e") $("exportBtn").click();
-    else if (/^[1-6]$/.test(key)) { const s = SLOT_KEYS[+key - 1]; if (s !== "lines" || gen() === "contours") setSlot(s); }
+    else if (/^[1-7]$/.test(key)) { const s = SLOT_KEYS[+key - 1]; if (s !== "lines" || gen() === "contours") setSlot(s); }
     else if ((e.key === "Delete" || e.key === "Backspace") && sel != null) {
       e.preventDefault();
       if (S.source === "gradient") { if (S.grad.colors.length > 2) { S.grad.colors.splice(sel, 1); S.grad.points.splice(sel, 1); } }
@@ -1255,7 +1373,7 @@
       img.src = url;
     });
   }
-  const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image, grad: st.source === "gradient" ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper });
+  const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image, grad: st.source === "gradient" ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper, time: st._t || 0, motion: st._t != null ? st.motion.type : "still", motionAmt: st.motion?.amt });
   function fit() {
     const cs = getComputedStyle(wrap);
     const aw = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), ah = wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
@@ -1350,26 +1468,42 @@
   const readable = (st) => (st.mode !== "layers" && /^#[0-9a-f]{12}$/i.test(st.line + st.bg.slice(1)) && hexDist(st.line, st.bg) < 60 ? { ...st, line: st.line2, line2: st.line } : st);
   const lightLines = (st) => ({ ...st, gap: Math.max(st.gap, st.w / 18), levels: Math.min(st.levels, 12), weight: Math.max(st.weight, 2.4) });
   function schedulePreviews(delay = 260) { clearTimeout(previewT); previewT = setTimeout(buildPreviews, delay); }
-  async function effectBase(W, H) {
-    if (current.raster) {
-      baseCanvas.width = W; baseCanvas.height = H;
-      const x = baseCanvas.getContext("2d"), sw = fxCanvas.width, sh = Math.min(fxCanvas.height, sw * 0.625);
+  // Effect previews need a base image: the finished design (to preview adding one more effect),
+  // or the design before any effects (so each effect tile shows the stack up to that step).
+  async function effectBase(W, H, final = true) {
+    baseCanvas.width = W; baseCanvas.height = H;
+    const x = baseCanvas.getContext("2d");
+    if (final && current.raster) {
+      const sw = fxCanvas.width, sh = Math.min(fxCanvas.height, sw * 0.625);
       x.drawImage(fxCanvas, 0, (fxCanvas.height - sh) / 2, sw, sh, 0, 0, W, H);
+    } else if (S.source === "gradient") {
+      TFX.render(job({ ...noFx(S), h: Math.round(S.w * 0.625) }, W, H, null));
+      x.drawImage(thumbCanvas, 0, 0, W, H);
     } else await rasterize(baseCanvas, T.buildSVG({ ...S, h: Math.round(S.w * 0.625) }, { w: W, h: H, res: 2.5 }).svg, W, H);
   }
   const fxThumb = (id, W, H) => { TFX.render({ w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: { [id]: { ...S.fx[id], on: true } }, order: [id], ink: S.ink, paper: S.paper }); return thumbCanvas; };
+  const fxUpTo = (id, W, H) => { TFX.render({ w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: S.fx, order: S.fxOrder.slice(0, S.fxOrder.indexOf(id) + 1), ink: S.ink, paper: S.paper }); return thumbCanvas; };
+  // The generator tile shows the bare generator: default shape settings, the design's colors, no effects.
+  function baseOf(st) {
+    const b = clone(noFx(st));
+    for (const key of LAYERS.shape) if (key !== "source" && key !== "grad.type" && key !== "pattern") setPath(b, key, clone(getPath(DEFAULTS, key)));
+    b.seed = st.seed; b.usePoints = false;
+    return b;
+  }
   function buildPreviews() {
     if (drag) return;
     const jobs = [];
     // Slot tile thumbnails first: they're always on screen.
     const tileJob = (key, st) => jobs.push(async () => { const el = $("slotList").querySelector(`[data-th="${key}"]`); if (!el) return; await thumb(el, st, 64); });
+    // The build column reads as layers: the bare generator, then the tuned shape, then line style,
+    // then each effect stacked on what came before; the preset tile shows the finished result.
     tileJob("preset", S);
-    tileJob("generator", lightLines(noFx(S)));
+    tileJob("generator", lightLines(strokes(baseOf(S))));
     tileJob("shape", lightLines(strokes(noFx(S))));
     if (gen() === "contours") tileJob("lines", lightLines(noFx(S)));
     if (TFX && S.fxOrder.length) jobs.push(async () => {
-      await effectBase(128, 80);
-      for (const id of S.fxOrder) { const el = $("slotList").querySelector(`[data-th="fx:${id}"]`); if (!el) continue; putCanvas(el, fxThumb(id, 128, 80), 128, 80); }
+      await effectBase(128, 80, false);
+      for (const id of S.fxOrder) { const el = $("slotList").querySelector(`[data-th="fx:${id}"]`); if (!el) continue; putCanvas(el, fxUpTo(id, 128, 80), 128, 80); }
     });
     const p = panelOf(P.slot);
     if (p === "preset") for (const pc of presetCards) { if (!pc.done && !pc.el.hidden) jobs.push(async () => { await thumb(slotOf(pc.el), resolveLook(pc.look), 220); pc.done = true; }); }
@@ -1443,7 +1577,7 @@
     else miniIn.innerHTML = current.svg;
   }
   new IntersectionObserver(([en]) => {
-    const show = narrow.matches && !en.isIntersecting;
+    const show = narrow.matches && !en.isIntersecting && document.body.dataset.route === "studio";
     if (show === miniShown) return;
     miniShown = show;
     if (show) updateMini();
@@ -1459,11 +1593,12 @@
   const measure = (text) => { mirror.style.fontSize = getComputedStyle($("w")).fontSize; mirror.textContent = text; return Math.ceil(mirror.getBoundingClientRect().width); };
   let stopsKey = "", bodyFor = null, shownSlot = null;
   // Opening a panel: the title and sections rise in, and cards follow in a short stagger.
+  const jitter = (el) => { el.style.setProperty("--y", (5 + Math.random() * 7).toFixed(1) + "px"); el.style.setProperty("--d", (0.85 + Math.random() * 0.35).toFixed(2)); el.style.setProperty("--jit", Math.round(Math.random() * 45) + "ms"); el.style.setProperty("--s", (0.985 + Math.random() * 0.015).toFixed(3)); };
   function enterPanel(sec) {
     if (!sec || reduceMotion.matches) return;
     for (const el of [$("optHead"), sec]) { el.classList.remove("enter"); void el.offsetWidth; el.classList.add("enter"); }
-    [...sec.children].forEach((c, i) => c.style.setProperty("--i", Math.min(i, 8)));
-    for (const grid of sec.querySelectorAll(".cards, .palettes, .suggest")) [...grid.children].filter((c) => !c.hidden).forEach((c, i) => c.style.setProperty("--j", Math.min(i, 14)));
+    [...sec.children].forEach((c, i) => { c.style.setProperty("--i", Math.min(i, 8)); jitter(c); });
+    for (const grid of sec.querySelectorAll(".cards, .palettes, .suggest")) [...grid.children].filter((c) => !c.hidden).forEach((c, i) => { c.style.setProperty("--j", Math.min(i, 14)); jitter(c); });
   }
   function syncUI() {
     const g = gen();
@@ -1478,7 +1613,7 @@
     $("optTitle").textContent = fid ? FXI[fid].name : swapping && panel === "addfx" ? `Swap ${FXI[swapping].name}` : PANEL_TITLE[panel];
     optDice.title = optDice.ariaLabel = panel === "preset" ? "Surprise me" : `Randomize ${$("optTitle").textContent.toLowerCase()}`;
     if (fid !== bodyFor) { $("fxBodyHost").innerHTML = ""; if (fid) $("fxBodyHost").appendChild(fxBodies[fid]); bodyFor = fid; }
-    if (fid) $("fxLede").textContent = `${FXI[fid].cat} · ${S.fxOrder.indexOf(fid) + 1} of ${S.fxOrder.length}`;
+    if (fid) $("fxLede").innerHTML = `<span>${FXI[fid].cat}</span><span>Step ${S.fxOrder.indexOf(fid) + 1} of ${S.fxOrder.length}</span>`;
     if (panel !== "addfx") swapping = null;
     syncers.forEach((f) => f());
     for (const b of takeRow.querySelectorAll("[data-l]")) { b.classList.toggle("on", !!P.take[b.dataset.l]); b.setAttribute("aria-pressed", !!P.take[b.dataset.l]); }
@@ -1491,10 +1626,7 @@
     for (const [id, c] of Object.entries(modeCards)) c.classList.toggle("on", id === S.mode);
     for (const [id, c] of Object.entries(fxCards)) c.classList.toggle("added", S.fxOrder.includes(id));
     varCards.forEach((c) => c.classList.toggle("on", c._seed === S.seed));
-    if (panel === "colors") { renderPalettes(); clearTimeout(sugT); sugT = setTimeout(renderSuggest, sugKey ? 220 : 0); }
-    $("roles").querySelector('[data-k="line2"]').classList.toggle("off", !S.gradient && S.mode !== "layers");
-    $("roles").querySelector('[data-k="bg"]').classList.toggle("off", S.transparent);
-    $("roles").querySelector('[data-k="line"] span').textContent = S.mode === "lines" ? "Lines" : S.mode === "bands" ? "Bands" : "From";
+    if (panel === "colors") { renderPalettes(); renderMine(); }
     $("inkSec").hidden = !S.fxOrder.some((id) => ["halftone", "linescreen", "ascii", "dither"].includes(id) && S.fx[id].mono);
     $("gradient").checked = S.gradient || S.mode === "layers";
     $("gradient").disabled = S.mode === "layers";
@@ -1504,12 +1636,13 @@
     $("seed").value = S.seed;
     $("ptHint").textContent = selPoint() ? "Double-click to flip into a dip. Delete removes." : "Double-click the canvas to add a peak. Drag to move, scroll to resize.";
     $("gradHint").hidden = g !== "mesh";
-    const sk = JSON.stringify([S.grad.colors, g === "mesh" ? sel : null]);
-    if (sk !== stopsKey) { stopsKey = sk; renderStops(); }
     renderSlots();
     for (const key of ["w", "h"]) { const el = $(key); el.value = S[key]; el.style.width = measure(String(S[key])) + 8 + "px"; }
     $("sizeName").textContent = presetName();
     $("safe").checked = P.safe; $("unlock").checked = P.unlock;
+    $("motionHint").textContent = MOTION_HINT[S.motion.type];
+    $("vidLbl").textContent = canMp4() ? "Export MP4" : "Export WebM";
+    syncPlay();
     syncHistory();
   }
   document.fonts?.ready.then(() => { syncUI(); if (isRaster(S)) render(); });
@@ -1524,10 +1657,36 @@
   new ResizeObserver(() => { const key = wrap.clientWidth + "x" + wrap.clientHeight; if (painted && key !== lastWrap) { lastWrap = key; render(); } }).observe(wrap);
 
   window.TopoBrand?.mount($("brand"), "isoline");
+  applyTheme();
   // First visit opens on a curated preset rather than an empty default.
   let firstVisit = true;
   try { firstVisit = !localStorage.getItem(STORE); } catch (e) {}
   if (firstVisit) applyLook(PRESETS.find((p) => p[1] === "Prism")[2]);
   update({ commit: false });
   setTimeout(() => document.body.classList.remove("boot"), 900);
+
+  // ---------- links to the shell and the palette tool ----------
+  window.toastMsg = toast;
+  window.downloadBlob = download;
+  window.Studio = {
+    // A palette from the palette tool: its lightest color becomes the background for contours and the rest
+    // become inks, strongest contrast first; gradients take the colors as they are.
+    usePalette(hexes) {
+      if (gen() === "contours") {
+        const byLum = hexes.slice().sort((a, b) => lum(b) - lum(a)), bg = byLum[0];
+        const inks = hexes.filter((h) => h !== bg).sort((a, b) => Math.abs(lum(b) - lum(bg)) - Math.abs(lum(a) - lum(bg))).slice(0, 6);
+        S.bg = bg; S.transparent = false; setInks(inks.length > 1 ? inks : [inks[0] || "#111111", inks[0] || "#111111"]);
+      } else setGradColors(hexes);
+      P.slot = "colors";
+      update({ fade: true });
+    },
+    async snapshot(w, h) {
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      const x = c.getContext("2d"), sh = (S.h / S.w) * w, oy = (h - sh) / 2;
+      if (current.raster) x.drawImage(fxCanvas, 0, Math.max(0, -oy) * (fxCanvas.height / sh), fxCanvas.width, fxCanvas.height - Math.max(0, -oy) * 2 * (fxCanvas.height / sh), 0, Math.max(0, oy), w, Math.min(h, sh));
+      else { const img = await rasterize(document.createElement("canvas"), current.svg, w, Math.round(sh)); x.drawImage(img, 0, oy); }
+      return c;
+    },
+    onShow() { lastWrap = ""; fit(); render(); },
+  };
 })();

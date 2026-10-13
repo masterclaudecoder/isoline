@@ -21,6 +21,17 @@
     <symbol id="i-up" viewBox="0 0 20 20"><path d="M10 12.5v-9M6.5 7 10 3.5 13.5 7"/><path d="M4 14v1.5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V14"/></symbol>
     <symbol id="i-chev" viewBox="0 0 20 20"><path d="m6 8 4 4 4-4"/></symbol>
     <symbol id="i-next" viewBox="0 0 20 20"><path d="m8 6 4 4-4 4"/></symbol>
+    <symbol id="i-shift" viewBox="0 0 20 20"><path d="M10 3.5 3.5 10.5H7v6h6v-6h3.5Z"/></symbol>
+    <symbol id="i-file" viewBox="0 0 20 20"><path d="M11.5 3.5H6a1.5 1.5 0 0 0-1.5 1.5v10A1.5 1.5 0 0 0 6 16.5h8a1.5 1.5 0 0 0 1.5-1.5V7.5Z"/><path d="M11.5 3.5v4h4"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 20 20"><rect x="3.5" y="3.5" width="13" height="13" rx="2.5"/><path d="M3.5 12.5c3-1 5-4.5 13-6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 20 20"><path d="M6.5 4.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L7.7 4.1a.8.8 0 0 0-1.2.7Z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 20 20"><rect x="5.5" y="4.5" width="3" height="11" rx="1"/><rect x="11.5" y="4.5" width="3" height="11" rx="1"/></symbol>
+    <symbol id="i-wave" viewBox="0 0 20 20"><path d="M2.5 10c2-4.5 3.5-4.5 5 0s3 4.5 5 0 3.5-4.5 5 0"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 20 20"><rect x="4.5" y="9" width="11" height="8" rx="2"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9"/></symbol>
+    <symbol id="i-unlock" viewBox="0 0 20 20"><rect x="4.5" y="9" width="11" height="8" rx="2"/><path d="M7 9V6.5a3 3 0 0 1 5.8-1.1"/></symbol>
+    <symbol id="i-sort" viewBox="0 0 20 20"><path d="M5 4.5v11M2.5 13 5 15.5 7.5 13M10.5 6h7M10.5 10h5M10.5 14h3"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 20 20"><path d="M10 16s-6-3.6-6-8.2A3.3 3.3 0 0 1 10 6a3.3 3.3 0 0 1 6 1.8C16 12.4 10 16 10 16Z"/></symbol>
+    <symbol id="i-shades" viewBox="0 0 20 20"><rect x="4" y="3.5" width="12" height="13" rx="2.5"/><path d="M4 7.8h12M4 12.2h12"/></symbol>
     <symbol id="i-prev" viewBox="0 0 20 20"><path d="m12 6-4 4 4 4"/></symbol>
     <symbol id="i-pipette" viewBox="0 0 20 20"><path d="m11.5 6 2.5 2.5"/><path d="M13 4.5a1.8 1.8 0 0 1 2.5 2.5L8 14.5l-3 .5.5-3Z"/></symbol>
     <symbol id="i-plus" viewBox="0 0 20 20"><path d="M10 4.5v11M4.5 10h11"/></symbol>
@@ -38,8 +49,8 @@
 
 <div class="shell">
   <header class="top">
-    <div class="brand" id="brand"></div>
-    <div class="size">
+    <a class="brand" id="brand" href="#/" aria-label="Isoline home"></a>
+    <div class="size" data-for="studio">
       <input class="dim" id="w" type="number" min="64" max="8000" aria-label="Width">
       <span class="times">×</span>
       <input class="dim" id="h" type="number" min="64" max="8000" aria-label="Height">
@@ -62,14 +73,17 @@
             <span class="switch"><input type="checkbox" id="unlock"><span></span></span>
           </label>
           <div class="set-sep"></div>
-          <button class="opt" id="exportSettings"><span>Download settings</span><span class="mono">.json</span></button>
-          <button class="opt" id="copySettings"><span>Copy settings</span></button>
-          <button class="opt" id="importSettings"><span>Import settings</span></button>
+          <div class="set-row static"><span><b>Theme</b></span><div class="seg sm" id="theme"><button data-v="system">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
+          <div class="set-row static"><span><b>Accent</b></span><div class="accents" id="accents"></div></div>
           <div class="set-sep"></div>
-          <button class="opt danger" id="resetAll"><span>Reset to defaults</span></button>
+          <button class="opt" id="exportSettings"><span><svg class="ic"><use href="#i-down"/></svg>Download settings</span><span class="mono">.json</span></button>
+          <button class="opt" id="copySettings"><span><svg class="ic"><use href="#i-copy"/></svg>Copy settings</span></button>
+          <button class="opt" id="importSettings"><span><svg class="ic"><use href="#i-file"/></svg>Import settings</span></button>
+          <div class="set-sep"></div>
+          <button class="opt danger" id="resetAll"><span><svg class="ic"><use href="#i-reset"/></svg>Reset to defaults</span></button>
         </div>
       </div>
-      <div class="menu-wrap">
+      <div class="menu-wrap" data-for="studio">
         <button class="btn primary" id="exportBtn" aria-haspopup="true">Export<svg class="ic chev"><use href="#i-chev"/></svg></button>
         <div class="pop export" id="exportMenu" hidden>
           <div class="seg" id="fmt"><button data-v="svg">SVG</button><button data-v="png">PNG</button></div>
@@ -81,15 +95,26 @@
           <input class="field mono" id="fname" spellcheck="false">
           <dl class="facts" id="facts"></dl>
           <div class="ex-actions">
-            <button class="btn" id="copy"><span id="copyLbl">Copy SVG</span><kbd>C</kbd></button>
-            <button class="btn primary" id="download">Download</button>
+            <button class="btn" id="copy"><svg class="ic"><use href="#i-copy"/></svg><span id="copyLbl">Copy SVG</span></button>
+            <button class="btn primary" id="download"><svg class="ic"><use href="#i-down"/></svg>Download</button>
           </div>
         </div>
       </div>
     </div>
   </header>
 
-  <main class="app">
+  <div class="pages">
+  <section class="page home" data-page="home" hidden>
+    <div class="home-in">
+      <h1 class="home-title">Tools</h1>
+      <div class="tools">
+        <a class="tool" href="#/studio" data-go="studio"><span class="tool-prev" id="homeStudio"></span><span class="tool-text"><b>Studio</b><small>Topographic lines, gradients, noise and effects for Figma</small></span><svg class="ic go"><use href="#i-next"/></svg></a>
+        <a class="tool" href="#/palettes" data-go="palettes"><span class="tool-prev" id="homePalette"></span><span class="tool-text"><b>Palettes</b><small>Generate, name, save and export color palettes</small></span><svg class="ic go"><use href="#i-next"/></svg></a>
+      </div>
+    </div>
+  </section>
+
+  <main class="app page" data-page="studio">
     <aside class="slots scroll" id="slots" aria-label="Layers">
       <h2 class="col-title">Build</h2>
       <div id="slotList"></div>
@@ -151,26 +176,20 @@
       </div>
 
       <div class="panel-sec" data-panel="colors">
+        <div class="sub-head"><h3 class="sub">Your colors</h3><span class="val-static mono" id="stopCount"></span></div>
+        <div class="mine" id="mine"></div>
+        <div data-gen="contours">
+          <div class="toggles">
+            <label class="switch"><input type="checkbox" id="gradient" aria-label="Blend colors"><span></span><em>Blend</em></label>
+            <label class="switch"><input type="checkbox" id="transparent" aria-label="Transparent background"><span></span><em>Transparent</em></label>
+          </div>
+          <div id="color"></div>
+        </div>
         <div class="pal-head">
           <div class="seg sm tabs" id="palTabs"></div>
           <div class="pager"><button class="ib xs" id="palPrev" aria-label="Previous palettes"><svg class="ic"><use href="#i-prev"/></svg></button><span class="dots" id="palDots"></span><button class="ib xs" id="palNext" aria-label="Next palettes"><svg class="ic"><use href="#i-next"/></svg></button></div>
         </div>
         <div class="pal-view"><div class="palettes" id="palettes"></div></div>
-        <div data-gen="contours">
-          <h3 class="sub">Your colors</h3>
-          <div class="roles" id="roles"></div>
-          <div class="toggles">
-            <label class="switch"><input type="checkbox" id="gradient" aria-label="Blend lines"><span></span><em>Blend</em></label>
-            <label class="switch"><input type="checkbox" id="transparent" aria-label="Transparent background"><span></span><em>Transparent</em></label>
-          </div>
-          <div id="color"></div>
-        </div>
-        <div data-gen="raster">
-          <div class="sub-head"><h3 class="sub">Your colors</h3><span class="val-static mono" id="stopCount"></span></div>
-          <div class="stops" id="stops"></div>
-        </div>
-        <h3 class="sub">Suggested</h3>
-        <div class="suggest" id="suggest"></div>
         <div id="inkSec">
           <h3 class="sub">Print inks</h3>
           <div class="roles" id="inks"></div>
@@ -181,9 +200,24 @@
         <p class="lede" id="fxLede"></p>
         <div id="fxBodyHost"></div>
         <div class="fx-actions">
-          <button class="btn sm" id="fxSwap">Swap for another</button>
-          <button class="btn sm ghost" id="fxRemove">Remove</button>
+          <button class="btn sm" id="fxSwap"><svg class="ic"><use href="#i-swap"/></svg>Swap for another</button>
+          <button class="btn sm ghost" id="fxRemove"><svg class="ic"><use href="#i-x"/></svg>Remove</button>
         </div>
+      </div>
+
+      <div class="panel-sec" data-panel="motion">
+        <div class="seg wrap4" id="motionType"><button data-v="still">Still</button><button data-v="drift">Drift</button><button data-v="flow">Flow</button><button data-v="breathe">Breathe</button></div>
+        <p class="hint" id="motionHint"></p>
+        <div id="motionCtrls"></div>
+        <button class="btn play-btn" id="playBtn"><svg class="ic"><use href="#i-play"/></svg><span>Play</span></button>
+        <h3 class="sub">Export video</h3>
+        <div class="ex-grid">
+          <span class="label">Size</span><div class="seg sm" id="vidSize"><button data-v="720">720p</button><button data-v="1080">1080p</button><button data-v="1440">1440p</button></div>
+          <span class="label">Frame rate</span><div class="seg sm" id="vidFps"><button data-v="24">24</button><button data-v="30">30</button><button data-v="60">60</button></div>
+          <span class="label">Loops</span><div class="seg sm" id="vidLoops"><button data-v="1">1</button><button data-v="2">2</button><button data-v="4">4</button></div>
+        </div>
+        <div class="progress" id="vidProgress" hidden><i></i></div>
+        <div class="fx-actions"><button class="btn primary" id="vidExport"><svg class="ic"><use href="#i-down"/></svg><span id="vidLbl">Export MP4</span></button><button class="btn ghost" id="vidCancel" hidden>Cancel</button></div>
       </div>
 
       <div class="panel-sec" data-panel="addfx">
@@ -202,13 +236,46 @@
         <div class="stage-bar" role="toolbar" aria-label="Canvas">
           <button class="ib" id="undo" title="Undo (⌘Z)" aria-label="Undo"><svg class="ic"><use href="#i-undo"/></svg></button>
           <button class="ib" id="redo" title="Redo (⇧⌘Z)" aria-label="Redo"><svg class="ic"><use href="#i-redo"/></svg></button>
+          <button class="ib" id="barPlay" title="Play motion" aria-label="Play motion" hidden><svg class="ic"><use href="#i-play"/></svg></button>
           <span class="bar-sep"></span>
           <button class="bar-btn" id="variation" title="Same look, new variation">Variation<kbd>R</kbd></button>
-          <button class="bar-btn" id="surprise" title="A new look from the presets">Surprise<kbd>⇧R</kbd></button>
+          <button class="bar-btn" id="surprise" title="A new look from the presets">Surprise<kbd><svg class="ic kbd-ic"><use href="#i-shift"/></svg>R</kbd></button>
         </div>
       </div>
     </section>
   </main>
+
+  <section class="page pt" data-page="palettes" hidden>
+    <div class="pt-cols" id="ptCols"></div>
+    <div class="pt-bar" role="toolbar" aria-label="Palette">
+      <button class="bar-btn" id="ptGen">Generate<kbd>Space</kbd></button>
+      <div class="menu-wrap up">
+        <button class="bar-btn" id="ptModeBtn" aria-haspopup="true"><span id="ptMode">Auto</span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+        <div class="pop" id="ptModeMenu" hidden></div>
+      </div>
+      <span class="bar-sep"></span>
+      <button class="ib" id="ptUndo" title="Undo (⌘Z)" aria-label="Undo"><svg class="ic"><use href="#i-undo"/></svg></button>
+      <button class="ib" id="ptRedo" title="Redo (⇧⌘Z)" aria-label="Redo"><svg class="ic"><use href="#i-redo"/></svg></button>
+      <button class="ib" id="ptSort" title="Sort by lightness" aria-label="Sort by lightness"><svg class="ic"><use href="#i-sort"/></svg></button>
+      <span class="bar-sep"></span>
+      <div class="menu-wrap up">
+        <button class="bar-btn" id="ptSavedBtn" aria-haspopup="true"><svg class="ic"><use href="#i-heart"/></svg>Saved</button>
+        <div class="pop pt-saved" id="ptSavedMenu" hidden></div>
+      </div>
+      <div class="menu-wrap up">
+        <button class="bar-btn" id="ptExportBtn" aria-haspopup="true">Export<svg class="ic chev"><use href="#i-chev"/></svg></button>
+        <div class="pop" id="ptExportMenu" hidden>
+          <button class="opt" data-ex="hex"><span><svg class="ic"><use href="#i-copy"/></svg>Copy hex codes</span></button>
+          <button class="opt" data-ex="css"><span><svg class="ic"><use href="#i-copy"/></svg>Copy CSS variables</span></button>
+          <button class="opt" data-ex="json"><span><svg class="ic"><use href="#i-copy"/></svg>Copy JSON</span></button>
+          <button class="opt" data-ex="link"><span><svg class="ic"><use href="#i-copy"/></svg>Copy link</span></button>
+          <button class="opt" data-ex="png"><span><svg class="ic"><use href="#i-down"/></svg>Download PNG</span></button>
+        </div>
+      </div>
+      <button class="btn primary sm" id="ptUse">Use in Studio<svg class="ic"><use href="#i-next"/></svg></button>
+    </div>
+  </section>
+  </div>
 </div>
 
 <button class="mini" id="mini" aria-label="Back to canvas"><div class="mini-in" id="miniIn"></div></button>
@@ -235,9 +302,15 @@
 </div>
 
 <div class="toast" id="toast" role="status"></div>
+<script src="colornames.js"></script>
+<script src="color.js"></script>
+<script src="picker.js"></script>
+<script src="mp4-muxer.js"></script>
 <script src="engine.js"></script>
 <script src="brand.js"></script>
 <script src="fx.js"></script>
 <script src="app.js"></script>
+<script src="palette.js"></script>
+<script src="shell.js"></script>
 </body>
 </html>
