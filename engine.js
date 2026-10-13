@@ -95,6 +95,13 @@
     for (let j = 0; j < ny; j++) {
       for (let i = 0; i < nx; i++) {
         let px = i * sx, py = j * sy;
+        if (s.liquify > 0) {
+          // Two-level domain warp: the noise is itself displaced by noise, which gives the liquid swirls.
+          const ls = Math.max(4, sc * (s.liqScale || 1)), u0 = px / ls, v0 = py / ls;
+          const qx = noise(u0 + 1.3, v0 + 7.1), qy = noise(u0 + 8.2, v0 + 2.8);
+          px += s.liquify * ls * 0.06 * noise(u0 + 1.2 * qx + 4.7, v0 + 1.2 * qy + 1.9);
+          py += s.liquify * ls * 0.06 * noise(u0 + 1.2 * qx + 9.2, v0 + 1.2 * qy + 5.3);
+        }
         if (s.warp > 0) {
           const u0 = px / sc, v0 = py / sc;
           px += s.warp * sc * 0.5 * fbm(u0 + 5.2, v0 + 1.3, 2);
@@ -143,7 +150,7 @@
 
   // ---------- marching squares -> polylines ----------
   function contour(field, t) {
-    const { f, nx, cols, rows, sx, sy } = field;
+    const { f, nx, cols, rows, sx, sy, ox = 0, oy = 0 } = field;
     const pts = new Map(), adj = new Map();
     const lerp = (a, b) => (b === a ? 0.5 : (t - a) / (b - a));
     const hKey = (i, j) => (j * nx + i) * 2, vKey = (i, j) => (j * nx + i) * 2 + 1;
@@ -156,7 +163,7 @@
         const tl = f[j * nx + i], tr = f[j * nx + i + 1], br = f[(j + 1) * nx + i + 1], bl = f[(j + 1) * nx + i];
         const c = (tl > t ? 8 : 0) | (tr > t ? 4 : 0) | (br > t ? 2 : 0) | (bl > t ? 1 : 0);
         if (c === 0 || c === 15) continue;
-        const x0 = i * sx, y0 = j * sy;
+        const x0 = i * sx + ox, y0 = j * sy + oy;
         const T = () => { const k = hKey(i, j); if (!pts.has(k)) pts.set(k, [x0 + sx * lerp(tl, tr), y0]); return k; };
         const B = () => { const k = hKey(i, j + 1); if (!pts.has(k)) pts.set(k, [x0 + sx * lerp(bl, br), y0 + sy]); return k; };
         const L = () => { const k = vKey(i, j); if (!pts.has(k)) pts.set(k, [x0, y0 + sy * lerp(tl, bl)]); return k; };
@@ -294,6 +301,41 @@
     return d + (closed ? "Z" : "");
   }
 
+  // Field with a one-cell border far below every level, so each contour of {field > t} closes on itself.
+  function padField(field) {
+    const { f, nx, ny, sx, sy, min, max } = field;
+    const NX = nx + 2, NY = ny + 2, g = new Float32Array(NX * NY).fill(min - 1000 * (max - min || 1));
+    for (let j = 0; j < ny; j++) g.set(f.subarray(j * nx, j * nx + nx), (j + 1) * NX + 1);
+    return { ...field, f: g, nx: NX, ny: NY, cols: NX - 1, rows: NY - 1, ox: -sx, oy: -sy };
+  }
+
+  // Smooth a closed region outline but keep the stretches that run along the canvas edge exact.
+  function regionLine(p, sigma, w, h, eps) {
+    const out = (q) => q[0] < 0.01 || q[1] < 0.01 || q[0] > w - 0.01 || q[1] > h - 0.01;
+    const clampPt = (q) => [Math.min(w, Math.max(0, q[0])), Math.min(h, Math.max(0, q[1]))];
+    let q = p;
+    if (sigma > 0.3) {
+      const ds = Math.max(0.6, Math.min(4, sigma / 5));
+      const r = resampleUniform(p, true, ds);
+      const b = blurLine(r, true, sigma / ds / Math.sqrt(3));
+      q = b.map((v, i) => (out(r[i]) ? r[i] : v));
+    }
+    q = simplify(q.map(clampPt), eps);
+    const n = q.length;
+    if (n < 3) return "";
+    const edge = (a, b) => (a[0] === 0 && b[0] === 0) || (a[0] === w && b[0] === w) || (a[1] === 0 && b[1] === 0) || (a[1] === h && b[1] === h);
+    const at = (i) => q[(i + n) % n];
+    let d = `M${n1(q[0][0])} ${n1(q[0][1])}`;
+    for (let i = 0; i < n; i++) {
+      const p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
+      if (edge(p1, p2)) { d += `L${n1(p2[0])} ${n1(p2[1])}`; continue; }
+      // Next to an edge run, aim the tangent along the edge instead of across it.
+      const a0 = edge(p0, p1) ? p1 : p0, a3 = edge(p2, p3) ? p2 : p3;
+      d += `C${n1(p1[0] + (p2[0] - a0[0]) / 6)} ${n1(p1[1] + (p2[1] - a0[1]) / 6)} ${n1(p2[0] - (a3[0] - p1[0]) / 6)} ${n1(p2[1] - (a3[1] - p1[1]) / 6)} ${n1(p2[0])} ${n1(p2[1])}`;
+    }
+    return d + "Z";
+  }
+
   // Variable-width line as a filled outline. widthAt(x, y, distFromStart, distFromEnd) -> px.
   function outlinePath(p, closed, widthAt) {
     const n = p.length;
@@ -350,6 +392,28 @@
     const every = s.indexEvery;
     let body = "", count = 0;
 
+    const mode = s.mode || "lines";
+    if (mode !== "lines") {
+      // Filled modes: bands between pairs of contours, or stacked layers above each contour.
+      const padded = padField(field);
+      const ringsAt = (t) => {
+        let d = "";
+        for (const ln of contour(padded, t)) {
+          if (length(ln.p, true) < Math.max(minLen, 2)) continue;
+          d += regionLine(ln.p, sigma, w, h, 0.3 * Math.max(k, 0.3));
+        }
+        return d;
+      };
+      const band = Math.max(0.02, Math.min(0.98, s.band ?? 0.5));
+      levels.forEach((lv, i) => {
+        const next = levels[i + 1] ? levels[i + 1].t : lv.t + (i > 0 ? lv.t - levels[i - 1].t : span / 10);
+        const color = mode === "layers" || s.gradient ? mix(s.line, s.line2, Math.min(1, Math.max(0, lv.pos))) : s.line;
+        const d = mode === "layers" ? ringsAt(lv.t) : ringsAt(lv.t) + ringsAt(lv.t + band * (next - lv.t));
+        if (d) { body += `<path d="${d}" fill="${color}" fill-rule="evenodd"/>`; count++; }
+      });
+      levels.length = 0;
+    }
+
     for (const lv of levels) {
       const isIndex = every > 0 && ((lv.idx % every) + every) % every === 0;
       const sw = Math.round(s.weight * (isIndex ? s.indexWeight : 1) * Math.max(k, 0.35) * 100) / 100;
@@ -388,5 +452,5 @@
     return { svg, count };
   }
 
-  root.Topo = { PATTERNS, LINEAR, ANGLED, buildSVG, mulberry32 };
+  root.Topo = { PATTERNS, LINEAR, ANGLED, buildSVG, mulberry32, makeNoise };
 })(typeof window !== "undefined" ? window : globalThis);

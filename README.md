@@ -1,15 +1,29 @@
 # Isoline
 
-Topographic line patterns for Figma. Static site: open `index.html` or serve the folder (`python3 -m http.server`).
+Topographic patterns, gradients and effects for Figma. Static site: open `index.html` or serve the folder (`python3 -m http.server`).
 
+## Contours (vector, exports SVG)
 - **Patterns:** Blobs, Terrain, Flow, Rings, Ridges, Dunes, Lines, Strata, Waves
-- **Looks:** Soft, Bold, Orbit, Night, Stripes, Strata, Swell, Spectrum
-- **Points:** double-click the canvas to add a peak, drag to move, scroll or drag the handle to resize, double-click a point to turn it into a dip. Points shape every pattern; Blobs and Rings are built from them.
-- **Lines:** count or pixel gap, bias, weight up to 40px, swell, taper, accent lines, smoothing, grid precision, cleanup
-- **Exact values:** click any value next to a slider to type it (units optional, ↑↓ to nudge, ⇧ for ×10); hex fields for colors
-- **Animation:** changes morph the lines; pattern, seed and size changes crossfade (off with reduced motion)
-- **Randomize:** `R` new seed, `⇧R` everything, plus a dice on every control and section
-- **Export:** SVG or PNG (1–4×) with file size, or `C` to copy SVG and paste into Figma
+- **Render modes:** Lines (strokes), Bands (filled stripes with a thickness %, like the PewDiePie banner), Layers (stacked tinted fills)
+- **Shape:** scale, detail, warp, liquify (two-level domain warp), angle, bulges
+- **Points:** double-click the canvas to add a peak, drag to move, scroll or drag the handle to resize, double-click to flip into a dip
+- **Lines:** count or pixel gap, bias, weight, swell, taper, accent lines, smoothing, grid, cleanup
+
+## Gradient (raster, exports PNG)
+Mesh (drag color points on the canvas), linear, radial and conic, mixed in OKLab, with warp.
+
+## Effects (WebGL2, apply to either source)
+Liquify, fluted glass, glass grid, pixels (with bevel), halftone, ASCII / symbols, dither (Bayer 2/4/8), chromatic shift, grain.
+
+## Workflow
+- **Looks:** one-click presets in three groups: Lines, Fills, Effects
+- **Randomize:** `R` new seed, `⇧R` everything, a dice on every control, section and effect
+- **Safe values** (settings): keeps randomize in ranges that render cleanly. Off = full ranges.
+- **Unlock values** (settings): type numbers past slider limits (asks first; extreme values can freeze the tab)
+- **Settings import/export** as JSON
+- **Exact values:** click any value to type it; ↑↓ nudge, ⇧ for ×10; hex fields for colors
+- **Animation:** numeric changes morph; pattern/seed/size changes crossfade (off with reduced motion)
+- **Export:** SVG for vector contours, PNG 1–4× for everything, or `C` to copy and paste into Figma
 - `⌘Z` / `⇧⌘Z` undo and redo
 
-`logos.html` shows the logo concepts; the app uses Isoline. Files: `engine.js` (field, contours, smoothing, SVG; no DOM), `brand.js` (logo concepts), `app.js` (UI).
+Files: `engine.js` (contour field, marching squares, smoothing, SVG; no DOM), `fx.js` (WebGL2 gradient + effects), `brand.js` (logo concepts), `app.js` (UI). `logos.html` shows the logo concepts.
