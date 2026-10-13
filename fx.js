@@ -146,6 +146,147 @@ void main() {
   else o = vec4(floor(clamp(c.rgb + th / L, 0.0, 1.0) * L + 0.5) / L, 1.0);
 }`,
 
+    wave: `uniform float uAmp; uniform float uLen; uniform float uAngle;
+void main() {
+  vec2 dir = vec2(cos(uAngle), sin(uAngle)), nrm = vec2(-dir.y, dir.x);
+  float ph = dot(dp(), dir) / uLen * 6.2831853;
+  o = tex(vUv + toUv(nrm * sin(ph) * uAmp));
+}`,
+
+    swirl: `uniform float uAmt; uniform float uRad; uniform vec2 uC;
+void main() {
+  vec2 res = uRes / uK, c = uC * res, d = dp() - c;
+  float R = max(1.0, uRad * min(res.x, res.y)), t = clamp(1.0 - length(d) / R, 0.0, 1.0), a = uAmt * t * t;
+  float s = sin(a), co = cos(a);
+  o = tex(toUv(vec2(co * d.x - s * d.y, s * d.x + co * d.y) + c));
+}`,
+
+    kaleido: `uniform float uSeg; uniform float uRot; uniform float uZoom;
+void main() {
+  vec2 res = uRes / uK, c = res * 0.5, d = (dp() - c) / uZoom;
+  float r = length(d), seg = 6.2831853 / uSeg, a = mod(atan(d.y, d.x) + uRot, seg);
+  a = abs(a - seg * 0.5);
+  o = tex(toUv(c + r * vec2(cos(a), sin(a))));
+}`,
+
+    lens: `uniform float uShape; uniform float uSize; uniform float uRefr; uniform float uFrost; uniform float uRim; uniform vec2 uC;
+float box(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
+void main() {
+  vec2 res = uRes / uK; float m = min(res.x, res.y);
+  vec2 p = dp() - uC * res, hb; float rad;
+  if (uShape < 0.5) { hb = vec2(uSize * m * 0.5); rad = hb.x; }
+  else if (uShape < 1.5) { hb = vec2(uSize * m * 0.95, uSize * m * 0.3); rad = hb.y; }
+  else { hb = vec2(uSize * m * 0.5); rad = uSize * m * 0.14; }
+  float sd = box(p, hb, rad);
+  vec4 base = tex(vUv);
+  if (sd > 0.0) { float sh = exp(-sd / (m * 0.025)) * 0.16; o = vec4(base.rgb * (1.0 - sh), base.a); return; }
+  float depth = clamp(-sd / (m * 0.1 * uSize + 1.0), 0.0, 1.0);
+  vec2 g = vec2(box(p + vec2(1, 0), hb, rad) - box(p - vec2(1, 0), hb, rad), box(p + vec2(0, 1), hb, rad) - box(p - vec2(0, 1), hb, rad));
+  vec2 n = normalize(g + 1e-6);
+  float bend = pow(1.0 - depth, 2.5);
+  vec2 uv = vUv + toUv(-n * bend * uRefr * m * 0.07 - p * uRefr * 0.05);
+  float fr = uFrost * m * 0.025; vec3 col = vec3(0.0);
+  for (int i = 0; i < 12; i++) { float a = float(i) * 2.39996, rr = sqrt((float(i) + 0.5) / 12.0) * fr; col += tex(uv + toUv(vec2(cos(a), sin(a)) * rr)).rgb; }
+  col = mix(col / 12.0, vec3(1.0), 0.05);
+  float light = clamp(dot(n, normalize(vec2(-0.6, 0.8))), 0.0, 1.0);
+  col += uRim * pow(1.0 - depth, 7.0) * (0.25 + 0.75 * light);
+  o = vec4(col, 1.0);
+}`,
+
+    blur: `uniform float uAmt; uniform float uDir; uniform float uStart;
+void main() {
+  vec2 q = vec2(vUv.x, 1.0 - vUv.y); float t;
+  if (uDir < 0.5) t = 1.0 - q.y; else if (uDir < 1.5) t = q.y; else if (uDir < 2.5) t = 1.0 - q.x; else if (uDir < 3.5) t = q.x;
+  else if (uDir < 4.5) t = length((q - 0.5) * vec2(uRes.x / uRes.y, 1.0)) * 1.3; else t = 1.0;
+  float m = uDir > 4.5 ? 1.0 : smoothstep(uStart, 1.0, t);
+  float r = uAmt * m * uK; vec4 acc = vec4(0.0);
+  for (int i = 0; i < 48; i++) { float fi = float(i), a = fi * 2.39996, rr = sqrt((fi + 0.5) / 48.0) * r; acc += tex(vUv + vec2(cos(a), sin(a)) * rr / uRes); }
+  o = acc / 48.0;
+}`,
+
+    bloom: `uniform float uThr; uniform float uRad; uniform float uInt;
+void main() {
+  vec4 c = tex(vUv); vec3 acc = vec3(0.0); float r = uRad * uK;
+  for (int i = 0; i < 40; i++) { float fi = float(i), a = fi * 2.39996, rr = sqrt((fi + 0.5) / 40.0) * r; vec3 s = tex(vUv + vec2(cos(a), sin(a)) * rr / uRes).rgb; acc += max(s - uThr, 0.0) / (1.0 - uThr + 0.001); }
+  o = vec4(c.rgb + acc / 40.0 * uInt * 1.6, c.a);
+}`,
+
+    emboss: `uniform float uStr; uniform float uAngle; uniform float uDepth;
+void main() {
+  vec2 e = uDepth * uK / uRes;
+  float l = luma(tex(vUv - vec2(e.x, 0.0)).rgb), r = luma(tex(vUv + vec2(e.x, 0.0)).rgb);
+  float b = luma(tex(vUv - vec2(0.0, e.y)).rgb), t = luma(tex(vUv + vec2(0.0, e.y)).rgb);
+  vec3 n = normalize(vec3((l - r) * uStr * 4.0, (b - t) * uStr * 4.0, 1.0)), L = normalize(vec3(cos(uAngle), sin(uAngle), 0.8));
+  vec4 c = tex(vUv);
+  o = vec4(c.rgb * clamp(dot(n, L) / L.z, 0.0, 1.8), c.a);
+}`,
+
+    vignette: `uniform float uAmt; uniform float uSoft;
+void main() {
+  vec2 a = vec2(uRes.x / uRes.y, 1.0), q = (vUv - 0.5) * a;
+  float d = length(q) / length(a * 0.5), v = smoothstep(0.85 - uSoft * 0.7, 1.05, d);
+  vec4 c = tex(vUv);
+  o = vec4(c.rgb * (1.0 - v * uAmt), c.a);
+}`,
+
+    gradmap: `uniform vec3 uC1; uniform vec3 uC2; uniform vec3 uC3; uniform float uMix;
+void main() {
+  vec4 c = tex(vUv); float l = luma(c.rgb);
+  vec3 m = l < 0.5 ? mix(uC1, uC2, l * 2.0) : mix(uC2, uC3, (l - 0.5) * 2.0);
+  o = vec4(mix(c.rgb, m, uMix), c.a);
+}`,
+
+    posterize: `uniform float uLevels;
+void main() { vec4 c = tex(vUv); float L = max(uLevels - 1.0, 1.0); o = vec4(floor(c.rgb * L + 0.5) / L, c.a); }`,
+
+    linescreen: `uniform float uSpace; uniform float uAngle; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
+void main() {
+  vec2 nrm = vec2(-sin(uAngle), cos(uAngle)), d = dp();
+  float y = dot(d, nrm) / uSpace, f = fract(y) - 0.5;
+  vec4 c = tex(toUv(d - nrm * f * uSpace));
+  float w = (1.0 - luma(c.rgb)) * 0.5, aa = fwidth(y);
+  float m = 1.0 - smoothstep(w - aa, w + aa, abs(f));
+  o = vec4(mix(uPaper, uMono > 0.5 ? uInk : c.rgb, m), 1.0);
+}`,
+
+    riso: `uniform float uSize; uniform float uOff; uniform float uGrain; uniform vec3 uInkA; uniform vec3 uInkB; uniform vec3 uPaper;
+float dots(vec2 d, float ang, float cov) {
+  float ca = cos(ang), sa = sin(ang);
+  vec2 r = mat2(ca, -sa, sa, ca) * d / uSize;
+  float dist = length(fract(r) - 0.5), rad = sqrt(clamp(cov, 0.0, 1.0)) * 0.72, aa = fwidth(dist);
+  return 1.0 - smoothstep(rad - aa, rad + aa, dist);
+}
+void main() {
+  vec2 d = dp(), off = vec2(uOff, -uOff * 0.6);
+  vec4 c = tex(vUv), c2 = tex(vUv + toUv(off));
+  float sat = max(c2.r, max(c2.g, c2.b)) - min(c2.r, min(c2.g, c2.b));
+  float a = dots(d, 0.26, smoothstep(0.12, 0.95, 1.0 - luma(c.rgb)));
+  float b = dots(d + off, 1.31, smoothstep(0.05, 0.9, (1.0 - luma(c2.rgb)) * 0.55 + sat * 0.9));
+  vec3 col = uPaper * mix(vec3(1.0), uInkA, a * 0.92) * mix(vec3(1.0), uInkB, b * 0.85);
+  col += (hash(floor(d * uK) + uSeed) - 0.5) * uGrain * 0.3;
+  o = vec4(col, 1.0);
+}`,
+
+    voronoi: `uniform float uCell; uniform float uEdge;
+vec2 h2(vec2 p) { return vec2(hash(p + uSeed), hash(p + 19.19 + uSeed)); }
+void main() {
+  vec2 d = dp() / uCell, i = floor(d), f = fract(d), best = vec2(0.0);
+  float m1 = 8.0, m2 = 8.0;
+  for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+    vec2 g = vec2(float(x), float(y)), pt = g + h2(i + g); float dd = length(pt - f);
+    if (dd < m1) { m2 = m1; m1 = dd; best = i + pt; } else if (dd < m2) m2 = dd;
+  }
+  vec4 c = tex(toUv(best * uCell));
+  float e = 1.0 - smoothstep(0.0, uEdge + 0.001, m2 - m1);
+  o = vec4(c.rgb * (1.0 - e * 0.65), c.a);
+}`,
+
+    scan: `uniform float uSpace; uniform float uStr;
+void main() {
+  vec4 c = tex(vUv); float s = 0.5 + 0.5 * cos(dp().y / uSpace * 6.2831853);
+  o = vec4(c.rgb * (1.0 - uStr * s) + uStr * 0.08, c.a);
+}`,
+
     chroma: `uniform float uAmt;
 void main() {
   vec2 off = (vUv - 0.5) * 2.0 * uAmt * uK / uRes;
@@ -164,7 +305,8 @@ void main() {
 }`,
   };
 
-  const ORDER = ["liquify", "glass", "mesh", "pixel", "halftone", "ascii", "dither", "chroma", "grain"];
+  // Default pipeline order when effects are added; the app can reorder freely.
+  const ORDER = ["liquify", "wave", "swirl", "kaleido", "glass", "mesh", "lens", "blur", "bloom", "emboss", "gradmap", "posterize", "pixel", "voronoi", "halftone", "linescreen", "riso", "ascii", "dither", "scan", "chroma", "vignette", "grain"];
   const CHARSETS = { ascii: " .:-=+*#%@", blocks: " ░▒▓█", dots: " ·•●", binary: " 01", lines: " ─═│╬" };
 
   const hex3 = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
@@ -261,6 +403,7 @@ void main() {
         if (u === "uType" || u === "uN") gl.uniform1i(l, v);
         else if (typeof v === "number") gl.uniform1f(l, v);
         else if (v.length === 3 && typeof v[0] === "number") gl.uniform3fv(l, v);
+        else if (v.length === 2 && typeof v[0] === "number") gl.uniform2fv(l, v);
         else if (u === "uCol") gl.uniform3fv(l, v.flat());
         else if (u === "uPt") gl.uniform2fv(l, v.flat());
       }
@@ -284,6 +427,20 @@ void main() {
         }
         case "dither": return { uMat: e.matrix, uLevels: e.levels, uMono: e.mono ? 1 : 0, uPix: e.pix, uInk: ink, uPaper: paper };
         case "chroma": return { uAmt: e.amount };
+        case "wave": return { uAmp: e.amp, uLen: e.length, uAngle: rad(e.angle) };
+        case "swirl": return { uAmt: e.amount, uRad: e.radius, uC: [e.x, 1 - e.y] };
+        case "kaleido": return { uSeg: e.segments, uRot: rad(e.rotate), uZoom: e.zoom };
+        case "lens": return { uShape: ["circle", "pill", "square"].indexOf(e.shape), uSize: e.size, uRefr: e.refraction, uFrost: e.frost, uRim: e.rim, uC: [e.x, 1 - e.y] };
+        case "blur": return { uAmt: e.amount, uDir: ["top", "bottom", "left", "right", "center", "even"].indexOf(e.dir), uStart: e.start };
+        case "bloom": return { uThr: e.threshold, uRad: e.radius, uInt: e.intensity };
+        case "emboss": return { uStr: e.strength, uAngle: rad(e.angle), uDepth: e.depth };
+        case "vignette": return { uAmt: e.amount, uSoft: e.softness };
+        case "gradmap": return { uC1: hex3(e.c1), uC2: hex3(e.c2), uC3: hex3(e.c3), uMix: e.mix };
+        case "posterize": return { uLevels: e.levels };
+        case "linescreen": return { uSpace: e.spacing, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
+        case "riso": return { uSize: e.size, uOff: e.offset, uGrain: e.grain, uInkA: hex3(e.inkA), uInkB: hex3(e.inkB), uPaper: hex3(e.paper) };
+        case "voronoi": return { uCell: e.cell, uEdge: e.edge };
+        case "scan": return { uSpace: e.spacing, uStr: e.strength };
         case "grain": return { uAmt: e.amount, uSize: e.size, uMono: e.mono ? 1 : 0 };
       }
       return {};
@@ -312,9 +469,9 @@ void main() {
         input = srcTex;
       }
       const ink = hex3(job.ink), paper = hex3(job.paper);
-      for (const id of ORDER) {
+      for (const id of job.order || ORDER) {
         const e = job.fx[id];
-        if (!e || !e.on) continue;
+        if (!e || !e.on || !SHADERS[id]) continue;
         const out = targets.list[ping];
         draw(id, input, out.f, effectUniforms(id, e, ink, paper), w, h, k, job.seed);
         input = out.t; ping = 1 - ping;

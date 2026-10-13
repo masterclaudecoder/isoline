@@ -13,13 +13,7 @@
 <body>
 <div class="shell">
   <header class="top">
-    <div class="top-left">
-      <div class="brand" id="brand"></div>
-      <div class="tabs" id="tabs" role="tablist">
-        <button role="tab" data-v="contours"><i data-lucide="waves"></i>Contours</button>
-        <button role="tab" data-v="gradient"><i data-lucide="blend"></i>Gradient</button>
-      </div>
-    </div>
+    <div class="brand" id="brand"></div>
     <div class="top-right">
       <div class="tool-group">
         <button class="ib" id="undo" title="Undo (⌘Z)" aria-label="Undo"><i data-lucide="undo-2"></i></button>
@@ -33,7 +27,7 @@
         <button class="ib lg" id="settingsBtn" title="Settings" aria-label="Settings" aria-haspopup="true"><i data-lucide="settings-2"></i></button>
         <div class="pop settings" id="settingsMenu" hidden>
           <label class="set-row" for="safe">
-            <span><b>Safe values</b><small>Randomize and looks stay in ranges that render cleanly.</small></span>
+            <span><b>Safe values</b><small>Randomize and presets stay in ranges that render cleanly.</small></span>
             <span class="switch"><input type="checkbox" id="safe"><span></span></span>
           </label>
           <label class="set-row" for="unlock">
@@ -51,9 +45,7 @@
       <div class="menu-wrap">
         <button class="btn primary" id="exportBtn" aria-haspopup="true"><i data-lucide="download"></i>Export<i data-lucide="chevron-down" class="chev"></i></button>
         <div class="pop export" id="exportMenu" hidden>
-          <div class="seg" id="fmt">
-            <button data-v="svg">SVG</button><button data-v="png">PNG</button>
-          </div>
+          <div class="seg" id="fmt"><button data-v="svg">SVG</button><button data-v="png">PNG</button></div>
           <p class="note" id="rasterNote" hidden>Gradients and effects export as PNG.</p>
           <div class="seg" id="pngScale" hidden>
             <button data-v="1">1×</button><button data-v="2">2×</button><button data-v="3">3×</button><button data-v="4">4×</button>
@@ -71,90 +63,124 @@
   </header>
 
   <main class="app">
+    <nav class="rail" id="rail" role="tablist" aria-label="Sections">
+      <button role="tab" data-tab="presets"><i data-lucide="sparkles"></i><span>Presets</span></button>
+      <button role="tab" data-tab="source"><i data-lucide="layers"></i><span>Source</span></button>
+      <button role="tab" data-tab="shape"><i data-lucide="spline"></i><span>Shape</span></button>
+      <button role="tab" data-tab="style"><i data-lucide="pen-line"></i><span>Style</span></button>
+      <button role="tab" data-tab="color"><i data-lucide="palette"></i><span>Color</span></button>
+      <button role="tab" data-tab="effects"><i data-lucide="wand-sparkles"></i><span>Effects</span><b class="badge" id="fxCount" hidden></b></button>
+    </nav>
+
     <aside class="panel scroll" id="panel">
-      <section class="group" data-group="looks">
-        <div class="gh"><h2>Looks</h2><div class="gh-tools"></div></div>
-        <div class="looks" id="looks"></div>
+      <section class="tab" data-tab="presets">
+        <div class="gh"><h2>Presets</h2><div class="gh-tools" data-tools="presets"></div></div>
+        <div class="chips filter" id="presetFilter"></div>
+        <p class="hint">Click a card to apply all of it. Use the small buttons to take just its shape, style, colors or effects.</p>
+        <div class="cards" id="presetGrid"></div>
       </section>
 
-      <section class="group" data-group="pattern" data-source="contours">
-        <div class="gh"><h2>Pattern</h2><div class="gh-tools"></div></div>
-        <div class="patterns" id="patterns"></div>
+      <section class="tab" data-tab="source">
+        <div class="gh"><h2>Source</h2><div class="gh-tools" data-tools="source"></div></div>
+        <div class="cards two" id="srcCards"></div>
+        <div data-source="contours">
+          <h3 class="sub">Pattern</h3>
+          <div class="cards three" id="patterns"></div>
+        </div>
+        <div data-source="gradient">
+          <h3 class="sub">Gradient type</h3>
+          <div class="cards two" id="gradTypes"></div>
+        </div>
       </section>
 
-      <section class="group" data-group="points" data-source="contours">
-        <div class="gh">
-          <h2>Points</h2>
-          <div class="gh-tools">
-            <button class="ib" id="showPoints" title="Show handles" aria-label="Show handles"><i data-lucide="eye"></i></button>
-            <label class="switch" title="Use points"><input type="checkbox" id="usePoints" aria-label="Use points"><span></span></label>
+      <section class="tab" data-tab="shape">
+        <div class="gh"><h2>Shape</h2><div class="gh-tools" data-tools="shape"></div></div>
+        <h3 class="sub first">Variations</h3>
+        <div class="cards three" id="variations"></div>
+        <div data-source="contours">
+          <h3 class="sub">Form</h3>
+          <div id="shape"></div>
+          <div class="seed-row">
+            <label class="label" for="seed">Seed</label>
+            <input class="field mono" id="seed" type="number" min="0" max="999999">
           </div>
+          <div class="sub-head">
+            <h3 class="sub">Points</h3>
+            <div class="gh-tools">
+              <button class="ib" id="showPoints" title="Show handles" aria-label="Show handles"><i data-lucide="eye"></i></button>
+              <label class="switch" title="Use points"><input type="checkbox" id="usePoints" aria-label="Use points"><span></span></label>
+            </div>
+          </div>
+          <div class="pt-actions">
+            <button class="btn sm" id="addPoint"><i data-lucide="plus"></i>Add</button>
+            <button class="btn sm" id="scatter"><i data-lucide="sparkles"></i>Scatter</button>
+            <button class="btn sm ghost" id="clearPoints"><i data-lucide="trash-2"></i>Clear</button>
+          </div>
+          <p class="hint" id="ptHint"></p>
+          <div id="pointCtrls"></div>
         </div>
-        <div class="pt-actions">
-          <button class="btn sm" id="addPoint"><i data-lucide="plus"></i>Add</button>
-          <button class="btn sm" id="scatter"><i data-lucide="sparkles"></i>Scatter</button>
-          <button class="btn sm ghost" id="clearPoints"><i data-lucide="trash-2"></i>Clear</button>
+        <div data-source="gradient">
+          <h3 class="sub">Form</h3>
+          <div id="gradCtrls"></div>
+          <p class="hint" id="gradHint">Drag the color dots on the canvas to move them. Double-click to add one.</p>
         </div>
-        <p class="hint" id="ptHint"></p>
-        <div id="pointCtrls"></div>
       </section>
 
-      <section class="group" data-group="shape" data-source="contours">
-        <div class="gh"><h2>Shape</h2><div class="gh-tools"></div></div>
-        <div id="shape"></div>
-        <div class="seed-row">
-          <label class="label" for="seed">Seed</label>
-          <input class="field mono" id="seed" type="number" min="0" max="999999">
+      <section class="tab" data-tab="style">
+        <div class="gh"><h2>Style</h2><div class="gh-tools" data-tools="style"></div></div>
+        <div data-source="contours">
+          <h3 class="sub first">Render</h3>
+          <div class="cards three" id="modes"></div>
+          <h3 class="sub">Lines</h3>
+          <div id="lines"></div>
+        </div>
+        <div data-source="gradient" class="empty">
+          <i data-lucide="pen-line"></i>
+          <p>Style controls how contour lines are drawn. Gradients don't have lines.</p>
+          <button class="btn sm" id="toContours">Switch to contours</button>
         </div>
       </section>
 
-      <section class="group" data-group="lines" data-source="contours">
-        <div class="gh"><h2>Lines</h2><div class="gh-tools"></div></div>
-        <div class="seg mode" id="mode">
-          <button data-v="lines">Lines</button><button data-v="bands">Bands</button><button data-v="layers">Layers</button>
+      <section class="tab" data-tab="color">
+        <div class="gh"><h2>Color</h2><div class="gh-tools" data-tools="color"></div></div>
+        <h3 class="sub first">Palettes</h3>
+        <div class="palettes" id="palettes"></div>
+        <div data-source="contours">
+          <h3 class="sub">Colors</h3>
+          <div class="label-row"><label class="label" for="lineHex" id="lineLbl">Stroke</label><input class="hex mono" id="lineHex" spellcheck="false" autocomplete="off"></div>
+          <div class="swatches" id="lineSw"></div>
+          <div class="label-row">
+            <label class="label" for="line2Hex">Blend to</label>
+            <input class="hex mono" id="line2Hex" spellcheck="false" autocomplete="off">
+            <label class="switch"><input type="checkbox" id="gradient" aria-label="Blend colors"><span></span></label>
+          </div>
+          <div class="swatches" id="line2Sw"></div>
+          <div class="label-row">
+            <label class="label" for="bgHex">Background</label>
+            <input class="hex mono" id="bgHex" spellcheck="false" autocomplete="off">
+            <label class="switch" title="Transparent"><em>None</em><input type="checkbox" id="transparent" aria-label="Transparent background"><span></span></label>
+          </div>
+          <div class="swatches" id="bgSw"></div>
+          <div id="color"></div>
         </div>
-        <div id="lines"></div>
+        <div data-source="gradient">
+          <div class="label-row stops-row"><h3 class="sub inline">Colors</h3><span class="val-static mono" id="stopCount"></span></div>
+          <div class="stops" id="stops"></div>
+        </div>
+        <h3 class="sub">Effect inks</h3>
+        <p class="hint">Used by halftone, engrave, ASCII and dither when set to ink only.</p>
+        <div class="label-row"><label class="label" for="inkHex">Ink</label><input class="hex mono" id="inkHex" spellcheck="false" autocomplete="off"></div>
+        <div class="swatches" id="inkSw"></div>
+        <div class="label-row"><label class="label" for="paperHex">Paper</label><input class="hex mono" id="paperHex" spellcheck="false" autocomplete="off"></div>
+        <div class="swatches" id="paperSw"></div>
       </section>
 
-      <section class="group" data-group="color" data-source="contours">
-        <div class="gh"><h2>Color</h2><div class="gh-tools"></div></div>
-        <div class="label-row"><label class="label" for="lineHex" id="lineLbl">Stroke</label><input class="hex mono" id="lineHex" spellcheck="false" autocomplete="off"></div>
-        <div class="swatches" id="lineSw"></div>
-        <div class="label-row">
-          <label class="label" for="line2Hex">Blend to</label>
-          <input class="hex mono" id="line2Hex" spellcheck="false" autocomplete="off">
-          <label class="switch"><input type="checkbox" id="gradient" aria-label="Blend colors"><span></span></label>
-        </div>
-        <div class="swatches" id="line2Sw"></div>
-        <div class="label-row">
-          <label class="label" for="bgHex">Background</label>
-          <input class="hex mono" id="bgHex" spellcheck="false" autocomplete="off">
-          <label class="switch" title="Transparent"><em>None</em><input type="checkbox" id="transparent" aria-label="Transparent background"><span></span></label>
-        </div>
-        <div class="swatches" id="bgSw"></div>
-        <div id="color"></div>
-      </section>
-
-      <section class="group" data-group="gradient" data-source="gradient">
-        <div class="gh"><h2>Gradient</h2><div class="gh-tools"></div></div>
-        <div class="seg" id="gradType">
-          <button data-v="mesh">Mesh</button><button data-v="linear">Linear</button><button data-v="radial">Radial</button><button data-v="conic">Conic</button>
-        </div>
-        <div class="label-row stops-row"><span class="label">Colors</span><span class="val-static mono" id="stopCount"></span></div>
-        <div class="stops" id="stops"></div>
-        <p class="hint" id="gradHint">Drag the dots on the canvas to move colors. Double-click to add one.</p>
-        <div id="gradCtrls"></div>
-      </section>
-
-      <section class="group" data-group="effects">
-        <div class="gh"><h2>Effects</h2><div class="gh-tools"></div></div>
-        <div class="fx-list" id="fxList"></div>
-        <div class="inkpaper" id="inkPaper">
-          <div class="label-row"><label class="label" for="inkHex">Ink</label><input class="hex mono" id="inkHex" spellcheck="false" autocomplete="off"></div>
-          <div class="swatches" id="inkSw"></div>
-          <div class="label-row"><label class="label" for="paperHex">Paper</label><input class="hex mono" id="paperHex" spellcheck="false" autocomplete="off"></div>
-          <div class="swatches" id="paperSw"></div>
-        </div>
+      <section class="tab" data-tab="effects">
+        <div class="gh"><h2>Effects</h2><div class="gh-tools" data-tools="effects"></div></div>
+        <h3 class="sub first">In use</h3>
+        <div class="stack" id="stack"></div>
+        <p class="hint" id="stackEmpty">No effects yet. Pick one below. Effects run top to bottom; drag to reorder.</p>
+        <div id="fxGallery"></div>
       </section>
     </aside>
 
@@ -179,6 +205,7 @@
           <svg class="overlay" id="ov"></svg>
         </div>
       </div>
+      <div class="recipe scroll" id="recipe" aria-label="Current recipe"></div>
     </section>
   </main>
 </div>

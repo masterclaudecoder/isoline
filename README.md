@@ -12,12 +12,24 @@ Topographic patterns, gradients and effects for Figma. Static site: open `index.
 ## Gradient (raster, exports PNG)
 Mesh (drag color points on the canvas), linear, radial and conic, mixed in OKLab, with warp.
 
-## Effects (WebGL2, apply to either source)
-Liquify, fluted glass, glass grid, pixels (with bevel), halftone, ASCII / symbols, dither (Bayer 2/4/8), chromatic shift, grain.
+## Effects (WebGL2, apply to either source, in any order)
+- **Distort:** liquify, waves, twirl, kaleidoscope
+- **Glass:** fluted glass, glass grid, liquid glass
+- **Light:** progressive blur, glow, relief, vignette
+- **Color:** gradient map (duotone/tritone), posterize
+- **Print:** halftone, engrave (line screen), risograph, dither
+- **Stylize:** pixels, crystallize, ASCII / symbols, scanlines, chromatic
+- **Texture:** grain
+
+## Layout
+- **Rail:** Presets, Source, Shape, Style, Color, Effects (keys `1`–`6`)
+- **Presets:** live thumbnails; click to apply all, or hover and take only its shape, style, colors or effects
+- **Previews everywhere:** pattern and gradient-type thumbnails, seed variations, render-mode previews, and each effect previewed on your current design
+- **Effects stack:** drag the grip to reorder; effects run top to bottom
+- **Recipe strip** under the canvas summarizes the composition; click a step to edit it
 
 ## Workflow
-- **Looks:** one-click presets in three groups: Lines, Fills, Effects
-- **Randomize:** `R` new seed, `⇧R` everything, a dice on every control, section and effect
+- **Randomize:** `R` new seed, `⇧R` everything, a dice on every control, tab and effect
 - **Safe values** (settings): keeps randomize in ranges that render cleanly. Off = full ranges.
 - **Unlock values** (settings): type numbers past slider limits (asks first; extreme values can freeze the tab)
 - **Settings import/export** as JSON
