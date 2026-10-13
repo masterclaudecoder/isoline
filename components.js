@@ -38,7 +38,7 @@
   ];
   const KEY = "isoline-kit";
   const DEF = {
-    mode: "libraries", fw: "All", cat: "All", q: "", slot: "type", view: "components", layout: "hero", dark: null, follow: true,
+    mode: "libraries", fw: "All", cat: "All", q: "", slot: "type", view: "components", layout: "home", dark: null, follow: true,
     pair: 0, head: "", body: "", scale: 1.25, base: 16, tracking: -0.02,
     colors: ["#1c1c1e", "#e8572a", "#faf8f3"], accent: 1,
     unit: 4, density: 1, radius: 10, pill: false, elevation: "soft", dur: 200, ease: "out",
@@ -84,8 +84,8 @@
   function roles() {
     const onOf = (a) => (C.contrast(a, "#ffffff") >= C.contrast(a, "#111111") ? "#ffffff" : "#111111");
     if (K.follow) {
-      const u = UI[isDark() ? "dark" : "light"], accent = appAccent();
-      return { bg: u.bg, text: u.text, accent, onAccent: onOf(accent), surface: u.surface, border: C.mixOklab(u.bg, u.text, 0.1), muted: u.muted, contrast: C.contrast(u.text, u.bg) };
+      const u = UI[isDark() ? "dark" : "light"], accent = appAccent(), appOn = C.parseHex(getComputedStyle(document.documentElement).getPropertyValue("--on-accent").trim());
+      return { bg: u.bg, text: u.text, accent, onAccent: appOn || onOf(accent), surface: u.surface, border: C.mixOklab(u.bg, u.text, 0.1), muted: u.muted, contrast: C.contrast(u.text, u.bg) };
     }
     const cs = K.colors.slice(), byL = cs.slice().sort((a, b) => C.toOklch(a)[0] - C.toOklch(b)[0]);
     let bg = byL[byL.length - 1], text = byL[0];
@@ -132,103 +132,119 @@
     chev: '<path d="m6 8 4 4 4-4"/>', quote: '<path d="M8 6.5C5.5 7.3 4.5 9 4.5 11.5v2h4v-4H6.3c.2-1.2.9-2 2.2-2.5ZM15 6.5c-2.5.8-3.5 2.5-3.5 5v2h4v-4h-2.2c.2-1.2.9-2 2.2-2.5Z"/>',
   };
   const ki = (n, cls = "") => `<svg class="k-ic ${cls}" viewBox="0 0 20 20" aria-hidden="true">${KI[n]}</svg>`;
-  // A sparkline and a bar chart, drawn in the accent so they follow the palette.
-  function spark(vals, w = 220, h = 56) {
-    const max = Math.max(...vals), min = Math.min(...vals), X = (i) => (i / (vals.length - 1)) * w, Y = (v) => h - 4 - ((v - min) / (max - min || 1)) * (h - 10);
-    const line = vals.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join("");
-    return `<svg class="k-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><path class="k-spark-fill" d="${line}L${w} ${h}L0 ${h}Z"/><path class="k-spark-line" d="${line}"/><circle class="k-spark-dot" cx="${X(vals.length - 1)}" cy="${Y(vals[vals.length - 1])}" r="3.2"/></svg>`;
-  }
+  // A bar chart drawn in the accent, so it follows the palette.
   const bars = (vals, labels, hi = -1) => `<div class="k-bars">${vals.map((v, i) => `<div class="k-bar${i === hi ? " on" : ""}"><i style="height:${v}%"></i>${labels ? `<span>${labels[i]}</span>` : ""}</div>`).join("")}</div>`;
   const av = (t, i) => `<span class="k-av" style="--i:${i}">${t}</span>`;
+  // The demo product is a document review tool, so the pages can show real content (drafts, comments,
+  // sign-offs) instead of placeholder metrics. Each page is built for one task with one focal point.
+  const LOGO = `<span class="k-brand"><svg class="k-mark" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3.5v13M9 6h6.5M9 10h6.5M9 14h4"/></svg>Margin</span>`;
+  const NAV = (cta = "Start a document") => `<nav class="k-nav">${LOGO}<span>Product</span><span>Pricing</span><span>Changelog</span><span class="k-grow"></span><span class="k-link">Sign in</span><button class="k-btn k-sm">${cta}</button></nav>`;
+  const FOOT = `<footer class="k-foot">${LOGO}<span>Product</span><span>Pricing</span><span>Changelog</span><span>Privacy</span><span class="k-grow"></span><span class="k-small">© 2026 Margin</span></footer>`;
+  const thread = (open = true) => `<div class="k-thread">
+      <div class="k-cmt">${av("LW", 1)}<div><b>Lin Wei</b><span class="k-small">10:42</span><p>Can we say what changes for existing customers here? The pricing page links to this line.</p></div></div>
+      <div class="k-cmt">${av("AL", 0)}<div><b>Ada Lovelace</b><span class="k-small">10:51</span><p>Good catch. Added a sentence on renewals.</p></div></div>
+      ${open ? `<div class="k-reply"><span>Reply</span><button class="k-btn k-sm">Resolve</button></div>` : ""}
+    </div>`;
+  const SUGGEST = `<div class="k-card k-pic k-suggest"><div class="k-cmt">${av("SK", 2)}<div><b>Sam Kerr</b><span class="k-small">suggested a change</span></div></div><p>From 1 April, the Team plan includes <del>ten</del> <ins>unlimited</ins> documents and five sign-off requests a month.</p><div class="k-row k-end"><button class="k-btn k-sm k-ghost">Reject</button><button class="k-btn k-sm">Accept</button></div></div>`;
+  // The product picture: a draft open in the editor, with its comment thread beside the line it's about.
+  const EDITOR = `<div class="k-shot"><div class="k-shot-bar"><span>Spring pricing update</span><span class="k-small">Draft 4, edited by Ada</span><span class="k-grow"></span><span class="k-faces">${["AL", "LW", "SK"].map(av).join("")}</span><button class="k-btn k-sm">Request sign-off</button></div>
+      <div class="k-shot-body">
+        <div class="k-doc"><h3 class="k-h3">What's changing in April</h3><p>From 1 April, the Team plan includes unlimited documents and five sign-off requests a month.</p><p><mark>Existing customers keep their current price until their next renewal</mark>, and can switch plans at any time from Settings.</p><p>Business adds single sign-on, audit history and a named contact.</p><p class="k-ghostline"></p><p class="k-ghostline k-short"></p></div>
+        <div class="k-margin">${thread()}</div>
+      </div></div>`;
   const COMPONENTS = `
     <div class="k-sheet">
-      <section class="k-card k-stat"><div class="k-row k-between"><span class="k-label">Revenue</span><span class="k-badge k-soft">+12.4%</span></div><b class="k-num">$48,210</b><span class="k-small">vs $42,880 last month</span>${spark([18, 22, 19, 26, 24, 30, 28, 34, 31, 36, 40, 38])}</section>
-      <section class="k-card k-stat"><div class="k-row k-between"><span class="k-label">Active people</span><span class="k-badge k-soft">+3.1%</span></div><b class="k-num">2,418</b><span class="k-small">312 joined this week</span>${spark([30, 28, 31, 29, 33, 35, 34, 36, 35, 38, 37, 41])}</section>
-      <section class="k-card k-stat"><div class="k-row k-between"><span class="k-label">Review time</span><span class="k-badge k-line">-18 min</span></div><b class="k-num">1h 42m</b><span class="k-small">Median across 86 reviews</span>${spark([40, 38, 39, 33, 34, 30, 31, 27, 28, 24, 25, 22])}</section>
-      <section class="k-card k-chart k-span2">
-        <div class="k-row k-between k-head"><div><h3 class="k-h3">Weekly activity</h3><span class="k-small">Pages published and reviewed</span></div><div class="k-tabs"><span class="on">Week</span><span>Month</span><span>Year</span></div></div>
-        ${bars([42, 64, 55, 80, 72, 38, 30], ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], 3)}
-      </section>
-      <section class="k-card k-team">
-        <div class="k-row k-between k-head"><h3 class="k-h3">Team</h3><button class="k-btn k-sm k-sec">${ki("plus")}Invite</button></div>
-        ${[["AL", "Ada Lovelace", "Owner", "Online"], ["LW", "Lin Wei", "Editor", "Online"], ["SK", "Sam Kerr", "Reviewer", "Away"], ["MO", "Mo Okafor", "Viewer", "Offline"]].map(([i, n, r, st], k) => `<div class="k-person">${av(i, k)}<span class="k-who"><b>${n}</b><span>${r}</span></span><span class="k-status k-${st.toLowerCase()}">${st}</span></div>`).join("")}
-      </section>
-      <section class="k-card k-form">
-        <h3 class="k-h3">New project</h3>
-        <label class="k-label" for="k-name">Name</label><input class="k-input" id="k-name" value="Spring launch">
-        <label class="k-label">Visibility</label><div class="k-select">${ki("lock")}<span>Team only</span>${ki("chev")}</div>
-        <div class="k-row k-between k-opt"><span><b>Notifications</b><small>Email me when it ships</small></span><span class="k-switch on"><i></i></span></div>
-        <div class="k-row k-between k-opt"><span><b>Auto-save</b><small>Every few seconds</small></span><span class="k-switch"><i></i></span></div>
-        <div class="k-row k-end"><button class="k-btn k-ghost">Cancel</button><button class="k-btn">Create project</button></div>
+      <section class="k-card k-span2 k-review">
+        <div class="k-row k-between k-head"><h3 class="k-h3">Comments on “Spring pricing update”</h3><div class="k-tabs"><span class="on">Open</span><span>Resolved</span></div></div>
+        <p class="k-doc-line"><mark>Existing customers keep their current price until their next renewal</mark>, and can switch plans at any time from Settings.</p>
+        ${thread()}
       </section>
       <section class="k-card k-menu">
         <div class="k-cmd">${ki("search")}<span>Search or jump to</span><kbd>⌘K</kbd></div>
         <span class="k-small k-group">Suggestions</span>
-        ${[["file", "New page", "N"], ["users", "Invite people", "I"], ["chart", "Open analytics", "A"], ["gear", "Settings", ","]].map(([icn, t, k], n) => `<div class="k-item${n === 0 ? " on" : ""}">${ki(icn)}<span>${t}</span><kbd>${k}</kbd></div>`).join("")}
+        ${[["file", "New document", "N"], ["users", "Invite people", "I"], ["check", "Request sign-off", "S"], ["gear", "Settings", ","]].map(([icn, t, k], n) => `<div class="k-item${n === 0 ? " on" : ""}">${ki(icn)}<span>${t}</span><kbd>${k}</kbd></div>`).join("")}
       </section>
-      <section class="k-card k-notes">
-        <div class="k-alert">${ki("check")}<span><b>Published</b><small>Spring launch is live for everyone.</small></span></div>
-        <div class="k-toast">${ki("bell")}<span>Lin left 3 comments</span><button class="k-btn k-sm k-ghost">View</button></div>
-        <div class="k-row k-between k-small"><span>Uploading assets</span><span>64%</span></div>
-        <div class="k-progress"><i></i></div>
-        <div class="k-row k-people">${["AL", "LW", "SK"].map(av).join("")}<span class="k-small">Ada, Lin and 4 others are here</span></div>
+      <section class="k-card k-form">
+        <h3 class="k-h3">New document</h3>
+        <label class="k-label" for="k-name">Title</label><input class="k-input" id="k-name" value="Spring pricing update">
+        <label class="k-label">Who can see it</label><div class="k-select">${ki("lock")}<span>People in Marketing</span>${ki("chev")}</div>
+        <div class="k-row k-between k-opt"><span><b>Ask for sign-off</b><small>Ada and Lin approve before it publishes</small></span><span class="k-switch on"><i></i></span></div>
+        <div class="k-row k-end"><button class="k-btn k-ghost">Cancel</button><button class="k-btn">Create</button></div>
       </section>
       <section class="k-card k-table k-span2">
-        <div class="k-row k-between k-head k-pad"><h3 class="k-h3">Projects</h3><div class="k-row"><button class="k-btn k-sm k-ghost">Filter</button><button class="k-btn k-sm">${ki("plus")}New</button></div></div>
-        <div class="k-tr k-th"><span>Project</span><span>Owner</span><span>Status</span><span>Due</span></div>
-        ${[["Website refresh", "Ada", "In review", "k-soft", "Oct 18"], ["Brand book", "Lin", "Live", "", "Oct 02"], ["Spring launch", "Sam", "Draft", "k-line", "Nov 04"], ["Onboarding emails", "Mo", "In review", "k-soft", "Nov 11"]].map(([p, o, st, c, d], k) => `<div class="k-tr"><span class="k-proj"><i style="--i:${k}"></i>${p}</span><span>${o}</span><span><span class="k-badge ${c}">${st}</span></span><span class="k-muted">${d}</span></div>`).join("")}
+        <div class="k-row k-between k-pad"><h3 class="k-h3">Documents</h3><div class="k-row"><button class="k-btn k-sm k-ghost">Filter</button><button class="k-btn k-sm">${ki("plus")}New</button></div></div>
+        <div class="k-tr k-th"><span>Title</span><span>Owner</span><span>Comments</span><span>Updated</span></div>
+        ${[["Spring pricing update", "Ada", "2 open", "10:51", "Needs sign-off"], ["Onboarding emails", "Lin", "None", "Yesterday"], ["Brand guidelines", "Sam", "5 open", "12 Oct"], ["Release notes 4.2", "Mo", "None", "9 Oct"]].map(([t, o, c, d, tag]) => `<div class="k-tr"><span class="k-title">${t}${tag ? `<span class="k-badge k-soft">${tag}</span>` : ""}</span><span>${o}</span><span class="k-muted">${c}</span><span class="k-muted">${d}</span></div>`).join("")}
       </section>
-      <section class="k-card k-kit">
-        <h3 class="k-h3">Buttons and badges</h3>
-        <div class="k-row"><button class="k-btn">Primary</button><button class="k-btn k-sec">Secondary</button><button class="k-btn k-ghost">Ghost</button></div>
-        <div class="k-row"><button class="k-btn k-sm">${ki("plus")}Small</button><button class="k-btn k-sm k-sec k-icon" aria-label="More">${ki("more")}</button><button class="k-btn k-sm k-sec k-icon" aria-label="Search">${ki("search")}</button></div>
-        <div class="k-row"><span class="k-badge">New</span><span class="k-badge k-soft">Draft</span><span class="k-badge k-line">Archived</span><span class="k-chip">Design<i>×</i></span></div>
-        <label class="k-check"><span class="k-box on"></span>Send me the weekly digest</label>
+      <section class="k-card k-chart">
+        <h3 class="k-h3">Comments resolved each day</h3><p class="k-small">Last week, most on Thursday</p>
+        ${bars([42, 64, 55, 92, 72, 18, 10], ["M", "T", "W", "T", "F", "S", "S"], 3)}
+      </section>
+      <section class="k-card k-notes">
+        <div class="k-alert">${ki("check")}<span><b>Published</b><small>Release notes 4.2 is live on your site.</small></span></div>
+        <div class="k-toast">${ki("bell")}<span>Lin replied to your comment</span><button class="k-btn k-sm k-ghost">Open</button></div>
+        <div><div class="k-row k-between k-small"><span>Importing 3 of 5 files</span><span>64%</span></div><div class="k-progress"><i></i></div></div>
+      </section>
+      <section class="k-card k-kit k-span2">
+        <h3 class="k-h3">Buttons, tags and inputs</h3>
+        <div class="k-row"><button class="k-btn">Publish</button><button class="k-btn k-sec">Preview</button><button class="k-btn k-ghost">Cancel</button></div>
+        <div class="k-row"><button class="k-btn k-sm">${ki("plus")}Add</button><button class="k-btn k-sm k-sec k-icon" title="More">${ki("more")}</button><span class="k-chip">Marketing<i>×</i></span><span class="k-chip">Q2<i>×</i></span></div>
+        <div class="k-kit-cols"><div><label class="k-check"><span class="k-box on"></span>Email me a summary each Friday</label><label class="k-check"><span class="k-box"></span>Notify me about mentions only</label></div>
+        <div class="k-radios">${["Anyone with the link", "People in Marketing", "Only me"].map((t, n) => `<label class="k-radio"><span class="k-dot${n === 1 ? " on" : ""}"></span>${t}</label>`).join("")}</div></div>
       </section>
     </div>`;
-  // Landing building blocks: the product mock is made of the same components, so it restyles too.
-  const NAV = `<nav class="k-nav"><b class="k-brand"><i class="k-logo"></i>Northwind</b><span>Product</span><span>Customers</span><span>Pricing</span><span>Docs</span><span class="k-grow"></span><span class="k-link">Sign in</span><button class="k-btn k-sm">Get started</button></nav>`;
-  const MOCK = (wide) => `<div class="k-mock${wide ? " k-mock-wide" : ""}"><div class="k-mock-bar"><i></i><i></i><i></i><span>app.northwind.co</span></div><div class="k-mock-body">
-      <aside class="k-mock-side"><b class="k-brand"><i class="k-logo"></i>Northwind</b>${[["home", "Overview", 1], ["folder", "Projects"], ["check", "Reviews"], ["layers", "Assets"], ["gear", "Settings"]].map(([icn, t, on]) => `<span class="${on ? "on" : ""}">${ki(icn)}${t}</span>`).join("")}</aside>
-      <div class="k-mock-main"><div class="k-row k-between"><b class="k-h3">Overview</b><button class="k-btn k-sm">${ki("plus")}New project</button></div>
-        <div class="k-mock-stats">${[["Published", "128", "+12%"], ["In review", "14", "-3"], ["Avg. review", "1h 42m", "-18m"]].map(([l, v, d]) => `<div class="k-card"><span class="k-small">${l}</span><b>${v}</b><span class="k-badge k-soft">${d}</span></div>`).join("")}</div>
-        <div class="k-card k-mock-chart"><div class="k-row k-between"><span class="k-small">Activity</span><span class="k-small">Last 7 days</span></div>${bars([42, 64, 55, 80, 72, 50, 66], null, 3)}</div>
-      </div></div></div>`;
-  const LOGOS = `<div class="k-logos"><span class="k-small">Trusted by teams at</span>${["Acme", "Lumen", "Halcyon", "Parallel", "Fieldwork", "Orbit"].map((n, i) => `<b class="k-wordmark k-w${i}">${n}</b>`).join("")}</div>`;
-  const FEATS = [["sync", "Everything in sync", "Briefs, assets and approvals live in one place, updated as you work."], ["check", "Reviews that move", "Comment in context and approve in a click. No more chasing threads."], ["clock", "Ship on schedule", "Deadlines, reminders and a calm view of what is due this week."], ["lock", "Private by default", "Roles, single sign-on and audit logs for teams that need them."], ["chart", "Know what works", "See which pages land and where readers drop off."], ["layers", "Reusable blocks", "Save sections once and drop them into any page."]];
-  const feat = ([icn, t, d]) => `<div class="k-feat"><span class="k-feat-ic">${ki(icn)}</span><h3 class="k-h3">${t}</h3><p class="k-p">${d}</p></div>`;
-  const QUOTE = `<figure class="k-quote">${ki("quote", "k-quote-ic")}<blockquote>We moved our whole launch process into Northwind in a week. Reviews that took days now take an afternoon.</blockquote><figcaption>${av("PR", 2)}<span><b>Priya Rao</b><span>Head of content, Lumen</span></span></figcaption></figure>`;
-  const CTA = `<section class="k-cta"><div><h2 class="k-h2">Ready when your team is</h2><p class="k-p">Free for teams up to five. Upgrade when you grow.</p></div><div class="k-row"><button class="k-btn">Start free</button><button class="k-btn k-sec">Talk to us</button></div></section>`;
-  const FOOT = `<footer class="k-foot"><div><b class="k-brand"><i class="k-logo"></i>Northwind</b><p class="k-small">Calm launches for small teams.</p></div>${[["Product", ["Overview", "Pricing", "Changelog"]], ["Company", ["About", "Careers", "Press"]], ["Help", ["Docs", "Status", "Contact"]]].map(([h, l]) => `<div><b>${h}</b>${l.map((x) => `<span>${x}</span>`).join("")}</div>`).join("")}</footer>`;
   const LAYOUTS = {
-    hero: ["Hero", `${NAV}
-      <section class="k-hero"><div><span class="k-pill"><span class="k-badge">New</span>Reviews now run in real time${ki("arrow")}</span><h1 class="k-h1">Ship pages your team is proud of</h1><p class="k-lead">Plan, write and publish in one place, with review built in.</p><div class="k-row"><button class="k-btn k-lg">Start free${ki("arrow")}</button><button class="k-btn k-lg k-ghost">Watch the tour</button></div><span class="k-small k-note">${ki("check")}Free for teams up to five</span></div>${MOCK()}</section>
-      ${LOGOS}<section class="k-feats k-three">${FEATS.slice(0, 3).map(feat).join("")}</section>${CTA}${FOOT}`],
-    centered: ["Centered", `${NAV}
-      <section class="k-center"><span class="k-pill"><span class="k-badge">2.0</span>A calmer way to launch${ki("arrow")}</span><h1 class="k-h1">Every launch in one calm place</h1><p class="k-lead">Briefs, assets and approvals together, so nothing slips.</p><div class="k-row k-mid"><button class="k-btn k-lg">Start free</button><button class="k-btn k-lg k-sec">Book a demo</button></div></section>
-      ${MOCK(true)}
-      <section class="k-stats">${[["3x", "faster reviews"], ["40%", "fewer meetings"], ["12k", "teams shipping"]].map(([n, t]) => `<div><b>${n}</b><span class="k-p">${t}</span></div>`).join("")}</section>
-      ${QUOTE}${FOOT}`],
-    features: ["Features", `${NAV}
-      <section class="k-center k-tight"><h2 class="k-h1">Built for small teams</h2><p class="k-lead">Everything you need to plan, review and publish, without the busywork.</p></section>
-      <section class="k-bento">
-        <div class="k-card k-b-big"><h3 class="k-h3">See every launch at a glance</h3><p class="k-p">One board for what is drafting, in review and live.</p>${bars([42, 64, 55, 80, 72, 50, 66, 58, 74], null, 3)}</div>
-        <div class="k-card"><span class="k-feat-ic">${ki("check")}</span><h3 class="k-h3">Approve in a click</h3><p class="k-p">Reviewers sign off right on the page.</p></div>
-        <div class="k-card"><span class="k-feat-ic">${ki("bell")}</span><h3 class="k-h3">Gentle reminders</h3><p class="k-p">Nudges before a deadline, never after.</p></div>
-        <div class="k-card k-b-wide"><div><h3 class="k-h3">Work together, live</h3><p class="k-p">See who is editing and pick up where they left off.</p></div><div class="k-row k-people">${["AL", "LW", "SK", "MO"].map(av).join("")}</div></div>
-      </section>
-      <section class="k-feats k-three">${FEATS.slice(3).map(feat).join("")}</section>${CTA}${FOOT}`],
-    pricing: ["Pricing", `${NAV}
-      <section class="k-center k-tight"><h2 class="k-h1">Simple pricing</h2><p class="k-lead">Start free. Pay per team, not per seat.</p><div class="k-tabs k-billing"><span>Monthly</span><span class="on">Yearly<i class="k-badge k-soft">Save 20%</i></span></div></section>
-      <section class="k-prices">${[["Starter", "0", "For trying it out", ["3 projects", "Basic review", "Community support"]], ["Team", "24", "For growing teams", ["Unlimited projects", "Review and approvals", "Version history", "Priority support"]], ["Studio", "64", "For agencies", ["Everything in Team", "Roles and SSO", "Audit log", "Dedicated help"]]].map(([n, p, w, f], i) => `<div class="k-card${i === 1 ? " k-pop" : ""}">${i === 1 ? `<span class="k-badge k-flag">Most popular</span>` : ""}<h3 class="k-h3">${n}</h3><p class="k-small">${w}</p><div class="k-price"><b>$${p}</b><span>per month</span></div><button class="k-btn${i === 1 ? "" : " k-sec"}">Choose ${n}</button><div class="k-ticks">${f.map((x) => `<span>${ki("check")}${x}</span>`).join("")}</div></div>`).join("")}</section>
-      <section class="k-faq"><h2 class="k-h2">Questions</h2>${[["Can I change plans later?", "Yes. Switch at any time and we prorate the difference."], ["Do you offer discounts?", "Nonprofits and schools get half off any plan."], ["What happens to my data if I cancel?", "You can export everything for 90 days."]].map(([q, a], i) => `<div class="k-qa${i === 0 ? " open" : ""}"><b>${q}${ki("chev")}</b>${i === 0 ? `<p class="k-p">${a}</p>` : ""}</div>`).join("")}</section>${FOOT}`],
+    home: ["Home", `${NAV()}
+      <section class="k-hero"><h1 class="k-h1">Review drafts where they're written</h1><div class="k-hero-side"><p class="k-lead">Comments sit in the margin beside the line they're about. Resolve them in place, then publish when everyone has signed off.</p><div class="k-row"><button class="k-btn k-lg">Start a document</button><span class="k-link k-under">See how review works</span></div><span class="k-small">Free for up to three editors</span></div></section>
+      ${EDITOR}
+      <section class="k-split"><div><h2 class="k-h2">Suggest a change instead of describing it</h2><p class="k-p">Type over the text and it becomes a suggestion. The author accepts or rejects it with one key, and the draft remembers who changed what.</p></div>${SUGGEST}</section>
+      <section class="k-rows">${[["Mentions", "Type @ and a name to bring someone into a thread. They can reply from their email."], ["Sign-off", "Name the people who approve a draft. It publishes when the last one says yes."], ["Version history", "Compare any two drafts side by side, down to the word."], ["Publishing", "Send the final draft to your site, a help center or a PDF."]].map(([t, d]) => `<div><b>${t}</b><p class="k-p">${d}</p></div>`).join("")}</section>
+      <section class="k-close"><h2 class="k-h2">Start with a draft you already have</h2><p class="k-p">Paste it in or import a Google Doc. Your team can comment in a minute.</p><div class="k-row"><button class="k-btn">Start a document</button><button class="k-btn k-ghost">Talk to us</button></div></section>
+      ${FOOT}`],
+    article: ["Article", `${NAV()}
+      <div class="k-article">
+        <article>
+          <h1 class="k-h1">Why we moved comments into the margin</h1>
+          <div class="k-byline">${av("LW", 1)}<span><b>Lin Wei</b><span class="k-small">12 October 2026, 6 min read</span></span></div>
+          <p class="k-lead">Most review tools put comments in a list at the bottom of the page. By the time a draft has forty of them, nobody can tell which line each one is about.</p>
+          <p>We tried three layouts before settling on the margin. The first kept a single list and highlighted the line when you hovered a comment. People stopped hovering after a day.</p>
+          <h2 class="k-h2">What the margin changes</h2>
+          <p>A comment in the margin is read in the same glance as its sentence. When the text moves, the thread moves with it, so an edit never strands a question.</p>
+          <figure class="k-figure"><div class="k-card k-pic k-folded"><p>Existing customers keep their current price until their next renewal, and can switch plans at any time from Settings.</p><span class="k-marker">${ki("check")}2</span></div><figcaption class="k-small">A resolved thread folds into a mark beside its line, one click from reopening.</figcaption></figure>
+          <blockquote>We stopped asking which comment people meant, because the answer was always next to it.</blockquote>
+          <p>The cost is width. On a narrow screen the margin becomes a drawer, opened from a mark beside the line.</p>
+        </article>
+        <aside class="k-toc"><b>On this page</b><span class="on">The problem with lists</span><span>What the margin changes</span><span>Narrow screens</span><span>What's next</span></aside>
+      </div>
+      ${FOOT}`],
+    app: ["App", `<div class="k-app">
+      <aside class="k-side">${LOGO}${[["home", "Home"], ["file", "Documents", "24"], ["check", "Needs sign-off", "3"], ["users", "People"], ["gear", "Settings", "", 1]].map(([icn, t, n, on]) => `<span class="${on ? "on" : ""}">${ki(icn)}${t}${n ? `<em>${n}</em>` : ""}</span>`).join("")}</aside>
+      <main class="k-main">
+        <h1 class="k-h2">Settings</h1>
+        <div class="k-tabs k-tabs-line"><span class="on">Workspace</span><span>People</span><span>Billing</span></div>
+        <div class="k-set"><div><b>Workspace name</b><p class="k-small">Shown in invites and on published pages.</p></div><input class="k-input" value="Acme Marketing"></div>
+        <div class="k-set"><div><b>Address</b><p class="k-small">Where published documents live.</p></div><div class="k-input k-prefix"><span>margin.app/</span>acme</div></div>
+        <div class="k-set"><div><b>New documents are visible to</b></div><div class="k-radios">${["Everyone in the workspace", "Only the people invited", "Only the author"].map((t, n) => `<label class="k-radio"><span class="k-dot${n === 0 ? " on" : ""}"></span>${t}</label>`).join("")}</div></div>
+        <div class="k-set"><div><b>Sign-off</b><p class="k-small">Require approval before anything publishes.</p></div><span class="k-switch on"><i></i></span></div>
+        <div class="k-set"><div><b>People</b><p class="k-small">4 of 10 seats used.</p></div><div class="k-people-list">${[["AL", "Ada Lovelace", "Owner"], ["LW", "Lin Wei", "Editor"], ["SK", "Sam Kerr", "Editor"], ["MO", "mo@acme.co", "Invited"]].map(([i, n, r], k) => `<div class="k-person">${av(i, k)}<span>${n}</span>${r === "Invited" ? `<span class="k-badge k-line">Invited</span>` : `<span class="k-small">${r}</span>`}</div>`).join("")}</div></div>
+        <div class="k-row k-end k-save"><button class="k-btn k-ghost">Discard</button><button class="k-btn">Save changes</button></div>
+      </main></div>`],
+    pricing: ["Pricing", `${NAV()}
+      <section class="k-price-head"><div><h1 class="k-h1">Pricing</h1><p class="k-lead">Pay per workspace, not per reader. Everyone you invite to comment is free.</p></div><div class="k-tabs"><span>Monthly</span><span class="on">Yearly, 2 months free</span></div></section>
+      <div class="k-compare">
+        <div class="k-cmp-row k-cmp-head"><span></span>${[["Free", "$0", "For trying it on one draft"], ["Team", "$24", "For a team that reviews every week", 1], ["Business", "$64", "For teams that need controls"]].map(([n, p, w, on]) => `<div class="${on ? "k-pick" : ""}"><b class="k-h3">${n}</b><span class="k-amount">${p}<small>a month</small></span><span class="k-small">${w}</span><button class="k-btn${on ? "" : " k-sec"}">${on ? "Start a 14-day trial" : n === "Free" ? "Start free" : "Contact sales"}</button></div>`).join("")}</div>
+        ${[["Editors", "3", "Unlimited", "Unlimited"], ["Documents", "10", "Unlimited", "Unlimited"], ["Sign-off requests", "", "5 a month", "Unlimited"], ["Version history", "7 days", "1 year", "Forever"], ["Single sign-on", "", "", "yes"], ["Audit history", "", "", "yes"]].map(([f, ...v]) => `<div class="k-cmp-row"><span>${f}</span>${v.map((x, n) => `<span class="${n === 1 ? "k-pick" : ""}">${x === "yes" ? ki("check") : x || `<i class="k-none"></i>`}</span>`).join("")}</div>`).join("")}
+      </div>
+      <section class="k-faq">${[["Do commenters need a seat?", "No. Anyone you invite to comment or sign off is free on every plan."], ["What happens when a trial ends?", "You move to Free and keep everything. Drafts over the limit become read-only."], ["Can I pay by invoice?", "Yes, on yearly Business plans."]].map(([q, a], i) => `<div class="k-qa${i === 0 ? " open" : ""}"><b>${q}${ki("chev")}</b>${i === 0 ? `<p class="k-p">${a}</p>` : ""}</div>`).join("")}</section>
+      ${FOOT}`],
   };
-  function previewHTML() { return K.view === "components" ? COMPONENTS : `<div class="k-page">${LAYOUTS[K.layout][1]}</div>`; }
+  if (!LAYOUTS[K.layout]) K.layout = "home";
+  function previewHTML() { return K.view === "components" ? COMPONENTS : `<div class="k-page k-pg-${K.layout}">${LAYOUTS[K.layout][1]}</div>`; }
   // Home card: the hero landing, drawn at desktop width and scaled to fit the card.
   const homeRO = new ResizeObserver((en) => { for (const e of en) { const k = e.target.firstElementChild; if (k) k.style.setProperty("--s", (e.contentRect.width / 1240).toFixed(4)); } });
   function preview(el) {
     if (!el) return;
-    if (!el.firstElementChild?.classList.contains("k-home")) { el.innerHTML = `<div class="kit k-home k-landing"><div class="k-page">${LAYOUTS.hero[1]}</div></div>`; homeRO.observe(el); }
+    if (!el.firstElementChild?.classList.contains("k-home")) { el.innerHTML = `<div class="kit k-home k-landing"><div class="k-page">${LAYOUTS.home[1]}</div></div>`; homeRO.observe(el); }
     vars(el.firstElementChild);
     el.firstElementChild.style.setProperty("--s", ((el.clientWidth || 600) / 1240).toFixed(4));
   }

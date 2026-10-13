@@ -1824,6 +1824,9 @@
       return c;
     },
     onShow() { lastWrap = ""; fit(); render(); },
+    // A contour drawing from default settings plus overrides, as SVG markup. The Components kit uses it
+    // for its map pictures, colored with the kit's own tokens.
+    contour(over = {}, w = 800, h = 500) { const st = withDefaults({ ...clone(DEFAULTS), fxOrder: [], ...over }); return T.buildSVG({ ...st, w, h }, { w, h }).svg; },
     // For agents and scripts: read and change the design, and get its exports.
     state: () => clone(S),
     apply(partial) { S = withDefaults({ ...clone(S), ...partial, grad: { ...S.grad, ...(partial?.grad || {}) }, fx: { ...S.fx, ...(partial?.fx || {}) } }); sel = null; update({ fade: true }); return clone(S); },
