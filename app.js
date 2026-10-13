@@ -453,7 +453,7 @@
   const fxTiles = fxSlot.querySelector(".fx-tiles"), addTile = fxSlot.querySelector(".tile.add"), countEl = fxSlot.querySelector(".count");
   const motionSlot = document.createElement("div");
   motionSlot.className = "slot";
-  motionSlot.innerHTML = `<div class="slot-label">Motion</div><button class="tile" data-slot="motion"><span class="tile-th motion-th">${ic("wave")}</span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
+  motionSlot.innerHTML = `<div class="slot-label">Motion</div><button class="tile" data-slot="motion"><span class="tile-th" data-th="motion"></span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
   slotList.appendChild(motionSlot);
   const EASE = "cubic-bezier(.2,.8,.2,1)";
   const animOK = () => !reduceMotion.matches && !document.body.classList.contains("boot");
@@ -475,7 +475,7 @@
     for (const [id] of SLOT_DEFS) {
       const wrap = slotEls[id], t = wrap.querySelector(".tile"), [title, sub] = slotInfo(id);
       const show = !slotWhen[id] || slotWhen[id]();
-      if (wrap.hidden === show) { wrap.hidden = !show; if (show && animOK()) wrap.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260 }); }
+      if (wrap.hidden === show) wrap.hidden = !show; // folds open and closed in CSS
       t.classList.toggle("on", P.slot === id);
       setText(t.querySelector("b"), title); setText(t.querySelector("small"), sub);
     }
@@ -495,7 +495,7 @@
       t.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.95)" }], { duration: 200, easing: EASE }).onfinish = () => t.remove();
     }
     addTile.classList.toggle("on", P.slot === "addfx");
-    { const t = motionSlot.querySelector(".tile"), m = S.motion; t.classList.toggle("on", P.slot === "motion"); t.classList.toggle("live", m.type !== "still"); setText(t.querySelector("b"), MOTION_NAME[m.type]); setText(t.querySelector("small"), m.type === "still" ? "No motion" : `${m.dur}s, ${{ loop: "looping", pingpong: "ping-pong", once: "once" }[m.mode]}`); }
+    { const t = motionSlot.querySelector(".tile"), m = S.motion; t.classList.toggle("on", P.slot === "motion"); setText(t.querySelector("b"), MOTION_NAME[m.type]); setText(t.querySelector("small"), m.type === "still" ? "No motion" : `${m.dur}s, ${{ loop: "looping", pingpong: "ping-pong", once: "once" }[m.mode]}`); }
     setText(addTile.querySelector("small"), S.fxOrder.length ? `${S.fxOrder.length} applied` : "None applied");
     for (const t of fxTiles.querySelectorAll("[data-fx]")) setText(t.querySelector("small"), fxFact(t.dataset.fx));
     const n = String(S.fxOrder.length);
@@ -997,7 +997,7 @@
   // Every motion loops: drift moves the field round a circle, flow slides the contour levels (or sways a
   // gradient's colors) by whole steps, breathe swells and settles the warp.
   const MOTION_NAME = { still: "Still", drift: "Drift", flow: "Flow", breathe: "Breathe" };
-  const MOTION_HINT = { still: "Pick a motion to make a loop.", drift: "The pattern glides round in a loop.", flow: "Lines flow outward; gradient colors sway.", breathe: "The warp swells and settles." };
+  const MOTION_HINT = { still: "Pick a motion to make a loop.", drift: "The pattern glides round in a loop.", flow: "Lines flow outward and gradient colors sway.", breathe: "The warp swells and settles." };
   // Time shaping: ping-pong runs forward then back, reverse flips direction, and the easing curve
   // (a preset or your own cubic bezier) sets the pace inside each pass.
   const EASES = { linear: [0, 0, 1, 1], ease: [0.25, 0.1, 0.25, 1], in: [0.42, 0, 1, 1], out: [0, 0, 0.58, 1], inout: [0.42, 0, 0.58, 1] };
@@ -1263,11 +1263,11 @@
   $("accents").innerHTML = ACCENTS.map((c) => `<button class="sw" data-c="${c}" style="background:${c}" aria-label="Accent ${c}"></button>`).join("") + `<button class="sw custom" aria-label="Custom accent"></button>`;
   $("accents").onclick = (e) => {
     const b = e.target.closest("[data-c]");
-    if (b) { P.accent = b.dataset.c; savePrefs(); applyTheme(); return; }
+    if (b) { P.accent = b.dataset.c; savePrefs(); window.UI ? UI.swap(applyTheme) : applyTheme(); return; }
     const c = e.target.closest(".custom");
     if (c) picker.open(c, P.accent, (v) => { P.accent = v; applyTheme(); }, () => savePrefs(), [["Palette", inPlay()]]);
   };
-  $("theme").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P.theme = b.dataset.v; savePrefs(); applyTheme(); };
+  $("theme").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P.theme = b.dataset.v; savePrefs(); window.UI ? UI.swap(applyTheme) : applyTheme(); };
 
   // ---------- settings ----------
   $("safe").onchange = (e) => { P.safe = e.target.checked; savePrefs(); toast(P.safe ? "Safe values on" : "Safe values off. Randomizing uses the full ranges."); };
@@ -1588,6 +1588,7 @@
     tileJob("generator", lightLines(strokes(baseOf(S))));
     tileJob("shape", lightLines(strokes(noFx(S))));
     if (gen() === "contours") tileJob("lines", lightLines(noFx(S)));
+    jobs.push(motionThumb);
     if (TFX && S.fxOrder.length) jobs.push(async () => {
       await effectBase(128, 80, false);
       for (const id of S.fxOrder) { const el = $("slotList").querySelector(`[data-th="fx:${id}"]`); if (!el) continue; putCanvas(el, fxUpTo(id, 128, 80), 128, 80); }
@@ -1606,6 +1607,45 @@
       for (const id of FX_IDS) jobs.push(() => putCanvas(slotOf(fxCards[id]), fxThumb(id, 260, 163), 260, 163));
     }
     enqueue(jobs);
+  }
+
+  // Motion tile: the finished design playing its loop, like every other tile shows its layer. A short
+  // run of small frames is rendered once per change and cycled; a still design shows as a still.
+  const thumbSVG = (s, w, h) => { const z = 2, W = w * z, H = h * z; return T.buildSVG(s, { w: W, h: H, res: 2.5 * z, minLen: 8 }).svg.replace(/^<svg([^>]*?) width="\d+" height="\d+" viewBox="[^"]*"/, `<svg$1 width="${w}" height="${h}" viewBox="${(W - w) / 2} ${(H - h) / 2} ${w} ${h}"`); };
+  let motionKey = "", motionTok = 0;
+  async function motionThumb() {
+    const el = $("slotList").querySelector('[data-th="motion"]'); if (!el) return;
+    const key = JSON.stringify(S);
+    if (key === motionKey && el.children.length) return;
+    motionKey = key;
+    const tok = ++motionTok;
+    if (S.motion.type === "still" || reduceMotion.matches) { await thumb(el, S, 64); return; }
+    const N = 24, w = 64, h = 40, W = 128, H = 80, frames = [];
+    for (let k = 0; k < N; k++) {
+      const st = { ...motionState(S, motionT(k / N)), h: Math.round(S.w * 0.625) };
+      const f = document.createElement("canvas"); f.width = W; f.height = H;
+      if (!isRaster(st) || !TFX) await rasterize(f, thumbSVG(st, w, h), W, H);
+      else {
+        const image = st.source === "contours" ? await rasterize(thumbRaster, T.buildSVG(st, { w: W, h: H, res: 2.5 }).svg, W, H) : null;
+        TFX.render(job(st, W, H, image)); f.getContext("2d").drawImage(thumbCanvas, 0, 0);
+      }
+      frames.push(f);
+      if (tok !== motionTok) return;
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    const view = document.createElement("canvas"); view.width = W; view.height = H;
+    const x = view.getContext("2d"), L = Math.min(4, Math.max(1.6, S.motion.dur)) * 1000;
+    let last = -1;
+    const tick = (now) => {
+      if (tok !== motionTok || !view.isConnected) return;
+      requestAnimationFrame(tick);
+      if (document.body.dataset.route !== "studio") return;
+      const i = Math.floor(((now % L) / L) * N);
+      if (i !== last) { last = i; x.drawImage(frames[i], 0, 0); }
+    };
+    x.drawImage(frames[0], 0, 0);
+    swapIn(el, view);
+    requestAnimationFrame(tick);
   }
 
   // ---------- animated changes ----------

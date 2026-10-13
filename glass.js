@@ -1,6 +1,7 @@
 // Liquid glass for floating bars: an SVG displacement filter applied as a backdrop filter, so whatever is
 // behind the bar bends at its rounded edges, as with the canvas liquid-glass effect. Chromium supports SVG
-// filters in backdrop-filter; other browsers keep the frosted fallback from the stylesheet.
+// filters in backdrop-filter; other browsers keep the frosted fallback from the stylesheet. The bar adds
+// no color of its own, so its ink is set from what lies beneath (see --glass-ink).
 (function (root) {
   "use strict";
   const ok = !!(navigator.userAgentData?.brands || []).some((b) => /Chromium|Google Chrome|Microsoft Edge/.test(b.brand));
@@ -37,7 +38,7 @@
     const id = "glass-" + ++n;
     const f = document.createElementNS(NS, "filter");
     f.setAttribute("id", id); f.setAttribute("filterUnits", "userSpaceOnUse"); f.setAttribute("color-interpolation-filters", "sRGB");
-    f.innerHTML = `<feImage result="map" preserveAspectRatio="none"/><feGaussianBlur in="SourceGraphic" stdDeviation="0.4" result="soft"/><feDisplacementMap in="soft" in2="map" scale="${scale}" xChannelSelector="R" yChannelSelector="G" result="bent"/><feColorMatrix in="bent" type="saturate" values="1.5"/>`;
+    f.innerHTML = `<feImage result="map" preserveAspectRatio="none"/><feGaussianBlur in="SourceGraphic" stdDeviation="0.4" result="soft"/><feDisplacementMap in="soft" in2="map" scale="${scale}" xChannelSelector="R" yChannelSelector="G"/>`;
     host().appendChild(f);
     let key = "";
     const fit = () => {
@@ -50,7 +51,8 @@
       const im = f.querySelector("feImage");
       im.setAttribute("width", w); im.setAttribute("height", h);
       im.setAttribute("href", map(w, h, Math.min(r, h / 2), Math.min(bezel, h / 2)));
-      el.style.backdropFilter = el.style.webkitBackdropFilter = `url(#${id}) blur(2px) saturate(1.3)`;
+      // Refraction only: no tint, no saturation boost, just enough blur to soften the bent pixels.
+      el.style.backdropFilter = el.style.webkitBackdropFilter = `url(#${id}) blur(0.6px)`;
       el.classList.add("glass-live");
     };
     new ResizeObserver(fit).observe(el);

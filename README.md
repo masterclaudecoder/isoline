@@ -4,24 +4,27 @@ Topographic patterns, gradients and effects for Figma. Static site: open `index.
 
 ## Pages
 The home page (`#/`) shows three tools as large cards. Moving between pages is a seamless transition: the top bar stays put, pages crossfade, a tool's preview morphs into the tool, and floating bars pull up from the bottom once their page lands.
-- **Studio** (`#/studio`): the pattern, gradient, effects and motion editor described below. Each step ends with a button to the next one.
+- **Studio** (`#/studio`): the pattern, gradient, effects and motion editor described below. An orange button pinned to the foot of each panel moves on to the next step.
 - **Palettes** (`#/palettes`):
   - Space generates new colors for every unlocked column, using OKLCH harmonies (auto, analogous, monochrome, complement, triad, split, pastel, vivid, earthy).
   - New colors sweep across the columns as a wave, with the hex codes rolling through the in-between values.
-  - The harmony wheel in the mode button plots each color's hue.
+  - The harmony button shows the chosen harmony as color dots. Its menu lists every harmony with a sample drawn from your palette's hue, and a tooltip says what each one does.
   - V (Vary) nudges colors instead of replacing them, and the proportions toggle sizes the columns 60-30-10.
-  - Columns show their nearest name and contrast, and can be locked, edited, shaded, reordered, added or removed.
+  - Columns show their nearest name and contrast, and can be locked, edited, shaded, added or removed. Drag a grip to reorder: the column follows the pointer and the others slide aside. New columns grow in, removed ones fold away, and sorting or undo glides each color to its new place.
   - Export copies hex codes, CSS variables, JSON or a share link (`#/palettes/2f6fdb-...`), or downloads a PNG. **Use in Studio** applies the palette there.
-  - The bar is liquid glass: it bends what's behind its edges in Chromium browsers, and is frosted elsewhere.
+  - The bar is liquid glass: in Chromium browsers it only bends what's behind its edges and adds no tint, and each control takes light or dark ink from the color beneath it. Other browsers get a frosted bar.
 - **Components** (`#/components`) has two modes:
-  - **Libraries:** a directory of 120 UI, headless, animation, effects, icon, chart, form, 3D, styling and font libraries, filterable by framework and category, with picks first.
-  - **Builder:** design tokens for type (Google Fonts pairings, any Google or installed font, or your own uploaded font files), color, spacing, radius, elevation and motion, plus editable design rules. A live component sheet and four landing layouts show every change. Export copies CSS variables, a Tailwind v4 theme, JSON tokens, or a design or build brief for AI agents.
+  - **Libraries:** a directory of about 120 UI, headless, animation, effects, icon, chart, form, 3D, styling and font libraries, filterable by framework, category and search. Each card is a window onto the site: its OpenGraph banner from the [11ty OpenGraph image service](https://www.11ty.dev/docs/services/opengraph/), else a screenshot from the 11ty screenshot service, else a pane drawn from its icon. Picks come first, then one section per category.
+  - **Builder:** design tokens for type, color, spacing, radius, elevation and motion, plus editable design rules. Fonts are picked from searchable menus that show each font in its own face, group a catalog by kind and suggest what pairs with the other font. You can also type any Google or installed font, or upload your own files. A live component sheet and four landing layouts show every change. Export copies CSS variables, a Tailwind v4 theme, JSON tokens, or a design or build brief for AI agents.
 
 ## Agents
-**For AI** in the top bar copies a design brief, a build handoff or the agent guide for whatever page is open. Agents can drive the whole app through `window.Isoline`: `studio`, `palettes`, `components`, `color`, `go` and `guide()`. The guide is also embedded in the page as `#isoline-agent-guide`.
+**Copy for agents** in the top bar copies a brief of whatever page is open, with its values and settings, followed by the agent guide. Agents can drive the whole app through `window.Isoline`: `studio`, `palettes`, `components`, `color`, `go` and `guide()`. The guide is also embedded in the page as `#isoline-agent-guide`.
+
+## Interface
+Everything animates: menus, popovers and dialogs fade in and out, rows and sections fold open and closed, segmented controls slide their selection, lists glide when they reorder, and theme changes crossfade. Every surface shares one hover. Tooltips are custom and appear after a short pause.
 
 ## How it works
-The left column is the build, made of one slot per layer: **Preset → Generator → Shape → Lines → Colors → Effects**. Click a slot to open its options in the middle column; every choice there has a live preview of your current design. Effects stack: `+ Add effect` adds another, the count badge shows how many there are, drag the grip to reorder them, and × removes one.
+The left column is the build, made of one slot per layer: **Preset, Generator, Shape, Lines, Colors, Effects, Motion**. Click a slot to open its options in the middle column; every choice there has a live preview of your current design. The Motion tile plays a small loop of your design when motion is on. Effects stack: `+ Add effect` adds another, the count badge shows how many there are, drag the grip to reorder them, and × removes one.
 
 ## Generators
 - **Contours** (vector, exports SVG; coming from a gradient, they start as bands in its colors): Blobs, Terrain, Flow, Rings, Ridges, Dunes, Lines, Strata, Waves. Scale, detail, warp, liquify, angle and metaball points. Double-click the canvas to add a peak, then drag to move it or scroll to resize it.
@@ -48,7 +51,7 @@ Lines (strokes), Bands (filled stripes, PewDiePie-style) or Layers (stacked fill
 
 ## Effects (WebGL2, run top to bottom)
 - **Distort:** liquify, waves, twirl, bulge, ripples, water (with caustics), kaleidoscope
-- **Glass** (glass blocks have a corner radius; iOS-style: bezel refraction, frost, hairline highlights, slight dispersion): fluted glass, glass blocks, liquid glass
+- **Glass** (iOS-style bezel refraction, frost, hairline highlights and slight dispersion, with rounded glass blocks): fluted glass, glass blocks, liquid glass
 - **Light:** progressive blur, glow, relief, god rays, vignette
 - **Color:** gradient map, posterize, heatmap, liquid metal
 - **Print:** halftone, CMYK halftone, engrave, risograph, dither
@@ -56,9 +59,9 @@ Lines (strokes), Bands (filled stripes, PewDiePie-style) or Layers (stacked fill
 - **Texture:** paper, film grain
 
 ## Workflow
-- The bar under the canvas holds undo, redo, **Variation** (`R`: new seed and small nudges, same look) and **Surprise** (`⇧R`: half the time a whole preset; otherwise one preset's shape and lines with a random palette and another preset's effects, or none; always varied, with a crossfade).
+- The bar under the canvas holds undo, redo, **Variation** (`R`: new seed and small nudges, same look) and **Surprise** (`⇧R`). Half the time Surprise applies a whole preset. Otherwise it takes one preset's shape and lines with a random palette, and another preset's effects or none. It always crossfades.
 - A dice in each panel randomizes just that layer.
-- **Safe values** (in settings): keeps everything in ranges that render cleanly. **Unlock values** lets you type past slider limits; it asks you to confirm first.
+- **Safe values** (in settings): keeps everything in ranges that render cleanly. **Unlock values** lets you type past slider limits, after you confirm.
 - Click any value to type it. Settings import and export as JSON. `⌘Z` / `⇧⌘Z` undo and redo.
 - **Export:** SVG for contours, PNG 1–4× for everything, or `C` to copy for Figma.
 - **Theme:** Auto, light or dark, plus an accent color, in settings.
@@ -76,6 +79,7 @@ Files:
 - `agent.js`: the agent API and briefs.
 - `glass.js`: liquid glass bars.
 - `brand.js`: the logo.
+- `ui.js`: shared interface motion (tooltips, sliding segmented controls, list transitions).
 - `mp4-muxer.js`: vendored MP4 muxer.
 
 `logos.html` shows the logo concepts.

@@ -11,7 +11,9 @@
   const hashFor = (r) => (r === "home" ? "#/" : "#/" + r);
   let route = null;
 
-  function show(r) {
+  // inVT: the page is arriving inside a view transition, which already pulls the bars up, so their own
+  // entrance is skipped (it would restart and play a second time once the transition ends).
+  function show(r, inVT = false) {
     route = r;
     Shell.route = r;
     for (const p of document.querySelectorAll(".page")) p.hidden = p.dataset.page !== r;
@@ -24,8 +26,9 @@
       const pt = document.querySelector(".pt");
       [...pt.querySelectorAll(".pt-col")].forEach((c, i) => c.style.setProperty("--k", i));
       pt.style.setProperty("--n", pt.querySelectorAll(".pt-col").length);
-      pt.classList.remove("enter"); void pt.offsetWidth; pt.classList.add("enter");
-      clearTimeout(pt._t); pt._t = setTimeout(() => pt.classList.remove("enter"), 1600);
+      pt.classList.remove("enter", "bar-enter"); void pt.offsetWidth; pt.classList.add("enter");
+      if (!inVT) pt.classList.add("bar-enter");
+      clearTimeout(pt._t); pt._t = setTimeout(() => pt.classList.remove("enter", "bar-enter"), 1600);
     }
     if (r === "home") paintHome();
     if (r === "components") root.Components?.onShow();
@@ -39,7 +42,7 @@
     if (document.startViewTransition) {
       const html = document.documentElement;
       html.classList.add("vt");
-      document.startViewTransition(() => show(r)).finished.finally(() => html.classList.remove("vt"));
+      document.startViewTransition(() => show(r, true)).finished.finally(() => html.classList.remove("vt"));
       return;
     }
     // Fallback: the old page eases out, then the new one eases in.

@@ -18,18 +18,20 @@ A palette can be passed in the URL: #/palettes/2f6fdb-6a9f7a-d8a51f.
 ## Studio (topographic patterns, gradients, effects, motion)
 - Isoline.studio.state() returns the full settings object
 - Isoline.studio.apply(partial) merges settings and re-renders, e.g. apply({ pattern: "rings", mode: "bands", line: "#1b1b1b", bg: "#f1ede4" })
-- Isoline.studio.presets() lists presets; usePreset("Prism") applies one
+- Isoline.studio.presets() lists presets, and usePreset("Prism") applies one
 - Isoline.studio.generators() and effects() list what exists, with defaults
 - Isoline.studio.variation() and surprise() randomize within safe ranges
-- Isoline.studio.svg() returns the vector SVG (contours without effects); await Isoline.studio.png(2) returns a PNG Blob
+- Isoline.studio.svg() returns the vector SVG (contours without effects)
+- await Isoline.studio.png(2) returns a PNG Blob
 - Isoline.studio.describe() returns a plain-language description
 Key settings: source ("contours" or "gradient"), pattern, mode ("lines", "bands", "layers"), levels, gap, weight,
 line, line2, mids (extra inks), bg, grad.type ("mesh", "flow", "noise", "linear", "radial", "conic"), grad.colors,
 fx.<id>.on with fxOrder for the effect stack, motion { type, dur, amt, mode, dir, ease }.
 
 ## Palettes
-- Isoline.palettes.get() returns the hex colors; set(["#..."]) loads colors
-- Isoline.palettes.generate(mode) makes new colors; modes() lists harmonies; vary() nudges them; lock(index)
+- Isoline.palettes.get() returns the hex colors, and set(["#..."]) loads colors
+- Isoline.palettes.generate(mode) makes new colors, modes() lists the harmonies
+- Isoline.palettes.vary() nudges the unlocked colors, lock(index) keeps one
 - Isoline.palettes.saved() lists saved palettes
 - Isoline.color.name(hex), Isoline.color.contrast(a, b), Isoline.color.format(hex, "oklch")
 
@@ -47,7 +49,8 @@ Follow the rules in Isoline.components.brief("design"). The user edits them in C
     const S = root.Studio, st = S.state();
     let out = `# Studio ${kind === "design" ? "design brief" : "build handoff"}\n\n${S.describe()}\n`;
     if (kind === "design") out += `\nUse it as a background or texture. Export from the Export menu as SVG (contours without effects), PNG at 1 to 4 times size, or MP4 when motion is on.\n`;
-    else out += `\n## Use in code\n- Export the asset (SVG keeps contours sharp and small; PNG for gradients and effects; MP4 for motion) and set it as a background: background: url(pattern.svg) center / cover;\n- To recreate or tweak it, load these settings with Isoline.studio.apply(settings) or Settings, Import settings.\n\n## Settings\n\`\`\`json\n${JSON.stringify(st, null, 2)}\n\`\`\`\n`;
+    else out += `\n## Use in code\n- Export the asset and set it as a background: background: url(pattern.svg) center / cover
+- SVG keeps contours sharp and small, PNG suits gradients and effects, MP4 carries motion\n- To recreate or tweak it, load these settings with Isoline.studio.apply(settings) or Settings, Import settings.\n\n## Settings\n\`\`\`json\n${JSON.stringify(st, null, 2)}\n\`\`\`\n`;
     return out;
   }
   function paletteBrief(kind) {
@@ -80,23 +83,24 @@ Follow the rules in Isoline.components.brief("design"). The user edits them in C
   meta.type = "text/markdown"; meta.id = "isoline-agent-guide"; meta.textContent = GUIDE;
   document.head.appendChild(meta);
 
-  // "For AI" menu in the top bar, on every page.
+  // "Copy for agents" in the top bar: one click copies a brief of the open page plus the agent guide.
+  // The button is split so the copy action reads clearly, but either half copies.
+  function forAgents() {
+    const r = root.Shell?.route;
+    return r === "home" || !r ? GUIDE : `${brief("dev")}\n---\n\n${GUIDE}`;
+  }
   const wrap = document.createElement("div");
-  wrap.className = "menu-wrap";
-  wrap.innerHTML = `<button class="btn ai-btn" id="aiBtn" aria-haspopup="true"><svg class="ic"><use href="#i-spark"/></svg><span class="ai-lbl">For AI</span></button>
-    <div class="pop ai-pop" id="aiMenu" hidden>
-      <button class="opt" data-ai="design"><span><svg class="ic"><use href="#i-copy"/></svg><span><b>Design brief</b><small>What this page shows, for design work</small></span></span></button>
-      <button class="opt" data-ai="dev"><span><svg class="ic"><use href="#i-copy"/></svg><span><b>Build handoff</b><small>Values and settings, for development</small></span></span></button>
-      <button class="opt" data-ai="guide"><span><svg class="ic"><use href="#i-copy"/></svg><span><b>Agent guide</b><small>How an agent can drive this app</small></span></span></button>
-    </div>`;
+  wrap.className = "split"; wrap.id = "aiSplit";
+  wrap.innerHTML = `<button class="split-main" id="aiCopy">Copy for agents</button><span class="split-div" aria-hidden="true"></span><button class="split-side" id="aiCopyIc" aria-label="Copy for agents" title="Copies a brief of this page and the agent guide"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></button>`;
   const right = document.querySelector(".top-right");
   right.insertBefore(wrap, right.firstChild);
-  $("aiBtn").onclick = (e) => { e.stopPropagation(); $("aiMenu").hidden = !$("aiMenu").hidden; };
-  document.addEventListener("pointerdown", (e) => { if (!e.target.closest("#aiMenu, #aiBtn")) $("aiMenu").hidden = true; });
-  $("aiMenu").onclick = async (e) => {
-    const b = e.target.closest("[data-ai]"); if (!b) return;
-    $("aiMenu").hidden = true;
-    const text = b.dataset.ai === "guide" ? GUIDE : brief(b.dataset.ai);
-    try { await navigator.clipboard.writeText(text); root.toastMsg?.("Copied for your AI assistant"); } catch (err) { root.toastMsg?.("Clipboard is blocked here"); }
-  };
+  let doneT = 0;
+  wrap.addEventListener("click", async (e) => {
+    if (!e.target.closest("button")) return;
+    try {
+      await navigator.clipboard.writeText(forAgents());
+      wrap.classList.add("done"); clearTimeout(doneT); doneT = setTimeout(() => wrap.classList.remove("done"), 1600);
+      root.toastMsg?.("Copied for your agent");
+    } catch (err) { root.toastMsg?.("Clipboard is blocked here"); }
+  });
 })(window);

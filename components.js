@@ -271,61 +271,107 @@
   }
 
   // ---------- libraries view ----------
+  // Each library is a window onto its site: its OpenGraph banner, else a screenshot of the page, else a
+  // pane drawn from its icon. Names, descriptions and framework lists of any length fit the same card.
+  const hostOf = (u) => new URL(u).host.replace(/^www\./, "");
+  const enc = encodeURIComponent;
+  const shots = (l) => [`https://v1.opengraph.11ty.dev/${enc(l.url)}/small/`, `https://v1.screenshot.11ty.dev/${enc(l.url)}/opengraph/`];
+  const favicon = (l, sz = 64) => `https://www.google.com/s2/favicons?domain=${enc(hostOf(l.url))}&sz=${sz}`;
+  const tintOf = (name) => { let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+  const fwText = (fw) => { const n = fw.map((f) => (f === ANY ? "Any framework" : f)); return n.length > 3 ? `${n.slice(0, 3).join(", ")} and ${n.length - 3} more` : n.join(", "); };
+  function libCard(l) {
+    const h = tintOf(l.name);
+    return `<a class="lib${l.pick ? " pick" : ""}" href="${l.url}" target="_blank" rel="noopener" data-key="${esc(l.name)}" style="--h:${h}">
+      <span class="lib-pane"><span class="lib-fallback"><img src="${favicon(l)}" alt="" loading="lazy" referrerpolicy="no-referrer"><b>${esc(l.name)}</b></span><img class="lib-shot" src="${shots(l)[0]}" data-step="0" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>
+      <span class="lib-body">
+        <span class="lib-top"><b class="lib-name" title="${esc(l.name)}">${esc(l.name)}</b>${l.pick ? `<em class="lib-pick">Pick</em>` : ""}</span>
+        <span class="lib-desc">${esc(l.desc)}</span>
+        <span class="lib-fw">${esc(fwText(l.fw))}</span>
+        <span class="lib-host"><img src="${favicon(l, 32)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span>${hostOf(l.url)}</span>${ic("out")}</span>
+      </span>
+    </a>`;
+  }
   const lib = $("cpLib");
   lib.innerHTML = `
     <aside class="cp-filters scroll">
       <h2 class="col-title">Libraries</h2>
-      <input class="field" id="cpQ" placeholder="Search libraries" aria-label="Search libraries" spellcheck="false">
+      <label class="cp-search">${ic("search")}<input class="field" id="cpQ" placeholder="Search" aria-label="Search libraries" spellcheck="false"></label>
       <h3 class="sub">Framework</h3><div class="cp-list" id="cpFw"></div>
       <h3 class="sub">Category</h3><div class="cp-list" id="cpCat"></div>
     </aside>
-    <div class="cp-results scroll"><div class="cp-count" id="cpCount"></div><div class="cp-grid" id="cpGrid"></div></div>`;
-  const matches = (l, fw = K.fw, cat = K.cat) => (fw === "All" || l.fw.includes(fw)) && (cat === "All" || (cat === "Picks" ? l.pick : l.cat === cat)) && (!K.q || (l.name + " " + l.desc + " " + l.cat).toLowerCase().includes(K.q.toLowerCase()));
-  function renderLibs() {
-    const row = (kind, v, n) => `<button data-${kind}="${esc(v)}" class="${(kind === "fw" ? K.fw : K.cat) === v ? "on" : ""}"><span>${v === ANY ? "Any framework" : v}</span><small class="mono">${n}</small></button>`;
-    $("cpFw").innerHTML = ["All", ...FRAMEWORKS].map((f) => row("fw", f, LIBS.filter((l) => matches(l, f)).length)).join("");
-    $("cpCat").innerHTML = ["All", ...CATS].map((c) => row("cat", c, LIBS.filter((l) => matches(l, K.fw, c)).length)).join("");
-    const list = LIBS.filter((l) => matches(l)).sort((a, b) => (K.cat === "All" ? b.pick - a.pick : 0));
-    $("cpCount").textContent = `${list.length} ${list.length === 1 ? "library" : "libraries"}`;
-    $("cpGrid").innerHTML = list.map((l, i) => `<a class="lib" href="${l.url}" target="_blank" rel="noopener" style="--j:${Math.min(i, 18)}"><span class="lib-cat">${l.cat}${l.pick ? `<em>Pick</em>` : ""}</span><b>${esc(l.name)}</b><span class="lib-desc">${esc(l.desc)}</span><span class="lib-tags">${l.fw.map((f) => `<i>${f === ANY ? "Any" : f}</i>`).join("")}</span><span class="lib-host mono">${new URL(l.url).host.replace(/^www\./, "")}</span>${ic("next")}</a>`).join("") || `<p class="note">Nothing matches. Try another framework or category.</p>`;
+    <div class="cp-results scroll" id="cpResults"></div>`;
+  // Previews step down: banner, then screenshot, then the drawn pane underneath.
+  const shotFail = (img) => {
+    const l = LIBS.find((x) => x.name === img.closest(".lib")?.dataset.key); const step = +img.dataset.step + 1;
+    if (l && step < 2) { img.dataset.step = step; img.src = shots(l)[step]; } else img.remove();
+  };
+  lib.addEventListener("error", (e) => { if (e.target.matches?.(".lib-shot")) shotFail(e.target); else if (e.target.matches?.(".lib-fallback img, .lib-host img")) e.target.style.display = "none"; }, true);
+  lib.addEventListener("load", (e) => { const t = e.target; if (!t.matches?.(".lib-shot")) return; if (t.naturalWidth < 120) shotFail(t); else t.classList.add("in"); }, true);
+  const matches = (l, fw = K.fw, cat = K.cat) => (fw === "All" || l.fw.includes(fw)) && (cat === "All" || (cat === "Picks" ? l.pick : l.cat === cat)) && (!K.q || (l.name + " " + l.desc + " " + l.cat + " " + hostOf(l.url)).toLowerCase().includes(K.q.toLowerCase()));
+  function renderLibs(animate) {
+    const row = (kind, v, n) => `<button data-${kind}="${esc(v)}" class="${(kind === "fw" ? K.fw : K.cat) === v ? "on" : ""}${n ? "" : " empty"}"><span>${v === ANY ? "Any framework" : v}</span><small class="mono">${n}</small></button>`;
+    const paintList = (host, html) => { if (host.innerHTML !== html) host.innerHTML = html; };
+    paintList($("cpFw"), ["All", ...FRAMEWORKS].map((f) => row("fw", f, LIBS.filter((l) => matches(l, f)).length)).join(""));
+    paintList($("cpCat"), ["All", ...CATS].map((c) => row("cat", c, LIBS.filter((l) => matches(l, K.fw, c)).length)).join(""));
+    const list = LIBS.filter((l) => matches(l));
+    const sec = (title, items, cls = "") => `<section class="lib-sec ${cls}"><h3 class="lib-h" data-key="h:${esc(title)}">${esc(title)}<span class="mono">${items.length}</span></h3><div class="cp-grid">${items.map(libCard).join("")}</div></section>`;
+    let html;
+    if (!list.length) html = `<div class="cp-empty" data-key="empty"><b>No libraries match</b><p>${K.q ? `Nothing for “${esc(K.q)}”` : "Nothing in this combination"}${K.fw !== "All" ? ` with ${K.fw === ANY ? "any framework" : K.fw}` : ""}.</p><button class="btn sm" id="cpClear">${ic("reset")}Clear filters</button></div>`;
+    // The full directory reads as sections, picks first; a filtered view is one list with picks on top.
+    else if (K.cat === "All" && !K.q) html = sec("Picks", list.filter((l) => l.pick), "picks") + CATS.slice(1).map((c) => [c, list.filter((l) => l.cat === c)]).filter(([, v]) => v.length).map(([c, v]) => sec(c, v)).join("");
+    else html = sec(K.cat === "All" ? `Results` : K.cat, list.slice().sort((a, b) => b.pick - a.pick), K.cat === "Picks" ? "picks" : "");
+    const host = $("cpResults");
+    const paint = () => { host.innerHTML = html; };
+    if (animate && root.UI) root.UI.flip(host, paint, { sel: ".lib, .lib-h, .cp-empty" }); else paint();
   }
   lib.addEventListener("click", (e) => {
+    if (e.target.closest("#cpClear")) { K.fw = "All"; K.cat = "All"; K.q = ""; $("cpQ").value = ""; save(); renderLibs(true); return; }
     const b = e.target.closest("[data-fw],[data-cat]"); if (!b) return;
     if (b.dataset.fw) K.fw = b.dataset.fw; else K.cat = b.dataset.cat;
-    save(); renderLibs();
+    save(); renderLibs(true);
+    $("cpResults").scrollTo({ top: 0, behavior: "smooth" });
   });
   $("cpQ").value = K.q;
-  $("cpQ").addEventListener("input", (e) => { K.q = e.target.value; save(); renderLibs(); });
+  let qT = 0;
+  $("cpQ").addEventListener("input", (e) => { K.q = e.target.value.trim(); save(); clearTimeout(qT); qT = setTimeout(() => renderLibs(true), 90); });
 
   // ---------- builder view ----------
   const build = $("cpBuild");
-  const SLOTS = [["type", "Type"], ["color", "Color"], ["spacing", "Spacing"], ["radius", "Radius"], ["elevation", "Elevation"], ["motion", "Motion"], ["rules", "Design rules"]];
+  const SLOTS = [["type", "Type", "type"], ["color", "Color", "palette"], ["spacing", "Spacing", "space"], ["radius", "Radius", "corner"], ["elevation", "Elevation", "layers"], ["motion", "Motion", "timing"], ["rules", "Design rules", "rules"]];
   build.innerHTML = `
     <aside class="slots scroll"><h2 class="col-title">Tokens</h2><div id="cpSlots"></div></aside>
     <aside class="options scroll"><div class="opt-head"><h2 class="col-title" id="cpOptTitle"></h2></div><div id="cpOpts"></div>
-      <div class="next-step"><button class="btn next-btn" id="cpNext"><span id="cpNextLbl"></span>${ic("next")}</button></div></aside>
+      <div class="next-step"><button class="btn primary next-btn" id="cpNext"><span id="cpNextLbl"></span>${ic("next")}</button></div></aside>
     <section class="cp-stage">
-      <div class="cp-stage-top"><div class="seg sm" id="cpView"><button data-v="components">Components</button><button data-v="landing">Landing</button></div><div class="seg sm" id="cpLayout"></div><div class="seg sm" id="cpTheme"><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
+      <div class="cp-stage-top"><div class="seg sm" id="cpView"><button data-v="components">Components</button><button data-v="landing">Landing</button></div><div class="seg sm fold-x" id="cpLayout"></div><div class="seg sm" id="cpTheme"><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
       <div class="kit-frame scroll"><div class="kit" id="kit"></div></div>
     </section>`;
   $("cpLayout").innerHTML = Object.entries(LAYOUTS).map(([k, [n]]) => `<button data-v="${k}">${n}</button>`).join("");
-  const slotSub = {
-    type: () => `${fonts().head} and ${fonts().body}`, color: () => `${K.colors.length} colors, ${roles().contrast.toFixed(1)}:1 contrast`, spacing: () => `${K.unit}px unit, ${["compact", "regular", "roomy"][[0.8, 1, 1.25].indexOf(K.density)] || "custom"} density`,
-    radius: () => (K.pill ? `${K.radius}px corners, pill buttons` : `${K.radius}px corners`), elevation: () => `${K.elevation[0].toUpperCase() + K.elevation.slice(1)} shadow`, motion: () => `${K.dur}ms, ${{ linear: "linear", out: "ease out", inout: "ease in and out", spring: "spring" }[K.ease]}`, rules: () => `${K.rules.filter((r) => r.on).length} rules on`,
+  // Tile copy follows the studio's rule: the title names the choice, the subtitle lists its facts.
+  const EASE_NAME = { linear: "Linear", out: "Ease out", inout: "Ease in and out", spring: "Spring" };
+  const ELEV_FACT = { none: "Flat surfaces", hairline: "1px outline", soft: "Soft drop shadow", crisp: "Tight shadow", lifted: "Deep shadow" };
+  const cap = (t) => t[0].toUpperCase() + t.slice(1);
+  const slotInfo = {
+    type: () => { const f = fonts(), p = PAIRS[K.pair]; return [!K.head && !K.body && p ? p[0] : "Custom", f.head === f.body ? f.head : `${f.head} and ${f.body}`]; },
+    color: () => { const r = roles(); return [C.name(r.accent), `${K.colors.length} colors, ${r.contrast.toFixed(1)}:1 text`]; },
+    spacing: () => [{ 0.8: "Compact", 1: "Regular", 1.25: "Roomy" }[K.density] || "Custom", `${K.unit}px unit`],
+    radius: () => [K.radius === 0 ? "Square" : K.radius <= 6 ? "Subtle" : K.radius <= 14 ? "Rounded" : "Soft", `${K.radius}px${K.pill ? ", pill buttons" : ""}`],
+    elevation: () => [cap(K.elevation), ELEV_FACT[K.elevation]],
+    motion: () => [EASE_NAME[K.ease], `${K.dur}ms`],
+    rules: () => { const on = K.rules.filter((r) => r.on && r.t.trim()).length, off = K.rules.length - on; return [on ? `${on} ${on === 1 ? "rule" : "rules"}` : "No rules", off ? `${off} switched off` : K.rules.length ? "All on" : "Add your own"]; },
   };
-  const slotTh = {
-    type: () => `<span class="cp-th" style="font-family:'${fonts().head}';font-weight:${fonts().weight}">Aa</span>`,
-    color: () => `<span class="cp-th cp-sw">${K.colors.map((c) => `<i style="background:${c}"></i>`).join("")}</span>`,
-    spacing: () => `<span class="cp-th cp-bars">${[1, 2, 3, 4].map((n) => `<i style="width:${Math.min(40, space(n * 2))}px"></i>`).join("")}</span>`,
-    radius: () => `<span class="cp-th"><i class="cp-r" style="border-radius:${Math.min(K.radius, 16)}px"></i></span>`,
-    elevation: () => `<span class="cp-th"><i class="cp-e" style="box-shadow:${SHADOWS[K.elevation].replace(/var\(--k-border\)/, "rgba(0,0,0,.15)")}"></i></span>`,
-    motion: () => `<span class="cp-th">${ic("wave")}</span>`, rules: () => `<span class="cp-th">${ic("check")}</span>`,
-  };
+  // Built once and patched, so selection and text changes transition like the studio's build column.
+  $("cpSlots").innerHTML = SLOTS.map(([id, label, icon]) => `<div class="slot"><div class="slot-label">${label}</div><button class="tile" data-s="${id}"><span class="tile-th tile-ic">${ic(icon)}</span><span class="tile-text"><b></b><small></small></span>${ic("next")}</button></div>`).join("");
+  const setText = (el, v) => { if (el.textContent === v) return; el.textContent = v; if (!root.UI?.reduce.matches && !build.hidden) el.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 220 + Math.random() * 80, easing: "cubic-bezier(.22,1,.36,1)" }); };
   function renderSlots() {
-    $("cpSlots").innerHTML = SLOTS.map(([id, label]) => `<div class="slot"><div class="slot-label">${label}</div><button class="tile${K.slot === id ? " on" : ""}" data-s="${id}"><span class="tile-th">${slotTh[id]()}</span><span class="tile-text"><b>${label}</b><small>${esc(slotSub[id]())}</small></span>${ic("next")}</button></div>`).join("");
+    for (const t of $("cpSlots").querySelectorAll("[data-s]")) {
+      const [title, fact] = slotInfo[t.dataset.s]();
+      t.classList.toggle("on", K.slot === t.dataset.s);
+      setText(t.querySelector("b"), title); setText(t.querySelector("small"), fact);
+    }
   }
   $("cpSlots").addEventListener("click", (e) => { const t = e.target.closest("[data-s]"); if (t) setSlot(t.dataset.s); });
-  function setSlot(id) { K.slot = id; save(); renderSlots(); renderOpts(true); }
+  function setSlot(id) { if (K.slot === id) return; K.slot = id; save(); renderSlots(); renderOpts(true); $("cpOpts").closest(".options").scrollTo({ top: 0 }); }
   $("cpNext").onclick = () => { const i = SLOTS.findIndex((s) => s[0] === K.slot); if (i === SLOTS.length - 1) { $("cpExportBtn")?.click(); return; } setSlot(SLOTS[i + 1][0]); };
 
   // Option controls
@@ -340,12 +386,72 @@
   function seg(host, opts, get, set, cls = "") {
     const el = document.createElement("div"); el.className = "seg sm " + cls;
     el.innerHTML = opts.map(([v, l]) => `<button data-v="${v}" class="${String(get()) === String(v) ? "on" : ""}">${l}</button>`).join("");
-    el.onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; set(isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v); for (const x of el.children) x.classList.toggle("on", x === b); changed(); };
+    el.onclick = (e) => { const b = e.target.closest("button[data-v]"); if (!b) return; set(isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v); for (const x of el.querySelectorAll("button")) x.classList.toggle("on", x === b); changed(); };
     host.appendChild(el); return el;
   }
   const sub = (host, t) => host.insertAdjacentHTML("beforeend", `<h3 class="sub">${t}</h3>`);
-  const FONT_LIST_BASE = [...new Set(PAIRS.flatMap((p) => [p[1], p[2]]).concat(["Work Sans", "Outfit", "Lexend", "Epilogue", "Rubik", "Nunito", "Lora", "Merriweather", "Crimson Pro", "Cormorant Garamond", "Space Mono", "IBM Plex Mono", "Red Hat Display", "Schibsted Grotesk", "Hanken Grotesk", "Instrument Serif", "Young Serif", "Gloock", "Bebas Neue", "Anton"]))].sort();
-  const FONT_LIST = () => [...custom, ...FONT_LIST_BASE];
+
+  // ---------- fonts ----------
+  // A small catalog from Google Fonts, grouped by kind, so the picker can suggest rather than ask for a name.
+  const CATALOG = {
+    Sans: ["Inter", "Inter Tight", "Instrument Sans", "Geist", "DM Sans", "Manrope", "Figtree", "Plus Jakarta Sans", "Onest", "IBM Plex Sans", "Source Sans 3", "Libre Franklin", "Archivo", "Work Sans", "Outfit", "Lexend", "Rubik", "Nunito", "Public Sans", "Albert Sans", "Hanken Grotesk", "Schibsted Grotesk", "Red Hat Display", "Space Grotesk", "Sora", "Bricolage Grotesque", "Epilogue", "Urbanist"],
+    Serif: ["Fraunces", "Newsreader", "Playfair Display", "DM Serif Display", "Instrument Serif", "Libre Caslon Text", "Lora", "Merriweather", "Source Serif 4", "Literata", "EB Garamond", "Cormorant Garamond", "Crimson Pro", "Young Serif", "Gloock"],
+    Display: ["Syne", "Unbounded", "Bebas Neue", "Anton", "Archivo Black", "Big Shoulders Display", "Righteous"],
+    Mono: ["JetBrains Mono", "Geist Mono", "IBM Plex Mono", "Space Mono", "DM Mono", "Fira Code"],
+  };
+  const kindOf = (f) => (custom.has(f) ? "Yours" : Object.keys(CATALOG).find((k) => CATALOG[k].includes(f)) || "Google Fonts");
+  // Suggestions for one role given the other: the pairings that use it, then fonts of a contrasting kind.
+  function suggest(role, other) {
+    const fromPairs = PAIRS.filter((p) => p[role === "head" ? 2 : 1] === other).map((p) => p[role === "head" ? 1 : 2]);
+    const ok = kindOf(other), contrast = role === "head" ? (ok === "Serif" ? ["Sans", "Display"] : ["Serif", "Display", "Sans"]) : ok === "Sans" ? ["Sans"] : ["Sans", "Serif"];
+    const extra = contrast.flatMap((k) => CATALOG[k].slice(0, 4));
+    return [...new Set([...fromPairs, ...extra])].filter((f) => f !== other || role === "body").slice(0, 6);
+  }
+  let ff = null; // the open font picker
+  function fontPicker(anchor, role) {
+    closeFF();
+    const pop = document.createElement("div");
+    pop.className = "pop ff scroll"; pop.hidden = true;
+    pop.innerHTML = `<label class="ff-search">${ic("search")}<input class="field" placeholder="Search or type any Google font" spellcheck="false" aria-label="Search fonts"></label><div class="ff-list"></div>`;
+    document.body.appendChild(pop);
+    const r = anchor.getBoundingClientRect();
+    const pw = Math.max(280, Math.round(r.width));
+    pop.style.width = pw + "px"; pop.style.left = Math.min(r.left, innerWidth - pw - 12) + "px";
+    const below = innerHeight - r.bottom > 360;
+    pop.style.top = (below ? r.bottom + 6 : Math.max(8, r.top - 6 - 380)) + "px";
+    pop.classList.toggle("above", !below);
+    const input = pop.querySelector("input"), listEl = pop.querySelector(".ff-list");
+    const f = fonts(), cur = role === "head" ? f.head : f.body, other = role === "head" ? f.body : f.head;
+    const io = new IntersectionObserver((en) => en.forEach((e) => { if (e.isIntersecting) { loadFont(e.target.dataset.f); io.unobserve(e.target); } }), { root: listEl });
+    const rowHTML = (name) => `<button class="ff-row${name === cur ? " on" : ""}" data-f="${esc(name)}"><span style="font-family:'${esc(name)}', system-ui">${esc(name)}</span><small>${kindOf(name)}</small></button>`;
+    const group = (title, names) => (names.length ? `<h3>${esc(title)}</h3>` + names.map(rowHTML).join("") : "");
+    function paint() {
+      const q = input.value.trim().toLowerCase(), hit = (n) => !q || n.toLowerCase().includes(q);
+      const all = [...custom, ...Object.values(CATALOG).flat()];
+      let html = "";
+      if (q && !all.some((n) => n.toLowerCase() === q)) html += `<button class="ff-row use" data-f="${esc(input.value.trim())}"><span>Use “${esc(input.value.trim())}”</span><small>Google Fonts or installed</small></button>`;
+      html += group("Your fonts", [...custom].filter(hit));
+      if (!q) html += group(`Pairs with ${other}`, suggest(role, other));
+      for (const [k, names] of Object.entries(CATALOG)) html += group(k, names.filter(hit));
+      if (!html) html = `<p class="note ff-none">No fonts match.</p>`;
+      listEl.innerHTML = html;
+      for (const b of listEl.querySelectorAll("[data-f]")) if (!b.classList.contains("use")) io.observe(b);
+    }
+    paint();
+    input.addEventListener("input", paint);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") { const b = listEl.querySelector("[data-f]"); if (b) choose(b.dataset.f); } else if (e.key === "Escape") closeFF(); });
+    const choose = (name) => { K[role] = name; closeFF(); changed(); };
+    listEl.addEventListener("click", (e) => { const b = e.target.closest("[data-f]"); if (b) choose(b.dataset.f); });
+    requestAnimationFrame(() => { pop.hidden = false; input.focus(); listEl.querySelector(".on")?.scrollIntoView({ block: "center" }); });
+    anchor.classList.add("open");
+    ff = { pop, anchor, io };
+  }
+  function closeFF() { if (!ff) return; const { pop, anchor, io } = ff; ff = null; io.disconnect(); anchor.classList.remove("open"); pop.hidden = true; setTimeout(() => pop.remove(), 300); }
+  document.addEventListener("pointerdown", (e) => { if (ff && !e.target.closest(".ff, .ff-trigger")) closeFF(); });
+  document.addEventListener("scroll", (e) => { if (ff && !ff.pop.contains(e.target)) closeFF(); }, true);
+
+  // A contrast readout: the ratio, then the WCAG level it reaches.
+  const level = (r) => (r >= 7 ? ["AAA", "ok"] : r >= 4.5 ? ["AA", "ok"] : r >= 3 ? ["Large text", "warn"] : ["Low", "bad"]);
   function renderOpts(enter) {
     const o = $("cpOpts");
     $("cpOptTitle").textContent = SLOTS.find((s) => s[0] === K.slot)[1];
@@ -353,25 +459,30 @@
     $("cpNextLbl").textContent = i === SLOTS.length - 1 ? "Export" : `Next: ${SLOTS[i + 1][1]}`;
     o.innerHTML = "";
     if (K.slot === "type") {
+      const f = fonts();
+      o.insertAdjacentHTML("beforeend", `<div class="ff-pair">${[["head", "Headings", f.head, f.weight], ["body", "Body", f.body, 400]].map(([role, label, name, w]) => `<button class="ff-trigger" data-role="${role}" aria-haspopup="listbox"><small>${label}</small><span style="font-family:'${esc(name)}', system-ui;font-weight:${w}">${esc(name)}</span><em>${kindOf(name)}</em>${ic("chev")}</button>`).join("")}</div>
+        <p class="hint">Choose the body font first, for easy reading. Then pick a heading with some contrast, like a serif over a sans or a heavier weight.</p>`);
+      o.querySelector(".ff-pair").onclick = (e) => { const b = e.target.closest(".ff-trigger"); if (!b) return; if (ff?.anchor === b) closeFF(); else fontPicker(b, b.dataset.role); };
       sub(o, "Pairings");
-      const g = document.createElement("div"); g.className = "cards cp-pairs";
-      g.innerHTML = PAIRS.map(([n, h, b, w], k) => { loadFont(h); loadFont(b); return `<button class="card cp-pair${K.pair === k && !K.head && !K.body ? " on" : ""}" data-k="${k}"><span class="cp-aa" style="font-family:'${h}';font-weight:${w}">Aa</span><span class="cp-pair-b" style="font-family:'${b}'">The quick brown fox</span><span class="card-label">${n}</span><span class="card-sub">${h === b ? h : `${h} and ${b}`}</span></button>`; }).join("");
-      g.onclick = (e) => { const b = e.target.closest("[data-k]"); if (!b) return; K.pair = +b.dataset.k; K.head = K.body = ""; for (const x of g.children) x.classList.toggle("on", x === b); changed(); };
+      const g = document.createElement("div"); g.className = "cp-pairs";
+      const custom0 = K.head || K.body;
+      g.innerHTML = PAIRS.map(([n, h, b, w], k) => { loadFont(h); loadFont(b); return `<button class="pair${K.pair === k && !custom0 ? " on" : ""}${k >= 6 ? " extra" : ""}" data-k="${k}" title="${h === b ? h : `${h} and ${b}`}"><span class="pair-aa" style="font-family:'${h}';font-weight:${w}">Aa</span><span class="pair-t"><b>${n}</b><small style="font-family:'${b}'">${h === b ? h : `${h}, ${b}`}</small></span></button>`; }).join("");
+      g.onclick = (e) => { const b = e.target.closest("[data-k]"); if (!b) return; K.pair = +b.dataset.k; K.head = K.body = ""; changed(); };
       o.appendChild(g);
-      sub(o, "Fonts");
-      o.insertAdjacentHTML("beforeend", `<datalist id="cpFonts">${FONT_LIST().map((f) => `<option value="${f}">`).join("")}</datalist><div class="cp-fonts"><label class="label">Headings<input class="field" list="cpFonts" id="cpHead" value="${esc(fonts().head)}"></label><label class="label">Body<input class="field" list="cpFonts" id="cpBody" value="${esc(fonts().body)}"></label></div>`);
-      $("cpHead").onchange = (e) => { K.head = e.target.value.trim(); changed(); };
-      $("cpBody").onchange = (e) => { K.body = e.target.value.trim(); changed(); };
-      o.insertAdjacentHTML("beforeend", `<p class="hint">Type any Google Fonts family or a font installed on your computer, or upload your own.</p>`);
+      if (PAIRS.length > 6) {
+        o.insertAdjacentHTML("beforeend", `<button class="btn sm ghost cp-more" aria-expanded="${!!K.morePairs}">${K.morePairs ? "Show fewer" : `Show all ${PAIRS.length}`}</button>`);
+        g.classList.toggle("all", !!K.morePairs);
+        o.querySelector(".cp-more").onclick = (e) => { K.morePairs = !K.morePairs; save(); g.classList.toggle("all", K.morePairs); e.currentTarget.textContent = K.morePairs ? "Show fewer" : `Show all ${PAIRS.length}`; };
+      }
       sub(o, "Your fonts");
       const mine = document.createElement("div"); mine.className = "cp-mine";
-      mine.innerHTML = [...custom].map((f) => `<div class="cp-font" data-f="${esc(f)}"><span style="font-family:'${esc(f)}'">${esc(f)}</span><button class="btn sm ghost" data-use="head">Headings</button><button class="btn sm ghost" data-use="body">Body</button><button class="ib xs" data-del aria-label="Remove ${esc(f)}">${ic("x")}</button></div>`).join("") +
+      mine.innerHTML = [...custom].map((f) => `<div class="cp-font" data-key="${esc(f)}" data-f="${esc(f)}"><span style="font-family:'${esc(f)}'">${esc(f)}</span><button class="btn sm ghost" data-use="head">Headings</button><button class="btn sm ghost" data-use="body">Body</button><button class="ib xs" data-del title="Remove ${esc(f)}">${ic("x")}</button></div>`).join("") +
         `<label class="btn sm cp-up">${ic("up")}Upload a font<input type="file" accept=".woff2,.woff,.ttf,.otf" multiple hidden></label>`;
       mine.onclick = async (e) => {
         const row = e.target.closest("[data-f]"); if (!row) return;
         const f = row.dataset.f;
         if (e.target.closest("[data-use]")) { K[e.target.closest("[data-use]").dataset.use === "head" ? "head" : "body"] = f; changed(true); }
-        else if (e.target.closest("[data-del]")) { await removeFont(f); if (K.head === f) K.head = ""; if (K.body === f) K.body = ""; changed(true); }
+        else if (e.target.closest("[data-del]")) { await removeFont(f); if (K.head === f) K.head = ""; if (K.body === f) K.body = ""; root.UI ? root.UI.collapse(row, () => changed(true)) : changed(true); }
       };
       mine.querySelector("input").onchange = async (e) => {
         for (const file of e.target.files) { const name = file.name.replace(/\.(woff2?|ttf|otf)$/i, "").replace(/[-_]+/g, " "); if (await addFont(name, await file.arrayBuffer())) root.toastMsg?.(`Added ${name}`); }
@@ -389,73 +500,103 @@
       row.onclick = (e) => {
         const k = +e.target.closest("[data-k]")?.dataset.k;
         if (e.target.closest("[data-acc]")) { K.accent = +e.target.closest("[data-acc]").dataset.acc; changed(true); }
-        else if (e.target.closest(".x")) { K.colors.splice(k, 1); K.accent = clamp(K.accent, 0, K.colors.length - 1); changed(true); }
-        else if (e.target.closest(".stop-add")) { K.colors.push(C.mixOklab(K.colors[K.colors.length - 1], K.colors[0], 0.5)); changed(true); }
-        else if (e.target.closest(".sw")) { const sw = e.target.closest(".sw"); picker.open(sw, K.colors[k], (v) => { K.colors[k] = v; sw.style.background = v; changed(); }, () => save(), [["Palette", K.colors]]); }
+        else if (e.target.closest(".x")) { const st = e.target.closest(".stop"); const go = () => { K.colors.splice(k, 1); K.accent = clamp(K.accent, 0, K.colors.length - 1); changed(true); }; if (root.UI?.reduce.matches) go(); else st.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.6)" }], { duration: 200, easing: "ease-in", fill: "forwards" }).onfinish = go; }
+        else if (e.target.closest(".stop-add")) { K.colors.push(C.mixOklab(K.colors[K.colors.length - 1], K.colors[0], 0.5)); changed(true); $("cpOpts").querySelector(`.stop[data-k="${K.colors.length - 1}"]`)?.classList.add("fresh-stop"); }
+        else if (e.target.closest(".sw")) { const sw = e.target.closest(".sw"); picker.open(sw, K.colors[k], (v) => { K.colors[k] = v; sw.style.background = v; changed(); paintContrast(); }, () => save(), [["Palette", K.colors]]); }
       };
       o.appendChild(row);
-      const r = roles(), aa = r.contrast >= 4.5 ? "passes AA" : r.contrast >= 3 ? "large text only" : "too low";
-      o.insertAdjacentHTML("beforeend", `<p class="hint">Text on background ${r.contrast.toFixed(1)}:1, ${aa}.</p>`);
+      o.insertAdjacentHTML("beforeend", `<div class="cp-contrast"><span>Text contrast</span><b class="mono" id="cpRatio"></b><em id="cpLevel"></em></div>`);
+      paintContrast();
       const pal = root.Palettes;
       if (pal) {
         sub(o, "From palettes");
         const list = [["Palette tool", pal.colors()], ...pal.saved().map((p) => [p.name, p.colors])];
         const g = document.createElement("div"); g.className = "cp-pals";
-        g.innerHTML = list.map(([n, cols], k) => `<button class="sug" data-p="${k}"><span class="sug-sw">${cols.map((c) => `<i style="background:${c}"></i>`).join("")}</span><span>${esc(n)}</span></button>`).join("");
+        g.innerHTML = list.map(([n, cols], k) => `<button class="sug" data-p="${k}"><span class="sug-sw">${cols.slice(0, 6).map((c) => `<i style="background:${c}"></i>`).join("")}</span><span>${esc(n)}</span></button>`).join("");
         g.onclick = (e) => { const b = e.target.closest("[data-p]"); if (!b) return; K.colors = list[+b.dataset.p][1].slice(0, 8); const ch = K.colors.map((c) => C.toOklch(c)[1]); K.accent = ch.indexOf(Math.max(...ch)); changed(true); };
         o.appendChild(g);
       }
       sub(o, "Mode");
-      seg(o, [["0", "Light"], ["1", "Dark"]], () => (K.dark ? 1 : 0), (v) => (K.dark = !!v));
+      seg(o, [["0", "Light"], ["1", "Dark"]], () => (K.dark ? 1 : 0), (v) => { K.dark = !!v; paintContrast(); renderStageSegs(); });
     } else if (K.slot === "spacing") {
-      sub(o, "Base unit"); seg(o, [[4, "4px"], [8, "8px"]], () => K.unit, (v) => (K.unit = v));
-      sub(o, "Density"); seg(o, [[0.8, "Compact"], [1, "Regular"], [1.25, "Roomy"]], () => K.density, (v) => (K.density = v));
+      sub(o, "Base unit"); seg(o, [[4, "4px"], [8, "8px"]], () => K.unit, (v) => { K.unit = v; paintScale(); });
+      sub(o, "Density"); seg(o, [[0.8, "Compact"], [1, "Regular"], [1.25, "Roomy"]], () => K.density, (v) => { K.density = v; paintScale(); });
       sub(o, "Scale");
-      o.insertAdjacentHTML("beforeend", `<div class="cp-scale">${[1, 2, 3, 4, 6, 8, 12, 16].map((n) => `<div><span class="mono">${n}</span><i style="width:${space(n)}px"></i><span class="mono">${space(n)}px</span></div>`).join("")}</div>`);
+      o.insertAdjacentHTML("beforeend", `<div class="cp-scale" id="cpScale">${[1, 2, 3, 4, 6, 8, 12, 16].map((n) => `<div><span class="mono">${n}</span><i></i><span class="mono"></span></div>`).join("")}</div>`);
+      paintScale();
     } else if (K.slot === "radius") {
       slider(o, "Corner radius", 0, 32, 1, () => K.radius, (v) => (K.radius = v), (v) => v + "px");
       o.insertAdjacentHTML("beforeend", `<label class="label-row switch-row"><span class="label">Pill buttons</span><span class="switch"><input type="checkbox" id="cpPill"${K.pill ? " checked" : ""}><span></span></span></label>`);
       $("cpPill").onchange = (e) => { K.pill = e.target.checked; changed(); };
     } else if (K.slot === "elevation") {
       const g = document.createElement("div"); g.className = "cards cp-elev";
-      g.innerHTML = Object.entries(SHADOWS).map(([k, sh]) => `<button class="card${K.elevation === k ? " on" : ""}" data-e="${k}"><span class="th cp-e-th"><i style="box-shadow:${sh.replace(/var\(--k-border\)/, "rgba(0,0,0,.15)")}"></i></span><span class="card-label">${k[0].toUpperCase() + k.slice(1)}</span></button>`).join("");
+      g.innerHTML = Object.entries(SHADOWS).map(([k, sh]) => `<button class="card${K.elevation === k ? " on" : ""}" data-e="${k}"><span class="th cp-e-th"><i style="box-shadow:${sh.replace(/var\(--k-border\)/, "rgba(0,0,0,.15)")}"></i></span><span class="card-label">${cap(k)}</span><span class="card-sub">${ELEV_FACT[k]}</span></button>`).join("");
       g.onclick = (e) => { const b = e.target.closest("[data-e]"); if (!b) return; K.elevation = b.dataset.e; for (const x of g.children) x.classList.toggle("on", x === b); changed(); };
       o.appendChild(g);
     } else if (K.slot === "motion") {
       slider(o, "Duration", 60, 700, 10, () => K.dur, (v) => (K.dur = v), (v) => v + "ms");
       sub(o, "Easing"); seg(o, [["linear", "Linear"], ["out", "Out"], ["inout", "In and out"], ["spring", "Spring"]], () => K.ease, (v) => (K.ease = v));
       o.insertAdjacentHTML("beforeend", `<button class="cp-demo" id="cpDemo"><i></i><span>Click to replay</span></button>`);
-      $("cpDemo").onclick = (e) => { const b = e.currentTarget; b.classList.remove("go"); void b.offsetWidth; b.classList.add("go"); };
-      $("cpDemo").style.setProperty("--dur", K.dur + "ms"); $("cpDemo").style.setProperty("--ease", EASE[K.ease]);
+      const demo = $("cpDemo");
+      demo.style.setProperty("--dur", K.dur + "ms"); demo.style.setProperty("--ease", EASE[K.ease]);
+      demo.onclick = () => { demo.classList.remove("go"); void demo.offsetWidth; demo.classList.add("go"); };
     } else if (K.slot === "rules") {
-      o.insertAdjacentHTML("beforeend", `<p class="hint">These go into the brief you copy for AI agents. Edit, switch off or add your own.</p>`);
+      o.insertAdjacentHTML("beforeend", `<p class="hint">These go into the brief you copy for agents. Edit, switch off or add your own.</p>`);
       const list = document.createElement("div"); list.className = "cp-rules";
-      list.innerHTML = K.rules.map((r, k) => `<div class="cp-rule${r.on ? "" : " off"}" data-k="${k}"><span class="switch"><input type="checkbox"${r.on ? " checked" : ""} aria-label="Use this rule"><span></span></span><textarea class="field" rows="2" aria-label="Rule ${k + 1}">${esc(r.t)}</textarea><button class="ib xs" aria-label="Delete rule">${ic("x")}</button></div>`).join("");
-      list.addEventListener("change", (e) => { const k = +e.target.closest("[data-k]").dataset.k; if (e.target.type === "checkbox") { K.rules[k].on = e.target.checked; e.target.closest(".cp-rule").classList.toggle("off", !e.target.checked); } else K.rules[k].t = e.target.value; save(); renderSlots(); });
-      list.addEventListener("click", (e) => { const b = e.target.closest(".ib"); if (!b) return; K.rules.splice(+b.closest("[data-k]").dataset.k, 1); save(); renderOpts(); renderSlots(); });
+      K.rules.forEach((r) => (r.id ||= Math.random().toString(36).slice(2, 9)));
+      list.innerHTML = K.rules.map((r, k) => `<div class="cp-rule${r.on ? "" : " off"}" data-k="${k}" data-key="${r.id}"><span class="switch"><input type="checkbox"${r.on ? " checked" : ""} aria-label="Use this rule"><span></span></span><textarea class="field autosize" rows="1" aria-label="Rule ${k + 1}" placeholder="Write a rule">${esc(r.t)}</textarea><button class="ib xs" title="Delete rule">${ic("x")}</button></div>`).join("") || `<p class="note cp-norules">No rules yet. Agents will follow only the tokens.</p>`;
+      list.addEventListener("change", (e) => { const k = +e.target.closest("[data-k]").dataset.k; if (e.target.type === "checkbox") { K.rules[k].on = e.target.checked; e.target.closest(".cp-rule").classList.toggle("off", !e.target.checked); } save(); renderSlots(); });
+      list.addEventListener("input", (e) => { if (e.target.matches("textarea")) { K.rules[+e.target.closest("[data-k]").dataset.k].t = e.target.value; save(); } });
+      list.addEventListener("click", (e) => { const b = e.target.closest(".ib"); if (!b) return; const row = b.closest("[data-k]"); const go = () => { K.rules.splice(+row.dataset.k, 1); save(); renderOpts(); renderSlots(); }; root.UI ? root.UI.collapse(row, go) : go(); });
       o.appendChild(list);
       o.insertAdjacentHTML("beforeend", `<div class="pt-actions"><button class="btn sm" id="cpAddRule">${ic("plus")}Add a rule</button><button class="btn sm ghost" id="cpResetRules">${ic("reset")}Reset</button></div>`);
-      $("cpAddRule").onclick = () => { K.rules.push({ t: "", on: true }); save(); renderOpts(); $("cpOpts").querySelector(".cp-rule:last-child textarea").focus(); };
+      $("cpAddRule").onclick = () => { K.rules.push({ t: "", on: true }); save(); const host = $("cpOpts").querySelector(".cp-rules"); root.UI ? root.UI.flip(host, () => renderOpts()) : renderOpts(); renderSlots(); $("cpOpts").querySelector(".cp-rule:last-child textarea")?.focus(); };
       $("cpResetRules").onclick = () => { K.rules = RULES.map((t) => ({ t, on: true })); save(); renderOpts(); renderSlots(); };
+      requestAnimationFrame(() => o.querySelectorAll("textarea.autosize").forEach((t) => root.UI?.autosize(t)));
     }
     if (enter) { o.classList.remove("enter"); void o.offsetWidth; o.classList.add("enter"); }
+  }
+  // Type panel patches: the font triggers and the selected pairing follow the current fonts.
+  function syncType() {
+    const f = fonts(), o = $("cpOpts");
+    for (const t of o.querySelectorAll(".ff-trigger")) {
+      const head = t.dataset.role === "head", name = head ? f.head : f.body, sp = t.querySelector("span");
+      if (sp.textContent !== name) { sp.textContent = name; sp.style.fontFamily = `'${name}', system-ui`; sp.style.fontWeight = head ? f.weight : 400; t.querySelector("em").textContent = kindOf(name); if (!root.UI?.reduce.matches) sp.animate([{ opacity: 0, transform: "translateY(4px)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: "cubic-bezier(.22,1,.36,1)" }); }
+    }
+    const custom0 = K.head || K.body;
+    for (const b of o.querySelectorAll(".pair")) b.classList.toggle("on", !custom0 && +b.dataset.k === K.pair);
+  }
+  function paintContrast() {
+    const el = $("cpRatio"); if (!el) return;
+    const r = roles().contrast, [lv, cls] = level(r);
+    el.textContent = `${r.toFixed(1)}:1`;
+    const em = $("cpLevel"); if (em.textContent !== lv) { em.textContent = lv; em.className = "cp-badge " + cls; }
+  }
+  function paintScale() {
+    const host = $("cpScale"); if (!host) return;
+    [1, 2, 3, 4, 6, 8, 12, 16].forEach((n, k) => { const row = host.children[k]; row.querySelector("i").style.width = Math.min(space(n), 200) + "px"; row.lastElementChild.textContent = space(n) + "px"; });
+  }
+  function renderStageSegs() {
+    for (const [id, v] of [["cpView", K.view], ["cpLayout", K.layout], ["cpTheme", K.dark ? "dark" : "light"]]) for (const b of $(id).querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === v);
+    $("cpLayout").hidden = K.view !== "landing";
   }
   function renderStage() {
     const kit = $("kit");
     kit.className = "kit" + (K.view === "landing" ? " k-landing" : "");
     kit.innerHTML = previewHTML();
     vars(kit);
-    for (const [id, v] of [["cpView", K.view], ["cpLayout", K.layout], ["cpTheme", K.dark ? "dark" : "light"]]) for (const b of $(id).children) b.classList.toggle("on", b.dataset.v === v);
-    $("cpLayout").hidden = K.view !== "landing";
+    renderStageSegs();
   }
-  $("cpView").onclick = (e) => { const b = e.target.closest("[data-v]"); if (b) { K.view = b.dataset.v; save(); renderStage(); } };
-  $("cpLayout").onclick = (e) => { const b = e.target.closest("[data-v]"); if (b) { K.layout = b.dataset.v; save(); renderStage(); } };
-  $("cpTheme").onclick = (e) => { const b = e.target.closest("[data-v]"); if (b) { K.dark = b.dataset.v === "dark"; changed(K.slot === "color"); } };
+  const swapStage = () => (root.UI ? root.UI.swap(renderStage) : renderStage());
+  $("cpView").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && K.view !== b.dataset.v) { K.view = b.dataset.v; save(); swapStage(); } };
+  $("cpLayout").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && K.layout !== b.dataset.v) { K.layout = b.dataset.v; save(); swapStage(); } };
+  $("cpTheme").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b) { K.dark = b.dataset.v === "dark"; renderStageSegs(); changed(K.slot === "color"); } };
   let changeT = 0;
   function changed(rebuildOpts) {
     save();
     vars($("kit")); renderSlots();
-    if (rebuildOpts) renderOpts();
+    if (K.slot === "motion" && $("cpDemo")) { $("cpDemo").style.setProperty("--dur", K.dur + "ms"); $("cpDemo").style.setProperty("--ease", EASE[K.ease]); }
+    if (rebuildOpts) renderOpts(); else if (K.slot === "type") syncType();
     clearTimeout(changeT); changeT = setTimeout(() => root.dispatchEvent(new Event("kit-change")), 150);
   }
 
@@ -483,7 +624,7 @@
     const named = (h) => `${h} (${C.name(h)})`;
     const libs = LIBS.filter((l) => (K.fw === "All" || l.fw.includes(K.fw)) && ["Components", "Headless"].includes(l.cat)).slice(0, 6).map((l) => `- ${l.name}: ${l.url}`).join("\n");
     const own = [t.font.heading, t.font.body].filter((x) => custom.has(x));
-    let out = `# ${kind === "design" ? "Design brief" : "Build brief"}\n\nFollow these rules on every screen:\n${rules}\n\n## Type\n- Headings: ${t.font.heading}, weight ${t.font.headingWeight}, tracking ${t.font.tracking}em\n- Body: ${t.font.body}, ${t.size.base}px base, scale ratio ${K.scale}\n- Load from Google Fonts: ${fontsLink()}\n${own.length ? `- Self-hosted fonts (files supplied separately): ${[...new Set(own)].join(", ")}\n` : ""}\n## Color (${K.dark ? "dark" : "light"} mode)\n- Background ${named(r.bg)}, surface ${r.surface}, border ${r.border}\n- Text ${named(r.text)}, muted text ${r.muted}; text on background is ${r.contrast.toFixed(1)}:1\n- Accent ${named(r.accent)} with ${r.onAccent} text on it\n- Full palette: ${K.colors.join(", ")}\n\n## Shape and space\n- Spacing scale (px): ${Object.values(t.space).join(", ")}\n- Corner radius ${t.radius.base}px; buttons ${K.pill ? "fully rounded" : t.radius.base + "px"}\n- Elevation: ${K.elevation} (${t.shadow})\n\n## Motion\n- ${t.motion.duration}ms with ${t.motion.easing}; vary timing slightly between elements; honor prefers-reduced-motion.\n`;
+    let out = `# ${kind === "design" ? "Design brief" : "Build brief"}\n\nFollow these rules on every screen:\n${rules}\n\n## Type\n- Headings: ${t.font.heading}, weight ${t.font.headingWeight}, tracking ${t.font.tracking}em\n- Body: ${t.font.body}, ${t.size.base}px base, scale ratio ${K.scale}\n- Load from Google Fonts: ${fontsLink()}\n${own.length ? `- Self-hosted fonts (files supplied separately): ${[...new Set(own)].join(", ")}\n` : ""}\n## Color (${K.dark ? "dark" : "light"} mode)\n- Background ${named(r.bg)}, surface ${r.surface}, border ${r.border}\n- Text ${named(r.text)}, muted text ${r.muted}; text on background is ${r.contrast.toFixed(1)}:1\n- Accent ${named(r.accent)} with ${r.onAccent} text on it\n- Full palette: ${K.colors.join(", ")}\n\n## Shape and space\n- Spacing scale (px): ${Object.values(t.space).join(", ")}\n- Corner radius ${t.radius.base}px, buttons ${K.pill ? "fully rounded" : t.radius.base + "px"}\n- Elevation: ${K.elevation} (${t.shadow})\n\n## Motion\n- ${t.motion.duration}ms with ${t.motion.easing}\n- Vary timing slightly between elements and honor prefers-reduced-motion\n`;
     if (kind === "dev") out += `\n## Tokens as CSS variables\n\`\`\`css\n${cssVars()}\`\`\`\n\n## Tailwind v4 theme\n\`\`\`css\n${tailwind()}\`\`\`\n` + (libs ? `\n## Suggested libraries${K.fw !== "All" ? " for " + K.fw : ""}\n${libs}\n` : "");
     return out;
   }
@@ -512,11 +653,11 @@
   function setMode(m) {
     K.mode = m; save();
     lib.hidden = m !== "libraries"; build.hidden = m !== "builder";
-    for (const b of $("cpMode").children) b.classList.toggle("on", b.dataset.v === m);
-    if (m === "libraries") { renderLibs(); lib.classList.remove("enter"); void lib.offsetWidth; lib.classList.add("enter"); }
+    for (const b of $("cpMode").querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === m);
+    if (m === "libraries") renderLibs();
     else { renderSlots(); renderOpts(true); renderStage(); }
   }
-  $("cpMode").onclick = (e) => { const b = e.target.closest("[data-v]"); if (b && b.dataset.v !== K.mode) setMode(b.dataset.v); };
+  $("cpMode").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && b.dataset.v !== K.mode) { for (const x of $("cpMode").querySelectorAll("button")) x.classList.toggle("on", x === b); root.UI ? root.UI.swap(() => setMode(b.dataset.v)) : setMode(b.dataset.v); } };
 
   root.Components = { onShow: () => setMode(K.mode), preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
 })(window);
