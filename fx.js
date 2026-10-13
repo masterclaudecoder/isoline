@@ -21,11 +21,13 @@ vec2 dp() { return vUv * uRes / uK; }
 vec2 toUv(vec2 d) { return d * uK / uRes; }
 vec4 tex(vec2 uv) { return texture(uTex, clamp(uv, vec2(0.0), vec2(1.0))); }
 float sdBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
-// Frosted sample: n blur taps on a golden spiral, with red and blue pulled apart along disp.
+// Frosted sample: n blur taps on a golden spiral, rotated and spread per pixel so the blur reads as frost
+// rather than ghosted copies, with red and blue pulled apart along disp.
 vec3 frostDisp(vec2 uv, float rad, vec2 disp, int n) {
   vec3 c = vec3(0.0);
+  float j = hash(gl_FragCoord.xy) * 6.2831853;
   for (int i = 0; i < n; i++) {
-    float a = float(i) * 2.39996, r = n > 1 ? sqrt((float(i) + 0.5) / float(n)) * rad : 0.0;
+    float a = float(i) * 2.39996 + j, r = n > 1 ? sqrt((float(i) + hash(gl_FragCoord.xy + float(i) * 7.13)) / float(n)) * rad : 0.0;
     vec2 q = uv + toUv(vec2(cos(a), sin(a)) * r);
     c += vec3(tex(q + disp).r, tex(q).g, tex(q - disp).b);
   }
@@ -36,7 +38,8 @@ vec3 frostDisp(vec2 uv, float rad, vec2 disp, int n) {
 vec3 liquid(vec2 uv, float sd, vec2 n, float bez, float refr, float frost, float rim, float disp) {
   float x = 1.0 - clamp(-sd / bez, 0.0, 1.0), bend = x * x * x * (1.0 + x);
   float blur = frost + bend * refr * bez * 0.12;
-  vec3 c = frostDisp(uv + toUv(n * bend * refr * bez * 0.8), blur, toUv(n * bend * disp * bez * 0.035), blur > 0.5 ? 10 : 1);
+  vec2 off = n * bend * refr * bez * 0.8;
+  vec3 c = frostDisp(uv + toUv(off), blur, toUv(off * 0.16 * disp + n * bend * disp * bez * 0.04), blur > 0.5 ? 16 : 1);
   float l = luma(c);
   c = clamp(mix(vec3(l), c, 1.12), 0.0, 1.0);
   c = mix(c, vec3(1.0), 0.05);
@@ -71,6 +74,12 @@ float snoise(vec2 v) {
   return 130.0 * dot(m, g);
 }
 float sfbm(vec2 p) { float a = 0.5, r = 0.0; for (int i = 0; i < 8; i++) { if (float(i) >= uDetail) break; r += a * snoise(p); p = p * 2.02 + vec2(17.3, 9.1); a *= 0.5; } return r; }
+// Neuro: rotated layers of summed sines that knot into glowing, web-like filaments.
+float neuro(vec2 uv) {
+  vec2 acc = vec2(0.0), res = vec2(0.0); float sc = 8.0; mat2 rot = mat2(0.5403, 0.8415, -0.8415, 0.5403);
+  for (int j = 0; j < 15; j++) { uv = rot * uv; acc = rot * acc; vec2 layer = uv * sc + float(j) + acc; acc += sin(layer); res += (0.5 + 0.5 * cos(layer)) / sc; sc *= 1.2; }
+  return res.x + res.y;
+}
 vec2 cellPt(vec2 c) { return vec2(hash(c), hash(c + 19.19)); }
 vec2 worley(vec2 p) {
   vec2 i = floor(p), f = fract(p); float f1 = 8.0, f2 = 8.0;
@@ -118,7 +127,9 @@ void main() {
       else if (uNoise == 2) { float am = 0.5, r = 0.0; vec2 pp = q; for (int i = 0; i < 8; i++) { if (float(i) >= uDetail) break; r += am * abs(snoise(pp)); pp = pp * 2.02 + 17.0; am *= 0.5; } v = r * 1.6; }
       else if (uNoise == 3) v = worley(q * 1.5).x;
       else if (uNoise == 4) { vec2 w = worley(q * 1.5); v = 1.0 - smoothstep(0.0, 0.35, w.y - w.x); }
-      else v = 0.5 + 0.5 * sin(q.x * 4.0 + sfbm(q) * 5.0);
+      else if (uNoise == 5) v = 0.5 + 0.5 * sin(q.x * 4.0 + sfbm(q) * 5.0);
+      else if (uNoise == 6) { float nn = neuro(q * 0.5); v = clamp(1.2 * pow(nn, 3.0) + pow(nn, 10.0) - 0.1, 0.0, 1.0); }
+      else { vec2 c = (p - 0.5) * a; float ang = atan(c.y, c.x), r = length(c) / 0.36; float n = snoise(vec2(cos(ang), sin(ang)) * 0.9 / max(uScale, 0.1) + uSeed * 0.37) * (0.2 + uWarp * 0.3) + 0.08 * snoise(vec2(cos(ang), sin(ang)) * 2.4 + uSeed); v = exp(-pow((r - 1.0 - n) / (0.1 + 0.12 / max(uStretch, 0.3)), 2.0)) * (0.85 + 0.15 * sfbm(q * 2.0)); }
     }
     lab = ramp(clamp((v - 0.5) * uContrast + 0.5, 0.0, 1.0));
   } else if (uType == 0) {
@@ -148,7 +159,7 @@ void main() {
 // a hairline catches the light on each rib's leading edge, and red and blue split slightly as they bend.
 void main() {
   vec2 dir = vec2(cos(uAngle), sin(uAngle)), nrm = vec2(-dir.y, dir.x);
-  int n = uFrost > 0.01 ? 6 : 1;
+  int n = uFrost > 0.01 ? 8 : 1;
   vec3 acc = vec3(0.0);
   for (int s = 0; s < 4; s++) {
     vec2 d = dp() + nrm * ((float(s) - 1.5) * 0.25 / uK);
@@ -179,6 +190,113 @@ void main() {
   vec3 outside = base.rgb * (1.0 - shadow);
   float aa = 0.75 / uK;
   o = vec4(mix(outside, inside, smoothstep(aa, -aa, sd)), base.a);
+}`,
+
+    bulge: `uniform float uAmt; uniform float uRad; uniform vec2 uC;
+// Bulge or pinch: inside the radius the image is magnified (or shrunk), easing back to 1:1 at the edge.
+void main() {
+  vec2 res = uRes / uK, c = uC * res, d = dp() - c;
+  float R = max(1.0, uRad * min(res.x, res.y)), r = length(d) / R;
+  float k = r < 1.0 ? max(0.05, 1.0 - uAmt * (1.0 - r * r) * (1.0 - r * r)) : 1.0;
+  o = tex(toUv(c + d * k));
+}`,
+
+    ripple: `uniform float uAmp; uniform float uLen; uniform float uDecay; uniform float uShade; uniform vec2 uC;
+// Concentric water ripples from a point, fading with distance, with a soft light on each crest.
+void main() {
+  vec2 res = uRes / uK, d = dp() - uC * res; float r = length(d), m = min(res.x, res.y);
+  float ph = r / uLen * 6.2831853, fade = exp(-r / max(1.0, uDecay * m));
+  vec2 dir = d / max(r, 1e-3);
+  vec4 c = tex(vUv + toUv(dir * sin(ph) * uAmp * fade));
+  o = vec4(c.rgb * (1.0 + uShade * 0.18 * cos(ph) * fade), c.a);
+}`,
+
+    water: `uniform float uAmt; uniform float uScale; uniform float uCaustic;
+// Water surface: a smooth noise height field bends the image, and bright caustic lines gather where it focuses light.
+float H(vec2 q) { return fbm(q) + 0.5 * fbm(q * 2.1 + vec2(4.7, 1.9)); }
+void main() {
+  vec2 q = dp() / uScale; float e = 0.12;
+  vec2 g = vec2(H(q + vec2(e, 0.0)) - H(q - vec2(e, 0.0)), H(q + vec2(0.0, e)) - H(q - vec2(0.0, e))) / (2.0 * e);
+  vec4 c = tex(vUv + toUv(g * uAmt * uScale * 0.06));
+  // Caustics: thin bright lines where a second, warped field crosses its midpoint.
+  float f = fbm(q * 1.6 + g * 0.35 + vec2(2.3, 8.1));
+  float caustic = pow(1.0 - smoothstep(0.0, 0.06, abs(f - 0.5)), 2.0);
+  o = vec4(clamp(c.rgb + uCaustic * 0.35 * caustic * (0.6 + 0.4 * c.rgb), 0.0, 1.0), c.a);
+}`,
+
+    cmyk: `uniform float uSize; uniform float uAngle; uniform vec3 uPaper;
+// Four-color halftone: cyan, magenta, yellow and black screens at their classic angles, overprinted on paper.
+float screenDot(vec2 d, float ang, int ch) {
+  mat2 R = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
+  vec2 g = R * d / uSize, cell = floor(g) + 0.5, f = g - cell;
+  vec3 rgb = tex(toUv(transpose(R) * cell * uSize)).rgb;
+  float k = 1.0 - max(rgb.r, max(rgb.g, rgb.b)), den = max(1e-4, 1.0 - k);
+  float v = ch == 0 ? (1.0 - rgb.r - k) / den : ch == 1 ? (1.0 - rgb.g - k) / den : ch == 2 ? (1.0 - rgb.b - k) / den : k;
+  float rad = sqrt(clamp(v, 0.0, 1.0)) * 0.62, aa = 0.8 / (uSize * uK);
+  return smoothstep(rad + aa, rad - aa, length(f));
+}
+void main() {
+  vec2 d = dp(); vec3 col = uPaper;
+  col *= mix(vec3(1.0), vec3(0.0, 0.66, 0.92), screenDot(d, uAngle + 0.2618, 0));
+  col *= mix(vec3(1.0), vec3(0.92, 0.1, 0.55), screenDot(d, uAngle + 1.309, 1));
+  col *= mix(vec3(1.0), vec3(1.0, 0.92, 0.0), screenDot(d, uAngle, 2));
+  col *= mix(vec3(1.0), vec3(0.12, 0.11, 0.12), screenDot(d, uAngle + 0.7854, 3));
+  o = vec4(col, tex(vUv).a);
+}`,
+
+    paper: `uniform float uCrumple; uniform float uFiber; uniform float uScale;
+// Paper: a crumpled height field lit from the top left, plus fine fibres and tooth.
+float P(vec2 q) { return fbm(q) + 0.45 * fbm(q * 2.3 + 7.1) + 0.2 * fbm(q * 5.1 + 3.3); }
+void main() {
+  vec4 c = tex(vUv);
+  vec2 q = dp() / uScale; float e = 0.01;
+  vec2 g = vec2(P(q + vec2(e, 0.0)) - P(q - vec2(e, 0.0)), P(q + vec2(0.0, e)) - P(q - vec2(0.0, e))) / (2.0 * e);
+  vec3 n = normalize(vec3(-g * uCrumple * 0.5, 1.0));
+  float light = dot(n, normalize(vec3(-0.5, 0.6, 0.7))) - 0.7;
+  vec2 fq = dp() * vec2(0.9, 0.06);
+  float fiber = vnoise(fq) * vnoise(fq * 2.3 + 4.0), tooth = hash(floor(dp() * uK)) - 0.5;
+  vec3 col = c.rgb * (1.0 + light * 0.5) - uFiber * (fiber * 0.09 - tooth * 0.03);
+  o = vec4(clamp(col, 0.0, 1.0), c.a);
+}`,
+
+    heatmap: `uniform float uGlow; uniform float uMix; uniform float uInvert;
+// Thermal camera: brightness, softened by a glow, mapped onto a heat ramp.
+vec3 heat(float t) {
+  vec3 a = vec3(0.02, 0.0, 0.12), b = vec3(0.35, 0.05, 0.6), c = vec3(0.9, 0.12, 0.25), d = vec3(1.0, 0.55, 0.05), e = vec3(1.0, 0.95, 0.6);
+  return t < 0.25 ? mix(a, b, t / 0.25) : t < 0.5 ? mix(b, c, (t - 0.25) / 0.25) : t < 0.75 ? mix(c, d, (t - 0.5) / 0.25) : mix(d, e, (t - 0.75) / 0.25);
+}
+void main() {
+  vec4 c = tex(vUv); float v = luma(c.rgb), acc = 0.0;
+  for (int i = 0; i < 12; i++) { float a = float(i) * 2.39996, r = sqrt((float(i) + 0.5) / 12.0) * uGlow; acc += luma(tex(vUv + toUv(vec2(cos(a), sin(a)) * r)).rgb); }
+  v = mix(v, acc / 12.0, 0.6);
+  if (uInvert > 0.5) v = 1.0 - v;
+  o = vec4(mix(c.rgb, heat(clamp(v, 0.0, 1.0)), uMix), c.a);
+}`,
+
+    chrome: `uniform float uStr; uniform float uBands; uniform float uSoft; uniform vec3 uTint; uniform float uMix;
+// Liquid metal: brightness becomes a soft height field whose surface reflects a banded studio environment.
+float Lm(vec2 uv) { float s = 0.0; for (int i = 0; i < 6; i++) { float a = float(i) * 1.0472; s += luma(tex(uv + toUv(vec2(cos(a), sin(a)) * uSoft * 0.6)).rgb); } return s / 6.0; }
+void main() {
+  vec4 c = tex(vUv); vec2 e = toUv(vec2(uSoft, 0.0)), f = toUv(vec2(0.0, uSoft));
+  vec2 g = vec2(Lm(vUv + e) - Lm(vUv - e), Lm(vUv + f) - Lm(vUv - f));
+  vec3 n = normalize(vec3(-g * uStr * 6.0, 1.0));
+  vec3 R = reflect(vec3(0.0, 0.0, -1.0), n);
+  float t = R.y * 0.5 + 0.5 + luma(c.rgb) * 0.35;
+  float env = 0.5 + 0.42 * cos(t * uBands * 6.2831853 + 0.6) * (0.75 + 0.25 * R.x);
+  env = 0.1 + 0.9 * mix(env, smoothstep(0.1, 0.95, env), 0.4) + pow(max(0.0, dot(R, normalize(vec3(-0.4, 0.6, 0.7)))), 24.0) * 0.6;
+  vec3 metal = clamp(env * mix(vec3(1.0), uTint, 0.7), 0.0, 1.0);
+  o = vec4(mix(c.rgb, metal, uMix), c.a);
+}`,
+
+    rays: `uniform float uLen; uniform float uThr; uniform float uInt; uniform vec2 uC;
+// God rays: bright parts of the image are smeared outward from a light point, as through haze.
+void main() {
+  vec4 base = tex(vUv);
+  vec2 dir = (vUv - uC) * uLen / 48.0, uv = vUv; vec3 acc = vec3(0.0); float w = 1.0, ws = 0.0;
+  float j = hash(gl_FragCoord.xy);
+  uv -= dir * j;
+  for (int i = 0; i < 48; i++) { uv -= dir; vec3 s = tex(uv).rgb; acc += max(s - uThr, 0.0) / max(1.0 - uThr, 0.05) * w; ws += w; w *= 0.965; }
+  o = vec4(clamp(base.rgb + acc / ws * uInt, 0.0, 1.0), base.a);
 }`,
 
     pixel: `uniform float uSize; uniform float uBevel;
@@ -389,7 +507,7 @@ void main() {
   };
 
   // Default pipeline order when effects are added; the app can reorder freely.
-  const ORDER = ["liquify", "wave", "swirl", "kaleido", "glass", "mesh", "lens", "blur", "bloom", "emboss", "gradmap", "posterize", "pixel", "voronoi", "halftone", "linescreen", "riso", "ascii", "dither", "scan", "chroma", "vignette", "grain"];
+  const ORDER = ["liquify", "wave", "swirl", "bulge", "ripple", "water", "kaleido", "glass", "mesh", "lens", "rays", "chrome", "heatmap", "paper", "cmyk", "blur", "bloom", "emboss", "gradmap", "posterize", "pixel", "voronoi", "halftone", "linescreen", "riso", "ascii", "dither", "scan", "chroma", "vignette", "grain"];
   const CHARSETS = { ascii: " .:-=+*#%@", blocks: " ░▒▓█", dots: " ·•●", binary: " 01", lines: " ─═│╬" };
 
   const hex3 = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
@@ -524,6 +642,14 @@ void main() {
         case "riso": return { uSize: e.size, uOff: e.offset, uGrain: e.grain, uInkA: hex3(e.inkA), uInkB: hex3(e.inkB), uPaper: hex3(e.paper) };
         case "voronoi": return { uCell: e.cell, uEdge: e.edge };
         case "scan": return { uSpace: e.spacing, uStr: e.strength };
+        case "bulge": return { uAmt: e.amount, uRad: e.radius, uC: [e.x, 1 - e.y] };
+        case "ripple": return { uAmp: e.amp, uLen: e.length, uDecay: e.decay, uShade: e.shade, uC: [e.x, 1 - e.y] };
+        case "water": return { uAmt: e.amount, uScale: e.scale, uCaustic: e.caustic };
+        case "cmyk": return { uSize: e.size, uAngle: rad(e.angle), uPaper: paper };
+        case "paper": return { uCrumple: e.crumple, uFiber: e.fiber, uScale: e.scale };
+        case "heatmap": return { uGlow: e.glow, uMix: e.mix, uInvert: e.invert ? 1 : 0 };
+        case "chrome": return { uStr: e.strength, uBands: e.bands, uSoft: e.soft, uTint: hex3(e.tint), uMix: e.mix };
+        case "rays": return { uLen: e.length, uThr: e.threshold, uInt: e.intensity, uC: [e.x, 1 - e.y] };
         case "grain": return { uAmt: e.amount, uSize: e.size, uMono: e.mono ? 1 : 0, uSoft: e.soft ? 1 : 0 };
       }
       return {};
@@ -542,7 +668,7 @@ void main() {
         draw("gradient", srcTex, targets.list[0].f, {
           uType: ["mesh", "linear", "radial", "conic", "flow", "noise"].indexOf(g.type), uN: n,
           uScale: g.scale ?? 1.2, uDetail: g.detail ?? 3, uStretch: g.stretch ?? 1, uContrast: g.contrast ?? 1,
-          uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble"].indexOf(g.noise || "clouds"),
+          uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring"].indexOf(g.noise || "clouds"),
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
           uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle),
         }, w, h, k, job.seed);

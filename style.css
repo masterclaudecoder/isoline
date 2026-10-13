@@ -61,14 +61,17 @@ button { cursor: pointer; }
 .slots, .options {
   background: var(--panel); border-radius: 18px; box-shadow: var(--raised); overflow-y: auto; overscroll-behavior: contain; min-height: 0;
 }
-/* The gutter is always reserved on both sides, so content doesn't shift when a scrollbar appears; padding is trimmed by the gutter width to compensate. */
-.slots, .options { scrollbar-gutter: stable both-edges; }
-.slots { padding: 18px 2px 18px; }
-.options { padding: 18px 8px 24px; }
-@supports (-moz-appearance: none) { .slots { padding-inline: 6px; } .options { padding-inline: 12px; } }
+/* The scrollbar gutter is always reserved on the right, so content doesn't shift when a scrollbar appears;
+   the right padding is trimmed by the gutter width so the content still sits centered. */
+.slots, .options { scrollbar-gutter: stable; }
+.slots { padding: 18px 2px 18px 14px; }
+.options { padding: 18px 8px 24px 20px; }
+@supports (-moz-appearance: none) { .slots { padding-right: 6px; } .options { padding-right: 12px; } }
 .col-title { font-size: 30px; font-weight: 600; font-stretch: 88%; letter-spacing: -0.03em; line-height: 1; margin: 0; }
 .slots .col-title { padding: 0 6px 14px; }
-.opt-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.opt-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+/* The first visible section sits as close to the title as the first slot does in Build. */
+.lead, .lead > h3.sub:first-child, .lead > .sub-head:first-child, .lead > .pal-head:first-child { margin-top: 0 !important; }
 .gh-tools { display: flex; align-items: center; gap: 6px; }
 .lede { margin: 0 0 16px; color: var(--muted); font-size: 13px; line-height: 1.45; }
 
