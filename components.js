@@ -441,9 +441,23 @@
     rules: () => { const on = K.rules.filter((r) => r.on && r.t.trim()).length, off = K.rules.length - on; return [on ? `${on} ${on === 1 ? "rule" : "rules"}` : "No rules", off ? `${off} switched off` : K.rules.length ? "All on" : "Add your own"]; },
   };
   // Built once and patched, so selection and text changes transition like the studio's build column.
-  $("cpSlots").innerHTML = SLOTS.map(([id, label, icon]) => `<div class="slot"><div class="slot-label">${label}</div><button class="tile" data-s="${id}"><span class="tile-th tile-ic">${ic(icon)}</span><span class="tile-text"><b></b><small></small></span>${ic("next")}</button></div>`).join("");
+  // Each tile shows its token at work, drawn with the kit's own variables and cropped close: a heading,
+  // a scrap of interface, a corner, a lifted card, a moving dot. They change as the tokens do, at the
+  // token duration and easing.
+  const TOK_TH = {
+    type: `<span class="tt-ag">Ag</span>`,
+    color: `<span class="tt-ui"><i class="tt-l1"></i><i class="tt-l2"></i><i class="tt-pill"></i></span>`,
+    artwork: `<span class="tt-art" id="cpArtTile"></span>`,
+    spacing: `<span class="tt-space"><i></i><i></i><i></i></span>`,
+    radius: `<span class="tt-corner"></span>`,
+    elevation: `<span class="tt-card"></span>`,
+    motion: `<span class="tt-move"><i></i></span>`,
+    rules: `<span class="tt-rules"><i></i><i></i><i></i><i></i></span>`,
+  };
+  $("cpSlots").innerHTML = SLOTS.map(([id, label]) => `<div class="slot"><div class="slot-label">${label}</div><button class="tile" data-s="${id}"><span class="tile-th tok-th" data-tt="${id}">${TOK_TH[id]}</span><span class="tile-text"><b></b><small></small></span>${ic("next")}</button></div>`).join("");
   const setText = (el, v) => { if (el.textContent === v) return; el.textContent = v; if (!root.UI?.reduce.matches && !build.hidden) el.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 220 + Math.random() * 80, easing: "cubic-bezier(.22,1,.36,1)" }); };
   function renderSlots() {
+    vars($("cpSlots"));
     for (const t of $("cpSlots").querySelectorAll("[data-s]")) {
       const [title, fact] = slotInfo[t.dataset.s]();
       t.classList.toggle("on", K.slot === t.dataset.s);
@@ -476,6 +490,7 @@
     el.onclick = (e) => { const b = e.target.closest("button[data-v]"); if (!b) return; set(isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v); for (const x of el.querySelectorAll("button")) x.classList.toggle("on", x === b); changed(); };
     host.appendChild(el); return el;
   }
+  const dd = (el, label) => (root.UI?.dropdown ? root.UI.dropdown(el, { label }) : el);
   const sub = (host, t, first) => host.insertAdjacentHTML("beforeend", `<h3 class="sub${first ? " first" : ""}">${t}</h3>`);
   const subHead = (host, t, right, first) => host.insertAdjacentHTML("beforeend", `<div class="sub-head${first ? " first" : ""}"><h3 class="sub">${t}</h3>${right}</div>`);
 
@@ -643,16 +658,18 @@
       o.appendChild(g);
     } else if (K.slot === "motion") {
       slider(o, "Duration", 60, 700, 10, () => K.dur, (v) => (K.dur = v), (v) => v + "ms");
-      sub(o, "Easing"); seg(o, [["linear", "Linear"], ["out", "Out"], ["inout", "In and out"], ["spring", "Spring"]], () => K.ease, (v) => (K.ease = v));
+      sub(o, "Easing"); dd(seg(o, [["linear", "Linear"], ["out", "Out"], ["inout", "In and out"], ["spring", "Spring"]], () => K.ease, (v) => (K.ease = v)), "Easing");
       o.insertAdjacentHTML("beforeend", `<button class="cp-demo" id="cpDemo"><i></i><span>Click to replay</span></button>`);
       const demo = $("cpDemo");
       demo.style.setProperty("--dur", K.dur + "ms"); demo.style.setProperty("--ease", EASE[K.ease]);
       demo.onclick = () => { demo.classList.remove("go"); void demo.offsetWidth; demo.classList.add("go"); };
       // How things arrive and leave: menus, dialogs, toasts and page sections all use these.
-      sub(o, "Appear");
-      seg(o, [["none", "None"], ["fade", "Fade"], ["rise", "Rise"], ["scale", "Scale"], ["blur", "Blur"]], () => K.enter, (v) => { K.enter = v; setTimeout(() => replay(false), 0); }, "wrap5");
-      sub(o, "Disappear");
-      seg(o, [["none", "None"], ["fade", "Fade"], ["sink", "Sink"], ["scale", "Scale"], ["blur", "Blur"]], () => K.exit, (v) => { K.exit = v; setTimeout(() => replay(true), 0); }, "wrap5");
+      const pair = document.createElement("div"); pair.className = "dd-pair"; o.appendChild(pair);
+      const colA = document.createElement("div"), colB = document.createElement("div"); pair.append(colA, colB);
+      sub(colA, "Appear");
+      dd(seg(colA, [["none", "None"], ["fade", "Fade"], ["rise", "Rise"], ["scale", "Scale"], ["blur", "Blur"]], () => K.enter, (v) => { K.enter = v; setTimeout(() => replay(false), 0); }), "Appear");
+      sub(colB, "Disappear");
+      dd(seg(colB, [["none", "None"], ["fade", "Fade"], ["sink", "Sink"], ["scale", "Scale"], ["blur", "Blur"]], () => K.exit, (v) => { K.exit = v; setTimeout(() => replay(true), 0); }), "Disappear");
       slider(o, "Stagger", 0, 120, 5, () => K.stagger, (v) => (K.stagger = v), (v) => (v ? v + "ms" : "Off"));
       // When it plays: once as the page loads, or as each section scrolls into view and back out.
       sub(o, "Plays");
@@ -716,7 +733,9 @@
     const [w, h] = pageSize();
     zoom = K.fit ? 1 : rzZoom || Math.min(1, aw / w, ah / h);
     frame.style.width = Math.round(w * zoom) + "px"; frame.style.height = Math.round(h * zoom) + "px";
-    kit.style.width = w + "px"; kit.style.minHeight = h + "px"; kit.style.setProperty("--z", zoom.toFixed(4));
+    // The page is as wide as the frame minus its vertical scrollbar, so it never scrolls sideways.
+    const sb = frame.offsetWidth - frame.clientWidth;
+    kit.style.width = (sb > 0 ? w - sb / zoom : w) + "px"; kit.style.minHeight = h + "px"; kit.style.setProperty("--z", zoom.toFixed(4));
     if (root.Shell?.route === "components") root.syncSize?.();
   }
   new ResizeObserver(() => { if (!build.hidden) fitKit(); }).observe(canvas);
@@ -803,7 +822,7 @@
     paintArtThumb();
   }
   if (K.art === "studio") setTimeout(refreshArt, 1500);
-  function paintArtThumb() { const th = $("cpArtTh"); if (th) th.style.backgroundImage = artURL ? `url("${artURL}")` : ""; }
+  function paintArtThumb() { for (const th of [$("cpArtTh"), $("cpArtTile")]) if (th) th.style.backgroundImage = artURL ? `url("${artURL}")` : ""; }
   // Full width: the token columns fold away so the preview gets the whole page.
   function setWide(on) {
     K.wide = on; save();

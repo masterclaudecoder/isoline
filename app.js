@@ -442,20 +442,23 @@
   const SLOT_DEFS = [["preset", "Preset"], ["generator", "Generator"], ["shape", "Shape"], ["lines", "Lines"], ["colors", "Colors"]];
   const slotEls = {};
   const slotList = $("slotList");
-  for (const [id, label] of SLOT_DEFS) {
+  // Steps are numbered, so the build reads as a sequence and the last ones (Effects, Motion) aren't missed.
+  const stepN = (n) => `<span class="step-n">${n}</span>`;
+  SLOT_DEFS.forEach(([id, label], i) => {
     const wrap = document.createElement("div");
-    wrap.className = "slot";
-    wrap.innerHTML = `<div class="slot-label">${label}</div><button class="tile" data-slot="${id}"><span class="tile-th" data-th="${id}">${id === "colors" ? `<span class="tile-sw"></span>` : ""}</span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
+    wrap.className = "slot slot-" + id;
+    wrap.innerHTML = `<div class="slot-label">${stepN(i + 1)}${label}</div><button class="tile" data-slot="${id}"><span class="tile-th" data-th="${id}">${id === "colors" ? `<span class="tile-sw"></span>` : ""}</span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
     slotList.appendChild(wrap); slotEls[id] = wrap;
-  }
+  });
   const fxSlot = document.createElement("div");
-  fxSlot.className = "slot";
-  fxSlot.innerHTML = `<div class="slot-label">Effects<span class="count" hidden></span></div><div class="fx-tiles" id="fxTiles"><button class="tile add" data-slot="addfx"><span class="tile-plus">${ic("plus")}</span><span class="tile-text"><b>Add effect</b><small></small></span></button></div>`;
+  fxSlot.className = "slot slot-fx";
+  fxSlot.innerHTML = `<div class="slot-label">${stepN(6)}Effects<span class="count" hidden></span></div><div class="fx-tiles" id="fxTiles"><button class="tile add" data-slot="addfx"><span class="tile-plus">${ic("plus")}</span><span class="tile-text"><b>Add effect</b><small></small></span></button></div>`;
   slotList.appendChild(fxSlot);
   const fxTiles = fxSlot.querySelector(".fx-tiles"), addTile = fxSlot.querySelector(".tile.add"), countEl = fxSlot.querySelector(".count");
   const motionSlot = document.createElement("div");
-  motionSlot.className = "slot";
-  motionSlot.innerHTML = `<div class="slot-label">Motion</div><button class="tile" data-slot="motion"><span class="tile-th" data-th="motion"></span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
+  // Motion is the last step and the easiest to miss, so its tile is a wide banner with the loop playing.
+  motionSlot.className = "slot slot-motion";
+  motionSlot.innerHTML = `<div class="slot-label">${stepN(7)}Motion</div><button class="tile" data-slot="motion"><span class="tile-th" data-th="motion"></span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
   slotList.appendChild(motionSlot);
   const EASE = "cubic-bezier(.2,.8,.2,1)";
   const animOK = () => !reduceMotion.matches && !document.body.classList.contains("boot");
@@ -478,6 +481,10 @@
       const wrap = slotEls[id], t = wrap.querySelector(".tile"), [title, sub] = slotInfo(id);
       const show = !slotWhen[id] || slotWhen[id]();
       if (wrap.hidden === show) wrap.hidden = !show; // folds open and closed in CSS
+    }
+    { let n = 0; for (const w of slotList.children) { const el = w.querySelector(".step-n"); if (el && !w.hidden) setText(el, String(++n)); } }
+    for (const [id] of SLOT_DEFS) {
+      const wrap = slotEls[id], t = wrap.querySelector(".tile"), [title, sub] = slotInfo(id);
       t.classList.toggle("on", P.slot === id);
       setText(t.querySelector("b"), title); setText(t.querySelector("small"), sub);
     }
@@ -497,7 +504,7 @@
       t.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.95)" }], { duration: 200, easing: EASE }).onfinish = () => t.remove();
     }
     addTile.classList.toggle("on", P.slot === "addfx");
-    { const t = motionSlot.querySelector(".tile"), m = S.motion; t.classList.toggle("on", P.slot === "motion"); setText(t.querySelector("b"), MOTION_NAME[m.type]); setText(t.querySelector("small"), m.type === "still" ? "No motion" : `${m.dur}s, ${{ loop: "looping", pingpong: "ping-pong", once: "once" }[m.mode]}`); }
+    { const t = motionSlot.querySelector(".tile"), m = S.motion; t.classList.toggle("on", P.slot === "motion"); setText(t.querySelector("b"), MOTION_NAME[m.type]); t.classList.toggle("still", m.type === "still"); setText(t.querySelector("small"), m.type === "still" ? "Make it move" : `${m.dur}s, ${{ loop: "looping", pingpong: "ping-pong", once: "once" }[m.mode]}`); }
     setText(addTile.querySelector("small"), S.fxOrder.length ? `${S.fxOrder.length} applied` : "None applied");
     for (const t of fxTiles.querySelectorAll("[data-fx]")) setText(t.querySelector("small"), fxFact(t.dataset.fx));
     const n = String(S.fxOrder.length);
@@ -1033,7 +1040,18 @@
     update({ fade: true });
   }
   $("variation").onclick = () => { variation(); update({ fade: true }); };
-  $("surprise").onclick = surprise;
+  // Surprise throws a few sparks as it rolls a new look.
+  $("surprise").onclick = () => { burst($("surprise")); surprise(); };
+  function burst(btn) {
+    if (reduceMotion.matches) return;
+    const r = btn.getBoundingClientRect(), cx = r.left + 22, cy = r.top + r.height / 2;
+    for (let i = 0; i < 9; i++) {
+      const s = document.createElement("i"), a = (i / 9) * Math.PI * 2 + Math.random() * 0.5, d = 26 + Math.random() * 26, z = 5 + Math.random() * 6;
+      s.className = "spark-bit"; s.style.cssText = `left:${cx}px;top:${cy}px;width:${z}px;height:${z}px`;
+      document.body.appendChild(s);
+      s.animate([{ transform: "translate(-50%,-50%) scale(.2) rotate(0deg)", opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(a) * d}px), calc(-50% + ${Math.sin(a) * d}px)) scale(1) rotate(90deg)`, opacity: 1, offset: 0.55 }, { transform: `translate(calc(-50% + ${Math.cos(a) * d * 1.3}px), calc(-50% + ${Math.sin(a) * d * 1.3}px)) scale(0) rotate(160deg)`, opacity: 0 }], { duration: 640 + Math.random() * 200, easing: "cubic-bezier(.2,.8,.3,1)" }).onfinish = () => s.remove();
+    }
+  }
   $("undo").onclick = () => travel(-1);
   $("redo").onclick = () => travel(1);
 
@@ -1114,6 +1132,7 @@
   makeSeg($("motionMode"), () => S.motion.mode, (v) => (S.motion.mode = v));
   makeSeg($("motionDir"), () => S.motion.dir, (v) => (S.motion.dir = v));
   makeSeg($("motionEase"), () => S.motion.ease, (v) => (S.motion.ease = v));
+  window.UI?.dropdown($("motionEase"), { label: "Easing" });
   // Custom easing: drag the two handles of the cubic bezier.
   const bz = $("bezier");
   function drawBezier() {
@@ -1146,20 +1165,24 @@
     playRaf = requestAnimationFrame(playFrame);
     if (playBusy) return;
     playBusy = true;
-    const raw = (((now - playT0) / 1000) % S.motion.dur) / S.motion.dur, t0 = performance.now();
-    // Full detail while it keeps up; a lighter grid only when frames get slow.
-    paint(motionState(S, motionT(raw)), playSlow && S.source === "contours").then(() => { const ms = performance.now() - t0; playSlow = ms > 110; playBusy = false; watchPerf(now); });
+    const raw = (((now - playT0) / 1000) % S.motion.dur) / S.motion.dur;
+    paint(motionState(S, motionT(raw)), false, true).then(() => { playBusy = false; watchPerf(now); });
   }
-  function startPlay() { perfTimes = []; lowRes = false; startPlay0(); }
+  // Playback draws contours from a grid sized to the preview on screen rather than the full design, which
+  // is several times less work on a phone. The grid is chosen once per play and only coarsens once if
+  // frames stay slow, so the shape never flickers between two levels of detail.
+  let playRes = 0;
+  const pickPlayRes = (coarse = 1) => { const shown = Math.max(1, art.clientWidth) / S.w; playRes = Math.max(S.res, (2.4 / shown) * coarse); };
+  function startPlay() { perfTimes = []; lowRes = false; perfWarned = false; pickPlayRes(); startPlay0(); }
   function startPlay0() { if (S.motion.type === "still") { S.motion.type = "drift"; update(); } playing = true; playT0 = performance.now(); cancelAnimationFrame(playRaf); playRaf = requestAnimationFrame(playFrame); syncPlay(); }
   // Slow playback: after a few seconds under about 18 frames a second, offer to drop the expensive
   // parts (effects and motion). Raster frames also render smaller while it's slow.
-  let perfTimes = [], perfWarned = false;
+  let perfTimes = [], perfWarned = false, playT0Perf = 0;
   function watchPerf(now) {
     perfTimes.push(now); if (perfTimes.length > 40) perfTimes.shift();
-    if (perfWarned || perfTimes.length < 40 || now - playT0 < 3000) return;
+    if (perfWarned || perfTimes.length < 40 || now - Math.max(playT0, playT0Perf) < 3000) return;
     const fps = 1000 / ((perfTimes[perfTimes.length - 1] - perfTimes[0]) / (perfTimes.length - 1));
-    lowRes = fps < 24;
+    if (fps < 24 && !lowRes) { lowRes = true; pickPlayRes(1.5); perfTimes = []; playT0Perf = now; return; }
     if (fps < 18) { perfWarned = true; $("perfNote").hidden = false; $("perfFx").hidden = !S.fxOrder.length; }
   }
   $("perfFx").onclick = () => { S.fxOrder = []; $("perfNote").hidden = true; update(); toast("Effects removed. Undo brings them back."); };
@@ -1577,9 +1600,13 @@
       return;
     }
     if (fmt === "svg") { facts([["Dimensions", dims], ["File size", fmtBytes(new Blob([current.svg]).size)]]); return; }
-    facts([["Dimensions", dims], ["File size", "Measuring"]]);
     const tok = ++exportTok, key = JSON.stringify(S);
-    pngBlob(S.pngScale).then((b) => { if (tok !== exportTok) return; pngCache = { key, blob: b }; facts([["Dimensions", dims], ["File size", fmtBytes(b.size)]]); }).catch(() => facts([["Dimensions", dims], ["File size", "Unknown"]]));
+    if (pngCache?.key === key && pngCache.scale === S.pngScale) { facts([["Dimensions", dims], ["File size", fmtBytes(pngCache.blob.size)]]); return; }
+    facts([["Dimensions", dims], ["File size", "Measuring"]]);
+    // Measuring renders the full PNG, which is heavy. It waits until the menu has finished opening so the
+    // opening animation never stalls on it.
+    setTimeout(() => { if (tok !== exportTok || $("exportMenu").hidden) return; measure(); }, 420);
+    const measure = () => pngBlob(S.pngScale).then((b) => { if (tok !== exportTok) return; pngCache = { key, scale: S.pngScale, blob: b }; facts([["Dimensions", dims], ["File size", fmtBytes(b.size)]]); }).catch(() => facts([["Dimensions", dims], ["File size", "Unknown"]]));
   }
   $("fname").oninput = (e) => { e.target.dataset.edited = e.target.value ? "1" : ""; };
   $("fmt").onclick = (e) => { const b = e.target.closest("button"); if (b && !b.disabled) { S.fmt = b.dataset.v; save(); refreshExport(); } };
@@ -1661,6 +1688,7 @@
   const thumbCanvas = document.createElement("canvas");
   try { FXR = window.TopoFX.createFX(fxCanvas); } catch (e) { FXR = null; }
   try { TFX = window.TopoFX.createFX(thumbCanvas); } catch (e) { TFX = null; }
+  setTimeout(() => { FXR?.warm?.(); TFX?.warm?.(); }, 0);
   let current = { svg: "", raster: false }, raf = 0, anim = 0, painted = null, paintTok = 0, fxWarned = false;
   const rasterCanvas = document.createElement("canvas"), thumbRaster = document.createElement("canvas"), baseCanvas = document.createElement("canvas");
   function rasterize(target, svg, w, h) {
@@ -1689,19 +1717,19 @@
     art.style.height = Math.max(40, S.h * sc) + "px";
   }
   function previewDims(st) {
-    const dpr = lowRes && playing ? 1 : Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(playing ? (lowRes ? 1 : 1.5) : 2, window.devicePixelRatio || 1);
     let w = Math.max(64, Math.round(art.clientWidth * dpr)), h = Math.round((w * st.h) / st.w);
-    const cap = lowRes && playing ? 1200 : 2200, m = Math.max(w, h);
+    const cap = playing ? (lowRes ? 1000 : 1600) : 2200, m = Math.max(w, h);
     if (m > cap) { w = Math.round((w * cap) / m); h = Math.round((h * cap) / m); }
     return { w, h };
   }
-  async function paint(st, draft) {
+  async function paint(st, draft, play = false) {
     const tok = ++paintTok, t0 = performance.now();
     fit();
     let raster = isRaster(st);
     if (raster && !FXR) { raster = false; if (!fxWarned) { fxWarned = true; toast("This browser can't run WebGL2, so gradients and effects are off."); } }
     let svg = "";
-    if (st.source === "contours") svg = T.buildSVG(st, draft ? { res: Math.max(st.res * 2, 7) } : {}).svg;
+    if (st.source === "contours") svg = T.buildSVG(st, play && playRes ? { res: playRes } : draft ? { res: Math.max(st.res * 2, 7) } : {}).svg;
     if (raster) {
       const { w, h } = previewDims(st);
       let image = null;
@@ -1728,11 +1756,19 @@
   }
 
   // ---------- previews ----------
-  let queue = [], pumping = false, previewT = 0;
+  let queue = [], pumping = false, previewT = 0, quietUntil = 0;
+  const quiet = (ms = 500) => (quietUntil = Math.max(quietUntil, performance.now() + ms));
+  document.addEventListener("pointerdown", (e) => { if (e.target.closest(".top button, .dd-btn, .bar-btn, .tile")) quiet(); }, true);
   function enqueue(jobs) { queue = jobs; if (!pumping) pump(); }
   async function pump() {
     pumping = true;
-    while (queue.length) { const j = queue.shift(); try { await j(); } catch (e) {} await new Promise((r) => setTimeout(r, 0)); }
+    while (queue.length) {
+      // Thumbnails wait while shaders are still compiling in the background rather than blocking on them.
+      for (let n = 0; TFX?.ready && !TFX.ready() && n < 60; n++) await new Promise((r) => setTimeout(r, 50));
+      // And while a menu or panel is opening, so its animation gets the frames.
+      while (performance.now() < quietUntil) await new Promise((r) => setTimeout(r, quietUntil - performance.now() + 10));
+      const j = queue.shift(); try { await j(); } catch (e) {} await new Promise((r) => setTimeout(r, 0));
+    }
     pumping = false;
   }
   // New thumbnails fade in over the old ones, which leave once the fade is done.
@@ -1754,8 +1790,8 @@
   const svgNode = (markup) => { const t = document.createElement("template"); t.innerHTML = markup.trim(); return t.content.firstChild; };
   // Render a state into a thumbnail slot at a 16:10 frame.
   // Contour previews zoom into the center so individual lines stay readable at thumbnail size.
-  async function thumb(slot, st, w = 200) {
-    const h = Math.round(w * 0.625), s = { ...st, h: Math.round(st.w * 0.625) };
+  async function thumb(slot, st, w = 200, ar = 0.625) {
+    const h = Math.round(w * ar), s = { ...st, h: Math.round(st.w * ar) };
     if (!isRaster(s) || !TFX) {
       if (s.source !== "contours") { slot.innerHTML = ""; return null; }
       const z = 2, W = w * z, H = h * z;
@@ -1839,10 +1875,11 @@
     if (key === motionKey && el.children.length) return;
     motionKey = key;
     const tok = ++motionTok;
-    if (S.motion.type === "still" || reduceMotion.matches) { await thumb(el, S, 64); return; }
-    const N = 24, w = 64, h = 40, W = 128, H = 80, frames = [];
+    // A wide strip, since the Motion tile is a banner.
+    if (S.motion.type === "still" || reduceMotion.matches) { await thumb(el, S, 128, 0.375); return; }
+    const N = 24, w = 128, h = 48, W = 256, H = 96, frames = [];
     for (let k = 0; k < N; k++) {
-      const st = { ...motionState(S, motionT(k / N)), h: Math.round(S.w * 0.625) };
+      const st = { ...motionState(S, motionT(k / N)), h: Math.round(S.w * 0.375) };
       const f = document.createElement("canvas"); f.width = W; f.height = H;
       if (!isRaster(st) || !TFX) await rasterize(f, thumbSVG(st, w, h), W, H);
       else {

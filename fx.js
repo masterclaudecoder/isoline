@@ -290,7 +290,9 @@ void main() {
 
     chrome: `uniform float uStr; uniform float uBands; uniform float uSoft; uniform vec3 uTint; uniform float uMix;
 // Liquid metal: brightness becomes a soft height field whose surface reflects a banded studio environment.
-float Lm(vec2 uv) { float s = 0.0; for (int i = 0; i < 6; i++) { float a = float(i) * 1.0472; s += luma(tex(uv + toUv(vec2(cos(a), sin(a)) * uSoft * 0.6)).rgb); } return s / 6.0; }
+// Heights are averaged over two rings of samples, so hard color edges become smooth slopes. A single
+// small ring left steep steps that flashed as the edges moved in motion.
+float Lm(vec2 uv) { float s = luma(tex(uv).rgb) * 0.5; for (int i = 0; i < 8; i++) { float a = float(i) * 0.7854; vec2 d = vec2(cos(a), sin(a)) * uSoft; s += luma(tex(uv + toUv(d * 0.55)).rgb) + 0.75 * luma(tex(uv + toUv(d.yx * vec2(1.0, -1.0) * 1.1)).rgb); } return s / 14.5; }
 void main() {
   vec4 c = tex(vUv); vec2 e = toUv(vec2(uSoft, 0.0)), f = toUv(vec2(0.0, uSoft));
   vec2 g = vec2(Lm(vUv + e) - Lm(vUv - e), Lm(vUv + f) - Lm(vUv - f));
@@ -536,25 +538,34 @@ void main() {
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
 
+    // Programs compile in the background where the browser can (KHR_parallel_shader_compile): warm()
+    // starts every one without waiting, ready() reports whether they have all finished, and a program's
+    // status is only read when it is first drawn with, so nothing stalls the page while shaders build.
+    const par = gl.getExtension("KHR_parallel_shader_compile");
     const progs = {};
-    function program(name) {
+    function start(name) {
       if (progs[name]) return progs[name];
-      const sh = (type, src) => {
-        const s = gl.createShader(type);
-        gl.shaderSource(s, src); gl.compileShader(s);
-        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(name + ": " + gl.getShaderInfoLog(s));
-        return s;
-      };
-      const p = gl.createProgram();
-      gl.attachShader(p, sh(gl.VERTEX_SHADER, VS));
-      gl.attachShader(p, sh(gl.FRAGMENT_SHADER, HEAD + SHADERS[name]));
+      const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+      const p = gl.createProgram(), vs = sh(gl.VERTEX_SHADER, VS), fs = sh(gl.FRAGMENT_SHADER, HEAD + SHADERS[name]);
+      gl.attachShader(p, vs); gl.attachShader(p, fs);
       gl.bindAttribLocation(p, 0, "aPos");
       gl.linkProgram(p);
-      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(name + ": " + gl.getProgramInfoLog(p));
       const locs = {};
-      progs[name] = { p, loc: (u) => (u in locs ? locs[u] : (locs[u] = gl.getUniformLocation(p, u))) };
-      return progs[name];
+      return (progs[name] = { p, vs, fs, checked: false, loc: (u) => (u in locs ? locs[u] : (locs[u] = gl.getUniformLocation(p, u))) });
     }
+    function program(name) {
+      const pr = start(name);
+      if (!pr.checked) {
+        pr.checked = true;
+        if (!gl.getProgramParameter(pr.p, gl.LINK_STATUS)) {
+          const why = gl.getShaderParameter(pr.fs, gl.COMPILE_STATUS) ? gl.getProgramInfoLog(pr.p) : gl.getShaderInfoLog(pr.fs);
+          delete progs[name]; throw new Error(name + ": " + why);
+        }
+      }
+      return pr;
+    }
+    const warm = () => { if (par) for (const name of Object.keys(SHADERS)) start(name); };
+    const ready = () => !par || Object.values(progs).every((pr) => pr.checked || gl.getProgramParameter(pr.p, par.COMPLETION_STATUS_KHR));
 
     const newTex = () => {
       const t = gl.createTexture();
@@ -707,7 +718,7 @@ void main() {
       return { w, h };
     }
 
-    return { render, maxSize };
+    return { render, maxSize, warm, ready };
   }
 
   root.TopoFX = { createFX, ORDER, CHARSETS };

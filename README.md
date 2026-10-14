@@ -48,7 +48,7 @@ The Motion slot makes the design loop seamlessly:
 - **Flow:** contour lines flow outward, or a gradient's colors sway.
 - **Breathe:** the shape keeps morphing along a closed path through the noise, so it never visibly reverses and flows back into where it started.
 
-Each motion has a loop length, amplitude and seed, plus loop, ping-pong or once playback, forward or reverse, and easing. The easing is a preset or a custom cubic bezier you drag. Effects with randomness have their own seed. Play previews the loop on the canvas. If playback runs slow, the preview drops to a lighter resolution and a note offers to remove effects or stop motion in one click. Video is a format in the Export menu, alongside SVG and PNG, and every export shows its progress. **Export MP4** renders every frame at an exact timestamp using the browser's video encoder (H.264, or VP9 where H.264 isn't available) and [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (MIT). Browsers without WebCodecs record a WebM in real time.
+Each motion has a loop length, amplitude and seed, plus loop, ping-pong or once playback, forward or reverse, and easing. The easing is a preset or a custom cubic bezier you drag. Effects with randomness have their own seed. Play previews the loop on the canvas. Playback draws contours at the size they appear on screen, and if it still runs slow the preview gets lighter once and a note offers to remove effects or stop motion. Exports always render every frame at full quality. Video is a format in the Export menu, alongside SVG and PNG, and every export shows its progress. **Export MP4** renders every frame at an exact timestamp using the browser's video encoder (H.264, or VP9 where H.264 isn't available) and [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (MIT). Browsers without WebCodecs record a WebM in real time.
 
 ## Lines (contours only)
 Lines (strokes), Bands (filled stripes, PewDiePie-style) or Layers (stacked fills). Count or gap, bias, weight, swell, taper, accent lines, smoothing and cleanup.
@@ -65,6 +65,7 @@ Lines (strokes), Bands (filled stripes, PewDiePie-style) or Layers (stacked fill
 ## Workflow
 - The bar under the canvas holds undo, redo, **Variation** (`R`: new seed and small nudges, same look) and **Surprise** (`⇧R`). Half the time Surprise applies a whole preset. Otherwise it takes one preset's shape and lines with a random palette, and another preset's effects or none. It always crossfades.
 - A dice in each panel randomizes just that layer.
+- The build steps are numbered, and Motion closes the list as a wide tile playing the loop.
 - **Safe values** (in settings): keeps everything in ranges that render cleanly. **Unlock values** lets you type past slider limits, after you confirm.
 - Click any value to type it. Settings import and export as JSON. `⌘Z` / `⇧⌘Z` undo and redo.
 - **Export:** SVG for contours, PNG 1–4× for everything, MP4 or GIF for motion, or `C` to copy for Figma.

@@ -13,6 +13,8 @@
 <meta property="og:description" content="Patterns, gradients and motion, color palettes, and design tokens with briefs for your AI agents. Free, in the browser.">
 <meta property="og:url" content="https://masterclaudecoder.github.io/isoline/">
 <meta property="og:image" content="https://masterclaudecoder.github.io/isoline/og.jpg">
+<meta property="og:image:secure_url" content="https://masterclaudecoder.github.io/isoline/og.jpg">
+<meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="The Isoline logo beside a soft orange and violet gradient made in the Studio">
@@ -260,6 +262,7 @@
           <p class="hint mono" id="bezVals"></p>
         </div>
         <button class="btn play-btn" id="playBtn"><svg class="ic"><use href="#i-play"/></svg><span>Play</span></button>
+        <p class="note play-note">The preview may stutter on slower devices. Exports render every frame, so videos and GIFs play smoothly.</p>
       </div>
 
       <div class="panel-sec" data-panel="addfx">
@@ -276,14 +279,14 @@
           <svg class="overlay" id="ov"></svg>
         </div>
         <div class="stage-meta mono"><span class="kind" id="kind">SVG</span><span id="ms"></span></div>
-        <div class="perf-note" id="perfNote" role="status" hidden><span><b>Playback is slow here</b><small>Effects and motion are the heaviest parts.</small></span><button class="btn sm" id="perfFx">Remove effects</button><button class="btn sm" id="perfStop">Stop motion</button><button class="ib xs" id="perfX" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></div>
+        <div class="perf-note" id="perfNote" role="status" hidden><span><b>Playback is slow here</b><small>Exports stay smooth. To lighten the preview:</small></span><button class="btn sm" id="perfFx">Remove effects</button><button class="btn sm" id="perfStop">Stop motion</button><button class="ib xs" id="perfX" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></div>
         <div class="stage-bar glass" role="toolbar" aria-label="Canvas">
           <button class="ib" id="undo" title="Undo (⌘Z)" aria-label="Undo"><svg class="ic"><use href="#i-undo"/></svg></button>
           <button class="ib" id="redo" title="Redo (⇧⌘Z)" aria-label="Redo"><svg class="ic"><use href="#i-redo"/></svg></button>
           <button class="ib" id="barPlay" title="Play motion" aria-label="Play motion" hidden><svg class="ic"><use href="#i-play"/></svg></button>
           <span class="bar-sep"></span>
           <button class="bar-btn" id="variation" title="Same look, new variation">Variation<kbd>R</kbd></button>
-          <button class="bar-btn" id="surprise" title="A new look from the presets">Surprise<kbd><svg class="ic kbd-ic"><use href="#i-shift"/></svg>R</kbd></button>
+          <button class="bar-btn surprise" id="surprise" title="A new look from the presets"><span class="spark" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 1.5c.6 4.6 3.9 7.9 8.5 8.5-4.6.6-7.9 3.9-8.5 8.5-.6-4.6-3.9-7.9-8.5-8.5 4.6-.6 7.9-3.9 8.5-8.5Z"/></svg><svg viewBox="0 0 20 20"><path d="M10 1.5c.6 4.6 3.9 7.9 8.5 8.5-4.6.6-7.9 3.9-8.5 8.5-.6-4.6-3.9-7.9-8.5-8.5 4.6-.6 7.9-3.9 8.5-8.5Z"/></svg><svg viewBox="0 0 20 20"><path d="M10 1.5c.6 4.6 3.9 7.9 8.5 8.5-4.6.6-7.9 3.9-8.5 8.5-.6-4.6-3.9-7.9-8.5-8.5 4.6-.6 7.9-3.9 8.5-8.5Z"/></svg></span><span>Surprise</span><kbd><svg class="ic kbd-ic"><use href="#i-shift"/></svg>R</kbd></button>
         </div>
       </div>
     </section>

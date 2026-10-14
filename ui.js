@@ -199,5 +199,49 @@
     return { place };
   }
 
-  root.UI = { flip, swap, autosize, collapse, resizable, tip: { show, hide }, reduce };
+  // ---------- dropdowns ----------
+  // Turns a segmented control into a compact dropdown. The option buttons move into the menu as they are,
+  // so whatever already handles their clicks and marks the chosen one keeps working, and the trigger shows
+  // the chosen label. The menu is placed against the viewport, so scrolling panels never clip it.
+  let openDD = null;
+  function dropdown(seg, { label = "" } = {}) {
+    const wrap = document.createElement("div"), btn = document.createElement("button"), pop = document.createElement("div");
+    wrap.className = "dd"; btn.type = "button"; btn.className = "dd-btn"; if (label) btn.setAttribute("aria-label", label);
+    btn.innerHTML = `<span class="dd-v"></span><svg class="ic"><use href="#i-chev"/></svg>`;
+    pop.className = "pop dd-pop"; pop.hidden = true; pop.setAttribute("role", "listbox");
+    // The menu lives on the body: a transformed panel would otherwise trap its fixed position.
+    for (const old of document.querySelectorAll("body > .dd-pop")) if (!old._wrap?.isConnected) old.remove();
+    seg.replaceWith(wrap); wrap.append(btn); pop.appendChild(seg); pop._wrap = wrap; document.body.appendChild(pop);
+    seg.querySelector(":scope > .seg-ind")?.remove();
+    seg.classList.remove("seg", "has-ind", "sm", "wrap", "wrap4", "wrap5"); seg.classList.add("dd-list");
+    segs.delete(seg); ro.unobserve(seg);
+    for (const b of seg.querySelectorAll("button")) b.classList.add("opt");
+    const val = btn.querySelector(".dd-v");
+    const sync = () => { const on = seg.querySelector("button.on"); const t = on ? on.textContent.trim() : ""; if (val.textContent !== t) { val.textContent = t; if (!reduce.matches && wrap.isConnected) val.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 220, easing: "cubic-bezier(.22,1,.36,1)" }); } };
+    new MutationObserver(sync).observe(seg, { subtree: true, attributes: true, attributeFilter: ["class"] });
+    sync();
+    const close = () => { pop.hidden = true; btn.classList.remove("open"); if (openDD?.close === close) openDD = null; };
+    const place = () => {
+      const r = btn.getBoundingClientRect(), h = pop.offsetHeight, below = innerHeight - r.bottom - 8;
+      pop.style.left = Math.max(8, Math.min(r.left, innerWidth - pop.offsetWidth - 8)) + "px";
+      pop.style.minWidth = r.width + "px";
+      const up = below < h + 6 && r.top > below;
+      pop.style.top = (up ? r.top - h - 6 : r.bottom + 6) + "px";
+      pop.classList.toggle("above", up);
+    };
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (!wrap.isConnected) return;
+      if (!pop.hidden) { close(); return; }
+      openDD?.close(); openDD = { close, wrap, pop };
+      pop.hidden = false; btn.classList.add("open"); place();
+    });
+    seg.addEventListener("click", (e) => { if (e.target.closest("button")) requestAnimationFrame(close); });
+    return wrap;
+  }
+  document.addEventListener("pointerdown", (e) => { if (openDD && !openDD.wrap.contains(e.target) && !openDD.pop.contains(e.target)) openDD.close(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") openDD?.close(); });
+  addEventListener("scroll", (e) => { if (openDD && !openDD.pop.contains(e.target)) openDD.close(); }, true);
+
+  root.UI = { flip, swap, autosize, collapse, resizable, dropdown, tip: { show, hide }, reduce };
 })(window);

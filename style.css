@@ -702,7 +702,7 @@ body:not([data-route="studio"]) .mini { display: none; }
 .cp-st-l, .cp-st-r { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .cp-st-r { justify-content: flex-end; }
 .cp-canvas { position: relative; min-height: 0; border-radius: 18px; display: grid; place-items: center; padding: 26px; overflow: hidden; background: var(--well) radial-gradient(rgba(var(--line-rgb), .07) 1px, transparent 1px) 0 0 / 18px 18px; box-shadow: var(--sunken); }
-.kit-frame { overflow: auto; overscroll-behavior: contain; border-radius: 10px; background: var(--k-bg, var(--panel)); box-shadow: 0 0 0 1px rgba(var(--line-rgb), .08), 0 10px 30px -14px rgba(var(--shadow-rgb), .28); min-height: 0; view-transition-name: kit-frame; }
+.kit-frame { overflow: hidden auto; overscroll-behavior: contain; border-radius: 10px; background: var(--k-bg, var(--panel)); box-shadow: 0 0 0 1px rgba(var(--line-rgb), .08), 0 10px 30px -14px rgba(var(--shadow-rgb), .28); min-height: 0; view-transition-name: kit-frame; }
 
 /* The preview kit: styled only by its own --k-* tokens. */
 .comp-prev { overflow: hidden; position: relative; }
@@ -1464,7 +1464,6 @@ a.btn { text-decoration: none; color: inherit; }
   .cp-build .slots, .cp-build .options { padding: 14px 10px; }
 }
 @media (max-width: 640px) {
-  .cp-build #cpSlots .tile .tile-th { display: none !important; }
   .cp-st-r .size .btn.sm { padding: 0 8px; }
 }
 @media (max-width: 640px) {
@@ -1479,3 +1478,101 @@ a.btn { text-decoration: none; color: inherit; }
   .cp-stage-top > #cpLayout { order: 3; flex-basis: 100%; }
   #cpSizeSlot { display: none; }
 }
+.play-note { margin-top: 10px; text-align: center; }
+/* Phablets: on Components the bar stays one row, the brand, the Libraries and Builder switch centered,
+   then the actions. */
+@media (min-width: 641px) and (max-width: 900px) {
+  body[data-route="components"] .top { grid-template-columns: auto minmax(0, 1fr) auto; }
+  body[data-route="components"] .top > .cp-top { grid-column: 2; grid-row: 1; justify-self: center; }
+  body[data-route="components"] .top > .top-right { grid-column: 3; grid-row: 1; }
+}
+@media (min-width: 641px) and (max-width: 900px) {
+  .stage { height: 60vh; min-height: 360px; }
+  .cp-build .cp-canvas { height: 74vh; }
+}
+
+/* ---------- Surprise: the button worth pressing ---------- */
+/* An accent pill in the bar with a slow sheen and three twinkling sparks, and a burst on press. */
+.stage-bar .bar-btn.surprise, .glass.glass-live .bar-btn.surprise { position: relative; overflow: hidden; isolation: isolate; color: var(--on-accent, #fff); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, #fff), var(--accent)); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.18); padding-left: 8px; margin-left: 2px; }
+.stage-bar .bar-btn.surprise:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 74%, #fff), color-mix(in srgb, var(--accent) 92%, #fff)); }
+.stage-bar .bar-btn.surprise:active { transform: scale(.97); }
+.bar-btn.surprise::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.45) 48%, transparent 66%); translate: -120% 0; animation: sheen 4.8s cubic-bezier(.45,0,.2,1) 1.2s infinite; }
+@keyframes sheen { 0%, 62% { translate: -120% 0; } 100% { translate: 120% 0; } }
+.bar-btn.surprise kbd { color: inherit; background: rgba(255,255,255,.18); box-shadow: inset 0 0 0 1px rgba(255,255,255,.28), inset 0 -1.5px 0 rgba(0,0,0,.12); opacity: 1; }
+.spark { position: relative; width: 16px; height: 16px; flex: none; }
+.spark svg { position: absolute; fill: currentColor; stroke: none; animation: twinkle 2.4s ease-in-out infinite; }
+.spark svg:nth-child(1) { width: 13px; height: 13px; left: 0; top: 3px; }
+.spark svg:nth-child(2) { width: 7px; height: 7px; right: -1px; top: -1px; animation-delay: .8s; }
+.spark svg:nth-child(3) { width: 5px; height: 5px; right: 1px; bottom: -1px; animation-delay: 1.5s; }
+@keyframes twinkle { 0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; } 45% { transform: scale(.45) rotate(45deg); opacity: .55; } 60% { transform: scale(1.15) rotate(90deg); opacity: 1; } }
+.spark-bit { position: fixed; z-index: 80; pointer-events: none; background: var(--accent); clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); }
+@media (prefers-reduced-motion: reduce) { .bar-btn.surprise::after, .spark svg { animation: none; } }
+/* View transitions copy a bar's backdrop blur onto its transition group, which outlives the bar's own
+   fade and left an empty frosted rectangle behind. The snapshots already hold how the bar looked. */
+::view-transition-group(pt-bar), ::view-transition-group(stage-bar), ::view-transition-image-pair(pt-bar), ::view-transition-image-pair(stage-bar) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+/* ---------- build steps ---------- */
+/* Each step is numbered. Motion closes the list as a wide banner playing its loop, and invites a tap
+   while the design is still. */
+.step-n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 6px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; color: var(--muted); background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); margin-right: 2px; }
+.slot-motion .tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; row-gap: 10px; padding-top: 6px; }
+.slot-motion .tile-th { grid-column: 1 / -1; width: 100%; height: auto; aspect-ratio: 8 / 3; border-radius: 9px; }
+.slot-motion .tile .tile-text { padding-left: 4px; }
+.slot-motion .tile.still { background: color-mix(in srgb, var(--accent) 7%, var(--panel)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent); }
+.slot-motion .tile.still small { color: var(--accent-ink); font-weight: 600; }
+.slot-motion .tile.still .tile-th { opacity: .8; }
+@media (max-width: 900px) {
+  .slot-fx, .slot-motion { grid-column: 1 / -1; }
+
+}
+.slot-motion .tile-th canvas, .slot-motion .tile-th svg { object-fit: cover; }
+@media (max-width: 900px) { .slot-colors { grid-column: 1 / -1; } }
+
+/* ---------- builder token tiles: live specimens ---------- */
+.tok-th { position: relative; overflow: hidden; background: var(--k-bg); color: var(--k-text); box-shadow: inset 0 0 0 1px var(--hair); transition: background-color var(--k-dur) var(--k-ease); }
+.tok-th * { transition: all var(--k-dur) var(--k-ease); }
+.tt-ag { position: absolute; left: 7px; bottom: -9px; font: var(--k-hw) 36px/1 var(--k-head), system-ui, sans-serif; letter-spacing: var(--k-track); color: var(--k-text); }
+.tile:hover .tt-ag { translate: -4px 0; }
+.tt-ui { position: absolute; left: 10px; top: 9px; width: 70px; height: 44px; display: grid; align-content: start; gap: 4px; padding: 7px; background: var(--k-surface); border: 1px solid var(--k-border); border-radius: var(--k-r); }
+.tt-ui i { display: block; height: 4px; border-radius: 2px; }
+.tt-l1 { width: 30px; background: var(--k-text); } .tt-l2 { width: 22px; background: var(--k-muted); opacity: .7; }
+.tt-pill { width: 22px; height: 9px !important; margin-top: 2px; border-radius: var(--k-rb) !important; background: var(--k-accent); }
+.tile:hover .tt-pill { width: 28px; }
+.tt-art { position: absolute; inset: 0; background: radial-gradient(120% 90% at 20% 0%, color-mix(in srgb, var(--k-accent) 55%, var(--k-bg)), var(--k-bg) 70%) center / cover; }
+.tile:hover .tt-art { scale: 1.08; }
+.tt-space { position: absolute; left: 9px; top: 9px; display: flex; gap: var(--k-s2); }
+.tt-space i { width: 18px; height: 26px; border-radius: 3px; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-border); }
+.tt-space i:nth-child(2) { background: var(--k-accent); box-shadow: none; }
+.tile:hover .tt-space { gap: var(--k-s4); }
+.tt-corner { position: absolute; left: 14px; top: 10px; width: 90px; height: 60px; background: var(--k-surface); border: 1.5px solid var(--k-border); border-radius: calc(var(--k-r) * 1.6); }
+.tt-corner::after { content: ""; position: absolute; left: 8px; top: 8px; width: 16px; height: 9px; border-radius: var(--k-rb); background: var(--k-accent); }
+.tile:hover .tt-corner { translate: 3px 3px; }
+.tt-card { position: absolute; left: 12px; top: 11px; width: 80px; height: 50px; background: var(--k-surface); border-radius: var(--k-r); box-shadow: var(--k-shadow); }
+.tile:hover .tt-card { translate: 0 -2px; }
+.tt-move { position: absolute; left: 8px; right: 8px; top: 50%; height: 10px; margin-top: -5px; border-radius: 99px; background: color-mix(in srgb, var(--k-text) 7%, var(--k-bg)); }
+.tt-move i { position: absolute; left: 0; top: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--k-accent); transition: none; animation: tt-move calc(var(--k-dur) * 2 + 1600ms) var(--k-ease) infinite; }
+@keyframes tt-move { 0%, 20% { left: 0; } 50%, 70% { left: calc(100% - 10px); } 100% { left: 0; } }
+.tt-rules { position: absolute; left: 9px; top: 8px; display: grid; gap: 5px; }
+.tt-rules i { display: block; height: 3px; width: 46px; border-radius: 2px; background: var(--k-muted); opacity: .55; }
+.tt-rules i:first-child { width: 34px; background: var(--k-text); opacity: 1; }
+.tt-rules i:nth-child(3) { width: 38px; } .tt-rules i:nth-child(4) { width: 26px; }
+.tile:hover .tt-rules i { width: 50px; }
+@media (prefers-reduced-motion: reduce) { .tt-move i { animation: none; } }
+@media (max-width: 640px) {
+  .cp-build #cpSlots .tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; row-gap: 8px; }
+  .cp-build #cpSlots .tile .tile-th { display: block !important; grid-column: 1 / -1; width: 100%; height: 52px; }
+}
+
+/* ---------- dropdowns ---------- */
+.dd { position: relative; min-width: 0; }
+.dd-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 34px; padding: 0 8px 0 12px; border: 0; border-radius: 10px; background: var(--well); box-shadow: var(--sunken); color: var(--ink); font-size: 13px; font-weight: 600; text-align: left; transition: background .15s, box-shadow .15s; }
+.dd-btn:hover { background: color-mix(in srgb, var(--ink) 5%, var(--well)); }
+.dd-btn .ic { width: 16px; height: 16px; color: var(--muted); transition: transform .26s var(--ease); flex: none; }
+.dd-btn.open .ic { transform: rotate(180deg); }
+.dd-v { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pop.dd-pop { position: fixed; top: 0; left: 0; z-index: 60; padding: 4px; min-width: 160px; }
+.pop.dd-pop.above { transform-origin: bottom center; }
+.dd-list { display: grid; gap: 1px; }
+.dd-list .opt { padding: 7px 10px; font-size: 13px; }
+.dd-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dd-pair > div { min-width: 0; }
