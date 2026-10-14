@@ -27,8 +27,8 @@ A palette can be passed in the URL: #/palettes/2f6fdb-6a9f7a-d8a51f.
 Key settings: source ("contours" or "gradient"), pattern, mode ("lines", "bands", "layers", "shaded" for gradient bands), levels, gap, weight,
 line, line2, mids (extra inks), bg, grad.type ("mesh", "flow", "noise", "aura", "linear", "radial", "conic", "image"), grad.colors,
 fx.<id>.on with fxOrder for the effect stack, motion { type, dur, amt, mode, dir, ease }. Motion type ids: "drift", "breathe"
-(shown as Flow, the shape morphs), "flow" (shown as Breathe, lines swell and colors sway), "pulse".
-objects: up to 8 { kind ("sphere", "torus", "cube", "capsule", "blob", "pill", "image"), x, y, size, rot, tilt, spin, mat ("shaded",
+(shown as Flow, the shape morphs, linear/radial/conic blends stream), "flow" (shown as Breathe, lines swell, blends sway, fields swell), "pulse".
+objects: up to 8 { kind ("sphere", "torus", "cube", "capsule", "blob", "pyramid", "diamond", "image"), x, y, size, rot, tilt, spin, mat ("shaded",
 "design", "preset", "glass", "photo", "palette"), layer ("under" or "over" the effects), anim, speed (-5 to 5, whole numbers) }.
 
 ## Palettes

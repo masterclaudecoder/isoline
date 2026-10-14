@@ -26,7 +26,7 @@ The home page (`#/`) shows three tools as large cards. Moving between pages is o
 Everything animates: menus, popovers and dialogs fade in and out, rows and sections fold open and closed, segmented controls slide their selection, lists glide when they reorder, and theme changes crossfade. Every surface shares one hover. Tooltips are custom and appear after a short pause.
 
 ## How it works
-The left column is the build, made of one slot per layer: **Preset, Generator, Shape, Lines, Colors, Objects, Effects, Motion**. Click a slot to open its options in the middle column. On narrow screens, two or more effects or objects fold into a deck of cards; tap it to spread them out and reorder. every choice there has a live preview of your current design. Options are grouped into collapsible sections that remember whether you left them open, and a closed group shows a short summary of its values. The Motion tile plays a small loop of your design when motion is on. Effects stack: `+ Add effect` adds another, the count badge shows how many there are, drag the grip to reorder them, and × removes one.
+The left column is the build, made of one slot per layer: **Preset, Generator, Shape, Lines, Colors, Objects, Effects, Motion**. Click a slot to open its options in the middle column. On narrow screens, two or more effects or objects fold into a deck of cards; tap it to spread them out and reorder. every choice there has a live preview of your current design. Options are grouped into collapsible sections that remember whether you left them open, and a closed group shows a short summary of its values. Groups and settings explain themselves on hover, and shape, line and gradient settings also play a short loop of your design swept from low to high. Settings a generator ignores are hidden or dimmed with the reason. The Motion tile plays a small loop of your design when motion is on. Effects stack: `+ Add effect` adds another, the count badge shows how many there are, drag the grip to reorder them, and × removes one.
 
 ## Generators
 - **Canvas:** drag the handles that appear near the canvas edges to resize it. Your colors overlap when they run out of room, wrap only when they truly don't fit, and drag to reorder. Edit in Palettes opens them in the palette tool, and its button brings them back.
@@ -35,12 +35,12 @@ The left column is the build, made of one slot per layer: **Preset, Generator, S
 - **Mesh:** draggable color points blended in OKLab.
 - **Flow:** domain-warped simplex noise for soft, flowing color fields. Pair it with Grain.
 - **Noise:** clouds, ridges, billow, cells, veins, marble, neuro and smoke ring, with scale, detail, stretch, angle, warp and contrast. A setting a noise type ignores stays in place, dimmed, with a tooltip saying so.
-- **Aura:** after the reactive background of Yandex Music's My Wave. A soft body of color glows out of your darkest color, its outline wobbling in a few lobes, with smooth light lines winding through it. Size, wobble, edge, lines, line width, line light and color turn. Motion moves the lines themselves. No glow is baked in, so bloom or god rays go on top as effects.
+- **Aura:** after the reactive background of Yandex Music's My Wave. A soft body of color glows out of your darkest color, its outline wobbling in a few lobes, with thin light rings nested inside it. Each ring is a smaller copy of the outline whose lobes turn a little with depth, like stacked translucent layers, and the middle settles toward a round core. Size, wobble, edge, rings, ring width, ring light and color turn. Motion moves the rings themselves. No glow is baked in, so bloom or god rays go on top as effects.
 - **Linear, Radial, Conic** gradients.
 - **Image:** your own picture, filling the canvas, as a base for effects. It is kept in the browser outside the design state (one at a time), so undo history and saved settings stay small.
 
 ## Objects
-Objects sit on top of any generator. Add up to eight: a sphere, torus, cube, capsule, blob or pill, raymarched and lit from the upper left, or a picture card. Each sits under the effects (they apply to it) or over them, and drag their grips to change which draws on top. Each has its own material:
+Objects sit on top of any generator. Add up to eight: a sphere, torus, cube, capsule, blob, pyramid or diamond, raymarched and lit from the upper left, or a picture card. Each sits under the effects (they apply to it) or over them, and drag their grips to change which draws on top. Each has its own material:
 - **Shaded:** lit through your colors.
 - **Design:** wraps your current design round the shape, so it inherits the generator, lines and colors.
 - **Preset:** wraps a preset round it, projected from three sides so there's no seam.
@@ -57,25 +57,25 @@ The color picker has two modes: a color field, or sliders for the chosen format 
 ## Motion
 The Motion slot makes the design loop without a visible seam:
 - **Drift:** the field glides round a circle.
-- **Flow:** the shape keeps morphing along a closed path through the noise at an even pace, so it never visibly reverses or hurries, and flows back into where it started.
-- **Breathe:** contour lines swell outward, or a gradient's colors sway in and out.
+- **Flow:** the shape keeps morphing along a closed path through the noise at an even pace, so it never visibly reverses or hurries, and flows back into where it started. Linear, radial and conic blends stream instead: their colors run along the blend without end, so radial rings keep moving outward.
+- **Breathe:** contour lines swell outward. Blends sway their colors in and out, and mesh, flow and noise fields swell gently from the middle.
 - **Pulse:** four soft beats per loop push the field out from the center while it morphs a little.
 
 Hovering a motion type plays it on your own design in the tooltip, and hovering a playback, direction or easing shows its timing as a moving dot. Editing while it plays pauses the loop, lets the edit land, then crossfades the loop back in from its start.
 
-Each motion has a loop length, amplitude and seed, plus loop, ping-pong or once playback, forward or reverse, and easing. The easing is a preset or a custom cubic bezier you drag. Effects with randomness have their own seed. Play previews the loop on the canvas. Playback draws contours at the size they appear on screen. Frames are timed by how long the GPU takes to draw them, so a background tab or a pause never counts as slow. If they really are slow the preview gets lighter twice, then a note offers to remove effects or stop motion, once per visit. Exports always render every frame at full quality. Video is a format in the Export menu, alongside SVG and PNG, and every export shows its progress. **Export MP4** renders every frame at an exact timestamp using the browser's video encoder (H.264, or VP9 where H.264 isn't available) and [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (MIT). Browsers without WebCodecs record a WebM in real time.
+Each motion has a loop length, amplitude and seed, plus loop, ping-pong or once playback, forward or reverse, and easing. The easing is a preset or a custom cubic bezier you drag. Effects with randomness have their own seed. Play previews the loop on the canvas. Playback draws contours at the size they appear on screen. Frames are timed by how long the GPU takes to draw them, so a background tab or a pause never counts as slow. If they really are slow the preview gets lighter twice, then a note offers to remove effects or stop motion, once per visit. Exports always render every frame at full quality. Video is a format in the Export menu, alongside SVG and PNG, and every export shows its progress. **Export MP4** renders every frame at an exact timestamp using the browser's video encoder (H.264, or VP9 where H.264 isn't available) and [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (MIT). Browsers without WebCodecs record a WebM in real time. GIF export has an **Animated WebP** switch: every frame keeps its full color with no palette banding, usually in a smaller file. It shows wherever the browser can encode WebP.
 
 ## Lines (contours only)
-Contours draw on the GPU while previewing and playing, so dense bands stay smooth in motion. Exports still use the vector path where it applies.
+Contours draw on the GPU while previewing and playing, so dense bands stay smooth in motion. While drifting, the grid snaps to whole cells of the field and the levels come from the whole area the loop travels over, so lines glide instead of shivering. Exports still use the vector path where it applies.
 
 Lines (strokes), Bands (filled stripes, PewDiePie-style), Layers (stacked fills) or Gradient (bands shaded through the inks on either side of them). Count or gap, bias, weight, swell, taper, accent lines, smoothing and cleanup.
 
 ## Effects (WebGL2, run top to bottom)
-- **Distort:** liquify, waves, twirl, bulge, ripples, water (a rolling pool surface with the bright caustic web of a sunny pool floor), kaleidoscope
+- **Distort:** liquify, waves, twirl, bulge, ripples, water (a rolling pool surface with the bright caustic web of a sunny pool floor, drawn from the edges of wobbling cells so it stays crisp at any size and never blows out), kaleidoscope
 - **Glass** (iOS-style bezel refraction, frost, hairline highlights and slight dispersion, with rounded glass blocks): fluted glass, glass blocks, liquid glass
 - **Light:** progressive blur, glow, relief, god rays, vignette
 - **Color:** gradient map, posterize, heatmap, liquid metal (lit from a smoothed height map, so edges stay clean)
-- **Print:** halftone and CMYK halftone (circle, square, triangle or star dots), engrave, risograph, dither
+- **Print:** halftone and CMYK halftone (circle, square, triangle or star dots, each sized to lay down the same ink for the same tone and free to spill into the next cell instead of being cropped), engrave, risograph, dither
 - **Stylize:** pixels, crystallize, ASCII, scanlines, chromatic
 - **Texture:** paper, film grain
 
@@ -88,7 +88,7 @@ Lines (strokes), Bands (filled stripes, PewDiePie-style), Layers (stacked fills)
 - **Safe values** (in settings): keeps everything in ranges that render cleanly. **Unlock values** lets you type past slider limits, after you confirm.
 - **Designs** (top bar, `⌘S`): save designs to this browser, as many separate ones as you like (**Save as new design** starts another). Each keeps its earlier versions too, up to 30. Open, rename or delete one (with undo). Import or export one design or all of them as JSON. Every file carries the app version it was saved with, so files from an older or newer Isoline say what may look different before they open. **Copy link** puts the whole design in the URL, to bookmark or send.
 - Click any value to type it. Settings import and export as JSON. `⌘Z` / `⇧⌘Z` undo and redo.
-- **Export:** SVG for contours, PNG 1–4× for everything, MP4 or GIF for motion, or `C` to copy for Figma.
+- **Export:** SVG for contours, PNG 1–4× for everything, MP4, GIF or animated WebP for motion, or `C` to copy for Figma.
 - **Theme:** Auto, light or dark, plus an accent color, in settings.
 - **Version:** the bottom of settings shows the version and build date. Each deploy stamps a build id and busts the cache, and the app checks for a newer build when you come back to the tab.
 - **Builder motion:** appear and disappear play on load or on scroll. On scroll, the CSS export runs the same keyframes on a scroll timeline.

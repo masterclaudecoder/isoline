@@ -155,6 +155,7 @@
             <span class="label">Size</span><div class="seg sm" id="gifSize"><button data-v="360">360p</button><button data-v="480">480p</button><button data-v="720">720p</button></div>
             <span class="label">Frame rate</span><div class="seg sm" id="gifFps"><button data-v="15">15</button><button data-v="20">20</button><button data-v="30">30</button></div>
             <span class="label">Loops</span><div class="seg sm" id="gifLoops"><button data-v="1">1</button><button data-v="2">2</button><button data-v="4">4</button></div>
+            <span class="label" id="gifWebpL" data-tip="Full color with no banding, and usually a smaller file. Plays in every current browser">Animated WebP</span><label class="switch" id="gifWebpS"><input type="checkbox" id="gifWebp" aria-labelledby="gifWebpL"><span></span></label>
           </div>
           <p class="note" id="vidNote" hidden>Still designs export with a slow drift. Pick a motion for more control.</p>
           <label class="label" for="fname">File</label>
@@ -446,6 +447,6 @@
 <script src="shell.js"></script>
 <script src="agent.js"></script>
 <script src="glass.js"></script>
-<script src="tips.js"></script>
+<script src="tips.js" defer></script>
 </body>
 </html>

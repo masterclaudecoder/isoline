@@ -504,6 +504,9 @@ html.loading .shell { opacity: 0; animation: show-late 0s 3s forwards; }
 @keyframes intro-top { from { opacity: 0; transform: translateY(-8px); } }
 @keyframes intro-rise { from { opacity: 0; transform: translateY(14px) scale(.985); } }
 html.intro .top { animation: intro-top .5s var(--ease) both; }
+/* The rising cards would briefly overflow the home grid and flash a scrollbar. When the grid fits the
+   window (it is sized to it), nothing scrolls anyway, so clip the overflow for the length of the intro. */
+@media (min-height: 600px) and (min-width: 901px) { html.intro .home, .home.arriving { overflow: hidden; } }
 html.intro .page:not([hidden]) :is(.bento > .tool, .app > .slots, .app > .options, .app > .stage, .cp-lib > *, .cp-build > *) { animation: intro-rise .62s var(--ease) both; animation-delay: .08s; }
 html.intro .page:not([hidden]) :is(.bento > .tool:nth-child(2), .app > .options, .cp-lib > :nth-child(2), .cp-build > :nth-child(2)) { animation-delay: .15s; }
 html.intro .page:not([hidden]) :is(.bento > .tool:nth-child(3), .app > .stage, .cp-build > :nth-child(3)) { animation-delay: .22s; }
@@ -1405,6 +1408,7 @@ body[data-route="components"][data-cp="libraries"] .top > .size { visibility: hi
 .cp-st-r .size .ib { width: 26px; height: 26px; }
 a.btn { text-decoration: none; color: inherit; }
 #cpOpts .seg + .ctrl { margin-top: 16px; }
+#objLayer { margin-bottom: 14px; }
 @container (max-width: 900px) {
   .k-shot-body { grid-template-columns: 1fr; }
   .k-margin { padding: 20px; border-left: 0; border-top: 1px solid var(--k-border); }
@@ -1622,6 +1626,9 @@ a.btn { text-decoration: none; color: inherit; }
 .tip.rich > span { display: block; padding: 6px 4px 0; }
 .tip-fig { overflow: hidden; border-radius: 6px; aspect-ratio: 8 / 5; background: color-mix(in srgb, var(--bg) 12%, transparent); }
 .tip-fig img, .tip-fig canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tip-fig .sweep { position: relative; width: 100%; height: 100%; }
+.tip-fig .sweep > * { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .45s var(--ease); }
+.tip-fig .sweep > .on { opacity: 1; }
 /* Words with a tooltip behind them get a quiet dotted underline. */
 .tipped { text-decoration: underline dotted color-mix(in srgb, currentColor 45%, transparent); text-underline-offset: 3px; cursor: help; }
 /* Live preview of a color strength: a small page in that tint. */
@@ -1764,6 +1771,19 @@ html.vt #homePalette > i:nth-child(11), html.vt .pt-col:nth-child(11) { view-tra
 ::view-transition-group(pc-11) { animation-delay: 220ms; }
 html.vt #homePalette > i:nth-child(12), html.vt .pt-col:nth-child(12) { view-transition-name: pc-12; view-transition-class: palcol; }
 ::view-transition-group(pc-12) { animation-delay: 242ms; }
+/* Studio to Palettes and back: the same, from the circles under Your colors. */
+html.vt-pal #mine .sw[data-pc="1"] { view-transition-name: pc-1; view-transition-class: palcol; }
+html.vt-pal #mine .sw[data-pc="2"] { view-transition-name: pc-2; view-transition-class: palcol; }
+html.vt-pal #mine .sw[data-pc="3"] { view-transition-name: pc-3; view-transition-class: palcol; }
+html.vt-pal #mine .sw[data-pc="4"] { view-transition-name: pc-4; view-transition-class: palcol; }
+html.vt-pal #mine .sw[data-pc="5"] { view-transition-name: pc-5; view-transition-class: palcol; }
+html.vt-pal #mine .sw[data-pc="6"] { view-transition-name: pc-6; view-transition-class: palcol; }
+html.vt-pal #mine .sw[data-pc="7"] { view-transition-name: pc-7; view-transition-class: palcol; }
+html.vt-pal #mine .sw[data-pc="8"] { view-transition-name: pc-8; view-transition-class: palcol; }
+html.vt-pal #mine .sw[data-pc="9"] { view-transition-name: pc-9; view-transition-class: palcol; }
+html.vt-pal #mine .sw[data-pc="10"] { view-transition-name: pc-10; view-transition-class: palcol; }
+html.vt-pal #mine .sw[data-pc="11"] { view-transition-name: pc-11; view-transition-class: palcol; }
+html.vt-pal #mine .sw[data-pc="12"] { view-transition-name: pc-12; view-transition-class: palcol; }
 ::view-transition-group(.palcol) { animation-duration: .64s; animation-timing-function: cubic-bezier(.22,1,.36,1); overflow: clip; }
 ::view-transition-old(.palcol), ::view-transition-new(.palcol) { width: 100%; height: 100%; object-fit: fill; animation: none; }
 ::view-transition-old(.palcol) { display: none; }

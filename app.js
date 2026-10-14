@@ -20,7 +20,7 @@
     ["water", "Water", "Distort", { amount: 1, scale: 320, caustic: 0.6 }, [{ k: "amount", label: "Refraction", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 1.6] }, { k: "scale", label: "Size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [180, 520] }, { k: "caustic", label: "Caustics", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 1] }]],
     ["kaleido", "Kaleidoscope", "Distort", { segments: 6, rotate: 0, zoom: 1 }, [{ k: "segments", label: "Segments", min: 2, max: 16, step: 1, hard: [2, 64], rand: [4, 10] }, { k: "rotate", label: "Rotate", min: 0, max: 360, step: 1, fmt: deg }, { k: "zoom", label: "Zoom", min: 0.3, max: 3, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.7, 1.6] }]],
     ["glass", "Fluted glass", "Glass", { width: 44, angle: 90, strength: 0.9, frost: 0.2, light: 0.4 }, [{ k: "width", label: "Rib width", min: 4, max: 300, step: 1, log: true, fmt: px, rand: [24, 90] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }, { k: "strength", label: "Refraction", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.4] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.5] }, { k: "light", label: "Highlight", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.3, 0.7] }]],
-    ["mesh", "Glass blocks", "Glass", { cell: 120, radius: 0.25, strength: 0.7, frost: 0.25, grout: 1, rim: 0.6, disp: 0.5 }, [{ k: "cell", label: "Block size", min: 12, max: 400, step: 1, log: true, fmt: px, rand: [70, 180] }, { k: "radius", label: "Corner radius", min: 0, max: 0.5, step: 0.01, fmt: pct, pct: true, rand: [0.12, 0.35] }, { k: "strength", label: "Refraction", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.1, 0.5] }, { k: "grout", label: "Gap", min: 0, max: 4, step: 0.05, fmt: f2, rand: [0.5, 1.5] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
+    ["mesh", "Glass blocks", "Glass", { cell: 120, radius: 0, strength: 0.7, frost: 0.25, grout: 1, rim: 0.6, disp: 0.5 }, [{ k: "cell", label: "Block size", min: 12, max: 400, step: 1, log: true, fmt: px, rand: [70, 180] }, { k: "radius", label: "Corner radius", min: 0, max: 0.5, step: 0.01, fmt: pct, pct: true, rand: [0.12, 0.35] }, { k: "strength", label: "Refraction", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.1, 0.5] }, { k: "grout", label: "Gap", min: 0, max: 4, step: 0.05, fmt: f2, rand: [0.5, 1.5] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
     ["lens", "Liquid glass", "Glass", { shape: "pill", size: 0.42, x: 0.5, y: 0.5, refraction: 0.9, frost: 0.2, rim: 0.6, disp: 0.5 }, [{ seg: "shape", options: [["circle", "Circle"], ["pill", "Pill"], ["square", "Square"]] }, { k: "size", label: "Size", min: 0.1, max: 1.2, step: 0.01, fmt: f2, rand: [0.3, 0.6] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.65] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.65] }, { k: "refraction", label: "Refraction", min: 0, max: 2.5, step: 0.01, fmt: f2, rand: [0.6, 1.3] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.4] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
     ["blur", "Progressive blur", "Light", { amount: 32, dir: "bottom", start: 0.35 }, [{ seg: "dir", options: [["top", "Top"], ["bottom", "Bottom"], ["left", "Left"], ["right", "Right"], ["center", "Edges"], ["even", "Even"]] }, { k: "amount", label: "Blur", min: 0, max: 200, step: 0.5, fmt: px, rand: [16, 60] }, { k: "start", label: "Starts at", min: 0, max: 0.95, step: 0.01, fmt: pct, pct: true, rand: [0.25, 0.6] }]],
     ["bloom", "Glow", "Light", { threshold: 0.55, radius: 30, intensity: 0.9 }, [{ k: "threshold", label: "Threshold", min: 0, max: 0.95, step: 0.01, fmt: f2, rand: [0.35, 0.75] }, { k: "radius", label: "Radius", min: 2, max: 200, step: 1, log: true, fmt: px, rand: [16, 50] }, { k: "intensity", label: "Intensity", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.2] }]],
@@ -57,17 +57,17 @@
     ["mesh", "Mesh", "Soft color points"],
     ["flow", "Flow", "Warped color fields"],
     ["noise", "Noise", "Clouds, ridges and cells"],
-    ["aura", "Aura", "A glowing body of light"],
     ["linear", "Linear", "Straight blend"],
     ["radial", "Radial", "Blend from the center"],
     ["conic", "Conic", "Blend around a point"],
+    ["aura", "Aura", "A glowing body of light"],
     ["image", "Image", "Your own picture"],
   ];
   const GEN_LABEL = Object.fromEntries(GENS.map((g) => [g[0], g[1]]));
   const NOISE_TYPES = [["clouds", "Clouds"], ["ridges", "Ridges"], ["billow", "Billow"], ["cells", "Cells"], ["veins", "Veins"], ["marble", "Marble"], ["neuro", "Neuro"], ["ring", "Smoke ring"]];
   // Objects: forms and pictures placed over the design, before effects. Forms take a material: lit in
   // the palette, wrapped in the design underneath, wrapped in a preset, or glass.
-  const OBJ_KINDS = [["sphere", "Sphere"], ["torus", "Torus"], ["cube", "Cube"], ["capsule", "Capsule"], ["blob", "Blob"], ["pill", "Pill"], ["image", "Picture"]];
+  const OBJ_KINDS = [["sphere", "Sphere"], ["torus", "Torus"], ["cube", "Cube"], ["capsule", "Capsule"], ["blob", "Blob"], ["pyramid", "Pyramid"], ["diamond", "Diamond"], ["image", "Picture"]];
   const OBJ_LABEL = Object.fromEntries(OBJ_KINDS);
   const OBJ_MATS = [["shaded", "Shaded", "Lit in your palette"], ["design", "Design", "Wrapped in the design underneath"], ["preset", "Preset", "Wrapped in a preset of your choice"], ["glass", "Glass", "Bends what's behind it"]];
   const PIC_MATS = [["photo", "Photo", "The picture as it is"], ["palette", "Palette", "The picture in your colors"]];
@@ -167,7 +167,7 @@
     grad: { type: "flow", colors: ramp("Prism"), points: [{ x: 0.18, y: 0.22 }, { x: 0.8, y: 0.2 }, { x: 0.72, y: 0.8 }, { x: 0.2, y: 0.84 }, { x: 0.48, y: 0.5 }], angle: -25, warp: 0.5, warpScale: 1.6, soft: 1.6, scale: 0.45, detail: 2, stretch: 1.8, contrast: 1, noise: "clouds", image: "" },
     fx: clone(FX_DEFAULTS), fxOrder: [], objects: [], ink: "#1b1b1b", paper: "#f1ede4",
     fmt: "svg", pngScale: 2,
-    motion: { type: "still", dur: 6, amt: 0.5, mode: "loop", dir: 1, ease: "linear", bez: [0.42, 0, 0.58, 1], seed: 0 }, vid: { size: 1080, fps: 30, loops: 1 }, gif: { size: 480, fps: 20 },
+    motion: { type: "still", dur: 6, amt: 0.5, mode: "loop", dir: 1, ease: "linear", bez: [0.42, 0, 0.58, 1], seed: 0 }, vid: { size: 1080, fps: 30, loops: 1 }, gif: { size: 480, fps: 20, webp: false },
   };
   const STORE = "isoline-v4", PREFS = "isoline-prefs-v4";
   function withDefaults(src) {
@@ -192,7 +192,7 @@
     delete g.solid; delete g.ripple;
     // Aura was a noise type before it became a generator of its own.
     if (g.type === "noise" && g.noise === "aura") { g.type = "aura"; g.noise = "clouds"; g.scale = 1; g.warp = 0.6; g.detail = 4; g.stretch = 1; g.soft = 1.6; }
-    out.objects = (Array.isArray(out.objects) ? out.objects : []).filter((o) => o && OBJ_LABEL[o.kind]).slice(0, 8).map((o) => ({ ...OBJ_DEFAULT, ...o, id: typeof o.id === "string" ? o.id : objId() }));
+    out.objects = (Array.isArray(out.objects) ? out.objects : []).map((o) => (o?.kind === "pill" ? { ...o, kind: "capsule" } : o)).filter((o) => o && OBJ_LABEL[o.kind]).slice(0, 8).map((o) => ({ ...OBJ_DEFAULT, ...o, id: typeof o.id === "string" ? o.id : objId() }));
     if (!GENS.some((x) => x[0] === g.type && x[0] !== "contours")) g.type = "mesh";
     if (!Array.isArray(g.colors) || g.colors.length < 2) g.colors = DEFAULTS.grad.colors.slice();
     g.colors = g.colors.slice(0, 8);
@@ -217,9 +217,11 @@
     const inks = st.grad.colors.filter((c) => c !== bg).slice(0, 6), many = inks.length >= 3;
     return { ...st, source: "contours", mode: "bands", band: clamp(st.band, 0.35, 0.6), line: many ? inks[0] : line, line2: many ? inks[inks.length - 1] : line2, mids: many ? inks.slice(1, -1) : [], bg, gradient: false, transparent: false, opacity: 1 }; };
   // Going the other way, a gradient takes the contour inks, unless its colors already hold the same set.
+  // Aura starts from its own settings, so the canvas matches the thumbnail that was clicked.
+  const AURA_BASE = { scale: 1.25, detail: 4, stretch: 1, soft: 1.6, warp: 0.7, contrast: 1 };
   const asGradient = (st, type) => { const g = { ...st, source: "gradient", grad: { ...st.grad, type } };
     // Aura glows out of its first color, so it starts from the darkest one, at settings made for it.
-    if (type === "aura" && st.grad?.type !== "aura") Object.assign(g.grad, { scale: clamp(st.grad.scale, 0.9, 2.4), detail: clamp(st.grad.detail, 2, 4), stretch: 1, soft: 1.6, warp: clamp(st.grad.warp, 0.4, 1), contrast: 1, colors: [...st.grad.colors].sort((x, y) => lum(x) - lum(y)) });
+    if (type === "aura" && st.grad?.type !== "aura") Object.assign(g.grad, AURA_BASE, { colors: [...st.grad.colors].sort((x, y) => lum(x) - lum(y)) });
     if (st.source !== "contours") return g;
     const inks = [...new Set([st.bg, st.line, ...(st.mids || []), st.line2].filter(Boolean))].slice(0, 8), same = inks.length === st.grad.colors.length && inks.every((c) => st.grad.colors.includes(c));
     if (same) return g; g.grad.colors = inks; g.grad.points = inks.map((_, i) => clone(st.grad.points[i] || DEFAULTS.grad.points[i % 5])); return g; };
@@ -398,6 +400,28 @@
     const [a, b] = P.safe && c.rand ? c.rand : [c.min, c.max];
     return roundStep(c.log && a > 0 ? a * Math.pow(b / a, Math.random()) : rnd(a, b), c);
   }
+  // What each setting does, shown on hover over its name. Shape and line settings also play a short
+  // loop of the current design swept from low to high, so the change is visible before it is made.
+  const SLIDER_TIP = {
+    Scale: "How large the pattern is drawn", Detail: "Layers of finer detail on top of the main shape", Warp: "Bends the pattern with a slow, smooth push",
+    "Warp size": "How broad the bends are", Liquify: "Swirls the pattern like stirred paint", "Liquify size": "How broad the swirls are",
+    Features: "How many hills and dips the shape has", Bulge: "Swells the middle outward or pinches it in", "Bulge size": "How far the bulge reaches",
+    Falloff: "How quickly a point fades into its surroundings", Strength: "How high the point lifts, or how deep it sinks",
+    Count: "How many lines are drawn", Gap: "Space between neighboring lines", Bias: "Bunches lines toward the low or the high ground",
+    Thickness: "Width of each band", Weight: "Line thickness", Swell: "Lines thicken toward the peaks", "Swell size": "How far the thickening spreads",
+    Taper: "Lines thin out toward their ends", "Accent every": "Draws every nth line heavier, like index lines on a map", "Accent weight": "Thickness of the heavier lines",
+    Smooth: "Rounds off small kinks in the lines", Grid: "The spacing the lines are traced on. Smaller follows the shape more closely", Clean: "Drops short scraps of line",
+    Softness: "How gently neighboring colors blend", Stretch: "Pulls the pattern out along its angle", Angle: "Turns the pattern",
+    Contrast: "Pushes colors apart toward the ends of the palette", Size: "How large the body of light is", Wobble: "How far its outline bends",
+    Edge: "How softly the body fades into the background", Lines: "How many rings sit inside the body", "Line width": "Thickness of the rings",
+    "Line light": "How bright the rings glow", "Color turn": "Turns the colors round the body",
+    Opacity: "See-through amount", Refraction: "How strongly it bends what's behind it", Frost: "Blurs what's seen through the glass",
+    Dispersion: "Splits colors at the edges like a prism", Highlight: "Brightness of the light caught on the rim", Shine: "Strength of the highlight",
+    Ripple: "Ripples running over the surface", Tilt: "Leans it toward or away from you", Spin: "Turns it round its own axis", Rotate: "Turns it flat on the canvas",
+    Speed: "Its own pace within the loop. Negative runs backward", Amplitude: "How far things move", "Loop length": "Seconds before the motion repeats",
+    Caustics: "The bright web of light a pool casts on its floor", Grain: "Fine film grain", Intensity: "How strong the effect is",
+  };
+  const SWEEP_GROUPS = new Set(["shape", "lines", "gradient"]), sweeps = [];
   function makeSlider(host, c) {
     c.fmt ||= (v) => String(v);
     const id = "s-" + Math.random().toString(36).slice(2, 8);
@@ -405,6 +429,11 @@
     row.className = "ctrl";
     row.innerHTML = `<div class="label-row"><label class="label" for="${id}">${c.label}</label><input class="val" type="text" inputmode="decimal" spellcheck="false" autocomplete="off" aria-label="${c.label} value"><button class="ib xs" title="Randomize ${c.label.toLowerCase()}" aria-label="Randomize ${c.label.toLowerCase()}">${ic("dice")}</button></div><input id="${id}" type="range">`;
     const input = row.querySelector("input[type=range]"), val = row.querySelector(".val");
+    const tipText = c.tip || SLIDER_TIP[c.label];
+    if (tipText) {
+      const lab = row.querySelector(".label"); lab.dataset.tip = tipText;
+      if (SWEEP_GROUPS.has(c.group) && !c.noSweep) { c._sweep = sweeps.length; lab.dataset.tipPreview = "sweep:" + c._sweep; sweeps.push(c); }
+    }
     const L = Math.log(c.max / c.min);
     const toVal = (x) => (c.log ? roundStep(c.min * Math.exp((x / 1000) * L), c) : +x);
     const fromVal = (v) => (c.log ? (1000 * Math.log(clamp(v, c.min, c.max) / c.min)) / L : clamp(v, c.min, c.max));
@@ -446,6 +475,9 @@
       const na = c.na?.() || "";
       row.classList.toggle("na", !!na); input.disabled = val.disabled = !!na;
       if (na) row.dataset.tip = na; else delete row.dataset.tip;
+      // The reason it does nothing replaces the usual description on the name, too.
+      const lab = row.querySelector(".label");
+      if (tipText) { if (na) { lab.dataset.tip = na; delete lab.dataset.tipPreview; } else { lab.dataset.tip = tipText; if (c._sweep != null) lab.dataset.tipPreview = "sweep:" + c._sweep; } }
       const v = c.get();
       input.value = fromVal(v); paint(v);
     };
@@ -1020,6 +1052,8 @@
       if (inks.length < MAX_INKS()) html += `<button class="stop-add" title="Add color" aria-label="Add color">${ic("plus")}</button>`;
       html += `</div>${contours ? `<span class="mine-l">Lines, first to last</span>` : ""}</div>`;
       el.innerHTML = html;
+      // Numbered in the order Palettes lays out its columns, so each circle can travel to its column.
+      el.querySelectorAll(".sw").forEach((sw, i) => (sw.dataset.pc = i + 1));
       renderMine();
     }
     fitMine();
@@ -1339,7 +1373,7 @@
     if (!m || m.type === "still") return st;
     const off = seedFrac(m.seed), o = { ...st, _t: (t + off) % 1 }, tw = 2 * Math.PI * t, a = m.amt, a0 = off * 2 * Math.PI;
     if (st.source === "contours") {
-      if (m.type === "drift") { const R = a * st.scale * 0.5; o.driftX = R * Math.cos(tw + a0); o.driftY = R * Math.sin(tw + a0); }
+      if (m.type === "drift") { const R = a * st.scale * 0.5; o.driftX = R * Math.cos(tw + a0); o.driftY = R * Math.sin(tw + a0); o.driftR = R; }
       // Cycling inks need a whole cycle of steps per loop, or the colors would jump at the seam.
       else if (m.type === "flow") { const cyc = st.mids?.length && !st.gradient && st.mode !== "layers" && st.mode !== "shaded" ? st.mids.length + 2 : 1; o.phase = t * cyc * Math.max(1, Math.round(a * 4)); }
       // Breathe reads the warp from points travelling round a loop, so the shape morphs forward the
@@ -1387,6 +1421,11 @@
   makeSeg($("gifSize"), () => S.gif.size, (v) => (S.gif.size = v));
   makeSeg($("gifFps"), () => S.gif.fps, (v) => (S.gif.fps = v));
   makeSeg($("gifLoops"), () => S.vid.loops, (v) => (S.vid.loops = v));
+  const canWebp = !!window.WebPAnim?.supported();
+  const useWebp = () => canWebp && !!S.gif.webp;
+  $("gifWebpL").hidden = $("gifWebpS").hidden = !canWebp;
+  $("gifWebp").onchange = (e) => { S.gif.webp = e.target.checked; save(); refreshExport(); };
+  syncers.push(() => ($("gifWebp").checked = !!S.gif.webp));
   let playing = false, playRaf = 0, playT0 = 0, playBusy = false, playSlow = false;
   function playFrame(now) {
     if (!playing || held) return;
@@ -1402,7 +1441,7 @@
   // frames stay slow, so the shape never flickers between two levels of detail.
   let playRes = 0;
   const pickPlayRes = (coarse = 1) => { const shown = Math.max(1, art.clientWidth) / S.w; playRes = Math.max(S.res, (2.4 / shown) * coarse); };
-  function startPlay() { perfTimes = []; lowRes = 0; pickPlayRes(); startPlay0(); }
+  function startPlay() { perfTimes = []; lowRes = 0; perfSkip = 8; pickPlayRes(); startPlay0(); }
   function startPlay0() { if (S.motion.type === "still") { S.motion.type = "drift"; update(); } playing = true; held = false; playT0 = performance.now(); cancelAnimationFrame(playRaf); playRaf = requestAnimationFrame(playFrame); syncPlay(); }
   // Editing while it plays: the loop pauses so the edit isn't fighting the motion, the edit lands with
   // its usual transition, and once you let go the loop crossfades back in from its first frame.
@@ -1419,6 +1458,8 @@
     if (!playing || !held) return;
     if (ptrDown) { holdT = setTimeout(resumePlay, 300); return; }
     held = false; cancelAnimationFrame(raf); cancelAnimationFrame(anim); anim = 0; ++paintTok;
+    // A new design gets a fresh start at full detail: the last one's slowness says nothing about it.
+    lowRes = 0; pickPlayRes(); perfSkip = 8;
     crossfade(paint(motionState(S, motionT(0)), false, true));
     perfTimes = []; playT0 = performance.now();
     playRaf = requestAnimationFrame(playFrame);
@@ -1426,15 +1467,20 @@
   // Slow playback: frames are timed by how long each one takes to draw, not by the gaps between them,
   // so a background tab, a pause or a busy moment elsewhere never counts. Detail steps down twice
   // before anything is suggested, and the note shows at most once per visit.
-  let perfTimes = [], perfWarned = false;
+  let perfTimes = [], perfWarned = false, perfSkip = 0;
   try { perfWarned = !!sessionStorage.getItem("isoline.perfNote"); } catch (e) {}
   document.addEventListener("visibilitychange", () => (perfTimes = []));
   function watchPerf(cost) {
     if (document.hidden || document.body.dataset.route !== "studio") return;
+    // The first frames of a new design build shaders and textures, so they don't count.
+    if (perfSkip > 0) { perfSkip--; return; }
     perfTimes.push(cost); if (perfTimes.length > 45) perfTimes.shift();
     if (perfTimes.length < 45) return;
     const mid = perfTimes.slice().sort((a, b) => a - b)[22];
-    if (mid > 40 && lowRes < 2) { lowRes++; pickPlayRes(lowRes === 1 ? 1.5 : 2.2); perfTimes = []; return; }
+    if (mid > 40 && lowRes < 2) { lowRes++; pickPlayRes(lowRes === 1 ? 1.5 : 2.2); perfTimes = []; perfSkip = 4; return; }
+    // Fast again (a lighter design, or the machine woke up): detail steps back up, with a wide margin
+    // so it never flips back and forth.
+    if (mid < 14 && lowRes > 0) { lowRes--; pickPlayRes(lowRes === 1 ? 1.5 : 1); perfTimes = []; perfSkip = 4; return; }
     if (mid > 60 && !perfWarned) {
       perfWarned = true; try { sessionStorage.setItem("isoline.perfNote", "1"); } catch (e) {}
       $("perfNote").hidden = false; $("perfFx").hidden = !S.fxOrder.length;
@@ -1481,6 +1527,20 @@
     const { drawFrame } = framer(W, H, frames, fps);
     const pixels = async (i) => (await drawFrame(i)).getImageData(0, 0, W, H).data;
     try {
+      if (useWebp()) {
+        // Animated WebP: each frame keeps its full color, so there is no palette to choose first.
+        const anim = new window.WebPAnim(W, H, 0);
+        let t = 0;
+        for (let i = 0; i < frames && !job0.cancel; i++) {
+          const next = ((i + 1) * 1000) / fps, ms = Math.round(next) - Math.round(t); t = next;
+          await anim.add((await drawFrame(i)).canvas, ms, 0.9);
+          setProg(`Frame ${i + 1} of ${frames}`, 0.02 + ((i + 1) / frames) * 0.93);
+          if (i % 4 === 3) await new Promise((r) => setTimeout(r, 0));
+        }
+        if (job0.cancel) toast("Export cancelled");
+        else { setProg("Saving", 1); await download(anim.finish(), `${fileName()}.webp`, "WebP saved"); }
+        return;
+      }
       const samples = [];
       for (let k = 0; k < 5 && !job0.cancel; k++) samples.push(await pixels(Math.floor((k * frames) / 5)));
       const gif = new window.GifEncoder(W, H, samples, { dither: isRaster(S) });
@@ -1494,7 +1554,7 @@
       if (job0.cancel) toast("Export cancelled");
       else { setProg("Saving", 1); await download(gif.finish(), `${fileName()}.gif`, "GIF saved"); }
     } catch (e) {
-      toast("GIF failed. Try a smaller size");
+      toast(useWebp() ? "WebP failed. Try a smaller size" : "GIF failed. Try a smaller size");
     } finally {
       exporting = null;
       hideProg(); $("exCancel").hidden = true; $("download").disabled = false;
@@ -1786,7 +1846,7 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.9", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "1.10", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
@@ -2059,7 +2119,7 @@
     $("vidNote").hidden = !animFmt(fmt) || S.motion.type !== "still";
     $("copy").hidden = animFmt(fmt);
     $("copyLbl").textContent = raster ? "Copy PNG" : "Copy SVG";
-    $("dlLbl").textContent = fmt === "video" ? (canMp4() ? "Export MP4" : "Export WebM") : fmt === "gif" ? "Export GIF" : "Download";
+    $("dlLbl").textContent = fmt === "video" ? (canMp4() ? "Export MP4" : "Export WebM") : fmt === "gif" ? (useWebp() ? "Export WebP" : "Export GIF") : "Download";
     if (!$("fname").dataset.edited) $("fname").value = autoName();
     let dims = fmt === "png" ? `${S.w * S.pngScale} × ${S.h * S.pngScale}` : `${S.w} × ${S.h}`;
     const facts = (rows) => ($("facts").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join(""));
@@ -2069,7 +2129,7 @@
       return;
     }
     if (fmt === "gif") {
-      const [W, H] = gifDims(), secs = S.motion.dur * S.vid.loops, n = Math.round(secs * S.gif.fps), mb = (W * H * n * 0.32) / 1048576;
+      const [W, H] = gifDims(), secs = S.motion.dur * S.vid.loops, n = Math.round(secs * S.gif.fps), mb = (W * H * n * (useWebp() ? 0.09 : 0.32)) / 1048576;
       facts([["Dimensions", `${W} × ${H}`], ["Length", `${secs}s, ${n} frames`], ["File size", `About ${mb < 1 ? mb.toFixed(1) : Math.round(mb)} MB`]]);
       return;
     }
@@ -2086,7 +2146,7 @@
   $("fmt").onclick = (e) => { const b = e.target.closest("button"); if (b && !b.disabled) { S.fmt = b.dataset.v; save(); refreshExport(); } };
   $("pngScale").onclick = (e) => { const v = e.target.closest("button")?.dataset.v; if (v) { S.pngScale = +v; save(); refreshExport(); } };
   for (const id of ["vidSize", "vidFps", "vidLoops", "gifSize", "gifFps", "gifLoops"]) $(id).addEventListener("click", () => setTimeout(refreshExport));
-  const fileName = () => ($("fname").value.trim() || autoName()).replace(/\.(svg|png|mp4|webm|gif)$/i, "");
+  const fileName = () => ($("fname").value.trim() || autoName()).replace(/\.(svg|png|mp4|webm|gif|webp)$/i, "");
   $("download").onclick = async () => {
     const fmt = exportFmt();
     if (fmt === "video") return exportVideo();
@@ -2112,9 +2172,10 @@
   // ---------- option groups ----------
   // Long panels fold into titled groups. A closed group sums up its values in its header, so nothing
   // set inside it goes unseen. Groups with nothing to show for the current design hide themselves.
-  function groupOf(nodes, title, { open = true, hint } = {}) {
+  function groupOf(nodes, title, { open = true, hint, tip } = {}) {
     const g = UI.wrapGroup(nodes, title, { key: "studio-" + title, open, hint: hint ? "1" : "" });
     if (!g) return null;
+    if (tip) g.querySelector(".grp-t").dataset.tip = tip;
     syncers.push(() => {
       g.hidden = ![...g.body.children].some((c) => !c.hidden);
       if (hint) g.setHint(hint());
@@ -2123,16 +2184,16 @@
   }
   const rowsOf = (host, labels) => [...host.children].filter((r) => labels.includes(r.querySelector(".label")?.textContent));
   const facts = (...xs) => xs.filter(Boolean).join(", ");
-  groupOf([...rowsOf($("shape"), ["Scale", "Detail", "Angle", "Features", "Bulge", "Bulge size"]), document.querySelector(".seed-row")], "Scale and detail", { hint: () => facts(px(S.scale), `seed ${S.seed}`) });
-  groupOf(rowsOf($("shape"), ["Warp", "Liquify", "Liquify size"]), "Distortion", { hint: () => facts(`warp ${f2(S.warp)}`, S.liquify ? `liquify ${f2(S.liquify)}` : "") });
-  groupOf([document.querySelector(".pts-head"), document.querySelector(".pt-actions"), $("ptHint"), $("pointCtrls")], "Points", { open: false, hint: () => (S.usePoints ? `${S.points.length} in use` : "Off") });
-  groupOf([$("gradCtrls"), $("gradHint")], "Fine-tune", { hint: () => (gen() === "aura" ? facts(`size ${f2(S.grad.scale)}×`, `${S.grad.detail} lines`) : facts(`warp ${f2(S.grad.warp)}`)) });
-  groupOf(rowsOf($("lines"), ["Count", "Gap", "Bias", "Thickness"]), "Spacing", { hint: () => (linear() ? px(S.gap) + " gap" : S.levels + " levels") });
-  groupOf(rowsOf($("lines"), ["Weight", "Swell", "Swell size", "Taper"]), "Stroke", { hint: () => facts(f2(S.weight) + "px", S.swell ? "swell" : "", S.taper ? "taper" : "") });
-  groupOf(rowsOf($("lines"), ["Accent every", "Accent weight"]), "Accent lines", { open: false, hint: () => (S.indexEvery ? `every ${S.indexEvery}` : "Off") });
-  groupOf(rowsOf($("lines"), ["Smooth", "Grid", "Clean"]), "Detail", { open: false, hint: () => facts(`smooth ${f2(S.smooth)}`, `grid ${px(S.res)}`) });
-  { const sec = document.querySelector('.panel-sec[data-panel="colors"] [data-gen="contours"]'); groupOf([...sec.children], "Fine-tune", { hint: () => facts(S.gradient || S.mode !== "lines" ? "blended" : "", S.transparent ? "transparent" : "", S.opacity < 1 ? pct(S.opacity) : "") }); }
-  groupOf([$("motionMore")], "Timing", { open: false, hint: () => facts({ loop: "loop", pingpong: "ping-pong", once: "once" }[S.motion.mode], S.motion.ease === "linear" ? "linear" : S.motion.ease) });
+  groupOf([...rowsOf($("shape"), ["Scale", "Detail", "Angle", "Features", "Bulge", "Bulge size"]), document.querySelector(".seed-row")], "Scale and detail", { tip: "The size of the shapes, how much fine detail they carry, and the seed that lays them out", hint: () => facts(px(S.scale), `seed ${S.seed}`) });
+  groupOf(rowsOf($("shape"), ["Warp", "Liquify", "Liquify size"]), "Distortion", { tip: "Bends and swirls the pattern after it is made", hint: () => facts(`warp ${f2(S.warp)}`, S.liquify ? `liquify ${f2(S.liquify)}` : "") });
+  groupOf([document.querySelector(".pts-head"), document.querySelector(".pt-actions"), $("ptHint"), $("pointCtrls")], "Points", { tip: "Your own hills and dips, placed by hand. Turn them on to shape the lines around them", open: false, hint: () => (S.usePoints ? `${S.points.length} in use` : "Off") });
+  groupOf([$("gradCtrls"), $("gradHint")], "Fine-tune", { tip: "Settings for this generator", hint: () => (gen() === "aura" ? facts(`size ${f2(S.grad.scale)}×`, `${S.grad.detail} lines`) : facts(`warp ${f2(S.grad.warp)}`)) });
+  groupOf(rowsOf($("lines"), ["Count", "Gap", "Bias", "Thickness"]), "Spacing", { tip: "How many lines there are and how they are spread over the shape", hint: () => (linear() ? px(S.gap) + " gap" : S.levels + " levels") });
+  groupOf(rowsOf($("lines"), ["Weight", "Swell", "Swell size", "Taper"]), "Stroke", { tip: "How each line is drawn", hint: () => facts(f2(S.weight) + "px", S.swell ? "swell" : "", S.taper ? "taper" : "") });
+  groupOf(rowsOf($("lines"), ["Accent every", "Accent weight"]), "Accent lines", { tip: "Every few lines drawn heavier, like index contours on a map", open: false, hint: () => (S.indexEvery ? `every ${S.indexEvery}` : "Off") });
+  groupOf(rowsOf($("lines"), ["Smooth", "Grid", "Clean"]), "Detail", { tip: "How finely the lines follow the shape", open: false, hint: () => facts(`smooth ${f2(S.smooth)}`, `grid ${px(S.res)}`) });
+  { const sec = document.querySelector('.panel-sec[data-panel="colors"] [data-gen="contours"]'); groupOf([...sec.children], "Fine-tune", { tip: "How the colors fill the lines and the space between them", hint: () => facts(S.gradient || S.mode !== "lines" ? "blended" : "", S.transparent ? "transparent" : "", S.opacity < 1 ? pct(S.opacity) : "") }); }
+  groupOf([$("motionMore")], "Timing", { tip: "How the loop runs: repeating, back and forth or once, and its easing", open: false, hint: () => facts({ loop: "loop", pingpong: "ping-pong", once: "once" }[S.motion.mode], S.motion.ease === "linear" ? "linear" : S.motion.ease) });
 
   // ---------- objects ----------
   // New objects land off-centre, staggered, so a second one doesn't hide the first.
@@ -2489,6 +2550,7 @@
     const b = clone(noFx(st));
     for (const key of LAYERS.shape) if (key !== "source" && key !== "grad.type" && key !== "pattern" && key !== "grad.image") setPath(b, key, clone(getPath(DEFAULTS, key)));
     b.seed = st.seed; b.usePoints = false;
+    if (b.source === "gradient" && b.grad.type === "aura") Object.assign(b.grad, AURA_BASE);
     return b;
   }
   function buildPreviews() {
@@ -2656,7 +2718,7 @@
     if (P.slot !== shownSlot) { shownSlot = P.slot; enterPanel(document.querySelector(`.panel-sec[data-panel="${panel}"]`)); }
     for (const s of document.querySelectorAll("[data-gen]")) s.hidden = s.dataset.gen === "raster" ? g === "contours" || g === "image" : s.dataset.gen !== g;
     // A picture has no seed or settings of its own: its shape panel is just the picture.
-    for (const el of [$("variations"), $("variations").previousElementSibling, $("variations").nextElementSibling]) el.hidden = g === "image";
+    for (const el of [$("variations"), $("variations").previousElementSibling]) el.hidden = g === "image";
     for (const sec of document.querySelectorAll(".panel-sec")) { for (const c of sec.children) c.classList.remove("lead"); [...sec.children].find((c) => !c.hidden)?.classList.add("lead"); }
     const fid = fxOf();
     $("optTitle").textContent = fid ? FXI[fid].name : panel === "object" ? objName(objOf()) : swapping && panel === "addfx" ? `Swap ${FXI[swapping].name}` : PANEL_TITLE[panel];
@@ -2743,6 +2805,43 @@
   });
   // Timing tooltips: a dot runs along a track with that playback, direction or easing, the rest of the
   // timing as you have it, so each choice shows what it changes.
+  // A slider's preview: the current design at five settings from low to high, cross-fading in a loop.
+  const sweepCache = new Map();
+  let sweepBusy = Promise.resolve();
+  window.UI?.tipPreview("sweep", (v) => {
+    const c = sweeps[+v], fig = document.createElement("div"); fig.className = "sweep";
+    if (!c || c.when?.() === false || c.na?.()) return null;
+    const lo = c.rand && !c.log ? Math.min(c.rand[0], c.min + (c.max - c.min) * 0.1) : c.min, hi = c.max;
+    const vals = [0.08, 0.3, 0.52, 0.74, 0.96].map((f) => roundStep(c.log ? lo * Math.pow(hi / lo, f) : lo + (hi - lo) * f, c));
+    const key = JSON.stringify([noFx(S), c.label, vals]);
+    const frames = sweepCache.get(key);
+    const play = (nodes) => {
+      fig.replaceChildren(...nodes);
+      let i = 0; nodes[0]?.classList.add("on");
+      const id = setInterval(() => {
+        if (!fig.isConnected) return clearInterval(id);
+        nodes[i].classList.remove("on"); i = (i + 1) % nodes.length; nodes[i].classList.add("on");
+      }, 620);
+    };
+    if (frames) { play(frames.map((n) => (n.tagName === "CANVAS" ? copyCanvas(n) : n.cloneNode(true)))); return fig; }
+    const keep = c.get(), states = vals.map((x) => { c.set(x); return clone(noFx(S)); });
+    c.set(keep);
+    sweepBusy = sweepBusy.then(async () => {
+      const out = [];
+      for (const st of states) {
+        const slot = document.createElement("div");
+        const n = await thumb(slot, st.source === "contours" ? lightLines(st) : st, 160);
+        if (!n) return;
+        if (n.tagName === "CANVAS") { const cp = document.createElement("canvas"); cp.width = n.width; cp.height = n.height; cp.getContext("2d").drawImage(n, 0, 0); out.push(cp); } else out.push(n);
+        n.classList.remove("fresh");
+      }
+      if (sweepCache.size > 12) sweepCache.delete(sweepCache.keys().next().value);
+      sweepCache.set(key, out);
+      if (fig.isConnected) play(out.map((n) => (n.tagName === "CANVAS" ? copyCanvas(n) : n.cloneNode(true))));
+    }).catch(() => {});
+    return fig;
+  });
+  const copyCanvas = (n) => { const c = document.createElement("canvas"); c.width = n.width; c.height = n.height; c.getContext("2d").drawImage(n, 0, 0); return c; };
   window.UI?.tipPreview("timing", (v) => {
     const [k, val] = v.split("."), c = document.createElement("canvas"); c.width = 330; c.height = 96;
     const m = { ...S.motion, [k]: k === "dir" ? +val : val }, x = c.getContext("2d"), t0 = performance.now(), L = 2600;

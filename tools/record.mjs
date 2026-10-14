@@ -18,8 +18,8 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..")
 const OUT = path.join(ROOT, "previews", "tips");
 const BASE = process.argv[2]?.startsWith("http") ? process.argv[2] : "http://localhost:8765";
 const ONLY = process.argv.slice(2).filter((a) => !a.startsWith("http"));
-// Clips are 1.6x the tooltip's 220 by 138 frame, sharp on most screens and still small.
-const W = 352, H = 220;
+// Clips are twice the tooltip's 220 by 138 frame, so they stay sharp on high density screens.
+const W = 440, H = 276;
 
 const require = createRequire(import.meta.url);
 const load = (name) => { try { return require(name); } catch (e) { return require(path.join(require("node:child_process").execSync("npm root -g").toString().trim(), name)); } };
@@ -29,7 +29,7 @@ const browser = await pw.chromium.launch({ args: ["--use-angle=swiftshader", "--
 // ---------- encoding ----------
 async function encode(frames, delay) {
   const sized = await Promise.all(frames.map((f) => sharp(f).resize(W, H, { fit: "cover" }).png().toBuffer()));
-  return sharp(sized, { join: { animated: true } }).webp({ quality: 90, smartSubsample: true, effort: 6, loop: 0, delay: sized.map(() => delay) }).toBuffer();
+  return sharp(sized, { join: { animated: true } }).webp({ quality: 92, smartSubsample: true, effort: 6, loop: 0, delay: sized.map(() => delay) }).toBuffer();
 }
 
 // ---------- cursor ----------
@@ -73,7 +73,7 @@ function pointer(page, clip, frames) {
 }
 
 async function studio(look) {
-  const page = await browser.newPage({ viewport: { width: 1180, height: 760 }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport: { width: 1180, height: 760 }, deviceScaleFactor: 2 });
   await page.goto(BASE + "/#/studio");
   await page.waitForFunction(() => window.Studio?.apply);
   await page.waitForTimeout(800);
@@ -93,7 +93,7 @@ const CLIPS = {
     const ch = Math.min(art.height, art.width * (H / W)), cw = ch * (W / H);
     const clip = { x: art.x + (art.width - cw) / 2, y: art.y + (art.height - ch) / 2, width: cw, height: ch };
     // The clip is scaled down to W, so the cursor is drawn larger to land at a normal size.
-    await page.evaluate((k) => (window.__curK = k), Math.max(1, (clip.width / W) * 0.85));
+    await page.evaluate((k) => (window.__curK = k), Math.max(1, (clip.width * 2 / W) * 0.85));
     const pts = await page.evaluate(() => window.Studio.state().grad.points);
     const at = (p) => [art.x + p.x * art.width, art.y + p.y * art.height];
     const frames = [], ptr = pointer(page, clip, frames);

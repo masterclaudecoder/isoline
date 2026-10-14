@@ -424,7 +424,7 @@
       perm: permFor(s.seed), pattern: PATTERNS.findIndex((p) => p.id === s.pattern),
       pts: src, user: pts.length ? 1 : 0, feats,
       sc, oct: s.octaves, P: Math.max(0.3, s.falloff), bump: s.bump, liquify: s.liquify || 0, liqScale: Math.max(4, sc * (s.liqScale || 1)),
-      warp: s.warp || 0, loop: [s.loopX || 0, s.loopY || 0], drift: [s.driftX || 0, s.driftY || 0], dir: [Math.cos(ang), Math.sin(ang)],
+      warp: s.warp || 0, loop: [s.loopX || 0, s.loopY || 0], drift: [s.driftX || 0, s.driftY || 0], driftR: s.driftR || 0, dir: [Math.cos(ang), Math.sin(ang)],
       sigma: Math.pow(s.smooth, 1.5) * 48,
       lin: LINEAR.has(s.pattern), gap: Math.max(0.5, s.gap), phase: s.phase || 0, levels: s.levels, g: Math.pow(2, s.bias),
       mode: ["lines", "bands", "layers", "shaded"].indexOf(s.mode || "lines"), band: Math.max(0.02, Math.min(0.98, s.band ?? 0.5)),

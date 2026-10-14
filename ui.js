@@ -39,11 +39,12 @@
     const t = textOf(el); if (!t) return;
     target = el;
     const media = el.dataset.tipMedia && window.TIP_MEDIA?.[el.dataset.tipMedia], [pn, pv] = (el.dataset.tipPreview || "").split(":"), draw = previews[pn];
-    if (media || draw) {
+    const out = !media && draw ? draw(pv, el) : null;
+    if (media || out) {
       const fig = document.createElement("div"), cap = document.createElement("span");
       fig.className = "tip-fig"; cap.textContent = t;
       if (media) { const img = new Image(); img.alt = ""; img.onload = () => { if (target === el) place(el); }; img.src = media; fig.appendChild(img); }
-      else { const out = draw(pv, el); if (typeof out === "string") fig.innerHTML = out; else if (out) fig.appendChild(out); }
+      else if (typeof out === "string") fig.innerHTML = out; else fig.appendChild(out);
       tip.replaceChildren(fig, cap); tip.classList.add("rich");
     } else { tip.classList.remove("rich"); tip.textContent = t; }
     if (!tip.isConnected) document.body.appendChild(tip);

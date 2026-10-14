@@ -57,11 +57,13 @@
     if (document.startViewTransition) {
       const html = document.documentElement;
       html.classList.add("vt");
+      // Studio and Palettes share their colors: the circles in Studio turn into the palette's columns.
+      html.classList.toggle("vt-pal", [from, r].sort().join() === "palettes,studio");
       // A busy main thread can hold the snapshot back; past a moment the page just switches.
       const late = setTimeout(() => vt.skipTransition?.(), 450);
       const vt = document.startViewTransition(() => { clearTimeout(late); if (want === r) show(r, true); });
       vt.updateCallbackDone.catch(() => {}).finally(() => { if (want === r && route !== r) show(r); });
-      vt.finished.finally(() => { html.classList.remove("vt"); if (want === r) want = null; });
+      vt.finished.finally(() => { html.classList.remove("vt", "vt-pal"); if (want === r) want = null; });
       return;
     }
     // Fallback: the old page eases out, then the new one eases in.

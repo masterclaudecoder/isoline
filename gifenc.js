@@ -97,3 +97,54 @@
   }
   root.GifEncoder = GifEncoder;
 })(typeof window !== "undefined" ? window : globalThis);
+
+// Animated WebP: the browser encodes each frame as a still WebP (full color, no palette), and the
+// frames are wrapped into one animated file: a VP8X header, an ANIM chunk with the loop count, then
+// one ANMF chunk per frame carrying that frame's image data.
+(function (root) {
+  "use strict";
+  const supported = () => { try { const c = document.createElement("canvas"); c.width = c.height = 1; return c.toDataURL("image/webp").startsWith("data:image/webp"); } catch (e) { return false; } };
+  const u24 = (a, v) => a.push(v & 255, (v >> 8) & 255, (v >> 16) & 255);
+  const u32 = (a, v) => a.push(v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >>> 24) & 255);
+  const tag = (a, s) => { for (let i = 0; i < 4; i++) a.push(s.charCodeAt(i)); };
+  // The image chunks of a still WebP file: ALPH (if any) and VP8 or VP8L, each with its header.
+  function imageChunks(bytes) {
+    const out = []; let alpha = false;
+    for (let p = 12; p + 8 <= bytes.length;) {
+      const id = String.fromCharCode(bytes[p], bytes[p + 1], bytes[p + 2], bytes[p + 3]);
+      const n = bytes[p + 4] | (bytes[p + 5] << 8) | (bytes[p + 6] << 16) | (bytes[p + 7] << 24), end = p + 8 + n + (n & 1);
+      if (id === "ALPH" || id === "VP8 " || id === "VP8L") { out.push(bytes.subarray(p, end)); if (id !== "VP8 ") alpha = true; }
+      p = end;
+    }
+    return { out, alpha };
+  }
+  class WebPAnim {
+    constructor(w, h, loops = 0) { this.w = w; this.h = h; this.loops = loops; this.frames = []; this.alpha = false; }
+    // canvas: the frame to add, ms: how long it shows.
+    async add(canvas, ms, quality = 0.9) {
+      const blob = await new Promise((r) => canvas.toBlob(r, "image/webp", quality));
+      if (!blob || blob.type !== "image/webp") throw new Error("WebP encoding unavailable");
+      const { out, alpha } = imageChunks(new Uint8Array(await blob.arrayBuffer()));
+      if (!out.length) throw new Error("Empty WebP frame");
+      this.alpha ||= alpha;
+      this.frames.push({ out, ms: Math.max(1, Math.round(ms)) });
+    }
+    finish() {
+      const head = [];
+      tag(head, "VP8X"); u32(head, 10); head.push(0x02 | (this.alpha ? 0x10 : 0), 0, 0, 0); u24(head, this.w - 1); u24(head, this.h - 1);
+      tag(head, "ANIM"); u32(head, 6); u32(head, 0); head.push(this.loops & 255, (this.loops >> 8) & 255);
+      const parts = [new Uint8Array(head)];
+      for (const f of this.frames) {
+        const size = 16 + f.out.reduce((s, c) => s + c.length, 0), h = [];
+        tag(h, "ANMF"); u32(h, size); u24(h, 0); u24(h, 0); u24(h, this.w - 1); u24(h, this.h - 1); u24(h, f.ms);
+        h.push(0x02); // Don't blend with the previous frame, and leave it in place.
+        parts.push(new Uint8Array(h), ...f.out);
+      }
+      const body = parts.reduce((s, p) => s + p.length, 0), riff = [];
+      tag(riff, "RIFF"); u32(riff, 4 + body); tag(riff, "WEBP");
+      return new Blob([new Uint8Array(riff), ...parts], { type: "image/webp" });
+    }
+  }
+  root.WebPAnim = WebPAnim;
+  root.WebPAnim.supported = supported;
+})(window);
