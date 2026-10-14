@@ -172,7 +172,9 @@
   // ---------- helpers ----------
   const gen = (st = S) => (st.source === "contours" ? "contours" : st.grad.type);
   // Coming from a gradient, contours start as bands in that gradient's colors, as their preview shows.
-  const asContours = (st) => { if (st.source === "contours") return st; const own = PALS.find((p) => sameCols(p.colors, st.grad.colors)), [line, line2, bg] = own ? own.roles : rolesOf(st.grad.colors); return { ...st, source: "contours", mode: "bands", band: clamp(st.band, 0.35, 0.6), line, line2, mids: [], bg, gradient: false, transparent: false, opacity: 1 }; };
+  const asContours = (st) => { if (st.source === "contours") return st; const own = PALS.find((p) => sameCols(p.colors, st.grad.colors)), [line, line2, bg] = own ? own.roles : rolesOf(st.grad.colors); // Every color of the gradient carries over: the background, then the rest as inks in order.
+    const inks = st.grad.colors.filter((c) => c !== bg).slice(0, 6), many = inks.length >= 3;
+    return { ...st, source: "contours", mode: "bands", band: clamp(st.band, 0.35, 0.6), line: many ? inks[0] : line, line2: many ? inks[inks.length - 1] : line2, mids: many ? inks.slice(1, -1) : [], bg, gradient: false, transparent: false, opacity: 1 }; };
   function setGen(id) { if (id === "contours") Object.assign(S, asContours(S)); else { S.source = "gradient"; S.grad.type = id; } sel = null; }
   const linear = () => T.LINEAR.has(S.pattern);
   const activePoints = () => S.usePoints && S.points.length > 0;
@@ -563,6 +565,15 @@
     else if (p === "colors") randomPalette();
     else if (p === "effect") { randomizeFx(fxOf()); }
     else if (p === "addfx") { randomEffects(); }
+    else if (p === "motion") {
+      // A new motion: a moving type, then its sliders, playback, direction and easing.
+      if (S.motion.type === "still" || Math.random() < 0.6) S.motion.type = pick(["drift", "flow", "breathe"].filter((x) => x !== S.motion.type));
+      randomizeGroup("motion");
+      S.motion.mode = pick(["loop", "loop", "pingpong"]); S.motion.ease = pick(["linear", "ease", "inout", "linear"]);
+      if (P.safe) safeFix();
+      update(); if (playing) playT0 = performance.now(); else startPlay();
+      return;
+    }
     if (P.safe) safeFix();
     update({ fade: true });
   };
@@ -1060,9 +1071,9 @@
 
   // ---------- motion ----------
   // Every motion loops: drift moves the field round a circle, flow slides the contour levels (or sways a
-  // gradient's colors) by whole steps, breathe swells and settles the warp.
+  // gradient's colors) by whole steps, breathe morphs the shape round a loop that never reverses.
   const MOTION_NAME = { still: "Still", drift: "Drift", flow: "Flow", breathe: "Breathe" };
-  const MOTION_HINT = { still: "Pick a motion to make a loop.", drift: "The pattern glides round in a loop.", flow: "Lines flow outward and gradient colors sway.", breathe: "The warp swells and settles." };
+  const MOTION_HINT = { still: "Pick a motion to make a loop.", drift: "The pattern glides round in a loop.", flow: "Lines flow outward and gradient colors sway.", breathe: "The shape keeps morphing and flows back into itself." };
   // Time shaping: ping-pong runs forward then back, reverse flips direction, and the easing curve
   // (a preset or your own cubic bezier) sets the pace inside each pass.
   const EASES = { linear: [0, 0, 1, 1], ease: [0.25, 0.1, 0.25, 1], in: [0.42, 0, 1, 1], out: [0, 0, 0.58, 1], inout: [0.42, 0, 0.58, 1] };
@@ -1087,7 +1098,9 @@
       // Cycling inks need a whole cycle of steps per loop, or the colors would jump at the seam.
       else if (m.type === "flow") { const cyc = st.mids?.length && !st.gradient && st.mode !== "layers" ? st.mids.length + 2 : 1; o.phase = t * cyc * Math.max(1, Math.round(a * 4)); }
       // Breathe zooms gently and lets the warp swell a little; changing the warp hard would rebuild the shape every frame.
-      else { const w = Math.sin(tw + a0); o.scale = st.scale * (1 + 0.07 * a * w); o.warp = st.warp * (1 + 0.25 * a * w); }
+      // Breathe reads the warp from points travelling round a loop, so the shape morphs forward the
+      // whole time and only meets its first frame again at the end, with a slow swell on top.
+      else { const w = Math.sin(tw + a0); o.loopX = 1.4 * a * Math.cos(tw + a0); o.loopY = 1.4 * a * Math.sin(tw + a0); o.warp = Math.max(st.warp, 0.6 * a) * (1 + 0.15 * a * w); o.scale = st.scale * (1 + 0.04 * a * w); }
     }
     return o;
   }
@@ -1135,9 +1148,23 @@
     playBusy = true;
     const raw = (((now - playT0) / 1000) % S.motion.dur) / S.motion.dur, t0 = performance.now();
     // Full detail while it keeps up; a lighter grid only when frames get slow.
-    paint(motionState(S, motionT(raw)), playSlow && S.source === "contours").then(() => { playSlow = performance.now() - t0 > 110; playBusy = false; });
+    paint(motionState(S, motionT(raw)), playSlow && S.source === "contours").then(() => { const ms = performance.now() - t0; playSlow = ms > 110; playBusy = false; watchPerf(now); });
   }
-  function startPlay() { if (S.motion.type === "still") { S.motion.type = "drift"; update(); } playing = true; playT0 = performance.now(); cancelAnimationFrame(playRaf); playRaf = requestAnimationFrame(playFrame); syncPlay(); }
+  function startPlay() { perfTimes = []; lowRes = false; startPlay0(); }
+  function startPlay0() { if (S.motion.type === "still") { S.motion.type = "drift"; update(); } playing = true; playT0 = performance.now(); cancelAnimationFrame(playRaf); playRaf = requestAnimationFrame(playFrame); syncPlay(); }
+  // Slow playback: after a few seconds under about 18 frames a second, offer to drop the expensive
+  // parts (effects and motion). Raster frames also render smaller while it's slow.
+  let perfTimes = [], perfWarned = false;
+  function watchPerf(now) {
+    perfTimes.push(now); if (perfTimes.length > 40) perfTimes.shift();
+    if (perfWarned || perfTimes.length < 40 || now - playT0 < 3000) return;
+    const fps = 1000 / ((perfTimes[perfTimes.length - 1] - perfTimes[0]) / (perfTimes.length - 1));
+    lowRes = fps < 24;
+    if (fps < 18) { perfWarned = true; $("perfNote").hidden = false; $("perfFx").hidden = !S.fxOrder.length; }
+  }
+  $("perfFx").onclick = () => { S.fxOrder = []; $("perfNote").hidden = true; update(); toast("Effects removed. Undo brings them back."); };
+  $("perfStop").onclick = () => { stopPlay(); S.motion.type = "still"; $("perfNote").hidden = true; update(); };
+  $("perfX").onclick = () => { $("perfNote").hidden = true; };
   function stopPlay() { if (!playing) return; playing = false; cancelAnimationFrame(playRaf); syncPlay(); render(); }
   function syncPlay() {
     for (const b of [$("playBtn"), $("barPlay")]) b.querySelector("use").setAttribute("href", playing ? "#i-pause" : "#i-play");
@@ -1424,14 +1451,38 @@
   $("fbSubject").oninput = syncFb;
   $("fbText").oninput = (e) => { syncFb(); window.UI?.autosize(e.target); };
   $("fbCancel").onclick = () => closeModal("feedbackModal");
-  $("fbOk").onclick = () => {
+  // With an endpoint (worker/feedback.js) the issue is created directly; without one, or if it fails,
+  // the person finishes on GitHub.
+  const FEEDBACK_URL = "";
+  $("fbOk").onclick = async () => {
     const [name, label] = FB_KIND[fbKind], text = $("fbText").value.trim(), subj = $("fbSubject").value.trim() || text.split("\n")[0].slice(0, 80);
+    const details = $("fbInfo").checked ? pageInfo().map(([k, v]) => `- **${k}:** ${v}`).join("\n") : "";
+    const done = (msg) => { closeModal("feedbackModal"); $("fbSubject").value = $("fbText").value = ""; $("fbOk").disabled = true; toast(msg); };
+    if (FEEDBACK_URL) {
+      $("fbOk").disabled = true; $("fbOk").lastChild.textContent = "Sending";
+      try {
+        const r = await fetch(FEEDBACK_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: fbKind, title: $("fbSubject").value.trim(), body: text, details, website: $("fbHp").value }) });
+        if (r.ok) { $("fbOk").lastChild.textContent = "Send"; return done("Sent. Thanks for the feedback."); }
+      } catch (e) {}
+      $("fbOk").lastChild.textContent = "Send"; $("fbOk").disabled = false;
+      toast("Couldn't send it here. Opening GitHub instead.");
+    }
     let body = text || "_No details given._";
-    if ($("fbInfo").checked) body += "\n\n<details><summary>Page details</summary>\n\n" + pageInfo().map(([k, v]) => `- **${k}:** ${v}`).join("\n") + "\n</details>";
-    const url = `${ISSUES}?title=${encodeURIComponent(`${name}: ${subj}`)}&labels=${label}&body=${encodeURIComponent(body.slice(0, 6000))}`;
-    window.open(url, "_blank", "noopener");
-    closeModal("feedbackModal"); $("fbSubject").value = $("fbText").value = ""; toast("Thanks. Post it on the GitHub page that opened.");
+    if (details) body += "\n\n<details><summary>Page details</summary>\n\n" + details + "\n</details>";
+    window.open(`${ISSUES}?title=${encodeURIComponent(`${name}: ${subj}`)}&labels=${label}&body=${encodeURIComponent(body.slice(0, 6000))}`, "_blank", "noopener");
+    done("Thanks. Post it on the GitHub page that opened.");
   };
+  if (FEEDBACK_URL) { $("fbOk").lastChild.textContent = "Send"; $("fbOk").querySelector("svg").remove(); $("feedbackModal").querySelector(".note").textContent = "Goes straight to the team as a GitHub issue."; }
+  // ---------- version ----------
+  // The deploy stamps the build and its date in here; the site also publishes version.json so an open
+  // or cached copy can tell when a newer build is live.
+  const VERSION = "1.6", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
+  $("verReload").onclick = () => location.reload();
+  let updateSeen = false;
+  const checkVersion = () => { if (!stamped || updateSeen || location.protocol === "file:") return; fetch("version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((v) => { if (v?.build && v.build !== BUILD) { updateSeen = true; $("verLine").textContent = `Version ${VERSION}, a newer build is out`; $("verReload").hidden = false; toast("A new version of Isoline is out. Reload to get it."); } }).catch(() => {}); };
+  checkVersion();
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkVersion(); });
   $("importCancel").onclick = () => closeModal("importModal");
   $("importFile").onchange = async (e) => { const f = e.target.files?.[0]; if (f) $("importText").value = await f.text(); e.target.value = ""; };
   $("importOk").onclick = () => {
@@ -1622,7 +1673,7 @@
   }
   const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image, grad: st.source === "gradient" ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper, time: st._t || 0, motion: st._t != null ? st.motion.type : "still", motionAmt: st.motion?.amt });
   // While a resize handle is held the scale stays put, so the edge tracks the pointer.
-  let rzScale = 0;
+  let rzScale = 0, lowRes = false;
   const room = () => { const cs = getComputedStyle(wrap); return [wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)]; };
   window.UI?.resizable(art, {
     get: () => [S.w, S.h], scale: () => art.clientWidth / S.w, room, min: 64, max: () => (P.unlock ? 16000 : 8000),
@@ -1638,9 +1689,9 @@
     art.style.height = Math.max(40, S.h * sc) + "px";
   }
   function previewDims(st) {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = lowRes && playing ? 1 : Math.min(2, window.devicePixelRatio || 1);
     let w = Math.max(64, Math.round(art.clientWidth * dpr)), h = Math.round((w * st.h) / st.w);
-    const cap = 2200, m = Math.max(w, h);
+    const cap = lowRes && playing ? 1200 : 2200, m = Math.max(w, h);
     if (m > cap) { w = Math.round((w * cap) / m); h = Math.round((h * cap) / m); }
     return { w, h };
   }

@@ -71,10 +71,11 @@
   // Samples for the mode menu: the same harmony from the current palette's hue, seeded so they hold still.
   const seeded = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   function sampleOf(mode) {
-    if (mode === "auto") return [0, 72, 144, 216, 288].map((h, i) => C.fromOklch(0.62 + (i % 2) * 0.12, 0.13, (h + 20) % 360));
+    const n = clamp(st.cols.length, 2, 10);
+    if (mode === "auto") return Array.from({ length: n }, (_, i) => C.fromOklch(0.62 + (i % 2) * 0.12, 0.13, (i * 360 / n + 20) % 360));
     const lead = st.cols.find((c) => c.lock) || st.cols[Math.floor(st.cols.length / 2)];
     const base = lead ? C.toOklch(lead.hex) : [0.6, 0.12, 30];
-    return makePalette(mode, 5, [0.6, 0.12, Math.round(base[2] / 10) * 10], seeded(MODES.findIndex((m) => m[0] === mode) * 97 + 7)).sort((a, b) => C.toOklch(b)[0] - C.toOklch(a)[0]);
+    return makePalette(mode, n, [0.6, 0.12, Math.round(base[2] / 10) * 10], seeded(MODES.findIndex((m) => m[0] === mode) * 97 + 7)).sort((a, b) => C.toOklch(b)[0] - C.toOklch(a)[0]);
   }
   const dots = (hexes) => hexes.map((h) => `<i style="background:${h}"></i>`).join("");
   // Vary: nudge every unlocked color a little in hue, lightness and chroma, keeping the palette's character.
@@ -182,10 +183,20 @@
     const g = st.weighted ? weightOf(i, st.cols.length) : 1;
     el.animate([{ flexGrow: 0.0001, opacity: 0 }, { flexGrow: g, opacity: 1 }], { duration: 460, easing: EASE });
   }
+  // The neighbors grow into the space at the same time, straight to the sizes they keep after the
+  // rebuild, so nothing jumps when the column is finally removed.
   function foldOut(el, done) {
     if (reduce()) { done(); return; }
+    const els = [...colsEl.children], gone = els.indexOf(el), n = els.length - 1, opt = { duration: 380, easing: EASE, fill: "forwards" };
     el.style.minWidth = "0"; el.style.overflow = "hidden";
-    el.animate([{ flexGrow: getComputedStyle(el).flexGrow, opacity: 1 }, { flexGrow: 0.0001, opacity: 0 }], { duration: 380, easing: EASE, fill: "forwards" }).onfinish = done;
+    els.forEach((it, k) => {
+      if (it === el) return;
+      const to = st.weighted ? weightOf(k > gone ? k - 1 : k, n) : 1;
+      it.animate([{ flexGrow: getComputedStyle(it).flexGrow }, { flexGrow: to }], opt);
+    });
+    el.animate([{ flexGrow: getComputedStyle(el).flexGrow, opacity: 1 }, { flexGrow: 0, opacity: 0 }], opt).onfinish = () => {
+      colsEl.classList.add("still"); done(); void colsEl.offsetWidth; colsEl.classList.remove("still");
+    };
   }
   colsEl.addEventListener("click", async (e) => {
     const b = e.target.closest("[data-a], [data-shade]"); if (!b) return;
@@ -371,6 +382,7 @@
 
   root.Palettes = {
     colors: () => st.cols.map((c) => c.hex),
+    weights: () => st.cols.map((_, i) => (st.weighted ? weightOf(i, st.cols.length) : 1)),
     saved: () => saved.slice(),
     generate(mode) { if (mode && MODES.some((m) => m[0] === mode)) st.mode = mode; generate(); return st.cols.map((c) => c.hex); },
     vary() { vary(); return st.cols.map((c) => c.hex); },

@@ -30,7 +30,7 @@ The left column is the build, made of one slot per layer: **Preset, Generator, S
 
 ## Generators
 - **Canvas:** drag the handles that appear near the canvas edges to resize it. Your colors overlap when they run out of room, wrap only when they truly don't fit, and drag to reorder. Edit in Palettes opens them in the palette tool, and its button brings them back.
-- **Feedback:** Settings, Send feedback opens a filled-in GitHub issue (with optional page details) for you to post.
+- **Feedback:** Settings, Send feedback opens a filled-in GitHub issue (with optional page details) for you to post. To file issues straight from the app instead, deploy the small worker in `worker/` and set `FEEDBACK_URL` in `app.js`. It keeps the GitHub token on the server.
 - **Contours** (vector, exports SVG; coming from a gradient, they start as bands in its colors): Blobs, Terrain, Flow, Rings, Ridges, Dunes, Lines, Strata, Waves. Scale, detail, warp, liquify, angle and metaball points. Double-click the canvas to add a peak, then drag to move it or scroll to resize it.
 - **Mesh:** draggable color points blended in OKLab.
 - **Flow:** domain-warped simplex noise for soft, flowing color fields. Pair it with Grain.
@@ -46,9 +46,9 @@ The color picker has two modes: a color field, or sliders for the chosen format 
 The Motion slot makes the design loop seamlessly:
 - **Drift:** the field glides round a circle.
 - **Flow:** contour lines flow outward, or a gradient's colors sway.
-- **Breathe:** the warp swells and settles.
+- **Breathe:** the shape keeps morphing along a closed path through the noise, so it never visibly reverses and flows back into where it started.
 
-Each motion has a loop length, amplitude and seed, plus loop, ping-pong or once playback, forward or reverse, and easing. The easing is a preset or a custom cubic bezier you drag. Effects with randomness have their own seed. Play previews the loop on the canvas. Video is a format in the Export menu, alongside SVG and PNG, and every export shows its progress. **Export MP4** renders every frame at an exact timestamp using the browser's video encoder (H.264, or VP9 where H.264 isn't available) and [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (MIT). Browsers without WebCodecs record a WebM in real time.
+Each motion has a loop length, amplitude and seed, plus loop, ping-pong or once playback, forward or reverse, and easing. The easing is a preset or a custom cubic bezier you drag. Effects with randomness have their own seed. Play previews the loop on the canvas. If playback runs slow, the preview drops to a lighter resolution and a note offers to remove effects or stop motion in one click. Video is a format in the Export menu, alongside SVG and PNG, and every export shows its progress. **Export MP4** renders every frame at an exact timestamp using the browser's video encoder (H.264, or VP9 where H.264 isn't available) and [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (MIT). Browsers without WebCodecs record a WebM in real time.
 
 ## Lines (contours only)
 Lines (strokes), Bands (filled stripes, PewDiePie-style) or Layers (stacked fills). Count or gap, bias, weight, swell, taper, accent lines, smoothing and cleanup.
@@ -69,6 +69,8 @@ Lines (strokes), Bands (filled stripes, PewDiePie-style) or Layers (stacked fill
 - Click any value to type it. Settings import and export as JSON. `⌘Z` / `⇧⌘Z` undo and redo.
 - **Export:** SVG for contours, PNG 1–4× for everything, MP4 or GIF for motion, or `C` to copy for Figma.
 - **Theme:** Auto, light or dark, plus an accent color, in settings.
+- **Version:** the bottom of settings shows the version and build date. Each deploy stamps a build id and busts the cache, and the app checks for a newer build when you come back to the tab.
+- **Builder motion:** appear and disappear play on load or on scroll. On scroll, the CSS export runs the same keyframes on a scroll timeline.
 
 Files:
 - `engine.js`: contour field, marching squares, smoothing and SVG output, with no DOM.
@@ -87,5 +89,7 @@ Files:
 - `brand.js`: the logo.
 - `ui.js`: shared interface motion (tooltips, sliding segmented controls, list transitions).
 - `mp4-muxer.js`: vendored MP4 muxer.
+- `worker/feedback.js`: optional Cloudflare Worker that files feedback as GitHub issues.
+- `og.jpg`, `favicon.svg`: the link preview banner and tab icon.
 
 `logos.html` shows the logo concepts.

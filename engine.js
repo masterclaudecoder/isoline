@@ -91,7 +91,7 @@
     const ang = ((s.angle + 90) * Math.PI) / 180, ca = Math.cos(ang), sa = Math.sin(ang);
     // Motion: the whole field can be offset (drift), in output pixels scaled to this render.
     const driftX = (s.driftX || 0) * k, driftY = (s.driftY || 0) * k;
-    const smk = 40 * k;
+    const smk = 40 * k, lx = s.loopX || 0, ly = s.loopY || 0;
 
     let min = Infinity, max = -Infinity;
     for (let j = 0; j < ny; j++) {
@@ -105,9 +105,11 @@
           py += s.liquify * ls * 0.06 * noise(u0 + 1.2 * qx + 9.2, v0 + 1.2 * qy + 5.3);
         }
         if (s.warp > 0) {
+          // loopX and loopY move where the warp is read from round a closed path, so the shape keeps
+          // morphing forward and arrives back where it began (the breathe motion).
           const u0 = px / sc, v0 = py / sc;
-          px += s.warp * sc * 0.5 * fbm(u0 + 5.2, v0 + 1.3, 2);
-          py += s.warp * sc * 0.5 * fbm(u0 + 1.7, v0 + 9.2, 2);
+          px += s.warp * sc * 0.5 * fbm(u0 + 5.2 + lx, v0 + 1.3 + ly, 2);
+          py += s.warp * sc * 0.5 * fbm(u0 + 1.7 - ly, v0 + 9.2 + lx, 2);
         }
         const u = px / sc, v = py / sc;
         let val;
@@ -320,7 +322,15 @@
       const ds = Math.max(0.6, Math.min(4, sigma / 5));
       const r = resampleUniform(p, true, ds);
       const b = blurLine(r, true, sigma / ds / Math.sqrt(3));
-      q = b.map((v, i) => (out(r[i]) ? r[i] : v));
+      // Smoothing fades out toward the canvas edge, so neighbouring bands meet the edge at exactly the
+      // same points instead of each bending its own way (which left slivers along the border).
+      const reach = 2.5 * sigma;
+      q = b.map((v, i) => {
+        const p0 = r[i];
+        if (out(p0)) return p0;
+        const t = Math.min(1, Math.min(p0[0], p0[1], w - p0[0], h - p0[1]) / reach);
+        return t >= 1 ? v : [p0[0] + (v[0] - p0[0]) * t, p0[1] + (v[1] - p0[1]) * t];
+      });
     }
     q = simplify(q.map(clampPt), eps);
     const n = q.length;

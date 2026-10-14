@@ -83,20 +83,19 @@ Follow the rules in Isoline.components.brief("design"). The user edits them in C
   meta.type = "text/markdown"; meta.id = "isoline-agent-guide"; meta.textContent = GUIDE;
   document.head.appendChild(meta);
 
-  // "Copy for agents" in the top bar: one click copies the agent guide.
-  // The button is split so the copy action reads clearly, but either half copies.
-  function forAgents() {
-    const r = root.Shell?.route;
-    return GUIDE;
-  }
-  const wrap = document.createElement("div");
-  wrap.className = "split"; wrap.id = "aiSplit";
-  wrap.innerHTML = `<button class="split-main" id="aiCopy">Copy for agents</button><span class="split-div" aria-hidden="true"></span><button class="split-side" id="aiCopyIc" aria-label="Copy for agents" title="Copies the agent guide"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></button>`;
-  const right = document.querySelector(".top-right");
-  right.insertBefore(wrap, right.firstChild);
+  // "Copy for agents" in the top bar: one click copies the agent guide. It shares a well with the
+  // settings button, drawn like the size control, so the right side reads as one group.
+  function forAgents() { return GUIDE; }
+  const wrap = document.createElement("button");
+  wrap.className = "tb"; wrap.id = "aiSplit"; wrap.title = "Copies the agent guide";
+  wrap.innerHTML = `<span class="tb-ic" aria-hidden="true"><svg class="ic"><use href="#i-copy"/></svg><svg class="ic"><use href="#i-check"/></svg></span><span class="tb-l">Copy for agents</span>`;
+  const right = document.querySelector(".top-right"), group = document.createElement("div");
+  group.className = "top-group";
+  group.append(wrap, $settingsWrap());
+  right.insertBefore(group, right.firstChild);
+  function $settingsWrap() { return document.getElementById("settingsBtn").closest(".menu-wrap"); }
   let doneT = 0;
-  wrap.addEventListener("click", async (e) => {
-    if (!e.target.closest("button")) return;
+  wrap.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(forAgents());
       wrap.classList.add("done"); clearTimeout(doneT); doneT = setTimeout(() => wrap.classList.remove("done"), 1600);

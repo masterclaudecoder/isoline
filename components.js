@@ -57,7 +57,7 @@
   const KEY = "isoline-kit";
   const DEF = {
     mode: "libraries", fw: "All", cat: "All", q: "", slot: "type", view: "components", layout: "home", dark: null, follow: true,
-    fit: true, pw: 1440, ph: 900, tint: "tinted", src: null, art: "none", enter: "rise", exit: "fade", stagger: 50,
+    fit: true, pw: 1440, ph: 900, tint: "tinted", src: null, art: "none", enter: "rise", exit: "fade", stagger: 50, trigger: "load",
     pair: 0, head: "", body: "", scale: 1.25, base: 16, tracking: -0.02,
     rc: null,
     unit: 4, density: 1, radius: 10, pill: false, elevation: "soft", dur: 200, ease: "out",
@@ -151,7 +151,7 @@
       space: Object.fromEntries([1, 2, 3, 4, 6, 8, 12, 16].map((n) => [n, space(n)])),
       radius: { base: K.radius, button: K.pill ? 999 : K.radius },
       shadow: SHADOWS[K.elevation],
-      motion: { duration: K.dur, easing: EASE[K.ease], appear: K.enter, disappear: K.exit, stagger: K.stagger },
+      motion: { duration: K.dur, easing: EASE[K.ease], appear: K.enter, disappear: K.exit, stagger: K.stagger, trigger: K.trigger === "scroll" ? "scroll" : "load" },
     };
   }
   function vars(el) {
@@ -654,6 +654,9 @@
       sub(o, "Disappear");
       seg(o, [["none", "None"], ["fade", "Fade"], ["sink", "Sink"], ["scale", "Scale"], ["blur", "Blur"]], () => K.exit, (v) => { K.exit = v; setTimeout(() => replay(true), 0); }, "wrap5");
       slider(o, "Stagger", 0, 120, 5, () => K.stagger, (v) => (K.stagger = v), (v) => (v ? v + "ms" : "Off"));
+      // When it plays: once as the page loads, or as each section scrolls into view and back out.
+      sub(o, "Plays");
+      seg(o, [["load", "On load"], ["scroll", "On scroll"]], () => K.trigger, (v) => { K.trigger = v; setTimeout(() => replay(false), 0); });
       o.insertAdjacentHTML("beforeend", `<button class="btn sm cp-replay" id="cpReplayOpt">${ic("play")}Play out and back in</button>`);
       $("cpReplayOpt").onclick = () => replay(true);
     } else if (K.slot === "rules") {
@@ -745,8 +748,35 @@
   const EXIT = { fade: [{ opacity: 1 }, { opacity: 0 }], sink: [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(12px)" }], scale: [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.96)" }], blur: [{ opacity: 1, filter: "blur(0)" }, { opacity: 0, filter: "blur(10px)" }] };
   const partsOf = (kit) => [...kit.querySelectorAll(".k-sheet > *, .k-page > *:not(.k-app), .k-app > .k-side, .k-main > *")];
   let playTok = 0;
+  // On scroll, the frame is the viewport: sections play their appear motion as they come into view and
+  // their disappear motion as they leave, both ways, the way the exported scroll timeline does.
+  let scrollIO = null;
+  function armScroll(kit) {
+    scrollIO?.disconnect(); scrollIO = null;
+    if (K.trigger !== "scroll" || !kit) return;
+    const frame = $("kitFrame"), els = partsOf(kit), seen = new WeakSet();
+    for (const el of els) for (const a of el.getAnimations()) if (a.id === "kit") a.cancel();
+    if (ENTER[K.enter]) for (const el of els) { const a = el.animate([ENTER[K.enter][0], ENTER[K.enter][0]], { duration: 1, fill: "forwards" }); a.id = "kit"; }
+    scrollIO = new IntersectionObserver((list) => {
+      let n = 0;
+      for (const en of list) {
+        const el = en.target, kill = () => { for (const a of el.getAnimations()) if (a.id === "kit") a.cancel(); };
+        if (en.isIntersecting) {
+          seen.add(el); kill();
+          if (ENTER[K.enter]) { const a = el.animate(ENTER[K.enter], { duration: K.dur, easing: EASE[K.ease], delay: Math.min(n++, 8) * K.stagger, fill: "backwards" }); a.id = "kit"; }
+        } else if (seen.has(el)) {
+          kill();
+          const frames = EXIT[K.exit] || (ENTER[K.enter] ? [ENTER[K.enter][1], ENTER[K.enter][0]] : null);
+          if (frames) { const a = el.animate(frames, { duration: K.dur, easing: EASE[K.ease], fill: "forwards" }); a.id = "kit"; }
+        }
+      }
+    }, { root: frame, threshold: 0.12 });
+    els.forEach((el) => scrollIO.observe(el));
+  }
   async function replay(exitFirst) {
     const kit = $("kit"); if (!kit || build.hidden || root.UI?.reduce.matches) return;
+    if (K.trigger === "scroll") { if (exitFirst) $("kitFrame")?.scrollTo({ top: 0 }); armScroll(kit); return; }
+    scrollIO?.disconnect(); scrollIO = null;
     const tok = ++playTok, els = partsOf(kit), opts = (i, back) => ({ duration: K.dur, easing: EASE[K.ease], delay: Math.min(back ? els.length - 1 - i : i, 12) * K.stagger * (back ? 0.5 : 1) });
     for (const el of els) for (const a of el.getAnimations()) if (a.id === "kit") a.cancel();
     if (exitFirst && EXIT[K.exit]) {
@@ -819,7 +849,13 @@
     let out = "";
     if (ENTER[K.enter]) out += `\n@keyframes appear {\n${KF(ENTER[K.enter])}\n}\n.appear { animation: appear var(--duration) var(--easing) both; animation-delay: calc(var(--i, 0) * var(--stagger)); }\n`;
     if (EXIT[K.exit]) out += `\n@keyframes disappear {\n${KF(EXIT[K.exit])}\n}\n.disappear { animation: disappear var(--duration) var(--easing) both; }\n`;
-    return out + (out ? `\n@media (prefers-reduced-motion: reduce) { .appear, .disappear { animation-duration: 1ms; } }\n` : "");
+    // On scroll: the same keyframes run on a view timeline, in as a section enters and out as it leaves.
+    if (K.trigger === "scroll" && (ENTER[K.enter] || EXIT[K.exit])) {
+      const names = [ENTER[K.enter] && "appear", EXIT[K.exit] && "disappear"].filter(Boolean);
+      const ranges = [ENTER[K.enter] && "entry 0% entry 60%", EXIT[K.exit] && "exit 40% exit 100%"].filter(Boolean);
+      out += `\n/* Scroll-driven: sections appear as they enter the viewport and disappear as they leave. */\n@supports (animation-timeline: view()) {\n  .on-scroll { animation: ${names.map((n) => `${n} linear both`).join(", ")}; animation-timeline: ${names.map(() => "view()").join(", ")}; animation-range: ${ranges.join(", ")}; }\n}\n`;
+    }
+    return out + (out ? `\n@media (prefers-reduced-motion: reduce) { .appear, .disappear, .on-scroll { animation: none; } }\n` : "");
   }
   const jsonTokens = () => JSON.stringify(tokens(), null, 2);
   // Briefs for AI agents: one for design work, one for building it.
@@ -828,7 +864,7 @@
     const named = (h) => `${h} (${C.name(h)})`;
     const libs = LIBS.filter((l) => (K.fw === "All" || l.fw.includes(K.fw)) && ["Components", "Headless"].includes(l.cat)).slice(0, 6).map((l) => `- ${l.name}: ${l.url}`).join("\n");
     const own = [t.font.heading, t.font.body].filter((x) => custom.has(x));
-    let out = `# ${kind === "design" ? "Design brief" : "Build brief"}\n\nFollow these rules on every screen:\n${rules}\n\n## Type\n- Headings: ${t.font.heading}, weight ${t.font.headingWeight}, tracking ${t.font.tracking}em\n- Body: ${t.font.body}, ${t.size.base}px base, scale ratio ${K.scale}\n- Load from Google Fonts: ${fontsLink()}\n${own.length ? `- Self-hosted fonts (files supplied separately): ${[...new Set(own)].join(", ")}\n` : ""}\n## Color (${isDark() ? "dark" : "light"} mode)\n- Background ${named(r.bg)}, surface ${r.surface}, border ${r.border}\n- Text ${named(r.text)}, muted text ${r.muted}\n- Text on background is ${r.contrast.toFixed(1)}:1\n- Accent ${named(r.accent)} with ${r.onAccent} text on it\n- Roles: ${ROLES.map(([k, n]) => `${n.toLowerCase()} ${r[k]}`).join(", ")}\n\n## Shape and space\n- Spacing scale (px): ${Object.values(t.space).join(", ")}\n- Corner radius ${t.radius.base}px, buttons ${K.pill ? "fully rounded" : t.radius.base + "px"}\n- Elevation: ${K.elevation} (${t.shadow})\n\n## Motion\n- ${t.motion.duration}ms with ${t.motion.easing}\n- Things appear with ${K.enter === "none" ? "no motion" : `a ${K.enter} (${t.motion.stagger}ms between items in a group)`} and disappear with ${K.exit === "none" ? "no motion" : `a ${K.exit}`}\n- Vary timing slightly between elements and honor prefers-reduced-motion\n`;
+    let out = `# ${kind === "design" ? "Design brief" : "Build brief"}\n\nFollow these rules on every screen:\n${rules}\n\n## Type\n- Headings: ${t.font.heading}, weight ${t.font.headingWeight}, tracking ${t.font.tracking}em\n- Body: ${t.font.body}, ${t.size.base}px base, scale ratio ${K.scale}\n- Load from Google Fonts: ${fontsLink()}\n${own.length ? `- Self-hosted fonts (files supplied separately): ${[...new Set(own)].join(", ")}\n` : ""}\n## Color (${isDark() ? "dark" : "light"} mode)\n- Background ${named(r.bg)}, surface ${r.surface}, border ${r.border}\n- Text ${named(r.text)}, muted text ${r.muted}\n- Text on background is ${r.contrast.toFixed(1)}:1\n- Accent ${named(r.accent)} with ${r.onAccent} text on it\n- Roles: ${ROLES.map(([k, n]) => `${n.toLowerCase()} ${r[k]}`).join(", ")}\n\n## Shape and space\n- Spacing scale (px): ${Object.values(t.space).join(", ")}\n- Corner radius ${t.radius.base}px, buttons ${K.pill ? "fully rounded" : t.radius.base + "px"}\n- Elevation: ${K.elevation} (${t.shadow})\n\n## Motion\n- ${t.motion.duration}ms with ${t.motion.easing}\n- Things appear with ${K.enter === "none" ? "no motion" : `a ${K.enter} (${t.motion.stagger}ms between items in a group)`} and disappear with ${K.exit === "none" ? "no motion" : `a ${K.exit}`}\n- ${K.trigger === "scroll" ? "Sections play these as they scroll into and out of view (class on-scroll in the CSS)" : "These play once when a view loads"}\n- Vary timing slightly between elements and honor prefers-reduced-motion\n`;
     if (kind === "dev") out += `\n## Tokens as CSS variables\n\`\`\`css\n${cssVars()}\`\`\`\n\n## Tailwind v4 theme\n\`\`\`css\n${tailwind()}\`\`\`\n` + (libs ? `\n## Suggested libraries${K.fw !== "All" ? " for " + K.fw : ""}\n${libs}\n` : "");
     return out;
   }

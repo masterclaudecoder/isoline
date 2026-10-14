@@ -46,6 +46,12 @@ jobs:
           mkdir _site
           cp index.html logos.html style.css *.js _site/
           cp -r previews _site/
+          # Stamp the build, bust caches on every deploy, and publish the build id for update checks.
+          SHA=${GITHUB_SHA::7}; DATE=$(date -u +"%-d %b %Y")
+          sed -i "s/__BUILD__/$SHA/; s/__DATE__/$DATE/" _site/app.js
+          sed -i -E "s/(src=\"[a-z0-9-]+\.js)\"/\1?v=$SHA\"/g; s/href=\"style\.css\"/href=\"style.css?v=$SHA\"/" _site/index.html
+          echo "{\"build\":\"$SHA\"}" > _site/version.json
+          cp og.jpg favicon.svg _site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

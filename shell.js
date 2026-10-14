@@ -27,9 +27,12 @@
       const pt = document.querySelector(".pt");
       [...pt.querySelectorAll(".pt-col")].forEach((c, i) => c.style.setProperty("--k", i));
       pt.style.setProperty("--n", pt.querySelectorAll(".pt-col").length);
-      pt.classList.remove("enter", "bar-enter"); void pt.offsetWidth; pt.classList.add("enter");
+      // Inside a view transition the home strip already stretches into the columns, so they only settle
+      // their labels in afterwards. A second rise on top of the morph read as a stutter.
+      pt.classList.remove("enter", "bar-enter", "vt-enter"); void pt.offsetWidth;
+      pt.classList.add(inVT ? "vt-enter" : "enter");
       if (!inVT) pt.classList.add("bar-enter");
-      clearTimeout(pt._t); pt._t = setTimeout(() => pt.classList.remove("enter", "bar-enter"), 1600);
+      clearTimeout(pt._t); pt._t = setTimeout(() => pt.classList.remove("enter", "bar-enter", "vt-enter"), 1600);
     }
     if (r === "home") paintHome();
     // One size control: in the top bar for the studio, in the preview's own bar for the builder.
@@ -60,8 +63,8 @@
 
   // Home previews: the studio's current design and the palette tool's current colors.
   async function paintHome() {
-    const pal = root.Palettes?.colors() || [];
-    $("homePalette").innerHTML = pal.map((c) => `<i style="background:${c}"></i>`).join("");
+    const pal = root.Palettes?.colors() || [], w = root.Palettes?.weights?.() || [];
+    $("homePalette").innerHTML = pal.map((c, i) => `<i style="background:${c};flex-grow:${w[i] || 1}"></i>`).join("");
     root.Components?.preview($("homeComponents"));
     const host = $("homeStudio");
     const r = host.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);

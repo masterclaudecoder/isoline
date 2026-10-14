@@ -112,9 +112,14 @@ void main() {
   vec2 p = vec2(vUv.x, 1.0 - vUv.y);
   float tw = 6.2831853 * uTime;
   vec2 drift = uMotion == 1 ? uMotAmt * vec2(cos(tw), sin(tw)) : vec2(0.0);
-  float warp = uWarp * (uMotion == 3 ? 1.0 + 0.8 * uMotAmt * sin(tw) : 1.0);
+  // Breathe: the warp is read from points travelling round two loops (whole turns only), so the field
+  // morphs forward the whole time and lands back on its first frame without reversing.
+  bool br = uMotion == 3;
+  vec2 L1 = br ? 1.5 * uMotAmt * vec2(cos(tw), sin(tw)) : vec2(0.0);
+  vec2 L2 = br ? 1.1 * uMotAmt * vec2(sin(tw + 1.3), cos(2.0 * tw + 0.7)) : vec2(0.0);
+  float warp = br ? max(uWarp, 0.7 * uMotAmt) * (1.0 + 0.2 * uMotAmt * sin(tw)) : uWarp;
   if (uType >= 1 && uType <= 3) p += drift * 0.03;
-  if (warp > 0.0) { vec2 q = p * a * uWarpScale + drift * 0.6; p += warp * 0.3 * (vec2(fbm(q + vec2(1.7, 9.2)), fbm(q + vec2(8.3, 2.8))) - 0.5); }
+  if (warp > 0.0) { vec2 q = p * a * uWarpScale + drift * 0.6; p += warp * 0.3 * (vec2(fbm(q + vec2(1.7, 9.2) + L1), fbm(q + vec2(8.3, 2.8) + L2)) - 0.5); }
   vec3 lab;
   if (uType >= 4) {
     // Flow and noise generators: a rotated, stretched simplex field mapped through the color ramp.
@@ -124,11 +129,11 @@ void main() {
     q = q * uScale + uSeed * vec2(1.37, 2.91) + drift * 0.9;
     float v;
     if (uType == 4) {
-      vec2 w1 = vec2(sfbm(q), sfbm(q + vec2(5.2, 1.3)));
-      vec2 w2 = vec2(sfbm(q + warp * 1.2 * w1 + vec2(1.7, 9.2)), sfbm(q + warp * 1.2 * w1 + vec2(8.3, 2.8)));
+      vec2 w1 = vec2(sfbm(q + L1), sfbm(q + vec2(5.2, 1.3) + L2));
+      vec2 w2 = vec2(sfbm(q + warp * 1.2 * w1 + vec2(1.7, 9.2) - L2), sfbm(q + warp * 1.2 * w1 + vec2(8.3, 2.8) + L1.yx));
       v = sfbm(q + warp * 1.2 * w2) * 0.75 + 0.5;
     } else {
-      q += warp * vec2(sfbm(q + vec2(3.1, 7.7)), sfbm(q + vec2(9.4, 1.2)));
+      q += warp * vec2(sfbm(q + vec2(3.1, 7.7) + L1), sfbm(q + vec2(9.4, 1.2) + L2));
       if (uNoise == 0) v = sfbm(q) * 0.6 + 0.5;
       else if (uNoise == 1) { float am = 0.5, r = 0.0; vec2 pp = q; for (int i = 0; i < 8; i++) { if (float(i) >= uDetail) break; float n = 1.0 - abs(snoise(pp)); r += am * n * n; pp = pp * 2.02 + 17.0; am *= 0.5; } v = r * 1.1; }
       else if (uNoise == 2) { float am = 0.5, r = 0.0; vec2 pp = q; for (int i = 0; i < 8; i++) { if (float(i) >= uDetail) break; r += am * abs(snoise(pp)); pp = pp * 2.02 + 17.0; am *= 0.5; } v = r * 1.6; }
@@ -141,7 +146,7 @@ void main() {
     lab = ramp(clamp((v - 0.5) * uContrast + 0.5, 0.0, 1.0));
   } else if (uType == 0) {
     vec3 acc = vec3(0.0); float ws = 0.0;
-    for (int i = 0; i < 8; i++) { if (i >= uN) break; vec2 orb = uMotion == 1 ? 0.07 * uMotAmt * vec2(cos(tw + float(i) * 2.1), sin(tw + float(i) * 1.3)) : vec2(0.0); vec2 d = (p - uPt[i] - orb) * a; float w = 1.0 / pow(dot(d, d) + 0.0004, uSoft); acc += toLab(lin(uCol[i])) * w; ws += w; }
+    for (int i = 0; i < 8; i++) { if (i >= uN) break; vec2 orb = uMotion == 1 ? 0.07 * uMotAmt * vec2(cos(tw + float(i) * 2.1), sin(tw + float(i) * 1.3)) : br ? 0.16 * uMotAmt * vec2(sin(tw + float(i) * 2.1), sin(2.0 * tw + float(i) * 1.3)) : vec2(0.0); vec2 d = (p - uPt[i] - orb) * a; float w = 1.0 / pow(dot(d, d) + 0.0004, uSoft); acc += toLab(lin(uCol[i])) * w; ws += w; }
     lab = acc / ws;
   } else {
     vec2 c = (p - 0.5) * a; float t;
