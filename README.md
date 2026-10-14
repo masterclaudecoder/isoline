@@ -2,7 +2,7 @@
 
 Topographic patterns, palettes and design tokens. Static site: open `index.html` or serve the folder (`python3 -m http.server`).
 
-Live at **https://masterclaudecoder.github.io/topographic/**. Every push to the main branch deploys it through GitHub Actions (`.github/workflows/pages.yml`). The workflow also captures previews for new libraries and commits them to `previews/`. Pages has to be switched on once in the repository settings (Settings, Pages, Source: GitHub Actions).
+Live at **https://masterclaudecoder.github.io/isoline/**. Every push to the main branch deploys it through GitHub Actions (`.github/workflows/pages.yml`). The workflow also captures previews for new libraries and commits them to `previews/`. Pages has to be switched on once in the repository settings (Settings, Pages, Source: GitHub Actions).
 
 ## Pages
 The home page (`#/`) shows three tools as large cards. Moving between pages is a seamless transition: the top bar stays put, pages crossfade, a tool's preview morphs into the tool, and floating bars pull up from the bottom once their page lands.

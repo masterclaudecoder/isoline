@@ -319,7 +319,7 @@
   let local = {};
   const shots = (l) => [...(local[root.ISO_SLUG(l.name)] ? [local[root.ISO_SLUG(l.name)]] : []), `https://v1.opengraph.11ty.dev/${enc(l.url)}/small/`, `https://v1.screenshot.11ty.dev/${enc(l.url)}/opengraph/`];
   // Next to the page when served from the repo or GitHub Pages; from the published site otherwise.
-  const SITE = "https://masterclaudecoder.github.io/topographic/";
+  const SITE = "https://masterclaudecoder.github.io/isoline/";
   const loadIndex = (base) => fetch(base + "previews/index.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((m) => Object.fromEntries(Object.entries(m || {}).map(([k, v]) => [k, base + v.src])));
   loadIndex("").catch(() => loadIndex(SITE)).then((m) => { local = m; if (Object.keys(local).length && !lib.hidden && $("cpResults").children.length) renderLibs(); }).catch(() => {});
   const favicon = (l, sz = 64) => `https://www.google.com/s2/favicons?domain=${enc(hostOf(l.url))}&sz=${sz}`;
