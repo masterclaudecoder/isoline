@@ -451,7 +451,7 @@
   // a scrap of interface, a corner, a lifted card, a moving dot. They change as the tokens do, at the
   // token duration and easing.
   const TOK_TH = {
-    type: `<span class="tt-ag"><span>Ag</span><span>Ag</span><span>Ag</span></span>`,
+    type: `<span class="tt-ag"><span>Ag Bb</span></span>`,
     color: `<span class="tt-ui"><i class="tt-l1"></i><i class="tt-l2"></i><i class="tt-pill"></i></span>`,
     artwork: `<span class="tt-art" id="cpArtTile"></span>`,
     spacing: `<span class="tt-space"><i></i><b></b><i></i><b></b><i></i></span>`,
@@ -460,7 +460,33 @@
     motion: `<span class="tt-move"><i></i></span>`,
     rules: `<span class="tt-rules"><i></i><i></i><i></i><i></i></span>`,
   };
+  // Hover plays three beats on a token tile: as set, less, more, then home. Leaving lets the beat in
+  // progress finish, so the tile always comes to rest on the token's own value.
+  const TOK_ANIM = {
+    type: [".tt-ag span", () => [{ scale: 1 }, { scale: 0.74 }, { scale: 1.28 }, { scale: 1 }]],
+    color: [".tt-pill", () => [{ filter: "saturate(1)", width: "24px" }, { filter: "saturate(.3)", width: "16px" }, { filter: "saturate(1.7)", width: "34px" }, { filter: "saturate(1)", width: "24px" }]],
+    artwork: [".tt-art", () => [{ backgroundPosition: "50% 50%" }, { backgroundPosition: "20% 20%" }, { backgroundPosition: "85% 85%" }, { backgroundPosition: "50% 50%" }]],
+    spacing: [".tt-space b", () => [{ width: "8px" }, { width: "3px" }, { width: "17px" }, { width: "8px" }]],
+    radius: [".tt-corner", (el) => { const r = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0; return [{ borderRadius: r + "px" }, { borderRadius: Math.max(0, r - 7) + "px" }, { borderRadius: Math.min(15, r + 9) + "px" }, { borderRadius: r + "px" }]; }],
+    elevation: [".tt-card", () => { const k = (y, b, a) => ({ translate: `0 ${y}px`, boxShadow: `inset 0 1px 0 rgba(255,255,255,.14), 0 ${b}px ${b * 2}px -${b / 2}px rgba(0,0,0,${a})` }); return [k(0, 3, 0.35), k(1, 1, 0.25), k(-5, 10, 0.55), k(0, 3, 0.35)]; }],
+    motion: [".tt-move i", () => [{ left: "0%" }, { left: "calc(40% - 4px)" }, { left: "calc(100% - 10px)" }, { left: "0%" }]],
+    rules: [".tt-rules i", () => [{ scale: "1 1" }, { scale: ".55 1" }, { scale: "1.25 1" }, { scale: "1 1" }]],
+  };
+  function tokHover(tile) {
+    const th = tile.querySelector("[data-tt]"), spec = TOK_ANIM[th?.dataset.tt];
+    if (!spec || root.UI?.reduce.matches) return;
+    let anims = [];
+    tile.addEventListener("pointerenter", () => {
+      if (anims.length && anims.every((a) => a.playState === "running")) { anims.forEach((a) => a.effect.updateTiming({ iterations: Infinity })); return; }
+      anims.forEach((a) => a.cancel());
+      anims = [...th.querySelectorAll(spec[0])].map((el, i) => { if (spec[0].includes("rules")) el.style.transformOrigin = "0 50%"; return el.animate(spec[1](el).map((k) => ({ ...k, easing: "cubic-bezier(.45,0,.25,1)" })), { duration: 2400, iterations: Infinity, delay: i * 60 }); });
+    });
+    tile.addEventListener("pointerleave", () => {
+      for (const a of anims) { const t = a.effect.getComputedTiming(); a.effect.updateTiming({ iterations: Math.floor((t.currentIteration ?? 0)) + 1 }); }
+    });
+  }
   $("cpSlots").innerHTML = SLOTS.map(([id, label]) => `<div class="slot"><div class="slot-label">${label}</div><button class="tile" data-s="${id}"><span class="tile-th tok-th" data-tt="${id}">${TOK_TH[id]}</span><span class="tile-text"><b></b><small></small></span>${ic("next")}</button></div>`).join("");
+  $("cpSlots").querySelectorAll(".tile").forEach(tokHover);
   const setText = (el, v) => { if (el.textContent === v) return; el.textContent = v; if (!root.UI?.reduce.matches && !build.hidden) el.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 220 + Math.random() * 80, easing: "cubic-bezier(.22,1,.36,1)" }); };
   function renderSlots() {
     vars($("cpSlots"));

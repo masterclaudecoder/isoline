@@ -93,4 +93,8 @@
   const Shell = { go, route: null };
   root.Shell = Shell;
   show(parse(location.hash));
+  // First load: the page stays out of sight until its fonts are in (or a moment has passed), then the
+  // top bar settles and the page's panels rise in one after another, so nothing flashes or shifts.
+  const html = document.documentElement, reveal = () => { html.classList.remove("loading"); if (reduce.matches) return; html.classList.add("intro"); setTimeout(() => html.classList.remove("intro"), 1500); };
+  Promise.race([document.fonts?.ready || Promise.resolve(), new Promise((r) => setTimeout(r, 700))]).then(() => requestAnimationFrame(() => requestAnimationFrame(reveal)));
 })(window);

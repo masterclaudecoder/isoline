@@ -57,21 +57,22 @@
     ["mesh", "Mesh", "Soft color points"],
     ["flow", "Flow", "Warped color fields"],
     ["noise", "Noise", "Clouds, ridges and cells"],
+    ["aura", "Aura", "A glowing body of light"],
     ["linear", "Linear", "Straight blend"],
     ["radial", "Radial", "Blend from the center"],
     ["conic", "Conic", "Blend around a point"],
     ["image", "Image", "Your own picture"],
   ];
   const GEN_LABEL = Object.fromEntries(GENS.map((g) => [g[0], g[1]]));
-  const NOISE_TYPES = [["clouds", "Clouds"], ["ridges", "Ridges"], ["billow", "Billow"], ["cells", "Cells"], ["veins", "Veins"], ["marble", "Marble"], ["neuro", "Neuro"], ["ring", "Smoke ring"], ["aura", "Aura"]];
+  const NOISE_TYPES = [["clouds", "Clouds"], ["ridges", "Ridges"], ["billow", "Billow"], ["cells", "Cells"], ["veins", "Veins"], ["marble", "Marble"], ["neuro", "Neuro"], ["ring", "Smoke ring"]];
   // Objects: forms and pictures placed over the design, before effects. Forms take a material: lit in
   // the palette, wrapped in the design underneath, wrapped in a preset, or glass.
-  const OBJ_KINDS = [["sphere", "Sphere"], ["torus", "Torus"], ["cube", "Cube"], ["capsule", "Capsule"], ["blob", "Blob"], ["image", "Picture"]];
+  const OBJ_KINDS = [["sphere", "Sphere"], ["torus", "Torus"], ["cube", "Cube"], ["capsule", "Capsule"], ["blob", "Blob"], ["pill", "Pill"], ["image", "Picture"]];
   const OBJ_LABEL = Object.fromEntries(OBJ_KINDS);
   const OBJ_MATS = [["shaded", "Shaded", "Lit in your palette"], ["design", "Design", "Wrapped in the design underneath"], ["preset", "Preset", "Wrapped in a preset of your choice"], ["glass", "Glass", "Bends what's behind it"]];
   const PIC_MATS = [["photo", "Photo", "The picture as it is"], ["palette", "Palette", "The picture in your colors"]];
   const MAT_LABEL = Object.fromEntries([...OBJ_MATS, ...PIC_MATS].map(([k, l]) => [k, l]));
-  const OBJ_DEFAULT = { kind: "sphere", x: 0.5, y: 0.5, size: 0.5, rot: 0, tilt: 20, spin: 30, mat: "shaded", preset: "Prism", shine: 0.6, ripple: 0, round: 0.15, shadow: 0.4, image: "" };
+  const OBJ_DEFAULT = { kind: "sphere", x: 0.5, y: 0.5, size: 0.5, rot: 0, tilt: 20, spin: 30, mat: "shaded", preset: "Prism", shine: 0.6, ripple: 0, round: 0.15, shadow: 0.4, image: "", layer: "under", anim: true, speed: 1, refract: 1, frost: 0, disp: 0.3, rim: 0.5, tint: "#ffffff", tintAmt: 0 };
   const objId = () => "o" + Math.random().toString(36).slice(2, 8);
   const NOISE_LABEL = Object.fromEntries(NOISE_TYPES);
   // Palettes: [name, colors dark to light, contour roles [lines, blend, background] when they differ from the default pick]
@@ -100,6 +101,18 @@
     ["Cobalt", ["#0a1640", "#1f3fbf", "#6f8cff", "#e6ebff"], ["#1f3fbf", "#6f8cff", "#e6ebff"]],
     ["Terracotta", ["#2a1410", "#a3472d", "#e38b5d", "#f7dcc4"], ["#a3472d", "#e38b5d", "#f7dcc4"]],
     ["Ink", ["#0d0d0f", "#3a3a40", "#a9a6a0", "#f1ede4"], ["#0d0d0f", "#a9a6a0", "#f1ede4"]],
+    ["Lichen", ["#1e2419", "#4f5e3a", "#a7b36b", "#eef0dc"]],
+    ["Saffron", ["#2a1606", "#a8530f", "#f2a33a", "#fdf0d5"]],
+    ["Fjord", ["#0f1c24", "#2f4f5f", "#7fa7b3", "#e3edef"]],
+    ["Orchid", ["#2a0f2e", "#8a2d8f", "#e07ad6", "#fbe6f7"]],
+    ["Rust", ["#1f120c", "#6e2b14", "#c4622d", "#f2d6bf"]],
+    ["Mint", ["#0f2a22", "#1f7a5c", "#7fd6b0", "#effaf4"]],
+    ["Haze", ["#262333", "#615a7a", "#b9b0d0", "#f4f1f8"]],
+    ["Neon", ["#0a0a12", "#ff2e88", "#29e6ff", "#f6ff3d"]],
+    ["Olive", ["#1d1c10", "#5b5a2a", "#a8a35a", "#f1eedb"]],
+    ["Tide", ["#06141f", "#0e4c6e", "#3aa0c8", "#cfeef7"]],
+    ["Blush", ["#3a2226", "#b0636b", "#efb7b3", "#fdf3f0"]],
+    ["Slate", ["#14181d", "#3c4652", "#8a96a3", "#e8ecef"]],
   ];
   // Brand palettes, from each company's brand pages where published (Slack, Spotify, Discord, Dropbox) and
   // otherwise from the values design references agree on (Figma, Stripe, Linear, Mailchimp, Airbnb).
@@ -114,6 +127,14 @@
     ["Linear", ["#08090a", "#5e6ad2", "#f7f8f8"], ["#5e6ad2", "#f7f8f8", "#08090a"]],
     ["Mailchimp", ["#241c15", "#ffe01b", "#ffffff"], ["#241c15", "#ffffff", "#ffe01b"]],
     ["Airbnb", ["#222222", "#484848", "#ff385c", "#ffffff"], ["#ff385c", "#222222", "#ffffff"]],
+    ["GitHub", ["#0d1117", "#238636", "#1f6feb", "#f6f8fa"]],
+    ["Notion", ["#191919", "#787774", "#f7f6f3", "#ffffff"]],
+    ["Vercel", ["#000000", "#666666", "#ffffff"]],
+    ["Duolingo", ["#58cc02", "#1cb0f6", "#ff9600", "#ff4b4b", "#ffffff"]],
+    ["Netflix", ["#141414", "#e50914", "#ffffff"]],
+    ["Twitch", ["#0e0e10", "#9146ff", "#efeff1"]],
+    ["Shopify", ["#002e25", "#008060", "#95bf47", "#f6f6f1"]],
+    ["Google", ["#4285f4", "#ea4335", "#fbbc05", "#34a853", "#ffffff"]],
   ];
   const lum = (h) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
   // Lines take the darkest color, the blend a middle one and the background the lightest.
@@ -169,6 +190,8 @@
       g.type = "radial"; g.warp = 0;
     }
     delete g.solid; delete g.ripple;
+    // Aura was a noise type before it became a generator of its own.
+    if (g.type === "noise" && g.noise === "aura") { g.type = "aura"; g.noise = "clouds"; g.scale = 1; g.warp = 0.6; g.detail = 4; g.stretch = 1; g.soft = 1.6; }
     out.objects = (Array.isArray(out.objects) ? out.objects : []).filter((o) => o && OBJ_LABEL[o.kind]).slice(0, 8).map((o) => ({ ...OBJ_DEFAULT, ...o, id: typeof o.id === "string" ? o.id : objId() }));
     if (!GENS.some((x) => x[0] === g.type && x[0] !== "contours")) g.type = "mesh";
     if (!Array.isArray(g.colors) || g.colors.length < 2) g.colors = DEFAULTS.grad.colors.slice();
@@ -194,7 +217,10 @@
     const inks = st.grad.colors.filter((c) => c !== bg).slice(0, 6), many = inks.length >= 3;
     return { ...st, source: "contours", mode: "bands", band: clamp(st.band, 0.35, 0.6), line: many ? inks[0] : line, line2: many ? inks[inks.length - 1] : line2, mids: many ? inks.slice(1, -1) : [], bg, gradient: false, transparent: false, opacity: 1 }; };
   // Going the other way, a gradient takes the contour inks, unless its colors already hold the same set.
-  const asGradient = (st, type) => { const g = { ...st, source: "gradient", grad: { ...st.grad, type } }; if (st.source !== "contours") return g;
+  const asGradient = (st, type) => { const g = { ...st, source: "gradient", grad: { ...st.grad, type } };
+    // Aura glows out of its first color, so it starts from the darkest one, at settings made for it.
+    if (type === "aura" && st.grad?.type !== "aura") Object.assign(g.grad, { scale: clamp(st.grad.scale, 0.9, 2.4), detail: clamp(st.grad.detail, 2, 4), stretch: 1, soft: 1.6, warp: clamp(st.grad.warp, 0.4, 1), contrast: 1, colors: [...st.grad.colors].sort((x, y) => lum(x) - lum(y)) });
+    if (st.source !== "contours") return g;
     const inks = [...new Set([st.bg, st.line, ...(st.mids || []), st.line2].filter(Boolean))].slice(0, 8), same = inks.length === st.grad.colors.length && inks.every((c) => st.grad.colors.includes(c));
     if (same) return g; g.grad.colors = inks; g.grad.points = inks.map((_, i) => clone(st.grad.points[i] || DEFAULTS.grad.points[i % 5])); return g; };
   function setGen(id) { if (id === "contours") Object.assign(S, asContours(S)); else Object.assign(S, asGradient(S, id)); sel = null; }
@@ -204,12 +230,32 @@
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const newSeed = () => Math.floor(Math.random() * 999999);
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
-  // A short message at the bottom. With an action it gets a button and stays up a little longer.
+  // Notifications stack in the bottom right (along the bottom on phones). Each slides in, waits while
+  // hovered, and leaves on its own. One with an action gets a button and stays up longer. The same
+  // message twice in a row refreshes the one showing instead of stacking a copy.
   const toast = (msg, opt = {}) => {
-    const t = $("toast"); t.textContent = msg;
-    if (opt.action) { const b = document.createElement("button"); b.textContent = opt.action; b.onclick = () => { t.classList.remove("show"); opt.onAction?.(); }; t.append(b); }
-    t.classList.toggle("act", !!opt.action); t.classList.add("show"); clearTimeout(t._h);
-    t._h = setTimeout(() => t.classList.remove("show"), opt.action ? 5000 : 2000);
+    const host = $("toasts");
+    const same = [...host.children].find((n) => !n.classList.contains("out") && n.dataset.msg === msg && !opt.action);
+    if (same) { same._arm(); same.animate([{ transform: "scale(1.03)" }, { transform: "none" }], { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)" }); return; }
+    const n = document.createElement("div");
+    n.className = "note-t"; n.dataset.msg = msg; n.setAttribute("role", "status");
+    n.innerHTML = `<span class="note-msg"></span>${opt.action ? `<button class="note-act"></button>` : ""}<button class="note-x" aria-label="Dismiss">${ic("x")}</button>`;
+    n.querySelector(".note-msg").textContent = msg;
+    const leave = () => {
+      if (n.classList.contains("out")) return;
+      clearTimeout(n._h); n.classList.add("out");
+      const h = n.offsetHeight;
+      n.animate([{ opacity: 1, transform: "none", marginTop: "0px", height: h + "px" }, { opacity: 0, transform: "translateX(24px) scale(.97)", marginTop: "-8px", height: "0px" }], { duration: 260, easing: "cubic-bezier(.4,0,.2,1)" }).onfinish = () => n.remove();
+    };
+    n._arm = () => { clearTimeout(n._h); n._h = setTimeout(leave, opt.action ? 6000 : 2800); };
+    if (opt.action) { const b = n.querySelector(".note-act"); b.textContent = opt.action; b.onclick = () => { leave(); opt.onAction?.(); }; }
+    n.querySelector(".note-x").onclick = leave;
+    n.addEventListener("pointerenter", () => clearTimeout(n._h));
+    n.addEventListener("pointerleave", () => n._arm());
+    host.appendChild(n);
+    const live = [...host.children].filter((x) => !x.classList.contains("out"));
+    if (live.length > 3) live[0].querySelector(".note-x").click();
+    n._arm();
   };
   const isRaster = (st) => st.source === "gradient" || st.fxOrder.some((id) => st.fx[id]?.on) || !!st.objects?.length;
   const getPath = (o, p) => p.split(".").reduce((a, k) => (a == null ? a : a[k]), o);
@@ -250,7 +296,8 @@
     ["Noise", "Clouds", { ...G("noise", "Glacier", { noise: "clouds", scale: 1, detail: 5, warp: 0.3, stretch: 1.4, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Noise", "Neuro", { ...G("noise", "Iris", { noise: "neuro", scale: 1, detail: 3, warp: 0.2, stretch: 1, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Noise", "Halo", { ...G("noise", "Dusk", { noise: "ring", scale: 0.8, detail: 3, warp: 0.6, stretch: 1, contrast: 1, angle: 0 }), fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
-    ["Noise", "Aura", { ...G("noise", ["#07060f", "#3b1d8f", "#c13cff", "#ff5f6d", "#ffc371"], { noise: "aura", scale: 0.5, detail: 3, warp: 0.7, stretch: 1.4, contrast: 1, angle: 0 }), fx: { bloom: { threshold: 0.7, radius: 24, intensity: 0.35 }, grain: { amount: 0.06, size: 1.2, soft: true } } }],
+    ["Noise", "Aura", { ...G("aura", ["#050407", "#7a0f5c", "#e0336f", "#f2a81d", "#f4e04d"], { scale: 1, detail: 3, warp: 0.7, stretch: 1, soft: 1.6, contrast: 1, angle: 20 }), fx: { grain: { amount: 0.05, size: 1.2, soft: true } } }],
+    ["Noise", "Lagoon", { ...G("aura", ["#02161c", "#05607a", "#0fb5d0", "#3fe3ef", "#b8fbff"], { scale: 2.6, detail: 3, warp: 0.5, stretch: 1.4, soft: 2.4, contrast: 1.2, angle: -30 }), motion: { type: "breathe", dur: 12, amt: 0.6 } }],
     ["Gradients", "Orb", { ...G("radial", "Dusk", { warp: 0.2, soft: 1.6 }), objects: [{ kind: "blob", x: 0.5, y: 0.5, size: 0.62, tilt: 29, spin: 25, mat: "shaded", shine: 0.6, ripple: 0.3, shadow: 0.35 }], fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Gradients", "Ring", { ...G("radial", "Glacier", { warp: 0, soft: 2 }), objects: [{ kind: "torus", x: 0.5, y: 0.5, size: 0.66, tilt: 29, spin: -30, mat: "shaded", shine: 0.8, shadow: 0.3 }], fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Gradients", "Glass orbs", { ...G("flow", "Prism", { warp: 0.6, scale: 0.45 }), objects: [{ kind: "sphere", x: 0.34, y: 0.42, size: 0.44, mat: "glass", shine: 0.9, shadow: 0.25 }, { kind: "capsule", x: 0.7, y: 0.58, size: 0.4, rot: -30, tilt: 10, spin: 60, mat: "glass", shine: 0.9, shadow: 0.25 }] }],
@@ -395,6 +442,10 @@
       const vis = !c.when || c.when();
       row.hidden = !vis;
       if (!vis) return;
+      // A setting the current shape ignores stays in place, dimmed, saying so, rather than doing nothing.
+      const na = c.na?.() || "";
+      row.classList.toggle("na", !!na); input.disabled = val.disabled = !!na;
+      if (na) row.dataset.tip = na; else delete row.dataset.tip;
       const v = c.get();
       input.value = fromVal(v); paint(v);
     };
@@ -456,6 +507,7 @@
     if (id === "shape") {
       if (g === "contours") return [patLabel(S.pattern), activePoints() ? `${S.points.length} points, seed ${S.seed}` : `Scale ${S.scale}px, seed ${S.seed}`];
       if (g === "noise") return [NOISE_LABEL[gr.noise], `Scale ${sc(gr.scale)}, seed ${S.seed}`];
+      if (g === "aura") return ["Aura", `Size ${sc(gr.scale)}, ${gr.detail} lines`];
       if (g === "image") return IMG ? ["Image", `${IMG.el.naturalWidth}×${IMG.el.naturalHeight}px`] : ["Image", "No picture yet"];
       if (g === "flow") return ["Flow field", `Scale ${sc(gr.scale)}, seed ${S.seed}`];
       if (g === "mesh") return ["Mesh", `${gr.colors.length} points, softness ${f2(gr.soft)}`];
@@ -494,7 +546,7 @@
   function objTile(o) {
     const t = document.createElement("div");
     t.className = "tile fx obj"; t.dataset.obj = o.id;
-    t.innerHTML = `<button class="tile-main" data-slot="obj:${o.id}"><span class="tile-th" data-th="obj:${o.id}"></span><span class="tile-text"><b></b><small></small></span></button><button class="ib xs" data-remove-obj="${o.id}" aria-label="Remove" title="Remove">${ic("x")}</button>`;
+    t.innerHTML = `<span class="grip" title="Drag to reorder. Lower ones draw on top" aria-label="Drag to reorder">${ic("grip")}</span><button class="tile-main" data-slot="obj:${o.id}"><span class="tile-th" data-th="obj:${o.id}"></span><span class="tile-text"><b></b><small></small></span></button><button class="ib xs" data-remove-obj="${o.id}" aria-label="Remove" title="Remove">${ic("x")}</button>`;
     return t;
   }
   function renderObjTiles() {
@@ -521,6 +573,28 @@
   motionSlot.innerHTML = `<div class="slot-label">Motion</div><button class="tile" data-slot="motion"><span class="tile-th" data-th="motion"></span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
   slotList.appendChild(motionSlot);
   const EASE = "cubic-bezier(.2,.8,.2,1)";
+  // On narrow screens a stack of effects or objects folds into a deck of overlapping cards, like the
+  // color strip. Tapping the deck spreads it into the full list, where the grips reorder it.
+  const narrowStack = matchMedia("(max-width: 900px)"), stackOpen = { fx: false, obj: false };
+  narrowStack.addEventListener("change", () => { slotKey = ""; renderSlots(); });
+  for (const [k, slot] of [["fx", fxSlot], ["obj", objSlot]]) {
+    const b = document.createElement("button"); b.className = "stack-fold"; b.textContent = "Fold"; b.hidden = true;
+    b.onclick = () => { stackOpen[k] = false; slotKey = ""; renderSlots(); };
+    slot.querySelector(".slot-label").appendChild(b);
+    slot.addEventListener("click", (e) => {
+      if (!slot.classList.contains("folded") || !e.target.closest(".tile.fx")) return;
+      e.stopPropagation(); stackOpen[k] = true; slotKey = ""; renderSlots();
+    }, true);
+  }
+  function syncStacks() {
+    for (const [k, slot, n] of [["fx", fxSlot, S.fxOrder.length], ["obj", objSlot, S.objects.length]]) {
+      const deck = narrowStack.matches && n >= 2;
+      if (!deck) stackOpen[k] = false;
+      slot.classList.toggle("fx-stack", deck); slot.classList.toggle("folded", deck && !stackOpen[k]);
+      slot.querySelector(".stack-fold").hidden = !(deck && stackOpen[k]);
+      [...slot.querySelectorAll(".tile.fx:not(.leaving)")].forEach((t, i) => t.style.setProperty("--i", i));
+    }
+  }
   const animOK = () => !reduceMotion.matches && !document.body.classList.contains("boot");
   // Text that changes fades in rather than snapping.
   function setText(el, v) { if (el.textContent === v) return; el.textContent = v; if (animOK()) el.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 200 + Math.random() * 90, easing: EASE }); }
@@ -535,7 +609,7 @@
     if (key === slotKey) return;
     slotKey = key;
     const tiles = () => [...slotList.querySelectorAll(".tile")];
-    const keyOf = (n) => (n.dataset.fx ? "fx:" + n.dataset.fx : n.dataset.slot);
+    const keyOf = (n) => (n.dataset.fx ? "fx:" + n.dataset.fx : n.dataset.obj ? "obj:" + n.dataset.obj : n.dataset.slot);
     const before = new Map(tiles().map((n) => [keyOf(n), n.getBoundingClientRect().top]));
     for (const [id] of SLOT_DEFS) {
       const wrap = slotEls[id], t = wrap.querySelector(".tile"), [title, sub] = slotInfo(id);
@@ -561,6 +635,7 @@
     }
     addTile.classList.toggle("on", P.slot === "addfx");
     renderObjTiles();
+    syncStacks();
     { const t = motionSlot.querySelector(".tile"), m = S.motion; t.classList.toggle("on", P.slot === "motion"); setText(t.querySelector("b"), MOTION_NAME[m.type]); t.classList.toggle("still", m.type === "still"); setText(t.querySelector("small"), m.type === "still" ? "No motion yet" : `${m.dur}s, ${{ loop: "looping", pingpong: "ping-pong", once: "once" }[m.mode]}`); }
     setText(addTile.querySelector("small"), "Optional");
     for (const t of fxTiles.querySelectorAll("[data-fx]")) setText(t.querySelector("small"), fxFact(t.dataset.fx));
@@ -584,21 +659,22 @@
     const t = e.target.closest("[data-slot]");
     if (t) setSlot(t.dataset.slot);
   });
-  // Drag an effect's grip to reorder the stack.
+  // Drag a grip to reorder effects (the order they run in) or objects (lower ones draw on top).
   $("slotList").addEventListener("pointerdown", (e) => {
     const grip = e.target.closest(".grip");
-    if (!grip) return;
+    if (!grip || grip.closest(".fx-stack.folded")) return;
     e.preventDefault();
-    const id = grip.closest("[data-fx]").dataset.fx;
-    const mark = () => $("slotList").querySelector(`[data-fx="${id}"]`)?.classList.add("dragging");
-    mark();
+    const tile = grip.closest("[data-fx], [data-obj]"), isObj = !!tile.dataset.obj, attr = isObj ? "data-obj" : "data-fx";
+    const id = isObj ? tile.dataset.obj : tile.dataset.fx;
+    const list = () => (isObj ? S.objects : S.fxOrder), at = (i) => (isObj ? list()[i].id : list()[i]);
+    $("slotList").querySelector(`[${attr}="${id}"]`)?.classList.add("dragging");
     const move = (ev) => {
-      const items = [...$("slotList").querySelectorAll("[data-fx]")];
+      const items = [...$("slotList").querySelectorAll(`[${attr}]:not(.leaving)`)];
       let idx = items.findIndex((it) => { const r = it.getBoundingClientRect(); return ev.clientY < r.top + r.height / 2; });
       if (idx < 0) idx = items.length;
-      const cur = S.fxOrder.indexOf(id);
+      const cur = list().findIndex((_, i) => at(i) === id);
       if (idx > cur) idx--;
-      if (idx !== cur) { S.fxOrder.splice(cur, 1); S.fxOrder.splice(idx, 0, id); renderSlots(); update({ instant: true, commit: false }); }
+      if (idx !== cur) { const [x] = list().splice(cur, 1); list().splice(idx, 0, x); renderSlots(); update({ instant: true, commit: false }); }
     };
     const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); $("slotList").querySelector(".dragging")?.classList.remove("dragging"); commit(); };
     window.addEventListener("pointermove", move);
@@ -721,7 +797,7 @@
           try { localStorage.setItem(IMG_KEY, JSON.stringify({ id, url })); } catch (e) { toast("Too large to keep after a reload"); }
           loadImg(url, id, () => { S.source = "gradient"; S.grad.type = "image"; S.grad.image = id; sel = null; });
         };
-        raw.onerror = () => toast("That file isn't an image this browser can read");
+        raw.onerror = () => toast("Couldn't read that image");
         raw.src = r.result;
       };
       r.readAsDataURL(f);
@@ -743,7 +819,8 @@
   const patCards = {};
   for (const p of T.PATTERNS) { const c = card(p.label, () => { S.pattern = p.id; update({ fade: true }); }); $("patterns").appendChild(c); patCards[p.id] = c; }
   const noiseCards = {};
-  for (const [id, label] of NOISE_TYPES) { const c = card(label, () => { S.grad.noise = id; update({ fade: true }); }); $("noiseTypes").appendChild(c); noiseCards[id] = c; }
+  const NOISE_TIP = { clouds: "Soft, billowing noise", ridges: "Sharp crests like mountain ridges", billow: "Puffy, rounded swells", cells: "Stone-like cells", veins: "Thin lines between cells", marble: "Banded, swirling stone", neuro: "Knotted, glowing filaments", ring: "A soft ring of smoke" };
+  for (const [id, label] of NOISE_TYPES) { const c = card(label, () => { S.grad.noise = id; update({ fade: true }); }); c.dataset.tip = NOISE_TIP[id]; $("noiseTypes").appendChild(c); noiseCards[id] = c; }
   $("imgReplace").onclick = () => pickImage();
   const varCards = [];
   for (let i = 0; i < 6; i++) { const c = card("", () => { S.seed = c._seed; update({ fade: true }); }); c.classList.add("var"); $("variations").appendChild(c); varCards.push(c); }
@@ -767,12 +844,20 @@
   const isG = (...t) => () => t.includes(gen());
   [
     { label: "Scale", ...bindKey(gr, "scale"), min: 0.1, max: 6, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.35, 1.2], when: isG("flow", "noise") },
-    { label: "Detail", ...bindKey(gr, "detail"), min: 1, max: 8, step: 1, rand: [2, 4], when: isG("flow", "noise") },
+    // Aura has its own set: the body's size, wobble and edge, and the light lines inside it.
+    { label: "Size", ...bindKey(gr, "scale"), min: 0.3, max: 4, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.8, 2.2], when: isG("aura") },
+    { label: "Wobble", ...bindKey(gr, "warp"), min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 1.1], when: isG("aura") },
+    { label: "Edge", ...bindKey(gr, "soft"), min: 0.5, max: 4, step: 0.05, fmt: f2, rand: [1, 2.6], when: isG("aura") },
+    { label: "Lines", ...bindKey(gr, "detail"), min: 1, max: 8, step: 1, rand: [2, 6], when: isG("aura") },
+    { label: "Line width", ...bindKey(gr, "stretch"), min: 0.3, max: 5, step: 0.05, log: true, fmt: (v) => f2(v) + "×", rand: [0.6, 2], when: isG("aura") },
+    { label: "Line light", ...bindKey(gr, "contrast"), min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.6, 1.6], when: isG("aura") },
+    { label: "Color turn", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("aura") },
+    { label: "Detail", ...bindKey(gr, "detail"), min: 1, max: 8, step: 1, rand: [2, 4], when: isG("flow", "noise"), na: () => (gen() === "noise" && ["cells", "veins", "neuro", "ring"].includes(S.grad.noise) ? `${NOISE_LABEL[S.grad.noise]} has no detail setting` : "") },
     { label: "Softness", ...bindKey(gr, "soft"), min: 0.5, max: 4, step: 0.05, fmt: f2, rand: [1.3, 2.2], when: isG("mesh") },
-    { label: "Warp", ...bindKey(gr, "warp"), min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 0.8], when: () => gen() !== "image" },
+    { label: "Warp", ...bindKey(gr, "warp"), min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 0.8], when: () => gen() !== "image" && gen() !== "aura" },
     { label: "Warp size", ...bindKey(gr, "warpScale"), min: 0.2, max: 8, step: 0.05, log: true, fmt: (v) => f2(v) + "×", rand: [1, 2.5], when: () => isG("mesh", "linear", "radial", "conic")() && S.grad.warp > 0 },
     { label: "Stretch", ...bindKey(gr, "stretch"), min: 0.3, max: 5, step: 0.05, log: true, fmt: (v) => f2(v) + "×", rand: [1, 2.4], when: isG("flow", "noise") },
-    { label: "Angle", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("linear", "conic", "flow", "noise") },
+    { label: "Angle", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("linear", "conic", "flow", "noise"), na: () => (gen() === "noise" && S.grad.noise === "ring" ? "A smoke ring looks the same at any angle" : "") },
     { label: "Contrast", ...bindKey(gr, "contrast"), min: 0.3, max: 3, step: 0.01, fmt: f2, rand: [0.8, 1.3], when: isG("flow", "noise") },
   ].forEach((c) => makeSlider($("gradCtrls"), { group: "gradient", ...c }));
   $("seed").onchange = (e) => { S.seed = clamp(Math.floor(+e.target.value || 0), 0, 999999); update({ fade: true }); };
@@ -804,7 +889,7 @@
   // ---------- colors panel ----------
   // One color model for both kinds of generator: contours have a background plus inks (lines, any middle
   // colors, blend); gradients have their color stops. Palettes resample to however many colors you have.
-  const PER_PAGE = 6;
+  const PER_PAGE = 9;
   const sameCols = (a, b) => a.length === b.length && a.every((c, i) => c === b[i]);
   const inksOf = (st = S) => (st.source === "contours" ? [st.line, ...(st.mids || []), st.line2] : st.grad.colors);
   function setInks(arr) {
@@ -860,8 +945,9 @@
   const palEl = $("palettes");
   // Palettes saved in the palette tool get their own tab.
   const savedPals = () => (window.Palettes?.saved() || []).map((p) => ({ name: p.name, colors: p.colors, group: "Saved" }));
-  const tabs = () => ["Suggested", ...PAL_GROUPS.map(([g]) => g), ...(savedPals().length ? ["Saved"] : [])];
-  function renderTabs() { $("palTabs").innerHTML = tabs().map((g) => `<button data-v="${g}">${g}</button>`).join(""); if (!tabs().includes(P.palTab)) P.palTab = "Curated"; palKey = ""; }
+  const tabs = () => ["Suggested", ...PAL_GROUPS.map(([g]) => g), "Saved"];
+  const TAB_TIP = { Suggested: "Built from the colors you have", Curated: "Hand-picked palettes", Brands: "Colors from well-known brands", Saved: "Saved in the palette tool" };
+  function renderTabs() { $("palTabs").innerHTML = tabs().map((g) => `<button data-v="${g}" data-tip="${TAB_TIP[g] || g}">${g}</button>`).join(""); if (!tabs().includes(P.palTab)) P.palTab = "Curated"; palKey = ""; }
   addEventListener("palettes-saved", () => { renderTabs(); if (panelOf(P.slot) === "colors") renderPalettes(); });
   P.palTab ||= "Curated"; P.palPage ||= 0;
   let sugList = [];
@@ -875,7 +961,9 @@
     if (key !== palKey) {
       palKey = key;
       shown = palList().slice(page * PER_PAGE, (page + 1) * PER_PAGE);
-      palEl.innerHTML = shown.map((p, i) => {
+      palEl.classList.toggle("empty", !shown.length);
+      if (!shown.length) palEl.innerHTML = `<div class="pal-empty"><p>Palettes you save in the palette tool show up here.</p><button class="btn sm" data-go-pal>${ic("palette")}Open Palettes</button></div>`;
+      else palEl.innerHTML = shown.map((p, i) => {
         const f = fitPal(p);
         const sw = contours ? `<span class="pal-sw" style="background:${f.bg}">${f.inks.map((c) => `<i style="background:${c}"></i>`).join("")}</span>` : `<span class="pal-bar" style="background:linear-gradient(90deg,${f.inks.join(",")})"></span>`;
         return `<button class="pal" data-i="${i}">${sw}<span>${p.name}</span></button>`;
@@ -885,10 +973,10 @@
     [...palEl.children].forEach((b, i) => b.classList.toggle("on", !!shown[i] && palMatches(shown[i])));
     $("palDots").innerHTML = Array.from({ length: pageCount() }, (_, i) => `<i class="${i === page ? "on" : ""}"></i>`).join("");
     $("palPrev").disabled = page <= 0; $("palNext").disabled = page >= pageCount() - 1;
-    $("palDots").parentElement.style.visibility = pageCount() > 1 ? "" : "hidden";
+    $("palDots").parentElement.classList.toggle("off", pageCount() <= 1);
     for (const b of $("palTabs").children) b.classList.toggle("on", b.dataset.v === P.palTab);
   }
-  palEl.onclick = (e) => { const b = e.target.closest("[data-i]"); if (!b) return; applyPal(shown[+b.dataset.i]); update(); };
+  palEl.onclick = (e) => { if (e.target.closest("[data-go-pal]")) { $("toPalettes").click(); return; } const b = e.target.closest("[data-i]"); if (!b) return; applyPal(shown[+b.dataset.i]); update(); };
   const turnPage = (d) => { const n = clamp(P.palPage + d, 0, pageCount() - 1); if (n === P.palPage) return; P.palPage = n; savePrefs(); renderPalettes(d); };
   $("palPrev").onclick = () => turnPage(-1);
   $("palNext").onclick = () => turnPage(1);
@@ -1138,25 +1226,43 @@
       if (activePoints()) S.points = S.points.map((p) => ({ ...p, x: +clamp(p.x + rnd(-0.06, 0.06), 0.05, 0.95).toFixed(3), y: +clamp(p.y + rnd(-0.06, 0.06), 0.05, 0.95).toFixed(3) }));
     } else {
       if (gen() === "mesh") S.grad.points = S.grad.points.map((p) => ({ x: +clamp(p.x + rnd(-0.08, 0.08), 0.02, 0.98).toFixed(3), y: +clamp(p.y + rnd(-0.08, 0.08), 0.02, 0.98).toFixed(3) }));
-      if (["flow", "noise", "linear", "conic"].includes(gen())) S.grad.angle = Math.round(S.grad.angle + rnd(-12, 12));
+      if (["flow", "noise", "aura", "linear", "conic"].includes(gen())) S.grad.angle = Math.round(S.grad.angle + rnd(-12, 12));
     }
     if (P.safe) safeFix();
   }
   // Surprise: half the time a whole preset; otherwise the shape and lines of one preset, a random palette
   // and the effects of another (or none). Then a variation on top, so repeats still differ.
   const NO_FX = {};
+  // Surprise mixes several recipes: a preset as it is, a preset's shape in new colors, a look built from
+  // scratch on any generator, and now and then an object or two on top.
   function surprise() {
     const others = PRESETS.filter((p) => !lookMatches(p[2]));
-    const a = pick(others)[2];
-    if (Math.random() < 0.5) { applyLook(a); if (Math.random() < 0.25) randomPalette(); }
-    else {
+    const a = pick(others)[2], roll = Math.random();
+    if (roll < 0.3) { applyLook(a); if (Math.random() < 0.25) randomPalette(); }
+    else if (roll < 0.62) {
       applyLook(a, ["shape", "style"]);
       randomPalette();
       const r = Math.random();
       if (r < 0.25) applyLook(NO_FX, ["effects"]);
       else if (r < 0.6) applyLook(pick(others.filter((p) => p[2].fx))[2], ["effects"]);
       else randomEffects();
+    } else {
+      // From scratch: any generator, its own shape settings rolled, new colors, maybe a little effect.
+      applyLook(NO_FX, ["effects"]);
+      setGen(pick(GENS.filter(([id]) => id !== "image"))[0]);
+      const g = gen();
+      if (g === "contours") { S.pattern = pick(T.PATTERNS).id; S.mode = pick(["lines", "lines", "bands", "layers", "shaded"]); randomizeGroup("shape"); randomizeGroup("lines"); Object.assign(S, readable(S)); }
+      else { randomizeGroup("gradient"); if (g === "noise") S.grad.noise = pick(NOISE_TYPES)[0]; if (g === "mesh") scatterGrad(); }
+      randomPalette();
+      if (g === "aura") S.grad.colors.sort((x, y) => lum(x) - lum(y));
+      if (Math.random() < 0.55) randomEffects();
     }
+    S.objects = [];
+    if (Math.random() < 0.18) {
+      const n = Math.random() < 0.7 ? 1 : 2;
+      for (let i = 0; i < n; i++) S.objects.push({ ...OBJ_DEFAULT, id: objId(), kind: pick(OBJ_KINDS.filter(([k]) => k !== "image"))[0], mat: pick(["shaded", "glass", "design", "shaded"]), x: n === 1 ? 0.5 : [0.36, 0.64][i], y: n === 1 ? 0.5 : [0.42, 0.58][i], size: n === 1 ? +rnd(0.42, 0.62).toFixed(2) : +rnd(0.3, 0.42).toFixed(2), tilt: Math.round(rnd(-25, 40)), spin: Math.round(rnd(-80, 80)), rot: Math.round(rnd(-20, 20)) });
+    }
+    if (P.safe) safeFix();
     variation();
     update({ fade: true });
   }
@@ -1211,7 +1317,8 @@
   // ---------- motion ----------
   // Every motion loops: drift moves the field round a circle, flow slides the contour levels (or sways a
   // gradient's colors) by whole steps, breathe morphs the shape round a loop that never reverses.
-  const MOTION_NAME = { still: "Still", drift: "Drift", flow: "Flow", breathe: "Breathe", pulse: "Pulse" };
+  // The ids are older than the names: "breathe" morphs (shown as Flow) and "flow" swells (shown as Breathe).
+  const MOTION_NAME = { still: "Still", drift: "Drift", breathe: "Flow", flow: "Breathe", pulse: "Pulse" };
   // Time shaping: ping-pong runs forward then back, reverse flips direction, and the easing curve
   // (a preset or your own cubic bezier) sets the pace inside each pass.
   const EASES = { linear: [0, 0, 1, 1], ease: [0.25, 0.1, 0.25, 1], in: [0.42, 0, 1, 1], out: [0, 0, 0.58, 1], inout: [0.42, 0, 0.58, 1] };
@@ -1235,11 +1342,11 @@
       if (m.type === "drift") { const R = a * st.scale * 0.5; o.driftX = R * Math.cos(tw + a0); o.driftY = R * Math.sin(tw + a0); }
       // Cycling inks need a whole cycle of steps per loop, or the colors would jump at the seam.
       else if (m.type === "flow") { const cyc = st.mids?.length && !st.gradient && st.mode !== "layers" && st.mode !== "shaded" ? st.mids.length + 2 : 1; o.phase = t * cyc * Math.max(1, Math.round(a * 4)); }
-      // Breathe zooms gently and lets the warp swell a little; changing the warp hard would rebuild the shape every frame.
       // Breathe reads the warp from points travelling round a loop, so the shape morphs forward the
       // whole time and only meets its first frame again at the end, with a slow swell on top.
       else if (m.type === "pulse") { const beat = Math.pow(0.5 - 0.5 * Math.cos(tw * 4), 3); o.loopX = 0.5 * a * Math.cos(tw + a0); o.loopY = 0.5 * a * Math.sin(tw + a0); o.scale = st.scale * (1 + 0.08 * a * beat); }
-      else { const w = Math.sin(tw + a0); o.loopX = 1.4 * a * Math.cos(tw + a0); o.loopY = 1.4 * a * Math.sin(tw + a0); o.warp = Math.max(st.warp, 0.6 * a) * (1 + 0.15 * a * w); o.scale = st.scale * (1 + 0.04 * a * w); }
+      // The read point moves at a constant speed and nothing else swells, so the morph keeps an even pace.
+      else { o.loopX = 1.4 * a * Math.cos(tw + a0); o.loopY = 1.4 * a * Math.sin(tw + a0); o.warp = Math.max(st.warp, 0.6 * a); }
     }
     return o;
   }
@@ -1282,35 +1389,61 @@
   makeSeg($("gifLoops"), () => S.vid.loops, (v) => (S.vid.loops = v));
   let playing = false, playRaf = 0, playT0 = 0, playBusy = false, playSlow = false;
   function playFrame(now) {
-    if (!playing) return;
+    if (!playing || held) return;
     playRaf = requestAnimationFrame(playFrame);
     if (playBusy) return;
     playBusy = true;
     const raw = (((now - playT0) / 1000) % S.motion.dur) / S.motion.dur;
-    paint(motionState(S, motionT(raw)), false, true).then(() => { playBusy = false; watchPerf(now); });
+    const t0 = performance.now();
+    paint(motionState(S, motionT(raw)), false, true).then((r) => { playBusy = false; if (r) (r.raster && FXR?.sync ? FXR.sync() : Promise.resolve()).then(() => { const c = performance.now() - t0; $("ms").textContent = `${Math.round(c)} ms`; watchPerf(c); }); });
   }
   // Playback draws contours from a grid sized to the preview on screen rather than the full design, which
   // is several times less work on a phone. The grid is chosen once per play and only coarsens once if
   // frames stay slow, so the shape never flickers between two levels of detail.
   let playRes = 0;
   const pickPlayRes = (coarse = 1) => { const shown = Math.max(1, art.clientWidth) / S.w; playRes = Math.max(S.res, (2.4 / shown) * coarse); };
-  function startPlay() { perfTimes = []; lowRes = 0; perfWarned = false; pickPlayRes(); startPlay0(); }
-  function startPlay0() { if (S.motion.type === "still") { S.motion.type = "drift"; update(); } playing = true; playT0 = performance.now(); cancelAnimationFrame(playRaf); playRaf = requestAnimationFrame(playFrame); syncPlay(); }
-  // Slow playback: after a few seconds under about 18 frames a second, offer to drop the expensive
-  // parts (effects and motion). Raster frames also render smaller while it's slow.
-  let perfTimes = [], perfWarned = false, playT0Perf = 0;
-  function watchPerf(now) {
-    perfTimes.push(now); if (perfTimes.length > 40) perfTimes.shift();
-    if (perfWarned || perfTimes.length < 40 || now - Math.max(playT0, playT0Perf) < 3000) return;
-    const fps = 1000 / ((perfTimes[perfTimes.length - 1] - perfTimes[0]) / (perfTimes.length - 1));
-    // Two steps down in preview detail before suggesting anything: exports always render at full size.
-    if (fps < 24 && lowRes < 2) { lowRes++; pickPlayRes(lowRes === 1 ? 1.5 : 2.2); perfTimes = []; playT0Perf = now; return; }
-    if (fps < 18) { perfWarned = true; $("perfNote").hidden = false; $("perfFx").hidden = !S.fxOrder.length; }
+  function startPlay() { perfTimes = []; lowRes = 0; pickPlayRes(); startPlay0(); }
+  function startPlay0() { if (S.motion.type === "still") { S.motion.type = "drift"; update(); } playing = true; held = false; playT0 = performance.now(); cancelAnimationFrame(playRaf); playRaf = requestAnimationFrame(playFrame); syncPlay(); }
+  // Editing while it plays: the loop pauses so the edit isn't fighting the motion, the edit lands with
+  // its usual transition, and once you let go the loop crossfades back in from its first frame.
+  let held = false, holdT = 0, ptrDown = false;
+  addEventListener("pointerdown", () => (ptrDown = true), true);
+  addEventListener("pointerup", () => (ptrDown = false), true);
+  addEventListener("pointercancel", () => (ptrDown = false), true);
+  function holdPlay() {
+    if (!playing) return;
+    held = true; cancelAnimationFrame(playRaf);
+    clearTimeout(holdT); holdT = setTimeout(resumePlay, 900);
   }
-  $("perfFx").onclick = () => { S.fxOrder = []; $("perfNote").hidden = true; update(); toast("Effects removed. Undo brings them back."); };
+  function resumePlay() {
+    if (!playing || !held) return;
+    if (ptrDown) { holdT = setTimeout(resumePlay, 300); return; }
+    held = false; cancelAnimationFrame(raf); cancelAnimationFrame(anim); anim = 0; ++paintTok;
+    crossfade(paint(motionState(S, motionT(0)), false, true));
+    perfTimes = []; playT0 = performance.now();
+    playRaf = requestAnimationFrame(playFrame);
+  }
+  // Slow playback: frames are timed by how long each one takes to draw, not by the gaps between them,
+  // so a background tab, a pause or a busy moment elsewhere never counts. Detail steps down twice
+  // before anything is suggested, and the note shows at most once per visit.
+  let perfTimes = [], perfWarned = false;
+  try { perfWarned = !!sessionStorage.getItem("isoline.perfNote"); } catch (e) {}
+  document.addEventListener("visibilitychange", () => (perfTimes = []));
+  function watchPerf(cost) {
+    if (document.hidden || document.body.dataset.route !== "studio") return;
+    perfTimes.push(cost); if (perfTimes.length > 45) perfTimes.shift();
+    if (perfTimes.length < 45) return;
+    const mid = perfTimes.slice().sort((a, b) => a - b)[22];
+    if (mid > 40 && lowRes < 2) { lowRes++; pickPlayRes(lowRes === 1 ? 1.5 : 2.2); perfTimes = []; return; }
+    if (mid > 60 && !perfWarned) {
+      perfWarned = true; try { sessionStorage.setItem("isoline.perfNote", "1"); } catch (e) {}
+      $("perfNote").hidden = false; $("perfFx").hidden = !S.fxOrder.length;
+    }
+  }
+  $("perfFx").onclick = () => { S.fxOrder = []; $("perfNote").hidden = true; update(); toast("Effects removed", { action: "Undo", onAction: () => travel(-1) }); };
   $("perfStop").onclick = () => { stopPlay(); S.motion.type = "still"; $("perfNote").hidden = true; update(); };
   $("perfX").onclick = () => { $("perfNote").hidden = true; };
-  function stopPlay() { if (!playing) return; playing = false; cancelAnimationFrame(playRaf); syncPlay(); render(); }
+  function stopPlay() { if (!playing) return; playing = false; held = false; clearTimeout(holdT); cancelAnimationFrame(playRaf); syncPlay(); render(); }
   function syncPlay() {
     for (const b of [$("playBtn"), $("barPlay")]) b.querySelector("use").setAttribute("href", playing ? "#i-pause" : "#i-play");
     $("playBtn").querySelector("span").textContent = playing ? "Pause" : "Play";
@@ -1361,7 +1494,7 @@
       if (job0.cancel) toast("Export cancelled");
       else { setProg("Saving", 1); await download(gif.finish(), `${fileName()}.gif`, "GIF saved"); }
     } catch (e) {
-      toast("Couldn't make the GIF. Try a smaller size.");
+      toast("GIF failed. Try a smaller size");
     } finally {
       exporting = null;
       hideProg(); $("exCancel").hidden = true; $("download").disabled = false;
@@ -1421,7 +1554,7 @@
       if (blob) { setProg("Saving", 1); await download(blob, `${fileName()}.${blob.type === "video/mp4" ? "mp4" : "webm"}`, "Video saved"); }
       else if (job0.cancel) toast("Export cancelled");
     } catch (e) {
-      toast("This browser couldn't encode the video. Try a smaller size.");
+      toast("Video failed. Try a smaller size");
     } finally {
       exporting = null;
       hideProg(); $("exCancel").hidden = true; $("download").disabled = false;
@@ -1604,7 +1737,7 @@
   $("unlockOk").onclick = () => { P.unlock = true; savePrefs(); $("unlock").checked = true; closeModal("unlockModal"); toast("Values unlocked"); };
   const settingsJSON = () => JSON.stringify({ app: "isoline", version: 5, appVersion: VERSION, settings: S }, null, 2);
   $("exportSettings").onclick = () => { closeMenus(); download(new Blob([settingsJSON()], { type: "application/json" }), `isoline-settings-${S.seed}.json`, "Settings saved"); };
-  $("copySettings").onclick = async () => { closeMenus(); try { await navigator.clipboard.writeText(settingsJSON()); toast("Settings copied"); } catch (e) { toast("Clipboard is blocked here. Use Download settings."); } };
+  $("copySettings").onclick = async () => { closeMenus(); try { await navigator.clipboard.writeText(settingsJSON()); toast("Settings copied"); } catch (e) { toast("Clipboard blocked. Use Download"); } };
   $("importSettings").onclick = () => { closeMenus(); $("importErr").hidden = true; $("importText").value = ""; openModal("importModal"); $("importText").focus(); };
   // Feedback becomes a GitHub issue: the form fills in a new-issue page, which the person posts with
   // their own account, so the site needs no server or token.
@@ -1642,7 +1775,7 @@
         if (r.ok) { $("fbOk").lastChild.textContent = "Send"; return done("Sent. Thanks for the feedback."); }
       } catch (e) {}
       $("fbOk").lastChild.textContent = "Send"; $("fbOk").disabled = false;
-      toast("Couldn't send it here. Opening GitHub instead.");
+      toast("Opening GitHub instead");
     }
     let body = text || "_No details given._";
     if (details) body += "\n\n<details><summary>Page details</summary>\n\n" + details + "\n</details>";
@@ -1653,11 +1786,11 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.8", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "1.9", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
-  const checkVersion = () => { if (!stamped || updateSeen || location.protocol === "file:") return; fetch("version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((v) => { if (v?.build && v.build !== BUILD) { updateSeen = true; $("verLine").textContent = `Version ${VERSION}, a newer build is out`; $("verReload").hidden = false; toast("A new version of Isoline is out. Reload to get it."); } }).catch(() => {}); };
+  const checkVersion = () => { if (!stamped || updateSeen || location.protocol === "file:") return; fetch("version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((v) => { if (v?.build && v.build !== BUILD) { updateSeen = true; $("verLine").textContent = `Version ${VERSION}, a newer build is out`; $("verReload").hidden = false; toast("New version out. Reload to update"); } }).catch(() => {}); };
   checkVersion();
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkVersion(); });
   $("importCancel").onclick = () => closeModal("importModal");
@@ -1676,11 +1809,11 @@
   // Designs live in this browser's storage, each with its own history of saved versions. Every version
   // records the settings schema and app version it was saved with, so opening one made by a newer
   // Isoline, or one that needs a picture this browser doesn't have, says what will change first.
-  const SCHEMA = 5, LIB = "isoline-designs-v1", MAX_VERSIONS = 30;
+  const SCHEMA = 6, LIB = "isoline-designs-v1", MAX_VERSIONS = 30;
   let lib = (() => { try { const v = JSON.parse(localStorage.getItem(LIB) || "null"); return Array.isArray(v?.items) ? v.items : []; } catch (e) { return []; } })();
   const saveLib = () => {
     try { localStorage.setItem(LIB, JSON.stringify({ schema: 1, items: lib })); return true; }
-    catch (e) { toast("Browser storage is full. Delete or export some designs first."); return false; }
+    catch (e) { toast("Storage full. Delete or export designs"); return false; }
   };
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const libItem = (id) => lib.find((d) => d.id === id);
@@ -1731,20 +1864,20 @@
     if (!cur && P.designId) { P.designId = null; savePrefs(); }
     const dirty = cur && !sameState(latest(cur).state, S);
     if (document.activeElement !== $("dzName")) $("dzName").value = cur?.name || "";
-    $("dzState").textContent = !cur ? "Not saved yet" : dirty ? `Changed since version ${cur.versions.length}` : `Saved, ${cur.versions.length === 1 ? "1 version" : cur.versions.length + " versions"}`;
+    $("dzState").textContent = !cur ? "Not saved yet" : dirty ? "Unsaved changes" : "Saved";
     $("dzState").classList.toggle("dirty", !!dirty);
     $("dzCopy").hidden = !cur;
     $("dzExportAll").disabled = !lib.length;
     const list = $("dzList");
-    if (!lib.length) { list.innerHTML = `<p class="dz-empty">Saved designs show up here, with every version you save.</p>`; return; }
+    if (!lib.length) { list.innerHTML = `<p class="dz-empty">Your saved designs show up here.</p>`; return; }
     const open = list.dataset.open || "";
     list.innerHTML = lib.slice().sort((a, b) => b.updated - a.updated).map((d) => `
       <div class="dz-item${d.id === P.designId ? " on" : ""}${d.id === open ? " open" : ""}" data-id="${d.id}">
         <button class="dz-main" data-act="open" title="Open the latest version">
           <span class="dz-thumb">${d.thumb ? `<img src="${d.thumb}" alt="">` : ""}</span>
-          <span class="dz-text"><b>${esc(d.name || "Untitled design")}</b><small>${d.versions.length === 1 ? "1 version" : d.versions.length + " versions"}, ${ago(d.updated)}</small></span>
+          <span class="dz-text"><b>${esc(d.name || "Untitled design")}</b><small>${ago(d.updated)}${d.versions.length > 1 ? `, ${d.versions.length} versions` : ""}</small></span>
         </button>
-        <button class="ib xs" data-act="versions" title="Versions" aria-label="Versions"><svg class="ic"><use href="#i-history"/></svg></button>
+        <button class="ib xs" data-act="versions" title="Earlier versions" aria-label="Earlier versions"${d.versions.length > 1 ? "" : " hidden"}><svg class="ic"><use href="#i-history"/></svg></button>
         <button class="ib xs" data-act="download" title="Download .json" aria-label="Download"><svg class="ic"><use href="#i-down"/></svg></button>
         <button class="ib xs" data-act="delete" title="Delete" aria-label="Delete"><svg class="ic"><use href="#i-trash"/></svg></button>
         <div class="dz-vers"><div>${d.versions.map((v, i) => ({ v, i })).reverse().map(({ v, i }) => `<button class="opt" data-act="restore" data-v="${i}"><span>Version ${i + 1}</span><span class="mono">${when(v.at)}</span></button>`).join("")}</div></div>
@@ -1753,14 +1886,14 @@
   async function saveDesign(asNew = false) {
     let cur = asNew ? null : libItem(P.designId);
     const name = $("dzName").value.trim() || cur?.name || `Design ${lib.length + 1}`;
-    if (cur && sameState(latest(cur).state, S) && cur.name === name) { toast("No changes since the last version"); return; }
+    if (cur && sameState(latest(cur).state, S) && cur.name === name) { toast("Nothing new to save"); return; }
     const thumb = await thumbURL(), now = Date.now(), version = { at: now, schema: SCHEMA, app: VERSION, state: clone(S) };
     if (cur && sameState(latest(cur).state, S)) { cur.name = name; cur.updated = now; }
     else if (cur) { cur.name = name; cur.versions.push(version); if (cur.versions.length > MAX_VERSIONS) cur.versions.splice(0, cur.versions.length - MAX_VERSIONS); cur.thumb = thumb || cur.thumb; cur.updated = now; }
     else { cur = { id: uid(), name: asNew && libItem(P.designId) ? `${name} copy` : name, created: now, updated: now, thumb, versions: [version] }; lib.push(cur); }
     if (!saveLib()) return;
     P.designId = cur.id; savePrefs(); dzSync();
-    toast(cur.versions.length > 1 ? `Saved version ${cur.versions.length} of ${cur.name}` : `Saved ${cur.name}`);
+    toast(`Saved ${cur.name}`);
   }
   $("dzSave").onclick = () => saveDesign();
   $("dzCopy").onclick = () => saveDesign(true);
@@ -1808,7 +1941,7 @@
     const f = e.target.files?.[0]; e.target.value = "";
     if (!f) return;
     closeMenus();
-    try { importData(JSON.parse(await f.text())); } catch (err) { toast("That file isn't an Isoline design or settings file."); }
+    try { importData(JSON.parse(await f.text())); } catch (err) { toast("Not an Isoline file"); }
   };
 
   // ---------- share links ----------
@@ -1842,9 +1975,9 @@
     const st = clone(S); delete st.fmt; delete st.pngScale;
     const url = `${location.origin}${location.pathname}#/studio?d=${await shareCode(st)}`;
     closeMenus();
-    const pic = S.source === "gradient" && S.grad.type === "image" ? " Pictures aren't included in links." : "";
-    try { await navigator.clipboard.writeText(url); toast(`Link copied. Anyone with it opens this design.${pic}`); }
-    catch (e) { history.replaceState(null, "", url); toast(`Clipboard is blocked here. The link is in the address bar.${pic}`); }
+    const pic = (S.source === "gradient" && S.grad.type === "image") || S.objects.some((o) => o.kind === "image") ? ", without pictures" : "";
+    try { await navigator.clipboard.writeText(url); toast(`Link copied${pic}`); }
+    catch (e) { history.replaceState(null, "", url); toast(`Link is in the address bar${pic}`); }
   };
   async function openShared() {
     const m = location.hash.match(/[?&]d=([\w-]+)/);
@@ -1852,8 +1985,8 @@
     history.replaceState(null, "", location.pathname + location.search + "#/studio");
     try {
       const { state, meta } = await readCode(m[1]);
-      openState(state, meta, () => { P.designId = null; savePrefs(); toast("Opened a shared design. Save it to keep it."); });
-    } catch (e) { toast("That link is damaged, so the design couldn't open."); }
+      openState(state, meta, () => { P.designId = null; savePrefs(); toast("Shared design opened"); });
+    } catch (e) { toast("That link is broken"); }
   }
   addEventListener("hashchange", openShared);
   setTimeout(openShared, 0);
@@ -1861,7 +1994,7 @@
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s" && window.Shell?.route === "studio") { e.preventDefault(); saveDesign(); }
   });
 
-  $("resetAll").onclick = () => { closeMenus(); S = withDefaults(null); sel = null; P.slot = "preset"; update(); toast("Reset. Undo with ⌘Z"); };
+  $("resetAll").onclick = () => { closeMenus(); S = withDefaults(null); sel = null; P.slot = "preset"; update(); toast("Reset", { action: "Undo", onAction: () => travel(-1) }); };
 
   // ---------- export ----------
   let saver = null;
@@ -1869,7 +2002,7 @@
   async function download(blob, name, done) {
     if (saver) {
       try { await saver.save({ filename: name, data: blob }); toast(done); }
-      catch (e) { if (e?.code !== "declined") toast("Couldn't save here. Use Copy instead."); }
+      catch (e) { if (e?.code !== "declined") toast("Couldn't save. Use Copy"); }
       return;
     }
     const a = document.createElement("a");
@@ -1964,15 +2097,15 @@
       const blob = pngCache?.key === JSON.stringify(S) ? (setProg("Ready", 0.9), pngCache.blob) : await pngBlob(S.pngScale, setProg);
       setProg("Saving", 1);
       await download(blob, fileName() + ".png", "PNG saved");
-    } catch (e) { toast("Couldn't make the PNG. Try a smaller scale."); }
+    } catch (e) { toast("PNG failed. Try a smaller scale"); }
     $("download").disabled = false; setTimeout(hideProg, 600);
   };
   async function copyOut() {
     if (!isRaster(S)) {
-      try { await navigator.clipboard.writeText(current.svg); toast("Copied. Paste into Figma with ⌘V"); } catch (e) { toast("Clipboard is blocked here. Use Download."); }
+      try { await navigator.clipboard.writeText(current.svg); toast("Copied for Figma"); } catch (e) { toast("Clipboard blocked. Use Download"); }
       return;
     }
-    try { await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob(1) })]); toast("PNG copied. Paste into Figma with ⌘V"); } catch (e) { toast("Clipboard is blocked here. Use Download."); }
+    try { await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob(1) })]); toast("PNG copied"); } catch (e) { toast("Clipboard blocked. Use Download"); }
   }
   $("copy").onclick = copyOut;
 
@@ -1993,7 +2126,7 @@
   groupOf([...rowsOf($("shape"), ["Scale", "Detail", "Angle", "Features", "Bulge", "Bulge size"]), document.querySelector(".seed-row")], "Scale and detail", { hint: () => facts(px(S.scale), `seed ${S.seed}`) });
   groupOf(rowsOf($("shape"), ["Warp", "Liquify", "Liquify size"]), "Distortion", { hint: () => facts(`warp ${f2(S.warp)}`, S.liquify ? `liquify ${f2(S.liquify)}` : "") });
   groupOf([document.querySelector(".pts-head"), document.querySelector(".pt-actions"), $("ptHint"), $("pointCtrls")], "Points", { open: false, hint: () => (S.usePoints ? `${S.points.length} in use` : "Off") });
-  groupOf([$("gradCtrls"), $("gradHint")], "Fine-tune", { hint: () => facts(`warp ${f2(S.grad.warp)}`) });
+  groupOf([$("gradCtrls"), $("gradHint")], "Fine-tune", { hint: () => (gen() === "aura" ? facts(`size ${f2(S.grad.scale)}×`, `${S.grad.detail} lines`) : facts(`warp ${f2(S.grad.warp)}`)) });
   groupOf(rowsOf($("lines"), ["Count", "Gap", "Bias", "Thickness"]), "Spacing", { hint: () => (linear() ? px(S.gap) + " gap" : S.levels + " levels") });
   groupOf(rowsOf($("lines"), ["Weight", "Swell", "Swell size", "Taper"]), "Stroke", { hint: () => facts(f2(S.weight) + "px", S.swell ? "swell" : "", S.taper ? "taper" : "") });
   groupOf(rowsOf($("lines"), ["Accent every", "Accent weight"]), "Accent lines", { open: false, hint: () => (S.indexEvery ? `every ${S.indexEvery}` : "Off") });
@@ -2005,7 +2138,7 @@
   // New objects land off-centre, staggered, so a second one doesn't hide the first.
   const SPOTS = [[0.5, 0.5], [0.32, 0.4], [0.68, 0.6], [0.66, 0.34], [0.34, 0.66], [0.5, 0.3], [0.5, 0.7], [0.22, 0.5]];
   function addObject(kind, image = "") {
-    if (S.objects.length >= 8) { toast("Eight objects is the most a design holds"); return; }
+    if (S.objects.length >= 8) { toast("Up to 8 objects"); return; }
     const [x, y] = SPOTS.find(([a, b]) => !S.objects.some((o) => Math.hypot(o.x - a, o.y - b) < 0.08)) || [rnd(0.25, 0.75), rnd(0.25, 0.75)];
     const o = { ...OBJ_DEFAULT, id: objId(), kind, x, y, image, size: S.objects.length ? 0.36 : 0.5, mat: kind === "image" ? "photo" : "shaded", spin: kind === "image" ? 0 : 30, tilt: kind === "image" ? 0 : 20, shadow: kind === "image" ? 0.3 : 0.4 };
     S.objects.push(o);
@@ -2023,12 +2156,12 @@
     $("objForms").appendChild(c); objFormCards[id] = c;
   }
   $("objPicReplace").onclick = () => pickPicture((pid) => { const o = objOf(); if (o) { o.image = pid; update(); } });
-  $("objDup").onclick = () => { const o = objOf(); if (!o || S.objects.length >= 8) return toast("Eight objects is the most a design holds"); const c = { ...clone(o), id: objId(), x: clamp(o.x + 0.06, 0, 1), y: clamp(o.y + 0.06, 0, 1) }; S.objects.push(c); P.slot = "obj:" + c.id; update(); };
+  $("objDup").onclick = () => { const o = objOf(); if (!o || S.objects.length >= 8) return toast("Up to 8 objects"); const c = { ...clone(o), id: objId(), x: clamp(o.x + 0.06, 0, 1), y: clamp(o.y + 0.06, 0, 1) }; S.objects.push(c); P.slot = "obj:" + c.id; update(); };
   $("objRemove").onclick = () => { const o = objOf(); if (!o) return; S.objects = S.objects.filter((x) => x !== o); P.slot = S.objects.length ? "obj:" + S.objects[S.objects.length - 1].id : "addobj"; update(); };
   const ob = (key) => ({ get: () => objOf()?.[key] ?? OBJ_DEFAULT[key], set: (v) => { const o = objOf(); if (o) o[key] = v; } });
   const isPic = () => objOf()?.kind === "image";
   {
-    const host = $("objGroups"), G = (title, open = true) => { const g = UI.group(title, { key: "obj-" + title, open }); host.appendChild(g); return g.body; };
+    const host = $("objGroups"), groups = {}, G = (title, open = true) => { const g = UI.group(title, { key: "obj-" + title, open }); host.appendChild(g); groups[title] = g; return g.body; };
     const mat = G("Material");
     const seg = document.createElement("div"); seg.className = "seg sm grid2"; seg.id = "objMat";
     seg.innerHTML = [...OBJ_MATS, ...PIC_MATS].map(([v, l, tip]) => `<button data-v="${v}" data-tip="${tip}">${l}</button>`).join("");
@@ -2051,6 +2184,23 @@
     const turn = G("Orientation");
     makeSlider(turn, { label: "Tilt", ...ob("tilt"), min: -90, max: 90, step: 1, fmt: deg, rand: [-35, 45] });
     makeSlider(turn, { label: "Spin", ...ob("spin"), min: -180, max: 180, step: 1, fmt: deg, rand: [-90, 90] });
+    // Glass: how far it bends what's behind, frost, color split, the lit rim and a tint.
+    const glass = G("Glass");
+    makeSlider(glass, { label: "Refraction", ...ob("refract"), min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.6, 1.8] });
+    makeSlider(glass, { label: "Frost", ...ob("frost"), min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Off"), rand: [0, 0.5] });
+    makeSlider(glass, { label: "Dispersion", ...ob("disp"), min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Off"), rand: [0.1, 0.6] });
+    makeSlider(glass, { label: "Rim light", ...ob("rim"), min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Off"), rand: [0.3, 0.8] });
+    makeColor(glass, "Tint", () => objOf()?.tint || "#ffffff", (v) => { const o = objOf(); if (o) o.tint = v; });
+    makeSlider(glass, { label: "Tint amount", ...ob("tintAmt"), min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Off"), rand: [0, 0.5] });
+    syncers.push(() => (groups.Glass.hidden = isPic() || objOf()?.mat !== "glass"));
+    // Layer and motion: under the effects (they apply to it) or over them, and its own pace in the loop.
+    const lay = G("Layer and motion");
+    const lseg = document.createElement("div"); lseg.className = "seg sm"; lseg.id = "objLayer";
+    lseg.innerHTML = `<button data-v="under" data-tip="Effects apply to it">Under effects</button><button data-v="over" data-tip="Sits on top, untouched by effects">Over effects</button>`;
+    lay.appendChild(lseg);
+    makeSeg(lseg, () => objOf()?.layer || "under", (v) => { const o = objOf(); if (o) o.layer = v; });
+    makeSwitch(lay, "Moves with the motion", () => objOf()?.anim !== false, (v) => { const o = objOf(); if (o) o.anim = v; });
+    makeSlider(lay, { label: "Speed", ...ob("speed"), min: -5, max: 5, step: 1, fmt: (v) => (v === 1 ? "1× in sync" : v === 0 ? "Still" : v + "×"), rand: [-3, 3], when: () => objOf()?.anim !== false, na: () => (S.motion.type === "still" ? "Turn on motion to see objects move" : "") });
     const surf = G("Surface", false);
     makeSlider(surf, { label: "Shine", ...ob("shine"), min: 0, max: 1, step: 0.01, pct: true, fmt: pct, rand: [0.3, 0.9] });
     makeSlider(surf, { label: "Ripple", ...ob("ripple"), min: 0, max: 2, step: 0.01, fmt: (v) => (v ? f2(v) : "Off"), rand: [0, 0.6], when: () => !isPic() });
@@ -2167,10 +2317,10 @@
         c.getContext("2d").drawImage(el, 0, 0, c.width, c.height); URL.revokeObjectURL(url0);
         const url = /png|webp|gif|svg/.test(f.type) ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.86), id = "i" + Date.now().toString(36);
         const img = new Image();
-        img.onload = () => { PICS.set(id, { el: img, url }); then(id); if (!storePics()) toast("This picture is too big to keep after a reload. It works until then."); };
+        img.onload = () => { PICS.set(id, { el: img, url }); then(id); if (!storePics()) toast("Too big to keep after a reload"); };
         img.src = url;
       };
-      el.onerror = () => toast("That file couldn't be read as a picture.");
+      el.onerror = () => toast("Couldn't read that picture");
       el.src = url0;
     };
     inp.click();
@@ -2222,7 +2372,8 @@
   // Playback and slider drags preview effects at less detail, stepping down further when frames run slow.
   function previewDims(st, draft) {
     const dpr = Math.min(playing ? [1.5, 1, 0.75][lowRes] : draft ? 1.25 : 2, window.devicePixelRatio || 1);
-    let w = Math.max(64, Math.round(art.clientWidth * dpr)), h = Math.round((w * st.h) / st.w);
+    // The frame's final width, not its width mid-glide, so a new size renders once at the right detail.
+    let w = Math.max(64, Math.round((parseFloat(art.style.width) || art.clientWidth) * dpr)), h = Math.round((w * st.h) / st.w);
     const cap = playing ? [1600, 1000, 720][lowRes] : draft ? 1400 : 2200, m = Math.max(w, h);
     if (m > cap) { w = Math.round((w * cap) / m); h = Math.round((h * cap) / m); }
     return { w, h };
@@ -2231,7 +2382,7 @@
     const tok = ++paintTok, t0 = performance.now();
     fit();
     let raster = isRaster(st);
-    if (raster && !FXR) { raster = false; if (!fxWarned) { fxWarned = true; toast("This browser can't run WebGL2, so gradients and effects are off."); } }
+    if (raster && !FXR) { raster = false; if (!fxWarned) { fxWarned = true; toast("No WebGL2 here, so gradients and effects are off"); } }
     let svg = "";
     // Playback and drags draw contours on the GPU straight from the field, which keeps bands and dense
     // lines smooth. Stills keep the SVG path, which is what exports use.
@@ -2243,7 +2394,7 @@
       let image = null;
       if (svg) { image = await rasterize(rasterCanvas, svg, w, h); if (tok !== paintTok) return null; }
       FXR.render({ ...job(st, w, h, image), contours: gpu });
-    } else artSvg.innerHTML = svg;
+    } else { artSvg.innerHTML = svg; artSvg.firstElementChild?.setAttribute("preserveAspectRatio", "xMidYMid slice"); }
     fxCanvas.hidden = !raster; artSvg.hidden = raster;
     art.classList.toggle("clear", st.source === "contours" && st.transparent);
     $("ms").textContent = `${Math.round(performance.now() - t0)} ms`;
@@ -2546,6 +2697,7 @@
   function update({ draft = false, commit: doCommit = true, instant = false, fade = false } = {}) {
     if (sel != null && !(S.source === "gradient" ? S.grad.points[sel] : S.points[sel])) sel = null;
     syncUI(); save(); savePrefs();
+    holdPlay();
     if (draft || instant || !painted) render(draft); else animateFrom(painted, fade);
     if (doCommit && !draft) commit();
   }
@@ -2585,6 +2737,24 @@
       const i = Math.floor(((performance.now() - t0) / 3000) * N) % N;
       if (!frames[i]) { const f = document.createElement("canvas"); f.width = c.width; f.height = c.height; await loopFrame(st, i / N, f); frames[i] = f; }
       x.drawImage(frames[i], 0, 0);
+      requestAnimationFrame(tick);
+    })();
+    return c;
+  });
+  // Timing tooltips: a dot runs along a track with that playback, direction or easing, the rest of the
+  // timing as you have it, so each choice shows what it changes.
+  window.UI?.tipPreview("timing", (v) => {
+    const [k, val] = v.split("."), c = document.createElement("canvas"); c.width = 330; c.height = 96;
+    const m = { ...S.motion, [k]: k === "dir" ? +val : val }, x = c.getContext("2d"), t0 = performance.now(), L = 2600;
+    const css = getComputedStyle(document.body), acc = css.getPropertyValue("--accent").trim() || "#e8572a", ink = css.getPropertyValue("--ink").trim() || "#222";
+    (function tick() {
+      if ((!c.isConnected || c.closest(".tip")?.hidden) && performance.now() - t0 > 100) return;
+      const raw = ((performance.now() - t0) % L) / L, u = m.mode === "once" ? Math.min(1, ((performance.now() - t0) % (L * 1.4)) / L) : raw;
+      const t = motionT(u, m), X = 28 + t * (c.width - 56);
+      x.clearRect(0, 0, c.width, c.height);
+      x.globalAlpha = 0.14; x.fillStyle = ink; x.beginPath(); x.roundRect(28, 44, c.width - 56, 8, 4); x.fill();
+      x.globalAlpha = 1; x.fillStyle = acc; x.beginPath(); x.roundRect(28, 44, Math.max(8, X - 28 + 4), 8, 4); x.fill();
+      x.beginPath(); x.arc(X, 48, 11, 0, Math.PI * 2); x.fill();
       requestAnimationFrame(tick);
     })();
     return c;
