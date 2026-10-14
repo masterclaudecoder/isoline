@@ -65,7 +65,7 @@ Lines (strokes), Bands (filled stripes, PewDiePie-style) or Layers (stacked fill
 ## Workflow
 - The bar under the canvas holds undo, redo, **Variation** (`R`: new seed and small nudges, same look) and **Surprise** (`⇧R`). Half the time Surprise applies a whole preset. Otherwise it takes one preset's shape and lines with a random palette, and another preset's effects or none. It always crossfades.
 - A dice in each panel randomizes just that layer.
-- The build steps are numbered, and Motion closes the list as a wide tile playing the loop.
+- Motion closes the build list as a wide tile playing the loop.
 - **Safe values** (in settings): keeps everything in ranges that render cleanly. **Unlock values** lets you type past slider limits, after you confirm.
 - Click any value to type it. Settings import and export as JSON. `⌘Z` / `⇧⌘Z` undo and redo.
 - **Export:** SVG for contours, PNG 1–4× for everything, MP4 or GIF for motion, or `C` to copy for Figma.
