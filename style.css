@@ -1512,9 +1512,7 @@ a.btn { text-decoration: none; color: inherit; }
 ::view-transition-group(pt-bar), ::view-transition-group(stage-bar), ::view-transition-image-pair(pt-bar), ::view-transition-image-pair(stage-bar) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 
 /* ---------- build steps ---------- */
-/* Each step is numbered. Motion closes the list as a wide banner playing its loop, and invites a tap
-   while the design is still. */
-.step-n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 6px; font-family: var(--mono); font-size: 10.5px; font-weight: 500; color: var(--muted); background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); margin-right: 2px; }
+/* Motion closes the list as a wide banner playing its loop, and invites a tap while the design is still. */
 .slot-motion .tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; row-gap: 10px; padding-top: 6px; }
 .slot-motion .tile-th { grid-column: 1 / -1; width: 100%; height: auto; aspect-ratio: 8 / 3; border-radius: 9px; }
 .slot-motion .tile .tile-text { padding-left: 4px; }

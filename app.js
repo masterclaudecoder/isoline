@@ -442,23 +442,21 @@
   const SLOT_DEFS = [["preset", "Preset"], ["generator", "Generator"], ["shape", "Shape"], ["lines", "Lines"], ["colors", "Colors"]];
   const slotEls = {};
   const slotList = $("slotList");
-  // Steps are numbered, so the build reads as a sequence and the last ones (Effects, Motion) aren't missed.
-  const stepN = (n) => `<span class="step-n">${n}</span>`;
-  SLOT_DEFS.forEach(([id, label], i) => {
+  SLOT_DEFS.forEach(([id, label]) => {
     const wrap = document.createElement("div");
     wrap.className = "slot slot-" + id;
-    wrap.innerHTML = `<div class="slot-label">${stepN(i + 1)}${label}</div><button class="tile" data-slot="${id}"><span class="tile-th" data-th="${id}">${id === "colors" ? `<span class="tile-sw"></span>` : ""}</span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
+    wrap.innerHTML = `<div class="slot-label">${label}</div><button class="tile" data-slot="${id}"><span class="tile-th" data-th="${id}">${id === "colors" ? `<span class="tile-sw"></span>` : ""}</span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
     slotList.appendChild(wrap); slotEls[id] = wrap;
   });
   const fxSlot = document.createElement("div");
   fxSlot.className = "slot slot-fx";
-  fxSlot.innerHTML = `<div class="slot-label">${stepN(6)}Effects<span class="count" hidden></span></div><div class="fx-tiles" id="fxTiles"><button class="tile add" data-slot="addfx"><span class="tile-plus">${ic("plus")}</span><span class="tile-text"><b>Add effect</b><small></small></span></button></div>`;
+  fxSlot.innerHTML = `<div class="slot-label">Effects<span class="count" hidden></span></div><div class="fx-tiles" id="fxTiles"><button class="tile add" data-slot="addfx"><span class="tile-plus">${ic("plus")}</span><span class="tile-text"><b>Add effect</b><small></small></span></button></div>`;
   slotList.appendChild(fxSlot);
   const fxTiles = fxSlot.querySelector(".fx-tiles"), addTile = fxSlot.querySelector(".tile.add"), countEl = fxSlot.querySelector(".count");
   const motionSlot = document.createElement("div");
   // Motion is the last step and the easiest to miss, so its tile is a wide banner with the loop playing.
   motionSlot.className = "slot slot-motion";
-  motionSlot.innerHTML = `<div class="slot-label">${stepN(7)}Motion</div><button class="tile" data-slot="motion"><span class="tile-th" data-th="motion"></span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
+  motionSlot.innerHTML = `<div class="slot-label">Motion</div><button class="tile" data-slot="motion"><span class="tile-th" data-th="motion"></span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
   slotList.appendChild(motionSlot);
   const EASE = "cubic-bezier(.2,.8,.2,1)";
   const animOK = () => !reduceMotion.matches && !document.body.classList.contains("boot");
@@ -481,10 +479,6 @@
       const wrap = slotEls[id], t = wrap.querySelector(".tile"), [title, sub] = slotInfo(id);
       const show = !slotWhen[id] || slotWhen[id]();
       if (wrap.hidden === show) wrap.hidden = !show; // folds open and closed in CSS
-    }
-    { let n = 0; for (const w of slotList.children) { const el = w.querySelector(".step-n"); if (el && !w.hidden) setText(el, String(++n)); } }
-    for (const [id] of SLOT_DEFS) {
-      const wrap = slotEls[id], t = wrap.querySelector(".tile"), [title, sub] = slotInfo(id);
       t.classList.toggle("on", P.slot === id);
       setText(t.querySelector("b"), title); setText(t.querySelector("small"), sub);
     }
