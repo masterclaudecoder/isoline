@@ -83,15 +83,15 @@ Follow the rules in Isoline.components.brief("design"). The user edits them in C
   meta.type = "text/markdown"; meta.id = "isoline-agent-guide"; meta.textContent = GUIDE;
   document.head.appendChild(meta);
 
-  // "Copy for agents" in the top bar: one click copies a brief of the open page plus the agent guide.
+  // "Copy for agents" in the top bar: one click copies the agent guide.
   // The button is split so the copy action reads clearly, but either half copies.
   function forAgents() {
     const r = root.Shell?.route;
-    return r === "home" || !r ? GUIDE : `${brief("dev")}\n---\n\n${GUIDE}`;
+    return GUIDE;
   }
   const wrap = document.createElement("div");
   wrap.className = "split"; wrap.id = "aiSplit";
-  wrap.innerHTML = `<button class="split-main" id="aiCopy">Copy for agents</button><span class="split-div" aria-hidden="true"></span><button class="split-side" id="aiCopyIc" aria-label="Copy for agents" title="Copies a brief of this page and the agent guide"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></button>`;
+  wrap.innerHTML = `<button class="split-main" id="aiCopy">Copy for agents</button><span class="split-div" aria-hidden="true"></span><button class="split-side" id="aiCopyIc" aria-label="Copy for agents" title="Copies the agent guide"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></button>`;
   const right = document.querySelector(".top-right");
   right.insertBefore(wrap, right.firstChild);
   let doneT = 0;

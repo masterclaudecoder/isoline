@@ -20,7 +20,7 @@ The home page (`#/`) shows three tools as large cards. Moving between pages is a
   - **Builder:** design tokens for type, color, spacing, radius, elevation and motion, plus editable design rules. Fonts are picked from searchable menus that show each font in its own face, group a catalog by kind and suggest what pairs with the other font. You can also type any Google or installed font, or upload your own files. The preview is a made-up document review product, so every component shows real content: a comment thread, a command menu, a form, a documents table, a chart titled by what it says, notices and controls. Four pages are each built for one task: a home page led by a picture of the product, an article, an app settings page and a pricing comparison. They avoid template tells (no badge over the headline, no invented stats, logo strips or icon tiles, one picture per idea). Pages render at desktop width and scale to fit. Until you change a color, the kit wears Isoline's own colors and follows the app's theme and accent, and the home page card shows the hero landing. Export copies CSS variables, a Tailwind v4 theme, JSON tokens, or a design or build brief for AI agents.
 
 ## Agents
-**Copy for agents** in the top bar copies a brief of whatever page is open, with its values and settings, followed by the agent guide. Agents can drive the whole app through `window.Isoline`: `studio`, `palettes`, `components`, `color`, `go` and `guide()`. The guide is also embedded in the page as `#isoline-agent-guide`.
+**Copy for agents** in the top bar copies the agent guide. Page briefs with values and settings come from `Isoline.brief()` and from Export in Components. Agents can drive the whole app through `window.Isoline`: `studio`, `palettes`, `components`, `color`, `go` and `guide()`. The guide is also embedded in the page as `#isoline-agent-guide`.
 
 ## Interface
 Everything animates: menus, popovers and dialogs fade in and out, rows and sections fold open and closed, segmented controls slide their selection, lists glide when they reorder, and theme changes crossfade. Every surface shares one hover. Tooltips are custom and appear after a short pause.
@@ -65,7 +65,7 @@ Lines (strokes), Bands (filled stripes, PewDiePie-style) or Layers (stacked fill
 - A dice in each panel randomizes just that layer.
 - **Safe values** (in settings): keeps everything in ranges that render cleanly. **Unlock values** lets you type past slider limits, after you confirm.
 - Click any value to type it. Settings import and export as JSON. `⌘Z` / `⇧⌘Z` undo and redo.
-- **Export:** SVG for contours, PNG 1–4× for everything, or `C` to copy for Figma.
+- **Export:** SVG for contours, PNG 1–4× for everything, MP4 or GIF for motion, or `C` to copy for Figma.
 - **Theme:** Auto, light or dark, plus an accent color, in settings.
 
 Files:

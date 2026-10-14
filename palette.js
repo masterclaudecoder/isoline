@@ -87,26 +87,49 @@
   }
   // New colors sweep across the columns as a wave: each column blends to its new color in OKLab while
   // its hex rolls through the in-between values, then the name settles.
-  let morphing = 0;
+  // Each column eases to its new color on a critically damped spring in OKLab. A new generate while one
+  // is still running just re-aims the springs, keeping each column's current color and speed, so
+  // pressing Space repeatedly reads as one continuous flow. Columns start one after another as a wave.
+  const springs = [];
+  let springRaf = 0, springLast = 0;
+  const W0 = 13; // stiffness: settles in about half a second
   function morph(next) {
-    const prev = st.cols.map((c) => c.hex);
-    st.cols = next; snap(); save();
     const els = [...colsEl.children];
-    if (els.length !== next.length || matchMedia("(prefers-reduced-motion: reduce)").matches) { render(true); return; }
-    const tok = ++morphing, t0 = performance.now(), dur = 560, gap = 70;
-    els.forEach((el, i) => { if (prev[i] !== next[i].hex) el.classList.add("morphing"); });
-    const step = (now) => {
-      if (tok !== morphing) return;
-      let busy = false;
-      els.forEach((el, i) => {
-        if (prev[i] === next[i].hex) return;
-        const t = clamp((now - t0 - i * gap) / dur, 0, 1), e = 1 - Math.pow(1 - t, 3);
-        if (t < 1) busy = true;
-        paintCol(el, t >= 1 ? next[i].hex : C.mixOklab(prev[i], next[i].hex, e), t >= 1);
-      });
-      if (busy) requestAnimationFrame(step); else { render(true); }
-    };
-    requestAnimationFrame(step);
+    st.cols = next; snap(); save();
+    if (els.length !== next.length || matchMedia("(prefers-reduced-motion: reduce)").matches) { springs.length = 0; render(true); return; }
+    const now = performance.now(), running = springRaf !== 0;
+    next.forEach((c, i) => {
+      let sp = springs[i];
+      if (!sp) sp = springs[i] = { p: C.toOklab(els[i].style.getPropertyValue("--c").trim() || c.hex), v: [0, 0, 0] };
+      if (sp.hex === c.hex || (!sp.goal && sp.p && C.fromOklab(sp.p) === c.hex)) return;
+      sp.hex = c.hex; sp.pending = C.toOklab(c.hex); sp.at = now + i * (running ? 30 : 55);
+      els[i].classList.add("morphing");
+    });
+    if (!springRaf) { springLast = now; springRaf = requestAnimationFrame(tick); }
+  }
+  function tick(now) {
+    const dt = Math.min(0.04, (now - springLast) / 1000); springLast = now;
+    const els = [...colsEl.children];
+    let busy = false;
+    springs.forEach((sp, i) => {
+      const el = els[i];
+      if (!sp || !el || (!sp.goal && !sp.pending)) return;
+      if (sp.pending && now >= sp.at) { sp.goal = sp.pending; sp.pending = null; }
+      busy = true;
+      if (!sp.goal) return;
+      for (let k = 0; k < 3; k++) { const a = W0 * W0 * (sp.goal[k] - sp.p[k]) - 2 * W0 * sp.v[k]; sp.v[k] += a * dt; sp.p[k] += sp.v[k] * dt; }
+      const far = Math.hypot(...sp.goal.map((g, k) => g - sp.p[k])), fast = Math.hypot(...sp.v);
+      if (far < 0.0015 && fast < 0.01 && !sp.pending) { sp.p = sp.goal.slice(); sp.v = [0, 0, 0]; sp.goal = null; paintCol(el, sp.hex, true); }
+      else paintCol(el, C.fromOklab(sp.p), false);
+    });
+    if (busy) springRaf = requestAnimationFrame(tick);
+    else { springRaf = 0; settle(); }
+  }
+  // After a morph the columns already show the new colors; only their bookkeeping catches up.
+  function settle() {
+    const keys = keysOf();
+    [...colsEl.children].forEach((el, i) => { el.dataset.hex = st.cols[i].hex; el.dataset.key = keys[i]; el.classList.remove("morphing"); });
+    syncBar(); root.dispatchEvent(new Event("palette-change"));
   }
   function paintCol(el, hex, final) {
     const on = textOn(hex);
@@ -142,6 +165,8 @@
   const keysOf = () => { const n = {}; return st.cols.map((c) => c.hex + ":" + (n[c.hex] = (n[c.hex] || 0) + 1)); };
   // Only colors that changed repaint, so a generate reads as a wave rather than a blink.
   function render(all) {
+    // A rebuild hands each column its exact color; springs restart from there.
+    springs.length = 0; cancelAnimationFrame(springRaf); springRaf = 0;
     const have = [...colsEl.children];
     if (all || have.length !== st.cols.length) colsEl.innerHTML = st.cols.map(colHTML).join("");
     else st.cols.forEach((c, i) => { const el = have[i]; if (el.dataset.hex === c.hex && el.dataset.lock === String(c.lock) && shadesFor !== i && !el.querySelector(".pt-shades")) return; const n = document.createRange().createContextualFragment(colHTML(c, i)).firstElementChild; n.style.setProperty("--delay", i * 40 + "ms"); n.classList.add("swap"); el.replaceWith(n); });
@@ -317,10 +342,11 @@
   }
   document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".pt-bar .menu-wrap")) for (const id of ["ptModeMenu", "ptSavedMenu", "ptExportMenu"]) $(id).hidden = true; });
 
-  // Keyboard, only while the palette page is open.
+  // Keyboard, only while the palette page is open. Holding Space keeps generating at a readable pace.
+  let lastGen = 0;
   document.addEventListener("keydown", (e) => {
-    if (root.Shell?.route !== "palettes" || e.target.matches("input, textarea")) return;
-    if (e.code === "Space") { e.preventDefault(); generate(); }
+    if (root.Shell?.route !== "palettes" || e.target.matches?.("input, textarea")) return;
+    if (e.code === "Space") { e.preventDefault(); const now = performance.now(); if (e.repeat && now - lastGen < 160) return; lastGen = now; generate(); }
     else if (e.key.toLowerCase() === "v" && !e.metaKey && !e.ctrlKey) vary();
     else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { e.preventDefault(); travel(e.shiftKey ? 1 : -1); }
   });

@@ -136,7 +136,7 @@
     grad: { type: "flow", colors: ramp("Prism"), points: [{ x: 0.18, y: 0.22 }, { x: 0.8, y: 0.2 }, { x: 0.72, y: 0.8 }, { x: 0.2, y: 0.84 }, { x: 0.48, y: 0.5 }], angle: -25, warp: 0.5, warpScale: 1.6, soft: 1.6, scale: 0.45, detail: 2, stretch: 1.8, contrast: 1, noise: "clouds" },
     fx: clone(FX_DEFAULTS), fxOrder: [], ink: "#1b1b1b", paper: "#f1ede4",
     fmt: "svg", pngScale: 2,
-    motion: { type: "still", dur: 6, amt: 0.5, mode: "loop", dir: 1, ease: "linear", bez: [0.42, 0, 0.58, 1], seed: 0 }, vid: { size: 1080, fps: 30, loops: 1 },
+    motion: { type: "still", dur: 6, amt: 0.5, mode: "loop", dir: 1, ease: "linear", bez: [0.42, 0, 0.58, 1], seed: 0 }, vid: { size: 1080, fps: 30, loops: 1 }, gif: { size: 480, fps: 20 },
   };
   const STORE = "isoline-v4", PREFS = "isoline-prefs-v4";
   function withDefaults(src) {
@@ -146,7 +146,7 @@
       if (!(key in src)) continue;
       if (key === "fx") { for (const id of FX_IDS) out.fx[id] = { ...FX_DEFAULTS[id], ...(src.fx?.[id] || {}) }; }
       else if (key === "grad") out.grad = { ...out.grad, ...src.grad };
-      else if (key === "motion" || key === "vid") out[key] = { ...out[key], ...src[key] };
+      else if (key === "motion" || key === "vid" || key === "gif") out[key] = { ...out[key], ...src[key] };
       else out[key] = src[key];
     }
     if (!T.PATTERNS.some((p) => p.id === out.pattern)) out.pattern = DEFAULTS.pattern;
@@ -989,8 +989,9 @@
   $("nextBtn").onclick = () => { const n = nextOf(P.slot); if (n === "export") { closeMenus(); $("exportBtn").click(); } else setSlot(n); };
   function syncNext() {
     const n = nextOf(P.slot);
-    $("nextLbl").textContent = n === "export" ? "Export" : `Next: ${PANEL_TITLE[n]}`;
-    $("nextSub").textContent = n === "addfx" ? "Optional" : n === "motion" ? "Optional" : "";
+    setText($("nextKicker"), n === "export" ? "Finish" : "Continue");
+    setText($("nextLbl"), n === "export" ? "Export" : PANEL_TITLE[n]);
+    setText($("nextSub"), n === "addfx" || n === "motion" ? "Optional" : "");
   }
 
   // ---------- motion ----------
@@ -1059,6 +1060,9 @@
   makeSeg($("vidSize"), () => S.vid.size, (v) => (S.vid.size = v));
   makeSeg($("vidFps"), () => S.vid.fps, (v) => (S.vid.fps = v));
   makeSeg($("vidLoops"), () => S.vid.loops, (v) => (S.vid.loops = v));
+  makeSeg($("gifSize"), () => S.gif.size, (v) => (S.gif.size = v));
+  makeSeg($("gifFps"), () => S.gif.fps, (v) => (S.gif.fps = v));
+  makeSeg($("gifLoops"), () => S.vid.loops, (v) => (S.vid.loops = v));
   let playing = false, playRaf = 0, playT0 = 0, playBusy = false, playSlow = false;
   function playFrame(now) {
     if (!playing) return;
@@ -1081,6 +1085,54 @@
 
   // Video export renders every frame at an exact timestamp. Browsers with WebCodecs get an H.264 MP4;
   // others record a WebM in real time.
+  // Draws frame i of an animation into a canvas of the export size, at an exact point in the loop.
+  function framer(W, H, frames, fps) {
+    const frameCanvas = document.createElement("canvas");
+    frameCanvas.width = W; frameCanvas.height = H;
+    const fctx = frameCanvas.getContext("2d", { willReadFrequently: true });
+    async function drawFrame(i) {
+      const st = motionState(S, motionT(S.motion.mode === "once" ? Math.min(1, i / Math.max(1, frames - 1)) : (i / fps / S.motion.dur) % 1));
+      if (isRaster(st) && FXR) {
+        const image = st.source === "contours" ? await rasterize(rasterCanvas, T.buildSVG(st, { w: W, h: H }).svg, W, H) : null;
+        FXR.render(job(st, W, H, image));
+        fctx.clearRect(0, 0, W, H); fctx.drawImage(fxCanvas, 0, 0, W, H);
+      } else await rasterize(frameCanvas, T.buildSVG(st, { w: W, h: H }).svg, W, H);
+      return fctx;
+    }
+    return { frameCanvas, drawFrame };
+  }
+  // GIF: a palette chosen from a few frames spread across the loop, then every frame indexed and
+  // compressed in turn. Delays are in hundredths of a second, spread so the loop keeps its length.
+  async function exportGif() {
+    if (exporting) return;
+    if (S.motion.type === "still") { S.motion.type = "drift"; update(); }
+    stopPlay();
+    const [W, H] = gifDims(), fps = S.gif.fps, frames = Math.round(S.motion.dur * S.vid.loops * fps);
+    const job0 = { cancel: false }; exporting = job0;
+    setProg("Choosing colors", 0); $("exCancel").hidden = false; $("download").disabled = true;
+    const { drawFrame } = framer(W, H, frames, fps);
+    const pixels = async (i) => (await drawFrame(i)).getImageData(0, 0, W, H).data;
+    try {
+      const samples = [];
+      for (let k = 0; k < 5 && !job0.cancel; k++) samples.push(await pixels(Math.floor((k * frames) / 5)));
+      const gif = new window.GifEncoder(W, H, samples, { dither: isRaster(S) });
+      let t = 0;
+      for (let i = 0; i < frames && !job0.cancel; i++) {
+        const next = Math.round(((i + 1) * 100) / fps), delay = Math.max(2, next - t); t = next;
+        gif.add(await pixels(i), delay);
+        setProg(`Frame ${i + 1} of ${frames}`, 0.05 + ((i + 1) / frames) * 0.9);
+        if (i % 4 === 3) await new Promise((r) => setTimeout(r, 0));
+      }
+      if (job0.cancel) toast("Export cancelled");
+      else { setProg("Saving", 1); await download(gif.finish(), `${fileName()}.gif`, "GIF saved"); }
+    } catch (e) {
+      toast("Couldn't make the GIF. Try a smaller size.");
+    } finally {
+      exporting = null;
+      hideProg(); $("exCancel").hidden = true; $("download").disabled = false;
+      render();
+    }
+  }
   let exporting = null;
   const canMp4 = () => typeof window.VideoEncoder === "function" && window.Mp4Muxer;
   async function exportVideo() {
@@ -1090,18 +1142,8 @@
     const [W, H] = vidDims(), fps = S.vid.fps, frames = Math.round(S.motion.dur * S.vid.loops * fps);
     const job0 = { cancel: false }; exporting = job0;
     setProg("Preparing", 0); $("exCancel").hidden = false; $("download").disabled = true;
-    const frameCanvas = document.createElement("canvas");
-    frameCanvas.width = W; frameCanvas.height = H;
-    const fctx = frameCanvas.getContext("2d");
-    async function drawFrame(i) {
-      const st = motionState(S, motionT(S.motion.mode === "once" ? Math.min(1, i / Math.max(1, frames - 1)) : (i / fps / S.motion.dur) % 1));
-      if (isRaster(st) && FXR) {
-        const image = st.source === "contours" ? await rasterize(rasterCanvas, T.buildSVG(st, { w: W, h: H }).svg, W, H) : null;
-        FXR.render(job(st, W, H, image));
-        fctx.drawImage(fxCanvas, 0, 0, W, H);
-      } else await rasterize(frameCanvas, T.buildSVG(st, { w: W, h: H }).svg, W, H);
-      setProg(`Frame ${i + 1} of ${frames}`, ((i + 1) / frames) * 0.96);
-    }
+    const { frameCanvas, drawFrame: draw } = framer(W, H, frames, fps);
+    const drawFrame = async (i) => { await draw(i); setProg(`Frame ${i + 1} of ${frames}`, ((i + 1) / frames) * 0.96); };
     try {
       let blob;
       if (canMp4()) {
@@ -1315,7 +1357,8 @@
   }
   const autoName = () => `isoline-${gen() === "contours" ? S.pattern : gen()}-${S.w}x${S.h}-${S.seed}`;
   const fmtBytes = (n) => (n < 1048576 ? Math.max(1, Math.round(n / 1024)) + " KB" : (n / 1048576).toFixed(1) + " MB");
-  const exportFmt = () => (S.fmt === "video" ? "video" : isRaster(S) ? "png" : S.fmt);
+  const exportFmt = () => (S.fmt === "video" || S.fmt === "gif" ? S.fmt : isRaster(S) ? "png" : S.fmt);
+  const animFmt = (f) => f === "video" || f === "gif";
   // Progress: every export reports what it is doing and how far along it is.
   function setProg(label, f) {
     $("exProg").hidden = false;
@@ -1347,25 +1390,32 @@
   }
   const pngBlob = (scale, on) => (isRaster(S) ? rasterPng(scale, on) : svgPng(scale, on));
   let pngCache = null, exportTok = 0;
+  const gifDims = () => { const sc = Math.min(S.gif.size / Math.min(S.w, S.h), 1600 / Math.max(S.w, S.h)); return [Math.round(S.w * sc), Math.round(S.h * sc)]; };
   const vidDims = () => { const even = (v) => Math.max(2, Math.round(v / 2) * 2), sc = Math.min(S.vid.size / Math.min(S.w, S.h), 3840 / Math.max(S.w, S.h)); return [even(S.w * sc), even(S.h * sc)]; };
   function refreshExport() {
     const raster = isRaster(S), fmt = exportFmt();
     exportTok++;
     for (const b of $("fmt").children) { b.classList.toggle("on", b.dataset.v === fmt); b.disabled = raster && b.dataset.v === "svg"; }
-    $("rasterNote").hidden = !raster || fmt === "video";
+    $("rasterNote").hidden = !raster || animFmt(fmt);
     for (const b of $("pngScale").children) b.classList.toggle("on", +b.dataset.v === S.pngScale);
     $("pngScale").hidden = fmt !== "png";
     $("vidOpts").hidden = fmt !== "video";
-    $("vidNote").hidden = fmt !== "video" || S.motion.type !== "still";
-    $("copy").hidden = fmt === "video";
+    $("gifOpts").hidden = fmt !== "gif";
+    $("vidNote").hidden = !animFmt(fmt) || S.motion.type !== "still";
+    $("copy").hidden = animFmt(fmt);
     $("copyLbl").textContent = raster ? "Copy PNG" : "Copy SVG";
-    $("dlLbl").textContent = fmt === "video" ? (canMp4() ? "Export MP4" : "Export WebM") : "Download";
+    $("dlLbl").textContent = fmt === "video" ? (canMp4() ? "Export MP4" : "Export WebM") : fmt === "gif" ? "Export GIF" : "Download";
     if (!$("fname").dataset.edited) $("fname").value = autoName();
     let dims = fmt === "png" ? `${S.w * S.pngScale} × ${S.h * S.pngScale}` : `${S.w} × ${S.h}`;
     const facts = (rows) => ($("facts").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join(""));
     if (fmt === "video") {
       const [W, H] = vidDims(), secs = S.motion.dur * S.vid.loops, mb = (W * H * S.vid.fps * 0.12 * secs) / 8 / 1048576;
       facts([["Dimensions", `${W} × ${H}`], ["Length", `${secs}s, ${Math.round(secs * S.vid.fps)} frames`], ["File size", `About ${mb < 1 ? mb.toFixed(1) : Math.round(mb)} MB`]]);
+      return;
+    }
+    if (fmt === "gif") {
+      const [W, H] = gifDims(), secs = S.motion.dur * S.vid.loops, n = Math.round(secs * S.gif.fps), mb = (W * H * n * 0.32) / 1048576;
+      facts([["Dimensions", `${W} × ${H}`], ["Length", `${secs}s, ${n} frames`], ["File size", `About ${mb < 1 ? mb.toFixed(1) : Math.round(mb)} MB`]]);
       return;
     }
     if (fmt === "svg") { facts([["Dimensions", dims], ["File size", fmtBytes(new Blob([current.svg]).size)]]); return; }
@@ -1376,11 +1426,12 @@
   $("fname").oninput = (e) => { e.target.dataset.edited = e.target.value ? "1" : ""; };
   $("fmt").onclick = (e) => { const b = e.target.closest("button"); if (b && !b.disabled) { S.fmt = b.dataset.v; save(); refreshExport(); } };
   $("pngScale").onclick = (e) => { const v = e.target.closest("button")?.dataset.v; if (v) { S.pngScale = +v; save(); refreshExport(); } };
-  for (const id of ["vidSize", "vidFps", "vidLoops"]) $(id).addEventListener("click", () => setTimeout(refreshExport));
-  const fileName = () => ($("fname").value.trim() || autoName()).replace(/\.(svg|png|mp4|webm)$/i, "");
+  for (const id of ["vidSize", "vidFps", "vidLoops", "gifSize", "gifFps", "gifLoops"]) $(id).addEventListener("click", () => setTimeout(refreshExport));
+  const fileName = () => ($("fname").value.trim() || autoName()).replace(/\.(svg|png|mp4|webm|gif)$/i, "");
   $("download").onclick = async () => {
     const fmt = exportFmt();
     if (fmt === "video") return exportVideo();
+    if (fmt === "gif") return exportGif();
     if (fmt === "svg") { setProg("Saving", 1); await download(new Blob([current.svg], { type: "image/svg+xml" }), fileName() + ".svg", "SVG saved"); setTimeout(hideProg, 600); return; }
     $("download").disabled = true;
     try {
@@ -1402,7 +1453,7 @@
   // ---------- keyboard ----------
   const SLOT_KEYS = ["preset", "generator", "shape", "lines", "colors", "addfx", "motion"];
   document.addEventListener("keydown", (e) => {
-    const typing = e.target.matches("input:not([type=range]):not([type=checkbox]), textarea");
+    const typing = !!e.target.matches?.("input:not([type=range]):not([type=checkbox]), textarea");
     const mod = e.metaKey || e.ctrlKey;
     if (e.key === "Escape") { picker.close(); closeMenus(); for (const m of document.querySelectorAll(".modal")) m.hidden = true; if (sel != null) { sel = null; syncUI(); drawOverlay(); } return; }
     if (document.querySelector(".modal:not([hidden])")) return;
@@ -1719,6 +1770,7 @@
   mirror.className = "dim";
   mirror.style.cssText = "position:absolute;visibility:hidden;width:auto;padding:0;white-space:pre;left:-9999px";
   document.body.appendChild(mirror);
+  const fieldSizing = CSS.supports?.("field-sizing", "content");
   const measure = (text) => { mirror.style.fontSize = getComputedStyle($("w")).fontSize; mirror.textContent = text; return Math.ceil(mirror.getBoundingClientRect().width); };
   let stopsKey = "", bodyFor = null, shownSlot = null;
   // Opening a panel: the title and sections rise in, and cards follow in a short stagger.
@@ -1766,7 +1818,8 @@
     $("ptHint").textContent = selPoint() ? "Double-click to flip into a dip. Delete removes." : "Double-click the canvas to add a peak. Drag to move, scroll to resize.";
     $("gradHint").hidden = g !== "mesh";
     renderSlots();
-    for (const key of ["w", "h"]) { const el = $(key); el.value = S[key]; el.style.width = measure(String(S[key])) + 8 + "px"; }
+    // Where the browser can size a field to its content, CSS does it; otherwise measure the digits.
+    for (const key of ["w", "h"]) { const el = $(key); el.value = S[key]; if (!fieldSizing) el.style.width = Math.max(24, measure(String(S[key]))) + 8 + "px"; }
     $("sizeName").textContent = presetName();
     $("safe").checked = P.safe; $("unlock").checked = P.unlock;
     $("motionHint").textContent = MOTION_HINT[S.motion.type];

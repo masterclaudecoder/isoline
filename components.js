@@ -35,18 +35,38 @@
     "No logos made of a letter in a square, or just the name with no design to it.",
     "Animate state changes with slight variation between elements, and respect reduced motion.",
     "Text meets WCAG AA contrast: 4.5:1 for body text, 3:1 for large text.",
+    "One thing leads on each screen. Make it larger or heavier and let the rest recede.",
+    "Group with space and hairline rules before adding a card. Never put cards inside cards.",
+    "Avoid a small label over a big number. Put figures in a sentence, a table or on the picture itself.",
+    "Tag only what varies. A badge repeated on every row says nothing.",
+    "No badge above a headline, no invented statistics, no logo walls or stock testimonials.",
+    "Design for zero, one, a typical number and a thousand items, and for text of any length.",
+    "Design the empty, loading and error states, not only the full one.",
+    "Use one hover style everywhere. Nothing lifts, scales or slides on hover.",
+    "Animate opening, closing, adding, removing and reordering. Motion explains a change and never decorates.",
+    "Keep the accent for calls to action and selection, and give every control in a row the same height.",
+    "Write headlines that say what the product does. If a line could sell any product, rewrite it.",
+    "Left-align the hero and lead with a real picture of the product, not a centered slogan.",
+    "No icon in a colored tile above every feature, no rows of three identical cards, no bento grids.",
+    "No arrow or chevron on every button. Keep them for links that move you forward.",
+    "No status dots or markers that never change state.",
+    "No dark call-to-action band closing every page.",
+    "Lay out each page for its task. Don't reuse one hero, features, stats and call-to-action skeleton everywhere.",
   ];
+  const RULES_V = 3;
   const KEY = "isoline-kit";
   const DEF = {
     mode: "libraries", fw: "All", cat: "All", q: "", slot: "type", view: "components", layout: "home", dark: null, follow: true,
     pair: 0, head: "", body: "", scale: 1.25, base: 16, tracking: -0.02,
-    colors: ["#1c1c1e", "#e8572a", "#faf8f3"], accent: 1,
+    rc: null,
     unit: 4, density: 1, radius: 10, pill: false, elevation: "soft", dur: 200, ease: "out",
     rules: RULES.map((t) => ({ t, on: true })),
   };
   let K = { ...DEF };
   try { K = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch (e) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(K)); } catch (e) {} };
+  // Rules added in later versions join a saved list once, after the rules already there.
+  if ((K.rulesV || 1) < RULES_V) { const have = new Set(K.rules.map((r) => r.t)); for (const t of RULES) if (!have.has(t)) K.rules.push({ t, on: true }); K.rulesV = RULES_V; save(); }
   const fonts = () => { const p = PAIRS[K.pair] || PAIRS[0]; return { head: K.head || p[1], body: K.body || p[2], weight: p[3] }; };
   // Your own fonts: uploaded files live in IndexedDB and load through the FontFace API.
   const custom = new Set();
@@ -75,23 +95,27 @@
   const appDark = () => { const t = document.documentElement.dataset.theme; return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
   const isDark = () => (K.dark == null ? appDark() : K.dark);
   const appAccent = () => C.parseHex(getComputedStyle(document.documentElement).getPropertyValue("--accent").trim()) || "#e8572a";
-  const cols = () => (K.follow ? [UI[isDark() ? "dark" : "light"].text, appAccent(), UI[isDark() ? "dark" : "light"].bg] : K.colors);
-  const accentIndex = () => (K.follow ? 1 : clamp(K.accent, 0, K.colors.length - 1));
-  // Editing any color takes the kit off the app's colors, starting from what it showed.
-  function unfollow() { if (!K.follow) return; K.colors = cols().slice(); K.accent = 1; K.follow = false; }
-  // Color roles from the palette: background is the lightest (or darkest in dark mode), text the opposite,
-  // the accent the chosen swatch, and surface, border and muted text mixed between them.
-  function roles() {
-    const onOf = (a) => (C.contrast(a, "#ffffff") >= C.contrast(a, "#111111") ? "#ffffff" : "#111111");
-    if (K.follow) {
-      const u = UI[isDark() ? "dark" : "light"], accent = appAccent(), appOn = C.parseHex(getComputedStyle(document.documentElement).getPropertyValue("--on-accent").trim());
-      return { bg: u.bg, text: u.text, accent, onAccent: appOn || onOf(accent), surface: u.surface, border: C.mixOklab(u.bg, u.text, 0.1), muted: u.muted, contrast: C.contrast(u.text, u.bg) };
-    }
-    const cs = K.colors.slice(), byL = cs.slice().sort((a, b) => C.toOklch(a)[0] - C.toOklch(b)[0]);
+  // Colors are named roles, one set for light and one for dark. Text on the accent is worked out.
+  const ROLES = [["bg", "Page", "Behind everything"], ["surface", "Surface", "Cards, panels and inputs"], ["text", "Text", "Headings and body copy"], ["muted", "Muted text", "Captions, hints and meta"], ["border", "Border", "Lines and outlines"], ["accent", "Accent", "Buttons, links and selection"]];
+  const onOf = (a) => (C.contrast(a, "#ffffff") >= C.contrast(a, "#111111") ? "#ffffff" : "#111111");
+  // From a loose palette: the lightest color is the page (the darkest in dark mode), the opposite is the
+  // text, the most colorful is the accent, and surface, border and muted text sit in between.
+  function rolesFrom(cs, dark) {
+    const byL = cs.slice().sort((a, b) => C.toOklch(a)[0] - C.toOklch(b)[0]), ch = cs.map((c) => C.toOklch(c)[1]);
     let bg = byL[byL.length - 1], text = byL[0];
-    if (isDark()) [bg, text] = [text, bg];
-    const accent = cs[accentIndex()];
-    return { bg, text, accent, onAccent: onOf(accent), surface: C.mixOklab(bg, text, 0.035), border: C.mixOklab(bg, text, 0.13), muted: C.mixOklab(bg, text, 0.58), contrast: C.contrast(text, bg) };
+    if (dark) [bg, text] = [text, bg];
+    return { bg, surface: C.mixOklab(bg, text, 0.035), text, muted: C.mixOklab(bg, text, 0.58), border: C.mixOklab(bg, text, 0.13), accent: cs[ch.indexOf(Math.max(...ch))] };
+  }
+  const appRoles = (dark) => { const u = UI[dark ? "dark" : "light"]; return { ...u, border: C.mixOklab(u.bg, u.text, 0.1), accent: appAccent() }; };
+  // Older saves kept a loose list of colors; they become role sets once.
+  if (!K.rc) K.rc = Array.isArray(K.colors) && !K.follow ? { light: rolesFrom(K.colors, false), dark: rolesFrom(K.colors, true) } : null;
+  const mode = () => (isDark() ? "dark" : "light");
+  // Editing any role takes the kit off the app's colors, starting from what it showed.
+  function unfollow() { if (!K.follow) return; K.rc = { light: appRoles(false), dark: appRoles(true) }; K.follow = false; }
+  function roles() {
+    const r = K.follow || !K.rc ? appRoles(isDark()) : K.rc[mode()];
+    const appOn = K.follow ? C.parseHex(getComputedStyle(document.documentElement).getPropertyValue("--on-accent").trim()) : null;
+    return { ...r, onAccent: appOn || onOf(r.accent), contrast: C.contrast(r.text, r.bg) };
   }
   const SHADOWS = { none: "none", hairline: "0 0 0 1px var(--k-border)", soft: "0 1px 2px rgba(0,0,0,.05), 0 8px 24px -10px rgba(0,0,0,.14)", crisp: "0 1px 0 rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.08)", lifted: "0 18px 40px -16px rgba(0,0,0,.28)" };
   const EASE = { linear: "linear", out: "cubic-bezier(.22,1,.36,1)", inout: "cubic-bezier(.65,0,.35,1)", spring: "cubic-bezier(.34,1.56,.64,1)" };
@@ -115,6 +139,24 @@
     for (const [k, px] of Object.entries(t.space)) v["--k-s" + k] = px + "px";
     for (const [k, val] of Object.entries(v)) el.style.setProperty(k, val);
     loadFont(t.font.heading); loadFont(t.font.body);
+    // The motion demo moves in exactly the chosen duration and easing, resting between moves.
+    const dot = el.querySelector(".k-track i");
+    if (dot && !root.UI?.reduce.matches) {
+      const d = t.motion.duration, hold = 700, tot = 2 * d + 2 * hold, span = (dot.parentElement.clientWidth || 320) - 28, e = t.motion.easing;
+      const key = d + e + span;
+      if (dot._key !== key) {
+        dot._anim?.cancel(); dot._key = key;
+        dot._anim = dot.animate([{ translate: "0 0", offset: 0 }, { translate: "0 0", offset: hold / tot, easing: e }, { translate: `${span}px 0`, offset: (hold + d) / tot }, { translate: `${span}px 0`, offset: (2 * hold + d) / tot, easing: e }, { translate: "0 0", offset: 1 }], { duration: tot, iterations: Infinity });
+      }
+    }
+    // Printed values in the specimen.
+    const on = K.rules.filter((r) => r.on && r.t.trim());
+    const tok = { elevation: `${K.elevation[0].toUpperCase() + K.elevation.slice(1)} shadow`, "motion.name": { linear: "linear", out: "ease out", inout: "ease in and out", spring: "spring" }[K.ease], "motion.duration": t.motion.duration + "ms", rules: on.length ? on.slice(0, 3).map((r) => `<span>${esc(r.t.trim())}</span>`).join("") + (on.length > 3 ? `<small>and ${on.length - 3} more in the brief</small>` : "") : "<small>No rules on</small>" };
+    for (const n of el.querySelectorAll("[data-tok]")) {
+      const key = n.dataset.tok, [a, b] = key.split(".");
+      const val = key in tok ? tok[key] : a === "size" || a === "space" || a === "radius" ? (a === "radius" ? (b === "button" ? (K.pill ? "pill" : t.radius.button + "px") : t.radius.base + "px") : t[a][b] + "px") : a === "color" ? t.color[b === "bg" ? "bg" : b].toUpperCase() : "";
+      if (key === "rules") n.innerHTML = val; else if (n.textContent !== val) n.textContent = val;
+    }
   }
 
   // ---------- previews ----------
@@ -152,8 +194,19 @@
         <div class="k-doc"><h3 class="k-h3">What's changing in April</h3><p>From 1 April, the Team plan includes unlimited documents and five sign-off requests a month.</p><p><mark>Existing customers keep their current price until their next renewal</mark>, and can switch plans at any time from Settings.</p><p>Business adds single sign-on, audit history and a named contact.</p><p class="k-ghostline"></p><p class="k-ghostline k-short"></p></div>
         <div class="k-margin">${thread()}</div>
       </div></div>`;
+  // The specimen at the top of the sheet shows every token on its own, so each setting on the left has
+  // a direct demonstration. Values are filled in from the tokens (see vars).
+  const SPEC = `<section class="k-card k-spec">
+      <div class="k-spec-row" data-spec="type"><span class="k-spec-l">Type</span><div class="k-type">${["4xl", "3xl", "2xl", "xl", "lg", "base", "sm"].map((k, i) => `<span class="k-ts"><b class="${i < 4 ? "k-hd" : ""}" style="font-size:var(--k-${k})">Ag</b><small><span>${k}</span><span class="mono" data-tok="size.${k}"></span></small></span>`).join("")}</div></div>
+      <div class="k-spec-row" data-spec="color"><span class="k-spec-l">Color</span><div class="k-swatches">${[["bg", "Page"], ["surface", "Surface"], ["text", "Text"], ["muted", "Muted"], ["border", "Border"], ["accent", "Accent"]].map(([k, n]) => `<span class="k-swatch"><i style="background:var(--k-${k === "bg" ? "bg" : k})"></i><small>${n}</small><small class="mono" data-tok="color.${k}"></small></span>`).join("")}</div></div>
+      <div class="k-spec-row" data-spec="spacing"><span class="k-spec-l">Spacing</span><div class="k-spaces">${[1, 2, 3, 4, 6, 8, 12, 16].map((n) => `<span class="k-space"><i style="width:var(--k-s${n});height:var(--k-s${n})"></i><small class="mono" data-tok="space.${n}"></small></span>`).join("")}</div></div>
+      <div class="k-spec-row" data-spec="radius"><span class="k-spec-l">Radius</span><div class="k-row k-radii"><span class="k-rad"><i style="border-radius:var(--k-r)"></i><small>Surfaces <span class="mono" data-tok="radius.base"></span></small></span><span class="k-rad"><button class="k-btn">Button</button><small>Buttons <span class="mono" data-tok="radius.button"></span></small></span><span class="k-rad"><span class="k-input">Field</span><small>Fields <span class="mono" data-tok="radius.base"></span></small></span></div></div>
+      <div class="k-spec-row" data-spec="elevation"><span class="k-spec-l">Elevation</span><div class="k-row k-elevs"><span class="k-elev"><i></i><small data-tok="elevation"></small></span></div></div>
+      <div class="k-spec-row" data-spec="motion"><span class="k-spec-l">Motion</span><div class="k-motion"><span class="k-track"><i></i></span><small><span class="mono" data-tok="motion.duration"></span> <span data-tok="motion.name"></span></small></div></div>
+      <div class="k-spec-row" data-spec="rules"><span class="k-spec-l">Rules</span><div class="k-rules-spec" data-tok="rules"></div></div>
+    </section>`;
   const COMPONENTS = `
-    <div class="k-sheet">
+    <div class="k-sheet">${SPEC}
       <section class="k-card k-span2 k-review">
         <div class="k-row k-between k-head"><h3 class="k-h3">Comments on “Spring pricing update”</h3><div class="k-tabs"><span class="on">Open</span><span>Resolved</span></div></div>
         <p class="k-doc-line"><mark>Existing customers keep their current price until their next renewal</mark>, and can switch plans at any time from Settings.</p>
@@ -287,7 +340,7 @@
   const lib = $("cpLib");
   lib.innerHTML = `
     <aside class="cp-filters scroll">
-      <h2 class="col-title">Libraries</h2>
+      <div class="opt-head cp-head"><h2 class="col-title">Libraries</h2><button class="btn sm ghost cp-reset" id="cpReset" hidden>${ic("reset")}Reset</button></div>
       <label class="cp-search">${ic("search")}<input class="field" id="cpQ" placeholder="Search" aria-label="Search libraries" spellcheck="false"></label>
       <h3 class="sub">Framework</h3><div class="cp-list" id="cpFw"></div>
       <h3 class="sub">Category</h3><div class="cp-list" id="cpCat"></div>
@@ -307,6 +360,7 @@
     const paintList = (host, html) => { if (host.innerHTML !== html) host.innerHTML = html; };
     paintList($("cpFw"), ["All", ...FRAMEWORKS].map((f) => row("fw", f, LIBS.filter((l) => matches(l, f)).length)).join(""));
     paintList($("cpCat"), ["All", ...CATS].map((c) => row("cat", c, LIBS.filter((l) => matches(l, K.fw, c)).length)).join(""));
+    $("cpReset").hidden = K.fw === "All" && K.cat === "All" && !K.q;
     const list = LIBS.filter((l) => matches(l));
     const sec = (title, items, cls = "") => `<section class="lib-sec ${cls}"><h3 class="lib-h" data-key="h:${esc(title)}">${esc(title)}<span class="mono">${items.length}</span></h3><div class="cp-grid">${items.map(libCard).join("")}</div></section>`;
     let html;
@@ -319,7 +373,7 @@
     if (animate && root.UI) root.UI.flip(host, paint, { sel: ".lib, .lib-h, .cp-empty" }); else paint();
   }
   lib.addEventListener("click", (e) => {
-    if (e.target.closest("#cpClear")) { K.fw = "All"; K.cat = "All"; K.q = ""; $("cpQ").value = ""; save(); renderLibs(true); return; }
+    if (e.target.closest("#cpClear, #cpReset")) { K.fw = "All"; K.cat = "All"; K.q = ""; $("cpQ").value = ""; save(); renderLibs(true); return; }
     const b = e.target.closest("[data-fw],[data-cat]"); if (!b) return;
     if (b.dataset.fw) K.fw = b.dataset.fw; else K.cat = b.dataset.cat;
     save(); renderLibs(true);
@@ -335,9 +389,9 @@
   build.innerHTML = `
     <aside class="slots scroll"><h2 class="col-title">Tokens</h2><div id="cpSlots"></div></aside>
     <aside class="options scroll"><div class="opt-head"><h2 class="col-title" id="cpOptTitle"></h2></div><div id="cpOpts"></div>
-      <div class="next-step"><button class="btn primary next-btn" id="cpNext"><span id="cpNextLbl"></span>${ic("next")}</button></div></aside>
+      <div class="next-step"><button class="btn primary next-btn" id="cpNext"><span class="nx-text"><small id="cpNextKicker">Continue</small><b id="cpNextLbl"></b></span><span class="nx-end">${ic("next")}</span></button></div></aside>
     <section class="cp-stage">
-      <div class="cp-stage-top"><div class="seg sm" id="cpView"><button data-v="components">Components</button><button data-v="landing">Landing</button></div><div class="seg sm fold-x" id="cpLayout"></div><div class="seg sm" id="cpTheme"><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
+      <div class="cp-stage-top"><button class="ib cp-wide" id="cpWide" title="Hide the sidebar">${ic("panel")}</button><div class="seg sm" id="cpView"><button data-v="components">Components</button><button data-v="landing">Landing</button></div><div class="seg sm fold-x" id="cpLayout"></div><div class="seg sm" id="cpTheme"><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
       <div class="kit-frame scroll"><div class="kit" id="kit"></div></div>
     </section>`;
   $("cpLayout").innerHTML = Object.entries(LAYOUTS).map(([k, [n]]) => `<button data-v="${k}">${n}</button>`).join("");
@@ -347,7 +401,7 @@
   const cap = (t) => t[0].toUpperCase() + t.slice(1);
   const slotInfo = {
     type: () => { const f = fonts(), p = PAIRS[K.pair]; return [!K.head && !K.body && p ? p[0] : "Custom", f.head === f.body ? f.head : `${f.head} and ${f.body}`]; },
-    color: () => { const r = roles(); return [K.follow ? "Isoline" : C.name(r.accent), K.follow ? `App colors, ${r.contrast.toFixed(1)}:1 text` : `${K.colors.length} colors, ${r.contrast.toFixed(1)}:1 text`]; },
+    color: () => { const r = roles(); return [K.follow ? "Isoline" : C.name(r.accent), `${isDark() ? "Dark" : "Light"}, ${r.contrast.toFixed(1)}:1 text`]; },
     spacing: () => [{ 0.8: "Compact", 1: "Regular", 1.25: "Roomy" }[K.density] || "Custom", `${K.unit}px unit`],
     radius: () => [K.radius === 0 ? "Square" : K.radius <= 6 ? "Subtle" : K.radius <= 14 ? "Rounded" : "Soft", `${K.radius}px${K.pill ? ", pill buttons" : ""}`],
     elevation: () => [cap(K.elevation), ELEV_FACT[K.elevation]],
@@ -365,7 +419,14 @@
     }
   }
   $("cpSlots").addEventListener("click", (e) => { const t = e.target.closest("[data-s]"); if (t) setSlot(t.dataset.s); });
-  function setSlot(id) { if (K.slot === id) return; K.slot = id; save(); renderSlots(); renderOpts(true); $("cpOpts").closest(".options").scrollTo({ top: 0 }); }
+  function setSlot(id) { if (K.slot === id) return; K.slot = id; save(); renderSlots(); renderOpts(true); $("cpOpts").closest(".options").scrollTo({ top: 0 }); focusSpec(true); }
+  // The specimen row for the open token is marked, and scrolled into view when you change token.
+  function focusSpec(scroll) {
+    const kit = $("kit"); if (!kit) return;
+    for (const r of kit.querySelectorAll(".k-spec-row")) r.classList.toggle("focus", r.dataset.spec === K.slot);
+    const row = kit.querySelector(`.k-spec-row[data-spec="${K.slot}"]`), f = kit.parentElement;
+    if (scroll && row && f) { const top = row.getBoundingClientRect().top - f.getBoundingClientRect().top + f.scrollTop - 24; f.scrollTo({ top: Math.max(0, top), behavior: root.UI?.reduce.matches ? "auto" : "smooth" }); }
+  }
   $("cpNext").onclick = () => { const i = SLOTS.findIndex((s) => s[0] === K.slot); if (i === SLOTS.length - 1) { $("cpExportBtn")?.click(); return; } setSlot(SLOTS[i + 1][0]); };
 
   // Option controls
@@ -450,7 +511,8 @@
     const o = $("cpOpts");
     $("cpOptTitle").textContent = SLOTS.find((s) => s[0] === K.slot)[1];
     const i = SLOTS.findIndex((s) => s[0] === K.slot);
-    $("cpNextLbl").textContent = i === SLOTS.length - 1 ? "Export" : `Next: ${SLOTS[i + 1][1]}`;
+    setText($("cpNextKicker"), i === SLOTS.length - 1 ? "Finish" : "Continue");
+    setText($("cpNextLbl"), i === SLOTS.length - 1 ? "Export" : SLOTS[i + 1][1]);
     o.innerHTML = "";
     if (K.slot === "type") {
       const f = fonts();
@@ -488,34 +550,31 @@
       slider(o, "Base size", 13, 20, 1, () => K.base, (v) => (K.base = v), (v) => v + "px");
       slider(o, "Heading tracking", -0.06, 0.04, 0.005, () => K.tracking, (v) => (K.tracking = v), (v) => (+v).toFixed(3) + "em");
     } else if (K.slot === "color") {
-      sub(o, "Colors");
-      const row = document.createElement("div"); row.className = "mine";
-      const cs = cols(), ai = accentIndex();
       o.insertAdjacentHTML("beforeend", `<label class="label-row switch-row cp-follow"><span class="label">Match Isoline</span><span class="switch"><input type="checkbox" id="cpFollow"${K.follow ? " checked" : ""}><span></span></span></label>`);
       $("cpFollow").onchange = (e) => { if (e.target.checked) { K.follow = true; K.dark = null; } else unfollow(); changed(true); renderStageSegs(); };
-      row.innerHTML = cs.map((c, k) => `<div class="stop" data-k="${k}"><button class="sw" style="background:${c}" aria-label="Edit color ${k + 1}"></button>${cs.length > 2 ? `<button class="x" aria-label="Remove color">${ic("x")}</button>` : ""}<button class="cp-acc${ai === k ? " on" : ""}" data-acc="${k}">${ai === k ? "Accent" : "Use"}</button></div>`).join("") + (cs.length < 8 ? `<button class="stop-add" aria-label="Add color">${ic("plus")}</button>` : "");
-      row.onclick = (e) => {
-        const k = +e.target.closest("[data-k]")?.dataset.k;
-        if (e.target.closest("[data-acc], .x, .stop-add")) unfollow();
-        if (e.target.closest("[data-acc]")) { K.accent = +e.target.closest("[data-acc]").dataset.acc; changed(true); }
-        else if (e.target.closest(".x")) { const st = e.target.closest(".stop"); const go = () => { K.colors.splice(k, 1); K.accent = clamp(K.accent, 0, K.colors.length - 1); changed(true); }; if (root.UI?.reduce.matches) go(); else st.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.6)" }], { duration: 200, easing: "ease-in", fill: "forwards" }).onfinish = go; }
-        else if (e.target.closest(".stop-add")) { K.colors.push(C.mixOklab(K.colors[K.colors.length - 1], K.colors[0], 0.5)); changed(true); $("cpOpts").querySelector(`.stop[data-k="${K.colors.length - 1}"]`)?.classList.add("fresh-stop"); }
-        else if (e.target.closest(".sw")) { const sw = e.target.closest(".sw"); picker.open(sw, cols()[k], (v) => { if (K.follow) { unfollow(); $("cpFollow").checked = false; } K.colors[k] = v; sw.style.background = v; changed(); paintContrast(); }, () => save(), [["Palette", cols()]]); }
+      sub(o, "Mode");
+      seg(o, [["0", "Light"], ["1", "Dark"]], () => (isDark() ? 1 : 0), (v) => { K.dark = !!v; renderStageSegs(); setTimeout(() => renderOpts(), 0); });
+      sub(o, `Roles in ${mode()} mode`);
+      // Each role shows its color, what it is for, and how well the text roles read on what they sit on.
+      const list = document.createElement("div"); list.className = "cp-roles";
+      list.innerHTML = ROLES.map(([k, name, what]) => `<button class="cp-role" data-role="${k}"><span class="sw"></span><span class="cp-role-t"><b>${name}</b><small>${what}</small></span><span class="cp-role-v"><span class="mono"></span><em class="cp-badge"></em></span></button>`).join("");
+      list.onclick = (e) => {
+        const b = e.target.closest("[data-role]"); if (!b) return;
+        const k = b.dataset.role, sw = b.querySelector(".sw");
+        picker.open(sw, roles()[k], (v) => { if (K.follow) { unfollow(); $("cpFollow").checked = false; } K.rc[mode()][k] = v; changed(); paintRoles(); }, () => save(), [["Roles", ROLES.map(([x]) => roles()[x])]]);
       };
-      o.appendChild(row);
-      o.insertAdjacentHTML("beforeend", `<div class="cp-contrast"><span>Text contrast</span><b class="mono" id="cpRatio"></b><em id="cpLevel"></em></div>`);
-      paintContrast();
+      o.appendChild(list);
+      paintRoles();
       const pal = root.Palettes;
       if (pal) {
-        sub(o, "From palettes");
-        const list = [["Palette tool", pal.colors()], ...pal.saved().map((p) => [p.name, p.colors])];
+        sub(o, "Start from a palette");
+        const plist = [["Palette tool", pal.colors()], ...pal.saved().map((p) => [p.name, p.colors])];
         const g = document.createElement("div"); g.className = "cp-pals";
-        g.innerHTML = list.map(([n, cols], k) => `<button class="sug" data-p="${k}"><span class="sug-sw">${cols.slice(0, 6).map((c) => `<i style="background:${c}"></i>`).join("")}</span><span>${esc(n)}</span></button>`).join("");
-        g.onclick = (e) => { const b = e.target.closest("[data-p]"); if (!b) return; K.follow = false; K.colors = list[+b.dataset.p][1].slice(0, 8); const ch = K.colors.map((c) => C.toOklch(c)[1]); K.accent = ch.indexOf(Math.max(...ch)); changed(true); };
+        g.innerHTML = plist.map(([n, cs], k) => `<button class="sug" data-p="${k}"><span class="sug-sw">${cs.slice(0, 6).map((c) => `<i style="background:${c}"></i>`).join("")}</span><span>${esc(n)}</span></button>`).join("");
+        g.onclick = (e) => { const b = e.target.closest("[data-p]"); if (!b) return; const cs = plist[+b.dataset.p][1]; K.follow = false; K.rc = { light: rolesFrom(cs, false), dark: rolesFrom(cs, true) }; changed(true); };
         o.appendChild(g);
+        o.insertAdjacentHTML("beforeend", `<p class="hint">The lightest color becomes the page, the darkest the text, the most colorful the accent. Fine-tune any role above.</p>`);
       }
-      sub(o, "Mode");
-      seg(o, [["0", "Light"], ["1", "Dark"]], () => (isDark() ? 1 : 0), (v) => { K.dark = !!v; paintContrast(); renderStageSegs(); });
     } else if (K.slot === "spacing") {
       sub(o, "Base unit"); seg(o, [[4, "4px"], [8, "8px"]], () => K.unit, (v) => { K.unit = v; paintScale(); });
       sub(o, "Density"); seg(o, [[0.8, "Compact"], [1, "Regular"], [1.25, "Roomy"]], () => K.density, (v) => { K.density = v; paintScale(); });
@@ -564,11 +623,16 @@
     const custom0 = K.head || K.body;
     for (const b of o.querySelectorAll(".pair")) b.classList.toggle("on", !custom0 && +b.dataset.k === K.pair);
   }
-  function paintContrast() {
-    const el = $("cpRatio"); if (!el) return;
-    const r = roles().contrast, [lv, cls] = level(r);
-    el.textContent = `${r.toFixed(1)}:1`;
-    const em = $("cpLevel"); if (em.textContent !== lv) { em.textContent = lv; em.className = "cp-badge " + cls; }
+  function paintRoles() {
+    const list = $("cpOpts").querySelector(".cp-roles"); if (!list) return;
+    const r = roles();
+    const ratio = { text: [r.text, r.bg], muted: [r.muted, r.bg], accent: [r.onAccent, r.accent] };
+    for (const b of list.children) {
+      const k = b.dataset.role, sw = b.querySelector(".sw"), hex = b.querySelector(".mono"), em = b.querySelector("em");
+      sw.style.background = r[k]; hex.textContent = r[k].toUpperCase();
+      if (ratio[k]) { const c = C.contrast(...ratio[k]), [lv, cls] = level(c); em.textContent = `${c.toFixed(1)}:1 ${lv}`; em.className = "cp-badge " + cls; em.hidden = false; }
+      else em.hidden = true;
+    }
   }
   function paintScale() {
     const host = $("cpScale"); if (!host) return;
@@ -587,7 +651,17 @@
     kit.innerHTML = previewHTML();
     vars(kit);
     renderStageSegs();
+    focusSpec(false);
   }
+  // Full width: the token columns fold away so the preview gets the whole page.
+  function setWide(on) {
+    K.wide = on; save();
+    build.classList.toggle("wide", on);
+    $("cpWide").dataset.tip = on ? "Show the sidebar" : "Hide the sidebar"; $("cpWide").setAttribute("aria-label", $("cpWide").dataset.tip);
+    $("cpWide").classList.toggle("on", on);
+  }
+  $("cpWide").onclick = () => { root.UI?.tip.hide(); setWide(!K.wide); };
+  setWide(!!K.wide);
   const swapStage = () => (root.UI ? root.UI.swap(renderStage) : renderStage());
   $("cpView").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && K.view !== b.dataset.v) { K.view = b.dataset.v; save(); swapStage(); } };
   $("cpLayout").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && K.layout !== b.dataset.v) { K.layout = b.dataset.v; save(); swapStage(); } };
@@ -625,7 +699,7 @@
     const named = (h) => `${h} (${C.name(h)})`;
     const libs = LIBS.filter((l) => (K.fw === "All" || l.fw.includes(K.fw)) && ["Components", "Headless"].includes(l.cat)).slice(0, 6).map((l) => `- ${l.name}: ${l.url}`).join("\n");
     const own = [t.font.heading, t.font.body].filter((x) => custom.has(x));
-    let out = `# ${kind === "design" ? "Design brief" : "Build brief"}\n\nFollow these rules on every screen:\n${rules}\n\n## Type\n- Headings: ${t.font.heading}, weight ${t.font.headingWeight}, tracking ${t.font.tracking}em\n- Body: ${t.font.body}, ${t.size.base}px base, scale ratio ${K.scale}\n- Load from Google Fonts: ${fontsLink()}\n${own.length ? `- Self-hosted fonts (files supplied separately): ${[...new Set(own)].join(", ")}\n` : ""}\n## Color (${isDark() ? "dark" : "light"} mode)\n- Background ${named(r.bg)}, surface ${r.surface}, border ${r.border}\n- Text ${named(r.text)}, muted text ${r.muted}\n- Text on background is ${r.contrast.toFixed(1)}:1\n- Accent ${named(r.accent)} with ${r.onAccent} text on it\n- Full palette: ${cols().join(", ")}\n\n## Shape and space\n- Spacing scale (px): ${Object.values(t.space).join(", ")}\n- Corner radius ${t.radius.base}px, buttons ${K.pill ? "fully rounded" : t.radius.base + "px"}\n- Elevation: ${K.elevation} (${t.shadow})\n\n## Motion\n- ${t.motion.duration}ms with ${t.motion.easing}\n- Vary timing slightly between elements and honor prefers-reduced-motion\n`;
+    let out = `# ${kind === "design" ? "Design brief" : "Build brief"}\n\nFollow these rules on every screen:\n${rules}\n\n## Type\n- Headings: ${t.font.heading}, weight ${t.font.headingWeight}, tracking ${t.font.tracking}em\n- Body: ${t.font.body}, ${t.size.base}px base, scale ratio ${K.scale}\n- Load from Google Fonts: ${fontsLink()}\n${own.length ? `- Self-hosted fonts (files supplied separately): ${[...new Set(own)].join(", ")}\n` : ""}\n## Color (${isDark() ? "dark" : "light"} mode)\n- Background ${named(r.bg)}, surface ${r.surface}, border ${r.border}\n- Text ${named(r.text)}, muted text ${r.muted}\n- Text on background is ${r.contrast.toFixed(1)}:1\n- Accent ${named(r.accent)} with ${r.onAccent} text on it\n- Roles: ${ROLES.map(([k, n]) => `${n.toLowerCase()} ${r[k]}`).join(", ")}\n\n## Shape and space\n- Spacing scale (px): ${Object.values(t.space).join(", ")}\n- Corner radius ${t.radius.base}px, buttons ${K.pill ? "fully rounded" : t.radius.base + "px"}\n- Elevation: ${K.elevation} (${t.shadow})\n\n## Motion\n- ${t.motion.duration}ms with ${t.motion.easing}\n- Vary timing slightly between elements and honor prefers-reduced-motion\n`;
     if (kind === "dev") out += `\n## Tokens as CSS variables\n\`\`\`css\n${cssVars()}\`\`\`\n\n## Tailwind v4 theme\n\`\`\`css\n${tailwind()}\`\`\`\n` + (libs ? `\n## Suggested libraries${K.fw !== "All" ? " for " + K.fw : ""}\n${libs}\n` : "");
     return out;
   }

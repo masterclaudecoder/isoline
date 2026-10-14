@@ -51,6 +51,7 @@
     <symbol id="i-timing" viewBox="0 0 20 20"><path d="M3.5 3.5v13h13"/><path d="M6 14c4.5 0 5-8.5 9.5-8.5"/></symbol>
     <symbol id="i-rules" viewBox="0 0 20 20"><path d="m3.5 6.2 1.6 1.6 2.6-2.6M3.5 12.7l1.6 1.6 2.6-2.6M10.5 6.5h6M10.5 13h6"/></symbol>
     <symbol id="i-search" viewBox="0 0 20 20"><circle cx="9" cy="9" r="5"/><path d="m16 16-3.4-3.4"/></symbol>
+    <symbol id="i-panel" viewBox="0 0 20 20"><rect x="3.5" y="4" width="13" height="12" rx="2.5"/><path d="M8.5 4v12M5.6 7.5h.9M5.6 10h.9"/></symbol>
     <symbol id="i-out" viewBox="0 0 20 20"><path d="M7.5 5.5h7v7M14.5 5.5l-9 9"/></symbol>
   </defs>
 </svg>
@@ -95,7 +96,7 @@
       <div class="menu-wrap" data-for="studio">
         <button class="btn primary" id="exportBtn" aria-haspopup="true">Export<svg class="ic chev"><use href="#i-chev"/></svg></button>
         <div class="pop export" id="exportMenu" hidden>
-          <div class="seg" id="fmt"><button data-v="svg">SVG</button><button data-v="png">PNG</button><button data-v="video">Video</button></div>
+          <div class="seg" id="fmt"><button data-v="svg">SVG</button><button data-v="png">PNG</button><button data-v="video">MP4</button><button data-v="gif">GIF</button></div>
           <p class="note" id="rasterNote" hidden>Gradients, noise and effects export as PNG.</p>
           <div class="seg" id="pngScale" hidden>
             <button data-v="1">1×</button><button data-v="2">2×</button><button data-v="3">3×</button><button data-v="4">4×</button>
@@ -104,6 +105,11 @@
             <span class="label">Size</span><div class="seg sm" id="vidSize"><button data-v="720">720p</button><button data-v="1080">1080p</button><button data-v="1440">1440p</button></div>
             <span class="label">Frame rate</span><div class="seg sm" id="vidFps"><button data-v="24">24</button><button data-v="30">30</button><button data-v="60">60</button></div>
             <span class="label">Loops</span><div class="seg sm" id="vidLoops"><button data-v="1">1</button><button data-v="2">2</button><button data-v="4">4</button></div>
+          </div>
+          <div class="ex-grid" id="gifOpts" hidden>
+            <span class="label">Size</span><div class="seg sm" id="gifSize"><button data-v="360">360p</button><button data-v="480">480p</button><button data-v="720">720p</button></div>
+            <span class="label">Frame rate</span><div class="seg sm" id="gifFps"><button data-v="15">15</button><button data-v="20">20</button><button data-v="30">30</button></div>
+            <span class="label">Loops</span><div class="seg sm" id="gifLoops"><button data-v="1">1</button><button data-v="2">2</button><button data-v="4">4</button></div>
           </div>
           <p class="note" id="vidNote" hidden>Still designs export as a gentle drift. Pick a motion in the Motion step for more control.</p>
           <label class="label" for="fname">File</label>
@@ -240,7 +246,7 @@
       <div class="panel-sec" data-panel="addfx">
         <div id="fxGallery"></div>
       </div>
-      <div class="next-step"><button class="btn primary next-btn" id="nextBtn"><span id="nextLbl">Next</span><small id="nextSub"></small><svg class="ic"><use href="#i-next"/></svg></button></div>
+      <div class="next-step"><button class="btn primary next-btn" id="nextBtn"><span class="nx-text"><small id="nextKicker">Continue</small><b id="nextLbl"></b></span><span class="nx-end"><small id="nextSub"></small><svg class="ic"><use href="#i-next"/></svg></span></button></div>
     </aside>
 
     <section class="stage">
@@ -332,6 +338,7 @@
 <script src="color.js"></script>
 <script src="picker.js"></script>
 <script src="mp4-muxer.js"></script>
+<script src="gifenc.js"></script>
 <script src="engine.js"></script>
 <script src="brand.js"></script>
 <script src="fx.js"></script>
