@@ -286,7 +286,14 @@
   $("ptUndo").onclick = () => travel(-1);
   $("ptRedo").onclick = () => travel(1);
   $("ptSort").onclick = () => { st.cols.sort((a, b) => C.toOklch(a.hex)[0] - C.toOklch(b.hex)[0]); snap(); glide(() => render(true)); save(); };
-  $("ptUse").onclick = () => { root.Studio?.usePalette(st.cols.map((c) => c.hex)); root.Shell?.go("studio"); };
+  // The bottom button sends the palette back to whichever tool opened it, the studio by default.
+  let from = "studio";
+  const setFrom = (f) => { from = f === "components" ? "components" : "studio"; $("ptUse").firstChild.textContent = from === "components" ? "Use in Components" : "Use in Studio"; };
+  $("ptUse").onclick = () => {
+    const hexes = st.cols.map((c) => c.hex);
+    if (from === "components") { root.Components?.usePalette(hexes); root.Shell?.go("components"); }
+    else { root.Studio?.usePalette(hexes); root.Shell?.go("studio"); }
+  };
   let dotsKey = "";
   function syncBar() {
     const m = MODES.find((x) => x[0] === st.mode) || MODES[0], sample = sampleOf(m[0]), key = m[0] + sample.join();
@@ -369,7 +376,8 @@
     vary() { vary(); return st.cols.map((c) => c.hex); },
     lock(i, on = true) { if (st.cols[i]) { st.cols[i].lock = on; render(true); save(); } },
     modes: () => MODES.map((m) => m[0]),
-    load(hexes) { st.cols = hexes.slice(0, 10).map((hex) => ({ hex, lock: false })); snap(); render(true); save(); },
+    load(hexes, src) { st.cols = hexes.slice(0, 10).map((hex) => ({ hex, lock: false })); snap(); render(true); save(); if (src) setFrom(src); },
+    returnTo: (src) => setFrom(src),
     onShow(hash) { if (fromHash(hash)) { snap(); render(true); save(); } },
   };
 })(window);

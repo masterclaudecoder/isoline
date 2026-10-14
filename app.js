@@ -786,15 +786,77 @@
     } else {
       const before = el.dataset.shape ? el.querySelectorAll("[data-ink]").length : inks.length;
       el.dataset.shape = shape;
-      let html = contours ? `<div class="stop bgc" data-k="bg"><button class="sw" style="background:${S.bg}" aria-label="Background color"></button><span>Background</span></div><span class="mine-sep"></span>` : "";
-      html += inks.map((c, i) => `<div class="stop${i >= before ? " fresh" : ""}" data-ink="${i}"><button class="sw" style="background:${c}" aria-label="Edit color ${i + 1}"></button>${inks.length > 2 ? `<button class="x" aria-label="Remove color ${i + 1}">${ic("x")}</button>` : ""}</div>`).join("");
+      // Two labeled groups: the background on its own, then the inks (or stops) in order, which you
+      // can drag to reorder.
+      let html = contours ? `<div class="mine-grp mine-bg"><div class="stop bgc" data-k="bg"><button class="sw" style="background:${S.bg}" aria-label="Background color"></button></div><span class="mine-l">Background</span></div><span class="mine-sep"></span>` : "";
+      html += `<div class="mine-grp mine-main"><div class="mine-inks">` + inks.map((c, i) => `<div class="stop${i >= before ? " fresh" : ""}" data-ink="${i}"><button class="sw" style="background:${c}" aria-label="Edit color ${i + 1}" title="Click to edit, drag to reorder"></button>${inks.length > 2 ? `<button class="x" aria-label="Remove color ${i + 1}">${ic("x")}</button>` : ""}</div>`).join("");
       if (inks.length < MAX_INKS()) html += `<button class="stop-add" title="Add color" aria-label="Add color">${ic("plus")}</button>`;
+      html += `</div><span class="mine-l">${contours ? "Lines, first to last" : "Color stops"}</span></div>`;
       el.innerHTML = html;
       renderMine();
     }
+    fitMine();
     $("stopCount").textContent = contours ? `${inks.length} ${inks.length === 1 ? "color" : "colors"} + background` : `${inks.length} of 8`;
   }
+  // When the row runs out of room the circles slide together and overlap. Only when even a deep overlap
+  // can't fit them do they wrap onto another line.
+  const SW = 40, GAP = 8, MAX_OV = 24;
+  function fitMine() {
+    const row = $("mine").querySelector(".mine-inks"); if (!row) return;
+    const n = row.children.length, avail = row.parentElement.clientWidth;
+    if (!avail) return;
+    const need = n * SW + (n - 1) * GAP, ov = n > 1 ? Math.max(0, (need - avail) / (n - 1)) : 0;
+    row.classList.toggle("wrap", ov > MAX_OV);
+    row.style.setProperty("--ov", (ov > MAX_OV ? 0 : Math.ceil(ov)) + "px");
+    row.classList.toggle("tight", ov > 0 && ov <= MAX_OV);
+  }
+  new ResizeObserver(fitMine).observe($("mine"));
+  // Drag to reorder: the circle follows the pointer and the others step aside into its old place.
+  let mineDrag = null, mineDragged = false;
+  $("mine").addEventListener("pointerdown", (e) => {
+    const sw = e.target.closest("[data-ink] > .sw"); if (!sw || e.button) return;
+    const stops = [...$("mine").querySelectorAll("[data-ink]")];
+    mineDrag = { el: sw.parentElement, from: +sw.parentElement.dataset.ink, x0: e.clientX, y0: e.clientY, stops, rects: stops.map((s) => s.getBoundingClientRect()), on: false, to: +sw.parentElement.dataset.ink, id: e.pointerId };
+  });
+  addEventListener("pointermove", (e) => {
+    const d = mineDrag; if (!d || e.pointerId !== d.id) return;
+    const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+    if (!d.on) { if (Math.hypot(dx, dy) < 5) return; d.on = true; picker.close(); d.el.classList.add("dragging"); $("mine").classList.add("sorting"); d.el.setPointerCapture?.(e.pointerId); }
+    d.el.style.translate = `${dx}px ${dy}px`;
+    const c = (r) => [r.left + r.width / 2, r.top + r.height / 2];
+    let to = 0, best = Infinity;
+    d.rects.forEach((r, k) => { const [cx, cy] = c(r), dist = Math.hypot(e.clientX - cx, (e.clientY - cy) * 1.6); if (dist < best) { best = dist; to = k; } });
+    d.to = to;
+    d.stops.forEach((s, k) => {
+      if (k === d.from) return;
+      const shift = d.from < to ? (k > d.from && k <= to ? -1 : 0) : (k < d.from && k >= to ? 1 : 0);
+      const r = d.rects[k + shift] || d.rects[k];
+      s.style.translate = shift ? `${r.left - d.rects[k].left}px ${r.top - d.rects[k].top}px` : "";
+    });
+  });
+  const endMineDrag = (e) => {
+    const d = mineDrag; if (!d || e.pointerId !== d.id) return;
+    mineDrag = null;
+    if (!d.on) return;
+    mineDragged = true; setTimeout(() => (mineDragged = false), 0);
+    const r = d.rects[d.to], r0 = d.rects[d.from];
+    // Settle into the new slot, then rebuild in the new order.
+    d.el.classList.remove("dragging"); d.el.classList.add("settling");
+    d.el.style.translate = `${r.left - r0.left}px ${r.top - r0.top}px`;
+    setTimeout(() => {
+      $("mine").classList.remove("sorting");
+      for (const s of d.stops) { s.style.translate = ""; s.classList.remove("settling"); }
+      if (d.to === d.from) return;
+      const a = inksOf().slice(), [c] = a.splice(d.from, 1); a.splice(d.to, 0, c);
+      if (gen() === "contours") setInks(a); else S.grad.colors = a;
+      $("mine").dataset.shape = ""; renderMine(); update();
+    }, root_reduce() ? 0 : 220);
+  };
+  const root_reduce = () => !!window.UI?.reduce.matches;
+  addEventListener("pointerup", endMineDrag);
+  addEventListener("pointercancel", endMineDrag);
   $("mine").addEventListener("click", (e) => {
+    if (mineDragged) return;
     const bg = e.target.closest('[data-k="bg"] .sw');
     if (bg) return picker.open(bg, S.bg, (v) => { S.bg = v; S.transparent = false; bg.style.background = v; update({ instant: true }); }, () => commit(), swatchesFor(S.bg));
     const x = e.target.closest(".x");
@@ -812,6 +874,8 @@
     const sw = e.target.closest("[data-ink] .sw");
     if (sw) { const i = +sw.parentElement.dataset.ink; picker.open(sw, inksOf()[i], (v) => { const a = inksOf(); a[i] = v; setInks(a); sw.style.background = v; update({ instant: true }); }, () => commit(), swatchesFor(inksOf()[i])); }
   });
+  // The palette tool opens with these colors, background first, and its "Use" button brings them back.
+  $("toPalettes").onclick = () => { window.Palettes?.load(gen() === "contours" ? [S.bg, ...inksOf()] : inksOf(), "studio"); window.Shell?.go("palettes"); };
   function roleRow(host, roles) {
     const el = $(host);
     el.innerHTML = roles.map(([key, label]) => `<div class="role" data-k="${key}"><button class="sw lg" aria-label="${label} color"></button><span>${label}</span></div>`).join("");
@@ -1260,15 +1324,27 @@
 
   // ---------- size ----------
   const clampDim = (v) => clamp(Math.round(+v || 0), 64, P.unlock ? 16000 : 8000);
+  // The size control drives whichever tool is open: the studio canvas, or the page in the Components
+  // builder, which also offers a size that follows the window.
+  const studioSize = { get: () => [S.w, S.h], set: (w, h) => { S.w = w; S.h = h; update(); } };
+  const sizer = () => (window.Shell?.route === "components" && window.Components?.sizer) || studioSize;
   for (const key of ["w", "h"]) {
-    $(key).onchange = (e) => { S[key] = clampDim(e.target.value); update(); };
+    $(key).onchange = (e) => { const [w, h] = sizer().get(), v = clampDim(e.target.value); sizer().set(key === "w" ? v : w, key === "h" ? v : h); syncSize(); };
     $(key).onkeydown = (e) => { if (e.key === "Enter") e.target.blur(); };
   }
-  $("swap").onclick = () => { [S.w, S.h] = [S.h, S.w]; update(); };
+  $("swap").onclick = () => { const [w, h] = sizer().get(); sizer().set(h, w); syncSize(); };
   const sizeMenu = $("sizeMenu");
-  sizeMenu.innerHTML = SIZES.map(([grp, list]) => `<h3>${grp}</h3>` + list.map(([n, w, h]) => `<button class="opt" data-w="${w}" data-h="${h}"><span>${n}</span><span class="mono">${w}×${h}</span></button>`).join("")).join("");
-  sizeMenu.onclick = (e) => { const b = e.target.closest(".opt"); if (!b) return; S.w = +b.dataset.w; S.h = +b.dataset.h; closeMenus(); update(); };
-  const presetName = () => { for (const [, list] of SIZES) for (const [n, w, h] of list) if (w === S.w && h === S.h) return n; return "Custom"; };
+  sizeMenu.innerHTML = `<button class="opt fit-opt" data-fit><span>Fit the window</span><span class="mono">Auto</span></button>` + SIZES.map(([grp, list]) => `<h3>${grp}</h3>` + list.map(([n, w, h]) => `<button class="opt" data-w="${w}" data-h="${h}"><span>${n}</span><span class="mono">${w}×${h}</span></button>`).join("")).join("");
+  sizeMenu.onclick = (e) => { const b = e.target.closest(".opt"); if (!b) return; if (b.hasAttribute("data-fit")) sizer().fit?.(); else sizer().set(+b.dataset.w, +b.dataset.h); closeMenus(); syncSize(); };
+  const presetName = (w, h) => { if (sizer().fitting?.()) return "Fit"; for (const [, list] of SIZES) for (const [n, pw, ph] of list) if (pw === w && ph === h) return n; return "Custom"; };
+  function syncSize() {
+    const [w, h] = sizer().get();
+    // Where the browser can size a field to its content, CSS does it; otherwise measure the digits.
+    for (const [key, v] of [["w", w], ["h", h]]) { const el = $(key); if (document.activeElement !== el) el.value = v; if (!fieldSizing) el.style.width = Math.max(24, measure(String(v))) + 8 + "px"; }
+    $("sizeName").textContent = presetName(w, h);
+    sizeMenu.querySelector(".fit-opt").hidden = !sizer().fit;
+  }
+  window.syncSize = syncSize;
 
   // ---------- menus + modals ----------
   const menus = { sizeBtn: sizeMenu, exportBtn: $("exportMenu"), settingsBtn: $("settingsMenu") };
@@ -1279,7 +1355,7 @@
       const open = menu.hidden;
       closeMenus();
       menu.hidden = !open;
-      if (open && menu === sizeMenu) for (const o of sizeMenu.querySelectorAll(".opt")) o.classList.toggle("on", +o.dataset.w === S.w && +o.dataset.h === S.h);
+      if (open && menu === sizeMenu) { const [w, h] = sizer().get(), fitting = !!sizer().fitting?.(); for (const o of sizeMenu.querySelectorAll(".opt")) o.classList.toggle("on", o.hasAttribute("data-fit") ? fitting : !fitting && +o.dataset.w === w && +o.dataset.h === h); }
       if (open && menu.id === "exportMenu") refreshExport();
     };
   }
@@ -1296,6 +1372,7 @@
     if (P.theme === "system") delete r.dataset.theme; else r.dataset.theme = P.theme;
     r.style.setProperty("--accent", P.accent);
     r.style.setProperty("--on-accent", window.Color.contrast(P.accent, "#ffffff") < 2.6 ? "#1c1c1e" : "#ffffff");
+    window.TopoBrand?.favicon(P.accent);
     for (const b of $("theme").children) b.classList.toggle("on", b.dataset.v === P.theme);
     for (const b of $("accents").querySelectorAll("[data-c]")) b.classList.toggle("on", b.dataset.c === P.accent);
     $("accents").querySelector(".custom").classList.toggle("on", !ACCENTS.includes(P.accent));
@@ -1325,6 +1402,36 @@
   $("exportSettings").onclick = () => { closeMenus(); download(new Blob([settingsJSON()], { type: "application/json" }), `isoline-settings-${S.seed}.json`, "Settings saved"); };
   $("copySettings").onclick = async () => { closeMenus(); try { await navigator.clipboard.writeText(settingsJSON()); toast("Settings copied"); } catch (e) { toast("Clipboard is blocked here. Use Download settings."); } };
   $("importSettings").onclick = () => { closeMenus(); $("importErr").hidden = true; $("importText").value = ""; openModal("importModal"); $("importText").focus(); };
+  // Feedback becomes a GitHub issue: the form fills in a new-issue page, which the person posts with
+  // their own account, so the site needs no server or token.
+  const ISSUES = "https://github.com/masterclaudecoder/isoline/issues/new";
+  const FB_KIND = { bug: ["Bug", "bug"], idea: ["Idea", "enhancement"], other: ["Feedback", "feedback"] };
+  let fbKind = "bug";
+  const pageInfo = () => {
+    const route = window.Shell?.route || "home", ua = (["Edg", "Firefox", "Chrome", "Version"].map((n) => navigator.userAgent.match(new RegExp(n + "/[\\d.]+"))?.[0]).find(Boolean) || "unknown browser").replace("Version", "Safari");
+    const rows = [["Page", route], ["Browser", ua], ["Window", `${innerWidth}×${innerHeight}`], ["Theme", document.documentElement.dataset.theme || "auto"]];
+    if (route === "studio") rows.push(["Design", window.Studio.describe()]);
+    if (route === "components") rows.push(["Kit", window.Components.summary?.() || ""]);
+    return rows;
+  };
+  const syncFb = () => { $("fbOk").disabled = !$("fbSubject").value.trim() && !$("fbText").value.trim(); };
+  $("feedbackBtn").onclick = () => {
+    closeMenus(); openModal("feedbackModal");
+    const r = pageInfo(); $("fbInfoSum").textContent = `${r[0][1][0].toUpperCase() + r[0][1].slice(1)}, ${r[1][1]}, ${r[2][1]}`;
+    syncFb(); $("fbSubject").focus();
+  };
+  $("fbKind").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; fbKind = b.dataset.v; for (const x of $("fbKind").querySelectorAll("button")) x.classList.toggle("on", x === b); $("fbText").placeholder = { bug: "What happened, and what did you expect?", idea: "What would you like to do?", other: "Tell us anything" }[fbKind]; };
+  $("fbSubject").oninput = syncFb;
+  $("fbText").oninput = (e) => { syncFb(); window.UI?.autosize(e.target); };
+  $("fbCancel").onclick = () => closeModal("feedbackModal");
+  $("fbOk").onclick = () => {
+    const [name, label] = FB_KIND[fbKind], text = $("fbText").value.trim(), subj = $("fbSubject").value.trim() || text.split("\n")[0].slice(0, 80);
+    let body = text || "_No details given._";
+    if ($("fbInfo").checked) body += "\n\n<details><summary>Page details</summary>\n\n" + pageInfo().map(([k, v]) => `- **${k}:** ${v}`).join("\n") + "\n</details>";
+    const url = `${ISSUES}?title=${encodeURIComponent(`${name}: ${subj}`)}&labels=${label}&body=${encodeURIComponent(body.slice(0, 6000))}`;
+    window.open(url, "_blank", "noopener");
+    closeModal("feedbackModal"); $("fbSubject").value = $("fbText").value = ""; toast("Thanks. Post it on the GitHub page that opened.");
+  };
   $("importCancel").onclick = () => closeModal("importModal");
   $("importFile").onchange = async (e) => { const f = e.target.files?.[0]; if (f) $("importText").value = await f.text(); e.target.value = ""; };
   $("importOk").onclick = () => {
@@ -1514,10 +1621,19 @@
     });
   }
   const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image, grad: st.source === "gradient" ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper, time: st._t || 0, motion: st._t != null ? st.motion.type : "still", motionAmt: st.motion?.amt });
+  // While a resize handle is held the scale stays put, so the edge tracks the pointer.
+  let rzScale = 0;
+  const room = () => { const cs = getComputedStyle(wrap); return [wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)]; };
+  window.UI?.resizable(art, {
+    get: () => [S.w, S.h], scale: () => art.clientWidth / S.w, room, min: 64, max: () => (P.unlock ? 16000 : 8000),
+    start() { rzScale = art.clientWidth / S.w; picker.close?.(); },
+    set(w, h) { S.w = w; S.h = h; update({ draft: true, commit: false }); },
+    end() { rzScale = 0; update(); },
+  });
   function fit() {
     const cs = getComputedStyle(wrap);
     const aw = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), ah = wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-    const sc = Math.min(aw / S.w, ah / S.h);
+    const sc = rzScale || Math.min(aw / S.w, ah / S.h);
     art.style.width = Math.max(40, S.w * sc) + "px";
     art.style.height = Math.max(40, S.h * sc) + "px";
   }
@@ -1818,9 +1934,7 @@
     $("ptHint").textContent = selPoint() ? "Double-click to flip into a dip. Delete removes." : "Double-click the canvas to add a peak. Drag to move, scroll to resize.";
     $("gradHint").hidden = g !== "mesh";
     renderSlots();
-    // Where the browser can size a field to its content, CSS does it; otherwise measure the digits.
-    for (const key of ["w", "h"]) { const el = $(key); el.value = S[key]; if (!fieldSizing) el.style.width = Math.max(24, measure(String(S[key]))) + 8 + "px"; }
-    $("sizeName").textContent = presetName();
+    if (window.Shell?.route !== "components") syncSize();
     $("safe").checked = P.safe; $("unlock").checked = P.unlock;
     $("motionHint").textContent = MOTION_HINT[S.motion.type];
     syncNext();

@@ -98,6 +98,20 @@
     el.innerHTML = c.html().replace(/#1c1c1e/g, "currentColor").replace(/stroke="#fff"/g, 'style="stroke:var(--panel)"');
     el.dataset.logo = c.id;
   }
+  // The tab icon is the Isoline mark on its own: lines in ink (light ink on a dark browser), the dot in
+  // the app's accent.
+  let markSVG = "";
+  function favicon(accent = ACCENT) {
+    if (typeof document === "undefined") return;
+    markSVG ||= (concepts.find((x) => x.id === "isoline").html().match(/<svg class="lg-mark"[\s\S]*?<\/svg>/) || [""])[0];
+    if (!markSVG) return;
+    const svg = markSVG.replace('<svg class="lg-mark"', '<svg xmlns="http://www.w3.org/2000/svg"').replace(' aria-hidden="true"', "")
+      .replace("<defs>", "<style>path{stroke:#1c1c1e}@media (prefers-color-scheme:dark){path{stroke:#edece8}circle{stroke:#1c1c1e}}</style><defs>")
+      .replace(`fill="${ACCENT}"`, `fill="${accent}"`);
+    let link = document.querySelector('link[rel="icon"]');
+    if (!link) { link = document.createElement("link"); link.rel = "icon"; link.type = "image/svg+xml"; document.head.appendChild(link); }
+    link.href = "data:image/svg+xml," + encodeURIComponent(svg);
+  }
 
-  root.TopoBrand = { concepts, mount };
+  root.TopoBrand = { concepts, mount, favicon };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -17,10 +17,11 @@
     route = r;
     Shell.route = r;
     for (const p of document.querySelectorAll(".page")) p.hidden = p.dataset.page !== r;
-    for (const el of document.querySelectorAll("[data-for]")) el.hidden = el.dataset.for !== r;
+    for (const el of document.querySelectorAll("[data-for]")) el.hidden = !el.dataset.for.split(" ").includes(r);
     document.body.dataset.route = r;
     if (r === "studio") root.Studio?.onShow();
     if (r === "palettes") {
+      if (Shell.from !== "studio" && Shell.from !== "components") root.Palettes?.returnTo("studio");
       root.Palettes?.onShow(location.hash);
       // Columns rise in one after another, then the bar pulls up beneath them.
       const pt = document.querySelector(".pt");
@@ -31,12 +32,18 @@
       clearTimeout(pt._t); pt._t = setTimeout(() => pt.classList.remove("enter", "bar-enter"), 1600);
     }
     if (r === "home") paintHome();
+    // One size control: in the top bar for the studio, in the preview's own bar for the builder.
+    const size = document.querySelector(".size"), slot = $("cpSizeSlot"), top = document.querySelector(".top");
+    if (r === "components" && slot && size.parentElement !== slot) slot.appendChild(size);
+    else if (r !== "components" && size.parentElement !== top) top.insertBefore(size, top.querySelector(".cp-top"));
     if (r === "components") root.Components?.onShow();
+    root.syncSize?.();
   }
   function go(r, push = true) {
     if (r === route) return;
     if (push) history.pushState(null, "", hashFor(r));
-    const from = route, dir = ORDER[r] >= ORDER[from] ? "fwd" : "back";
+    const from = route; Shell.from = from;
+    const dir = ORDER[r] >= ORDER[from] ? "fwd" : "back";
     document.documentElement.dataset.dir = dir;
     if (reduce.matches || from == null) return show(r);
     if (document.startViewTransition) {

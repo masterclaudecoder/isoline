@@ -140,5 +140,64 @@
     el.animate([{ height: h + "px", opacity: 1 }, { height: "0px", opacity: 0, marginTop: "0px", marginBottom: "0px", paddingTop: "0px", paddingBottom: "0px" }], { duration: 240, easing: EASE, fill: "forwards" }).onfinish = done;
   }
 
-  root.UI = { flip, swap, autosize, collapse, tip: { show, hide }, reduce };
+  // ---------- resize handles ----------
+  // resizable(box, opts) puts handles on the edges and corners of a box that sits centered in its parent.
+  // They fade in when the pointer comes near an edge. Dragging resizes around the center, so the edge you
+  // hold stays under the pointer, and the new size shows below the box while you drag.
+  // opts: get() [w, h] in the box's own units, scale() css px per unit, room() [w, h] in css px the box
+  // may grow to, set(w, h) during the drag, start() and end() around it, min and max sizes in units.
+  const CURSOR = { n: "ns-resize", s: "ns-resize", e: "ew-resize", w: "ew-resize", ne: "nesw-resize", sw: "nesw-resize", nw: "nwse-resize", se: "nwse-resize" };
+  function resizable(box, o) {
+    const host = box.parentElement, NEAR = 36;
+    const layer = document.createElement("div");
+    layer.className = "rz-layer"; layer.setAttribute("aria-hidden", "true");
+    layer.innerHTML = Object.keys(CURSOR).map((d) => `<i class="rz rz-${d}" data-d="${d}" style="cursor:${CURSOR[d]}"></i>`).join("") + `<span class="rz-size"></span>`;
+    host.appendChild(layer);
+    const label = layer.querySelector(".rz-size");
+    let drag = null;
+    const place = () => {
+      const hr = host.getBoundingClientRect(), r = box.getBoundingClientRect();
+      Object.assign(layer.style, { left: r.left - hr.left + host.scrollLeft + "px", top: r.top - hr.top + host.scrollTop + "px", width: r.width + "px", height: r.height + "px" });
+    };
+    const ro = new ResizeObserver(place); ro.observe(box); ro.observe(host);
+    const showSize = (w, h) => { label.textContent = `${w} × ${h}`; };
+    host.addEventListener("pointermove", (e) => {
+      if (drag || e.pointerType === "touch") return;
+      const r = box.getBoundingClientRect(), x = e.clientX, y = e.clientY;
+      const inside = x > r.left - NEAR && x < r.right + NEAR && y > r.top - NEAR && y < r.bottom + NEAR;
+      const near = inside && !o.disabled?.() && (Math.abs(x - r.left) < NEAR || Math.abs(x - r.right) < NEAR || Math.abs(y - r.top) < NEAR || Math.abs(y - r.bottom) < NEAR);
+      if (near && !layer.classList.contains("near")) place();
+      layer.classList.toggle("near", near);
+    });
+    host.addEventListener("pointerleave", () => { if (!drag) layer.classList.remove("near"); });
+    layer.addEventListener("pointerdown", (e) => {
+      const h = e.target.closest(".rz"); if (!h || e.button) return;
+      e.preventDefault(); e.stopPropagation();
+      const [w, hh] = o.get();
+      drag = { d: h.dataset.d, x: e.clientX, y: e.clientY, w, h: hh, s: o.scale(), room: o.room ? o.room() : [host.clientWidth, host.clientHeight], id: e.pointerId };
+      h.setPointerCapture(e.pointerId);
+      layer.classList.add("dragging"); layer.dataset.d = drag.d; document.documentElement.style.cursor = CURSOR[drag.d];
+      o.start?.(); showSize(w, hh);
+    });
+    layer.addEventListener("pointermove", (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const d = drag.d, dx = (e.clientX - drag.x) / drag.s, dy = (e.clientY - drag.y) / drag.s;
+      const max = typeof o.max === "function" ? o.max() : o.max || 8000, min = o.min || 64;
+      let w = drag.w, h = drag.h;
+      if (d.includes("e")) w += 2 * dx; else if (d.includes("w")) w -= 2 * dx;
+      if (d.includes("s")) h += 2 * dy; else if (d.includes("n")) h -= 2 * dy;
+      w = Math.round(Math.max(min, Math.min(max, w, drag.room[0] / drag.s)));
+      h = Math.round(Math.max(min, Math.min(max, h, drag.room[1] / drag.s)));
+      showSize(w, h); o.set(w, h); place();
+    });
+    const end = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      drag = null; layer.classList.remove("dragging"); document.documentElement.style.cursor = "";
+      o.end?.(); requestAnimationFrame(place);
+    };
+    layer.addEventListener("pointerup", end); layer.addEventListener("pointercancel", end);
+    return { place };
+  }
+
+  root.UI = { flip, swap, autosize, collapse, resizable, tip: { show, hide }, reduce };
 })(window);

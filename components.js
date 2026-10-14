@@ -57,6 +57,7 @@
   const KEY = "isoline-kit";
   const DEF = {
     mode: "libraries", fw: "All", cat: "All", q: "", slot: "type", view: "components", layout: "home", dark: null, follow: true,
+    fit: true, pw: 1440, ph: 900, tint: "tinted", src: null, art: "none", enter: "rise", exit: "fade", stagger: 50,
     pair: 0, head: "", body: "", scale: 1.25, base: 16, tracking: -0.02,
     rc: null,
     unit: 4, density: 1, radius: 10, pill: false, elevation: "soft", dur: 200, ease: "out",
@@ -65,6 +66,7 @@
   let K = { ...DEF };
   try { K = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch (e) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(K)); } catch (e) {} };
+  if (K.view === "landing") K.view = "pages";
   // Rules added in later versions join a saved list once, after the rules already there.
   if ((K.rulesV || 1) < RULES_V) { const have = new Set(K.rules.map((r) => r.t)); for (const t of RULES) if (!have.has(t)) K.rules.push({ t, on: true }); K.rulesV = RULES_V; save(); }
   const fonts = () => { const p = PAIRS[K.pair] || PAIRS[0]; return { head: K.head || p[1], body: K.body || p[2], weight: p[3] }; };
@@ -98,17 +100,37 @@
   // Colors are named roles, one set for light and one for dark. Text on the accent is worked out.
   const ROLES = [["bg", "Page", "Behind everything"], ["surface", "Surface", "Cards, panels and inputs"], ["text", "Text", "Headings and body copy"], ["muted", "Muted text", "Captions, hints and meta"], ["border", "Border", "Lines and outlines"], ["accent", "Accent", "Buttons, links and selection"]];
   const onOf = (a) => (C.contrast(a, "#ffffff") >= C.contrast(a, "#111111") ? "#ffffff" : "#111111");
-  // From a loose palette: the lightest color is the page (the darkest in dark mode), the opposite is the
-  // text, the most colorful is the accent, and surface, border and muted text sit in between.
-  function rolesFrom(cs, dark) {
-    const byL = cs.slice().sort((a, b) => C.toOklch(a)[0] - C.toOklch(b)[0]), ch = cs.map((c) => C.toOklch(c)[1]);
-    let bg = byL[byL.length - 1], text = byL[0];
-    if (dark) [bg, text] = [text, bg];
-    return { bg, surface: C.mixOklab(bg, text, 0.035), text, muted: C.mixOklab(bg, text, 0.58), border: C.mixOklab(bg, text, 0.13), accent: cs[ch.indexOf(Math.max(...ch))] };
+  // From a loose palette. The most colorful color (not too light or dark) becomes the accent. The page,
+  // surface and text are near-neutrals in the palette's hue, so a bright palette doesn't flood the page:
+  // "neutral" keeps them grey, "tinted" leans them toward the hue, "bold" uses the palette's own lightest
+  // and darkest colors. The accent is nudged until it reads on the page.
+  const lch = (c) => C.toOklch(c);
+  function rolesFrom(cs, dark, tint = "tinted") {
+    const byL = cs.slice().sort((a, b) => lch(a)[0] - lch(b)[0]);
+    const score = (c) => { const [l, ch] = lch(c); return ch * (1 - Math.abs(l - 0.6)); };
+    const acc0 = cs.slice().sort((a, b) => score(b) - score(a))[0];
+    const [, ac, ah] = lch(acc0);
+    const end = dark ? byL[0] : byL[byL.length - 1], [, ec, eh] = lch(end);
+    const hue = ec > 0.025 ? eh : ah;
+    let bg, surface, text;
+    if (tint === "bold") {
+      bg = end; text = dark ? byL[byL.length - 1] : byL[0];
+      if (C.contrast(text, bg) < 7) text = dark ? "#f6f5f2" : "#141414";
+      surface = C.mixOklab(bg, dark ? "#ffffff" : "#ffffff", dark ? 0.05 : 0.4);
+    } else {
+      const c = tint === "neutral" ? 0.004 : Math.min(0.032, Math.max(ec * 0.45, ac * 0.1));
+      bg = C.fromOklch(dark ? 0.175 : 0.972, c, hue);
+      surface = C.fromOklch(dark ? 0.215 : 0.993, c * 0.55, hue);
+      text = C.fromOklch(dark ? 0.94 : 0.22, Math.min(c * 0.7, 0.02), hue);
+    }
+    let accent = acc0;
+    for (let i = 0; i < 24 && C.contrast(accent, bg) < 3; i++) { const [l, ch, h] = lch(accent); accent = C.fromOklch(dark ? Math.min(0.92, l + 0.03) : Math.max(0.25, l - 0.03), ch, h); }
+    return { bg, surface, text, muted: C.mixOklab(bg, text, 0.6), border: C.mixOklab(bg, text, dark ? 0.17 : 0.12), accent };
   }
+  const fromSource = () => ({ light: rolesFrom(K.src, false, K.tint), dark: rolesFrom(K.src, true, K.tint) });
   const appRoles = (dark) => { const u = UI[dark ? "dark" : "light"]; return { ...u, border: C.mixOklab(u.bg, u.text, 0.1), accent: appAccent() }; };
   // Older saves kept a loose list of colors; they become role sets once.
-  if (!K.rc) K.rc = Array.isArray(K.colors) && !K.follow ? { light: rolesFrom(K.colors, false), dark: rolesFrom(K.colors, true) } : null;
+  if (!K.rc && Array.isArray(K.colors) && !K.follow) { K.src = K.colors; K.rc = fromSource(); }
   const mode = () => (isDark() ? "dark" : "light");
   // Editing any role takes the kit off the app's colors, starting from what it showed.
   function unfollow() { if (!K.follow) return; K.rc = { light: appRoles(false), dark: appRoles(true) }; K.follow = false; }
@@ -129,7 +151,7 @@
       space: Object.fromEntries([1, 2, 3, 4, 6, 8, 12, 16].map((n) => [n, space(n)])),
       radius: { base: K.radius, button: K.pill ? 999 : K.radius },
       shadow: SHADOWS[K.elevation],
-      motion: { duration: K.dur, easing: EASE[K.ease] },
+      motion: { duration: K.dur, easing: EASE[K.ease], appear: K.enter, disappear: K.exit, stagger: K.stagger },
     };
   }
   function vars(el) {
@@ -151,7 +173,7 @@
     }
     // Printed values in the specimen.
     const on = K.rules.filter((r) => r.on && r.t.trim());
-    const tok = { elevation: `${K.elevation[0].toUpperCase() + K.elevation.slice(1)} shadow`, "motion.name": { linear: "linear", out: "ease out", inout: "ease in and out", spring: "spring" }[K.ease], "motion.duration": t.motion.duration + "ms", rules: on.length ? on.slice(0, 3).map((r) => `<span>${esc(r.t.trim())}</span>`).join("") + (on.length > 3 ? `<small>and ${on.length - 3} more in the brief</small>` : "") : "<small>No rules on</small>" };
+    const tok = { elevation: `${K.elevation[0].toUpperCase() + K.elevation.slice(1)} shadow`, "motion.name": `${{ linear: "linear", out: "ease out", inout: "ease in and out", spring: "spring" }[K.ease]}, ${K.enter === "none" ? "no entrance" : MOVE_NAME[K.enter].toLowerCase() + " in"}, ${K.exit === "none" ? "no exit" : MOVE_NAME[K.exit].toLowerCase() + " out"}`, artwork: K.art === "studio" ? "Your Studio design, behind the product picture" : "None. Pages use plain backgrounds", "motion.duration": t.motion.duration + "ms", rules: on.length ? on.slice(0, 3).map((r) => `<span>${esc(r.t.trim())}</span>`).join("") + (on.length > 3 ? `<small>and ${on.length - 3} more in the brief</small>` : "") : "<small>No rules on</small>" };
     for (const n of el.querySelectorAll("[data-tok]")) {
       const key = n.dataset.tok, [a, b] = key.split(".");
       const val = key in tok ? tok[key] : a === "size" || a === "space" || a === "radius" ? (a === "radius" ? (b === "button" ? (K.pill ? "pill" : t.radius.button + "px") : t.radius.base + "px") : t[a][b] + "px") : a === "color" ? t.color[b === "bg" ? "bg" : b].toUpperCase() : "";
@@ -171,7 +193,7 @@
     layers: '<path d="m10 3.8 6.5 3.4L10 10.6 3.5 7.2Z"/><path d="m3.5 10.4 6.5 3.4 6.5-3.4"/><path d="m3.5 13.4 6.5 3.4 6.5-3.4"/>', plus: '<path d="M10 4.5v11M4.5 10h11"/>',
     home: '<path d="M4 9 10 4l6 5v6.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z"/><path d="M8 16.5v-4h4v4"/>', folder: '<path d="M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h3l1.5 1.8H15a1.5 1.5 0 0 1 1.5 1.5v6.2a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5Z"/>',
     gear: '<circle cx="10" cy="10" r="2.4"/><path d="M10 3.5v2M10 14.5v2M3.5 10h2M14.5 10h2M5.4 5.4l1.4 1.4M13.2 13.2l1.4 1.4M5.4 14.6l1.4-1.4M13.2 6.8l1.4-1.4"/>', more: '<circle cx="5" cy="10" r=".9"/><circle cx="10" cy="10" r=".9"/><circle cx="15" cy="10" r=".9"/>',
-    chev: '<path d="m6 8 4 4 4-4"/>', quote: '<path d="M8 6.5C5.5 7.3 4.5 9 4.5 11.5v2h4v-4H6.3c.2-1.2.9-2 2.2-2.5ZM15 6.5c-2.5.8-3.5 2.5-3.5 5v2h4v-4h-2.2c.2-1.2.9-2 2.2-2.5Z"/>',
+    chev: '<path d="m6 8 4 4 4-4"/>', menu: '<path d="M4 6.5h12M4 10h12M4 13.5h12"/>', quote: '<path d="M8 6.5C5.5 7.3 4.5 9 4.5 11.5v2h4v-4H6.3c.2-1.2.9-2 2.2-2.5ZM15 6.5c-2.5.8-3.5 2.5-3.5 5v2h4v-4h-2.2c.2-1.2.9-2 2.2-2.5Z"/>',
   };
   const ki = (n, cls = "") => `<svg class="k-ic ${cls}" viewBox="0 0 20 20" aria-hidden="true">${KI[n]}</svg>`;
   // A bar chart drawn in the accent, so it follows the palette.
@@ -180,8 +202,8 @@
   // The demo product is a document review tool, so the pages can show real content (drafts, comments,
   // sign-offs) instead of placeholder metrics. Each page is built for one task with one focal point.
   const LOGO = `<span class="k-brand"><svg class="k-mark" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3.5v13M9 6h6.5M9 10h6.5M9 14h4"/></svg>Margin</span>`;
-  const NAV = (cta = "Start a document") => `<nav class="k-nav">${LOGO}<span>Product</span><span>Pricing</span><span>Changelog</span><span class="k-grow"></span><span class="k-link">Sign in</span><button class="k-btn k-sm">${cta}</button></nav>`;
-  const FOOT = `<footer class="k-foot">${LOGO}<span>Product</span><span>Pricing</span><span>Changelog</span><span>Privacy</span><span class="k-grow"></span><span class="k-small">© 2026 Margin</span></footer>`;
+  const NAV = (cta = "Start a document") => `<nav class="k-nav">${LOGO}<span class="k-nl">Product</span><span class="k-nl">Pricing</span><span class="k-nl">Changelog</span><span class="k-grow"></span><span class="k-link k-nl">Sign in</span><button class="k-btn k-sm">${cta}</button><button class="k-btn k-sm k-ghost k-icon k-burger" title="Menu">${ki("menu")}</button></nav>`;
+  const FOOT = `<footer class="k-foot"><div class="k-foot-top"><div class="k-foot-brand">${LOGO}<p class="k-small">Drafts, comments and sign-off in one place.</p></div><div class="k-foot-cols">${[["Product", ["Review", "Sign-off", "Publishing", "Changelog"]], ["Company", ["About", "Careers", "Contact"]], ["Help", ["Guides", "Templates", "Status"]]].map(([h, l]) => `<div><b>${h}</b>${l.map((x) => `<span>${x}</span>`).join("")}</div>`).join("")}</div></div><div class="k-foot-base"><span>© 2026 Margin</span><span class="k-grow"></span><span>Privacy</span><span>Terms</span></div></footer>`;
   const thread = (open = true) => `<div class="k-thread">
       <div class="k-cmt">${av("LW", 1)}<div><b>Lin Wei</b><span class="k-small">10:42</span><p>Can we say what changes for existing customers here? The pricing page links to this line.</p></div></div>
       <div class="k-cmt">${av("AL", 0)}<div><b>Ada Lovelace</b><span class="k-small">10:51</span><p>Good catch. Added a sentence on renewals.</p></div></div>
@@ -199,6 +221,7 @@
   const SPEC = `<section class="k-card k-spec">
       <div class="k-spec-row" data-spec="type"><span class="k-spec-l">Type</span><div class="k-type">${["4xl", "3xl", "2xl", "xl", "lg", "base", "sm"].map((k, i) => `<span class="k-ts"><b class="${i < 4 ? "k-hd" : ""}" style="font-size:var(--k-${k})">Ag</b><small><span>${k}</span><span class="mono" data-tok="size.${k}"></span></small></span>`).join("")}</div></div>
       <div class="k-spec-row" data-spec="color"><span class="k-spec-l">Color</span><div class="k-swatches">${[["bg", "Page"], ["surface", "Surface"], ["text", "Text"], ["muted", "Muted"], ["border", "Border"], ["accent", "Accent"]].map(([k, n]) => `<span class="k-swatch"><i style="background:var(--k-${k === "bg" ? "bg" : k})"></i><small>${n}</small><small class="mono" data-tok="color.${k}"></small></span>`).join("")}</div></div>
+      <div class="k-spec-row" data-spec="artwork"><span class="k-spec-l">Artwork</span><div class="k-art-spec"><i></i><small data-tok="artwork"></small></div></div>
       <div class="k-spec-row" data-spec="spacing"><span class="k-spec-l">Spacing</span><div class="k-spaces">${[1, 2, 3, 4, 6, 8, 12, 16].map((n) => `<span class="k-space"><i style="width:var(--k-s${n});height:var(--k-s${n})"></i><small class="mono" data-tok="space.${n}"></small></span>`).join("")}</div></div>
       <div class="k-spec-row" data-spec="radius"><span class="k-spec-l">Radius</span><div class="k-row k-radii"><span class="k-rad"><i style="border-radius:var(--k-r)"></i><small>Surfaces <span class="mono" data-tok="radius.base"></span></small></span><span class="k-rad"><button class="k-btn">Button</button><small>Buttons <span class="mono" data-tok="radius.button"></span></small></span><span class="k-rad"><span class="k-input">Field</span><small>Fields <span class="mono" data-tok="radius.base"></span></small></span></div></div>
       <div class="k-spec-row" data-spec="elevation"><span class="k-spec-l">Elevation</span><div class="k-row k-elevs"><span class="k-elev"><i></i><small data-tok="elevation"></small></span></div></div>
@@ -249,7 +272,7 @@
   const LAYOUTS = {
     home: ["Home", `${NAV()}
       <section class="k-hero"><h1 class="k-h1">Review drafts where they're written</h1><div class="k-hero-side"><p class="k-lead">Comments sit in the margin beside the line they're about. Resolve them in place, then publish when everyone has signed off.</p><div class="k-row"><button class="k-btn k-lg">Start a document</button><span class="k-link k-under">See how review works</span></div><span class="k-small">Free for up to three editors</span></div></section>
-      ${EDITOR}
+      <div class="k-showcase">${EDITOR}</div>
       <section class="k-split"><div><h2 class="k-h2">Suggest a change instead of describing it</h2><p class="k-p">Type over the text and it becomes a suggestion. The author accepts or rejects it with one key, and the draft remembers who changed what.</p></div>${SUGGEST}</section>
       <section class="k-rows">${[["Mentions", "Type @ and a name to bring someone into a thread. They can reply from their email."], ["Sign-off", "Name the people who approve a draft. It publishes when the last one says yes."], ["Version history", "Compare any two drafts side by side, down to the word."], ["Publishing", "Send the final draft to your site, a help center or a PDF."]].map(([t, d]) => `<div><b>${t}</b><p class="k-p">${d}</p></div>`).join("")}</section>
       <section class="k-close"><h2 class="k-h2">Start with a draft you already have</h2><p class="k-p">Paste it in or import a Google Doc. Your team can comment in a minute.</p><div class="k-row"><button class="k-btn">Start a document</button><button class="k-btn k-ghost">Talk to us</button></div></section>
@@ -259,6 +282,7 @@
         <article>
           <h1 class="k-h1">Why we moved comments into the margin</h1>
           <div class="k-byline">${av("LW", 1)}<span><b>Lin Wei</b><span class="k-small">12 October 2026, 6 min read</span></span></div>
+          <div class="k-cover"></div>
           <p class="k-lead">Most review tools put comments in a list at the bottom of the page. By the time a draft has forty of them, nobody can tell which line each one is about.</p>
           <p>We tried three layouts before settling on the margin. The first kept a single list and highlighted the line when you hovered a comment. People stopped hovering after a day.</p>
           <h2 class="k-h2">What the margin changes</h2>
@@ -284,21 +308,23 @@
       </main></div>`],
     pricing: ["Pricing", `${NAV()}
       <section class="k-price-head"><div><h1 class="k-h1">Pricing</h1><p class="k-lead">Pay per workspace, not per reader. Everyone you invite to comment is free.</p></div><div class="k-tabs"><span>Monthly</span><span class="on">Yearly, 2 months free</span></div></section>
-      <div class="k-compare">
+      <div class="k-compare"><div class="k-compare-in">
         <div class="k-cmp-row k-cmp-head"><span></span>${[["Free", "$0", "For trying it on one draft"], ["Team", "$24", "For a team that reviews every week", 1], ["Business", "$64", "For teams that need controls"]].map(([n, p, w, on]) => `<div class="${on ? "k-pick" : ""}"><b class="k-h3">${n}</b><span class="k-amount">${p}<small>a month</small></span><span class="k-small">${w}</span><button class="k-btn${on ? "" : " k-sec"}">${on ? "Start a 14-day trial" : n === "Free" ? "Start free" : "Contact sales"}</button></div>`).join("")}</div>
         ${[["Editors", "3", "Unlimited", "Unlimited"], ["Documents", "10", "Unlimited", "Unlimited"], ["Sign-off requests", "", "5 a month", "Unlimited"], ["Version history", "7 days", "1 year", "Forever"], ["Single sign-on", "", "", "yes"], ["Audit history", "", "", "yes"]].map(([f, ...v]) => `<div class="k-cmp-row"><span>${f}</span>${v.map((x, n) => `<span class="${n === 1 ? "k-pick" : ""}">${x === "yes" ? ki("check") : x || `<i class="k-none"></i>`}</span>`).join("")}</div>`).join("")}
-      </div>
+      </div></div>
       <section class="k-faq">${[["Do commenters need a seat?", "No. Anyone you invite to comment or sign off is free on every plan."], ["What happens when a trial ends?", "You move to Free and keep everything. Drafts over the limit become read-only."], ["Can I pay by invoice?", "Yes, on yearly Business plans."]].map(([q, a], i) => `<div class="k-qa${i === 0 ? " open" : ""}"><b>${q}${ki("chev")}</b>${i === 0 ? `<p class="k-p">${a}</p>` : ""}</div>`).join("")}</section>
       ${FOOT}`],
   };
   if (!LAYOUTS[K.layout]) K.layout = "home";
   function previewHTML() { return K.view === "components" ? COMPONENTS : `<div class="k-page k-pg-${K.layout}">${LAYOUTS[K.layout][1]}</div>`; }
+  if (K.view !== "components") K.view = "pages";
   // Home card: the hero landing, drawn at desktop width and scaled to fit the card.
   const homeRO = new ResizeObserver((en) => { for (const e of en) { const k = e.target.firstElementChild; if (k) k.style.setProperty("--s", (e.contentRect.width / 1240).toFixed(4)); } });
   function preview(el) {
     if (!el) return;
     if (!el.firstElementChild?.classList.contains("k-home")) { el.innerHTML = `<div class="kit k-home k-landing"><div class="k-page">${LAYOUTS.home[1]}</div></div>`; homeRO.observe(el); }
     vars(el.firstElementChild);
+    el.firstElementChild.classList.toggle("k-has-art", !!artURL); el.firstElementChild.style.setProperty("--k-art", artURL ? `url("${artURL}")` : "none");
     el.firstElementChild.style.setProperty("--s", ((el.clientWidth || 600) / 1240).toFixed(4));
   }
   // The kit wears the app's colors until you change them, so it follows the app's theme and accent.
@@ -385,27 +411,33 @@
 
   // ---------- builder view ----------
   const build = $("cpBuild");
-  const SLOTS = [["type", "Type", "type"], ["color", "Color", "palette"], ["spacing", "Spacing", "space"], ["radius", "Radius", "corner"], ["elevation", "Elevation", "layers"], ["motion", "Motion", "timing"], ["rules", "Design rules", "rules"]];
+  const SLOTS = [["type", "Type", "type"], ["color", "Color", "palette"], ["artwork", "Artwork", "grid"], ["spacing", "Spacing", "space"], ["radius", "Radius", "corner"], ["elevation", "Elevation", "layers"], ["motion", "Motion", "timing"], ["rules", "Design rules", "rules"]];
   build.innerHTML = `
     <aside class="slots scroll"><h2 class="col-title">Tokens</h2><div id="cpSlots"></div></aside>
     <aside class="options scroll"><div class="opt-head"><h2 class="col-title" id="cpOptTitle"></h2></div><div id="cpOpts"></div>
       <div class="next-step"><button class="btn primary next-btn" id="cpNext"><span class="nx-text"><small id="cpNextKicker">Continue</small><b id="cpNextLbl"></b></span><span class="nx-end">${ic("next")}</span></button></div></aside>
     <section class="cp-stage">
-      <div class="cp-stage-top"><button class="ib cp-wide" id="cpWide" title="Hide the sidebar">${ic("panel")}</button><div class="seg sm" id="cpView"><button data-v="components">Components</button><button data-v="landing">Landing</button></div><div class="seg sm fold-x" id="cpLayout"></div><div class="seg sm" id="cpTheme"><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
-      <div class="kit-frame scroll"><div class="kit" id="kit"></div></div>
+      <div class="cp-stage-top">
+        <div class="cp-st-l"><button class="ib cp-wide" id="cpWide" title="Hide the sidebar">${ic("panel")}</button><div class="seg sm" id="cpView"><button data-v="components">Components</button><button data-v="pages">Pages</button></div></div>
+        <div class="seg sm fold-x" id="cpLayout"></div>
+        <div class="cp-st-r"><span class="cp-size-slot" id="cpSizeSlot"></span><button class="ib" id="cpReplay" title="Replay the entrance">${ic("play")}</button><div class="seg sm" id="cpTheme"><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
+      </div>
+      <div class="cp-canvas" id="cpCanvas"><div class="kit-frame scroll" id="kitFrame"><div class="kit" id="kit"></div></div></div>
     </section>`;
   $("cpLayout").innerHTML = Object.entries(LAYOUTS).map(([k, [n]]) => `<button data-v="${k}">${n}</button>`).join("");
   // Tile copy follows the studio's rule: the title names the choice, the subtitle lists its facts.
+  const MOVE_NAME = { none: "None", fade: "Fade", rise: "Rise", sink: "Sink", scale: "Scale", blur: "Blur" };
   const EASE_NAME = { linear: "Linear", out: "Ease out", inout: "Ease in and out", spring: "Spring" };
   const ELEV_FACT = { none: "Flat surfaces", hairline: "1px outline", soft: "Soft drop shadow", crisp: "Tight shadow", lifted: "Deep shadow" };
   const cap = (t) => t[0].toUpperCase() + t.slice(1);
   const slotInfo = {
     type: () => { const f = fonts(), p = PAIRS[K.pair]; return [!K.head && !K.body && p ? p[0] : "Custom", f.head === f.body ? f.head : `${f.head} and ${f.body}`]; },
     color: () => { const r = roles(); return [K.follow ? "Isoline" : C.name(r.accent), `${isDark() ? "Dark" : "Light"}, ${r.contrast.toFixed(1)}:1 text`]; },
+    artwork: () => (K.art === "studio" ? ["Studio design", "On the home and article pages"] : ["None", "Plain backgrounds"]),
     spacing: () => [{ 0.8: "Compact", 1: "Regular", 1.25: "Roomy" }[K.density] || "Custom", `${K.unit}px unit`],
     radius: () => [K.radius === 0 ? "Square" : K.radius <= 6 ? "Subtle" : K.radius <= 14 ? "Rounded" : "Soft", `${K.radius}px${K.pill ? ", pill buttons" : ""}`],
     elevation: () => [cap(K.elevation), ELEV_FACT[K.elevation]],
-    motion: () => [EASE_NAME[K.ease], `${K.dur}ms`],
+    motion: () => [EASE_NAME[K.ease], `${K.dur}ms, ${K.enter === "none" ? "no entrance" : MOVE_NAME[K.enter].toLowerCase() + " in"}`],
     rules: () => { const on = K.rules.filter((r) => r.on && r.t.trim()).length, off = K.rules.length - on; return [on ? `${on} ${on === 1 ? "rule" : "rules"}` : "No rules", off ? `${off} switched off` : K.rules.length ? "All on" : "Add your own"]; },
   };
   // Built once and patched, so selection and text changes transition like the studio's build column.
@@ -444,7 +476,8 @@
     el.onclick = (e) => { const b = e.target.closest("button[data-v]"); if (!b) return; set(isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v); for (const x of el.querySelectorAll("button")) x.classList.toggle("on", x === b); changed(); };
     host.appendChild(el); return el;
   }
-  const sub = (host, t) => host.insertAdjacentHTML("beforeend", `<h3 class="sub">${t}</h3>`);
+  const sub = (host, t, first) => host.insertAdjacentHTML("beforeend", `<h3 class="sub${first ? " first" : ""}">${t}</h3>`);
+  const subHead = (host, t, right, first) => host.insertAdjacentHTML("beforeend", `<div class="sub-head${first ? " first" : ""}"><h3 class="sub">${t}</h3>${right}</div>`);
 
   // ---------- fonts ----------
   // A small catalog from Google Fonts, grouped by kind, so the picker can suggest rather than ask for a name.
@@ -550,31 +583,49 @@
       slider(o, "Base size", 13, 20, 1, () => K.base, (v) => (K.base = v), (v) => v + "px");
       slider(o, "Heading tracking", -0.06, 0.04, 0.005, () => K.tracking, (v) => (K.tracking = v), (v) => (+v).toFixed(3) + "em");
     } else if (K.slot === "color") {
-      o.insertAdjacentHTML("beforeend", `<label class="label-row switch-row cp-follow"><span class="label">Match Isoline</span><span class="switch"><input type="checkbox" id="cpFollow"${K.follow ? " checked" : ""}><span></span></span></label>`);
-      $("cpFollow").onchange = (e) => { if (e.target.checked) { K.follow = true; K.dark = null; } else unfollow(); changed(true); renderStageSegs(); };
+      // Where the colors come from, how strongly the page takes their hue, then every role in detail.
+      const pal = root.Palettes;
+      const app = appRoles(isDark()), appCs = [app.bg, app.surface, app.text, app.accent];
+      const plist = [["isoline", "Isoline", appCs], ...(pal ? [["tool", "Palette tool", pal.colors()], ...pal.saved().map((p, k) => ["s" + k, p.name, p.colors])] : [])];
+      const cur = K.follow ? "isoline" : K.srcKey || "";
+      subHead(o, "Start from", pal ? `<button class="btn sm ghost" id="cpToPal">${ic("palette")}Edit in Palettes</button>` : "", true);
+      const g = document.createElement("div"); g.className = "cp-pals";
+      g.innerHTML = plist.map(([key, n, cs]) => `<button class="sug${key === cur ? " on" : ""}" data-p="${key}"><span class="sug-sw">${cs.slice(0, 6).map((c) => `<i style="background:${c}"></i>`).join("")}</span><span>${esc(n)}</span></button>`).join("");
+      g.onclick = (e) => {
+        const b = e.target.closest("[data-p]"); if (!b) return;
+        const key = b.dataset.p;
+        if (key === "isoline") { K.follow = true; K.dark = null; K.srcKey = "isoline"; }
+        else { K.follow = false; K.srcKey = key; K.src = plist.find((x) => x[0] === key)[2].slice(); K.rc = fromSource(); }
+        changed(true); renderStageSegs();
+      };
+      o.appendChild(g);
+      if (pal) $("cpToPal").onclick = () => { const r = roles(); pal.load(K.src && !K.follow ? K.src : [r.bg, r.surface, r.muted, r.text, r.accent], "components"); root.Shell?.go("palettes"); };
+      if (!K.follow && K.src) {
+        sub(o, "Strength");
+        seg(o, [["neutral", "Neutral"], ["tinted", "Tinted"], ["bold", "Bold"]], () => K.tint, (v) => { K.tint = v; K.rc = fromSource(); setTimeout(paintRoles, 0); });
+        o.insertAdjacentHTML("beforeend", `<p class="hint">${{ neutral: "Grey page and text, the palette only in the accent.", tinted: "Page and text lean toward the palette's hue.", bold: "The palette's own lightest and darkest colors." }[K.tint]}</p>`);
+      }
       sub(o, "Mode");
-      seg(o, [["0", "Light"], ["1", "Dark"]], () => (isDark() ? 1 : 0), (v) => { K.dark = !!v; renderStageSegs(); setTimeout(() => renderOpts(), 0); });
-      sub(o, `Roles in ${mode()} mode`);
+      seg(o, [["auto", "Match the app"], ["light", "Light"], ["dark", "Dark"]], () => (K.dark == null ? "auto" : K.dark ? "dark" : "light"), (v) => { K.dark = v === "auto" ? null : v === "dark"; renderStageSegs(); setTimeout(() => renderOpts(), 0); });
+      subHead(o, `Roles in ${mode()} mode`, `<span class="val-static mono">${ROLES.length}</span>`);
       // Each role shows its color, what it is for, and how well the text roles read on what they sit on.
       const list = document.createElement("div"); list.className = "cp-roles";
       list.innerHTML = ROLES.map(([k, name, what]) => `<button class="cp-role" data-role="${k}"><span class="sw"></span><span class="cp-role-t"><b>${name}</b><small>${what}</small></span><span class="cp-role-v"><span class="mono"></span><em class="cp-badge"></em></span></button>`).join("");
       list.onclick = (e) => {
         const b = e.target.closest("[data-role]"); if (!b) return;
         const k = b.dataset.role, sw = b.querySelector(".sw");
-        picker.open(sw, roles()[k], (v) => { if (K.follow) { unfollow(); $("cpFollow").checked = false; } K.rc[mode()][k] = v; changed(); paintRoles(); }, () => save(), [["Roles", ROLES.map(([x]) => roles()[x])]]);
+        picker.open(sw, roles()[k], (v) => { if (K.follow) { unfollow(); for (const x of g.children) x.classList.remove("on"); } K.srcKey = ""; K.rc[mode()][k] = v; changed(); paintRoles(); }, () => save(), [["Roles", ROLES.map(([x]) => roles()[x])]]);
       };
       o.appendChild(list);
       paintRoles();
-      const pal = root.Palettes;
-      if (pal) {
-        sub(o, "Start from a palette");
-        const plist = [["Palette tool", pal.colors()], ...pal.saved().map((p) => [p.name, p.colors])];
-        const g = document.createElement("div"); g.className = "cp-pals";
-        g.innerHTML = plist.map(([n, cs], k) => `<button class="sug" data-p="${k}"><span class="sug-sw">${cs.slice(0, 6).map((c) => `<i style="background:${c}"></i>`).join("")}</span><span>${esc(n)}</span></button>`).join("");
-        g.onclick = (e) => { const b = e.target.closest("[data-p]"); if (!b) return; const cs = plist[+b.dataset.p][1]; K.follow = false; K.rc = { light: rolesFrom(cs, false), dark: rolesFrom(cs, true) }; changed(true); };
-        o.appendChild(g);
-        o.insertAdjacentHTML("beforeend", `<p class="hint">The lightest color becomes the page, the darkest the text, the most colorful the accent. Fine-tune any role above.</p>`);
-      }
+    } else if (K.slot === "artwork") {
+      sub(o, "Picture", true);
+      seg(o, [["none", "None"], ["studio", "Studio design"]], () => K.art, (v) => { K.art = v; refreshArt(); setTimeout(() => renderOpts(), 0); });
+      if (K.art === "studio") {
+        o.insertAdjacentHTML("beforeend", `<div class="cp-art"><span class="cp-art-th" id="cpArtTh"></span><span class="cp-art-t"><b>Your Studio design</b><small>${esc((root.Studio?.describe?.() || "").split(". ").slice(0, 2).join(", ").replace(/ by /, "×").replace(/px,/, ","))}</small></span></div><p class="hint">Shows behind the product picture on the home page and as the article cover.</p><div class="pt-actions"><a class="btn sm" href="#/studio">${ic("grid")}Edit in Studio</a><button class="btn sm ghost" id="cpArtRe">${ic("reset")}Refresh</button></div>`);
+        $("cpArtRe").onclick = () => refreshArt();
+        paintArtThumb();
+      } else o.insertAdjacentHTML("beforeend", `<p class="hint">Use the design from the Studio as the backdrop for your pages. It updates whenever you come back here.</p>`);
     } else if (K.slot === "spacing") {
       sub(o, "Base unit"); seg(o, [[4, "4px"], [8, "8px"]], () => K.unit, (v) => { K.unit = v; paintScale(); });
       sub(o, "Density"); seg(o, [[0.8, "Compact"], [1, "Regular"], [1.25, "Roomy"]], () => K.density, (v) => { K.density = v; paintScale(); });
@@ -597,6 +648,14 @@
       const demo = $("cpDemo");
       demo.style.setProperty("--dur", K.dur + "ms"); demo.style.setProperty("--ease", EASE[K.ease]);
       demo.onclick = () => { demo.classList.remove("go"); void demo.offsetWidth; demo.classList.add("go"); };
+      // How things arrive and leave: menus, dialogs, toasts and page sections all use these.
+      sub(o, "Appear");
+      seg(o, [["none", "None"], ["fade", "Fade"], ["rise", "Rise"], ["scale", "Scale"], ["blur", "Blur"]], () => K.enter, (v) => { K.enter = v; setTimeout(() => replay(false), 0); }, "wrap5");
+      sub(o, "Disappear");
+      seg(o, [["none", "None"], ["fade", "Fade"], ["sink", "Sink"], ["scale", "Scale"], ["blur", "Blur"]], () => K.exit, (v) => { K.exit = v; setTimeout(() => replay(true), 0); }, "wrap5");
+      slider(o, "Stagger", 0, 120, 5, () => K.stagger, (v) => (K.stagger = v), (v) => (v ? v + "ms" : "Off"));
+      o.insertAdjacentHTML("beforeend", `<button class="btn sm cp-replay" id="cpReplayOpt">${ic("play")}Play out and back in</button>`);
+      $("cpReplayOpt").onclick = () => replay(true);
     } else if (K.slot === "rules") {
       o.insertAdjacentHTML("beforeend", `<p class="hint">These go into the brief you copy for agents. Edit, switch off or add your own.</p>`);
       const list = document.createElement("div"); list.className = "cp-rules";
@@ -640,19 +699,81 @@
   }
   function renderStageSegs() {
     for (const [id, v] of [["cpView", K.view], ["cpLayout", K.layout], ["cpTheme", isDark() ? "dark" : "light"]]) for (const b of $(id).querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === v);
-    $("cpLayout").hidden = K.view !== "landing";
+    $("cpLayout").hidden = K.view !== "pages";
   }
-  const fitKit = () => { const kit = $("kit"), f = kit?.parentElement; if (kit && f?.clientWidth) kit.style.setProperty("--z", Math.min(1, (f.clientWidth - 0.5) / 1240).toFixed(4)); };
-  new ResizeObserver(fitKit).observe(build.querySelector(".kit-frame"));
+  // ---------- page size ----------
+  // The preview is a page of a real size: the window's own room ("Fit"), or a preset or dragged size,
+  // scaled down to fit when it is bigger than the room. Layouts respond to the page width.
+  const canvas = $("cpCanvas"), frame = $("kitFrame");
+  const roomOf = () => { const cs = getComputedStyle(canvas); return [Math.floor(canvas.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)), Math.floor(canvas.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom))]; };
+  const pageSize = () => (K.fit ? roomOf() : [K.pw, K.ph]);
+  let zoom = 1, rzZoom = 0;
+  function fitKit() {
+    const kit = $("kit"), [aw, ah] = roomOf(); if (!kit || aw < 40 || ah < 40) return;
+    const [w, h] = pageSize();
+    zoom = K.fit ? 1 : rzZoom || Math.min(1, aw / w, ah / h);
+    frame.style.width = Math.round(w * zoom) + "px"; frame.style.height = Math.round(h * zoom) + "px";
+    kit.style.width = w + "px"; kit.style.minHeight = h + "px"; kit.style.setProperty("--z", zoom.toFixed(4));
+    if (root.Shell?.route === "components") root.syncSize?.();
+  }
+  new ResizeObserver(() => { if (!build.hidden) fitKit(); }).observe(canvas);
+  root.UI?.resizable(frame, {
+    get: pageSize, scale: () => zoom, room: roomOf, min: 280, max: 4000, disabled: () => build.hidden,
+    start() { const [w, h] = pageSize(); K.fit = false; K.pw = w; K.ph = h; rzZoom = zoom; },
+    set(w, h) { K.pw = w; K.ph = h; fitKit(); },
+    end() { rzZoom = 0; save(); fitKit(); },
+  });
+  const sizer = {
+    get: pageSize, fitting: () => K.fit,
+    set(w, h) { K.fit = false; K.pw = clamp(w, 280, 4000); K.ph = clamp(h, 280, 4000); save(); root.UI ? root.UI.swap(fitKit) : fitKit(); },
+    fit() { K.fit = true; save(); root.UI ? root.UI.swap(fitKit) : fitKit(); },
+  };
   function renderStage() {
     const kit = $("kit");
-    kit.className = "kit" + (K.view === "landing" ? " k-landing" : "");
-    fitKit();
+    kit.className = "kit" + (K.view === "pages" ? " k-landing" : "");
     kit.innerHTML = previewHTML();
+    fitKit();
     vars(kit);
     renderStageSegs();
     focusSpec(false);
+    applyArt();
   }
+  // ---------- entrances and exits ----------
+  // Page sections and sheet cards arrive in order with the chosen appear motion, and leave with the
+  // disappear one, at the token duration and easing.
+  const ENTER = { fade: [{ opacity: 0 }, { opacity: 1 }], rise: [{ opacity: 0, transform: "translateY(16px)" }, { opacity: 1, transform: "none" }], scale: [{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "none" }], blur: [{ opacity: 0, filter: "blur(10px)" }, { opacity: 1, filter: "blur(0)" }] };
+  const EXIT = { fade: [{ opacity: 1 }, { opacity: 0 }], sink: [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(12px)" }], scale: [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.96)" }], blur: [{ opacity: 1, filter: "blur(0)" }, { opacity: 0, filter: "blur(10px)" }] };
+  const partsOf = (kit) => [...kit.querySelectorAll(".k-sheet > *, .k-page > *:not(.k-app), .k-app > .k-side, .k-main > *")];
+  let playTok = 0;
+  async function replay(exitFirst) {
+    const kit = $("kit"); if (!kit || build.hidden || root.UI?.reduce.matches) return;
+    const tok = ++playTok, els = partsOf(kit), opts = (i, back) => ({ duration: K.dur, easing: EASE[K.ease], delay: Math.min(back ? els.length - 1 - i : i, 12) * K.stagger * (back ? 0.5 : 1) });
+    for (const el of els) for (const a of el.getAnimations()) if (a.id === "kit") a.cancel();
+    if (exitFirst && EXIT[K.exit]) {
+      const outs = els.map((el, i) => { const a = el.animate(EXIT[K.exit], { ...opts(i, true), fill: "forwards" }); a.id = "kit"; return a; });
+      await Promise.all(outs.map((a) => a.finished.catch(() => {})));
+      await new Promise((r) => setTimeout(r, 160));
+      if (tok !== playTok) return;
+      requestAnimationFrame(() => outs.forEach((a) => a.cancel()));
+    }
+    if (!ENTER[K.enter]) return;
+    els.forEach((el, i) => { const a = el.animate(ENTER[K.enter], { ...opts(i), fill: "backwards" }); a.id = "kit"; });
+  }
+  $("cpReplay").onclick = () => replay(true);
+  // ---------- artwork ----------
+  // The studio's current design, captured as a picture for the pages.
+  let artURL = "";
+  async function refreshArt() {
+    if (K.art !== "studio" || !root.Studio) { artURL = ""; applyArt(); return; }
+    try { const c = await root.Studio.snapshot(1600, 1000); artURL = c.toDataURL("image/jpeg", 0.86); } catch (e) { artURL = ""; }
+    applyArt();
+  }
+  function applyArt() {
+    for (const el of [$("kit"), $("homeComponents")?.firstElementChild]) if (el) { el.classList.toggle("k-has-art", !!artURL); el.style.setProperty("--k-art", artURL ? `url("${artURL}")` : "none"); }
+    paintArtThumb();
+  }
+  if (K.art === "studio") setTimeout(refreshArt, 1500);
+  function paintArtThumb() { const th = $("cpArtTh"); if (th) th.style.backgroundImage = artURL ? `url("${artURL}")` : ""; }
   // Full width: the token columns fold away so the preview gets the whole page.
   function setWide(on) {
     K.wide = on; save();
@@ -662,7 +783,7 @@
   }
   $("cpWide").onclick = () => { root.UI?.tip.hide(); setWide(!K.wide); };
   setWide(!!K.wide);
-  const swapStage = () => (root.UI ? root.UI.swap(renderStage) : renderStage());
+  const swapStage = () => { const go = () => { renderStage(); replay(false); }; root.UI ? root.UI.swap(go) : go(); };
   $("cpView").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && K.view !== b.dataset.v) { K.view = b.dataset.v; save(); swapStage(); } };
   $("cpLayout").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && K.layout !== b.dataset.v) { K.layout = b.dataset.v; save(); swapStage(); } };
   $("cpTheme").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b) { K.dark = b.dataset.v === "dark"; renderStageSegs(); changed(K.slot === "color"); } };
@@ -684,13 +805,21 @@
       Object.entries(t.size).map(([k, v]) => `  --text-${k}: ${v / 16}rem;`).join("\n") + "\n" +
       Object.entries(t.color).map(([k, v]) => `  --color-${k.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase())}: ${v};`).join("\n") + "\n" +
       Object.entries(t.space).map(([k, v]) => `  --space-${k}: ${v}px;`).join("\n") +
-      `\n  --radius: ${t.radius.base}px;\n  --radius-button: ${t.radius.button}px;\n  --shadow: ${t.shadow};\n  --duration: ${t.motion.duration}ms;\n  --easing: ${t.motion.easing};\n}\n`;
+      `\n  --radius: ${t.radius.base}px;\n  --radius-button: ${t.radius.button}px;\n  --shadow: ${t.shadow};\n  --duration: ${t.motion.duration}ms;\n  --easing: ${t.motion.easing};\n  --stagger: ${t.motion.stagger}ms;\n}\n` + motionCSS();
   }
   function tailwind() {
     const t = tokens();
     return `/* Tailwind CSS v4. Fonts: ${fontsLink()} */\n@import "tailwindcss";\n\n@theme {\n  --font-heading: ${stack(t.font.heading, "system-ui, sans-serif")};\n  --font-body: ${stack(t.font.body, "system-ui, sans-serif")};\n` +
       Object.entries(t.color).map(([k, v]) => `  --color-${k.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase())}: ${v};`).join("\n") +
       `\n  --spacing: ${space(1)}px;\n  --radius-base: ${t.radius.base}px;\n  --radius-button: ${t.radius.button}px;\n  --shadow-base: ${t.shadow};\n  --default-transition-duration: ${t.motion.duration}ms;\n  --default-transition-timing-function: ${t.motion.easing};\n}\n`;
+  }
+  // Appear and disappear as keyframes, with a reduced-motion fallback.
+  const KF = (frames) => frames.map((f, i) => `  ${i ? "to" : "from"} { ${Object.entries(f).map(([k, v]) => `${k}: ${v === "none" ? "none" : v};`).join(" ")} }`).join("\n");
+  function motionCSS() {
+    let out = "";
+    if (ENTER[K.enter]) out += `\n@keyframes appear {\n${KF(ENTER[K.enter])}\n}\n.appear { animation: appear var(--duration) var(--easing) both; animation-delay: calc(var(--i, 0) * var(--stagger)); }\n`;
+    if (EXIT[K.exit]) out += `\n@keyframes disappear {\n${KF(EXIT[K.exit])}\n}\n.disappear { animation: disappear var(--duration) var(--easing) both; }\n`;
+    return out + (out ? `\n@media (prefers-reduced-motion: reduce) { .appear, .disappear { animation-duration: 1ms; } }\n` : "");
   }
   const jsonTokens = () => JSON.stringify(tokens(), null, 2);
   // Briefs for AI agents: one for design work, one for building it.
@@ -699,7 +828,7 @@
     const named = (h) => `${h} (${C.name(h)})`;
     const libs = LIBS.filter((l) => (K.fw === "All" || l.fw.includes(K.fw)) && ["Components", "Headless"].includes(l.cat)).slice(0, 6).map((l) => `- ${l.name}: ${l.url}`).join("\n");
     const own = [t.font.heading, t.font.body].filter((x) => custom.has(x));
-    let out = `# ${kind === "design" ? "Design brief" : "Build brief"}\n\nFollow these rules on every screen:\n${rules}\n\n## Type\n- Headings: ${t.font.heading}, weight ${t.font.headingWeight}, tracking ${t.font.tracking}em\n- Body: ${t.font.body}, ${t.size.base}px base, scale ratio ${K.scale}\n- Load from Google Fonts: ${fontsLink()}\n${own.length ? `- Self-hosted fonts (files supplied separately): ${[...new Set(own)].join(", ")}\n` : ""}\n## Color (${isDark() ? "dark" : "light"} mode)\n- Background ${named(r.bg)}, surface ${r.surface}, border ${r.border}\n- Text ${named(r.text)}, muted text ${r.muted}\n- Text on background is ${r.contrast.toFixed(1)}:1\n- Accent ${named(r.accent)} with ${r.onAccent} text on it\n- Roles: ${ROLES.map(([k, n]) => `${n.toLowerCase()} ${r[k]}`).join(", ")}\n\n## Shape and space\n- Spacing scale (px): ${Object.values(t.space).join(", ")}\n- Corner radius ${t.radius.base}px, buttons ${K.pill ? "fully rounded" : t.radius.base + "px"}\n- Elevation: ${K.elevation} (${t.shadow})\n\n## Motion\n- ${t.motion.duration}ms with ${t.motion.easing}\n- Vary timing slightly between elements and honor prefers-reduced-motion\n`;
+    let out = `# ${kind === "design" ? "Design brief" : "Build brief"}\n\nFollow these rules on every screen:\n${rules}\n\n## Type\n- Headings: ${t.font.heading}, weight ${t.font.headingWeight}, tracking ${t.font.tracking}em\n- Body: ${t.font.body}, ${t.size.base}px base, scale ratio ${K.scale}\n- Load from Google Fonts: ${fontsLink()}\n${own.length ? `- Self-hosted fonts (files supplied separately): ${[...new Set(own)].join(", ")}\n` : ""}\n## Color (${isDark() ? "dark" : "light"} mode)\n- Background ${named(r.bg)}, surface ${r.surface}, border ${r.border}\n- Text ${named(r.text)}, muted text ${r.muted}\n- Text on background is ${r.contrast.toFixed(1)}:1\n- Accent ${named(r.accent)} with ${r.onAccent} text on it\n- Roles: ${ROLES.map(([k, n]) => `${n.toLowerCase()} ${r[k]}`).join(", ")}\n\n## Shape and space\n- Spacing scale (px): ${Object.values(t.space).join(", ")}\n- Corner radius ${t.radius.base}px, buttons ${K.pill ? "fully rounded" : t.radius.base + "px"}\n- Elevation: ${K.elevation} (${t.shadow})\n\n## Motion\n- ${t.motion.duration}ms with ${t.motion.easing}\n- Things appear with ${K.enter === "none" ? "no motion" : `a ${K.enter} (${t.motion.stagger}ms between items in a group)`} and disappear with ${K.exit === "none" ? "no motion" : `a ${K.exit}`}\n- Vary timing slightly between elements and honor prefers-reduced-motion\n`;
     if (kind === "dev") out += `\n## Tokens as CSS variables\n\`\`\`css\n${cssVars()}\`\`\`\n\n## Tailwind v4 theme\n\`\`\`css\n${tailwind()}\`\`\`\n` + (libs ? `\n## Suggested libraries${K.fw !== "All" ? " for " + K.fw : ""}\n${libs}\n` : "");
     return out;
   }
@@ -730,9 +859,13 @@
     lib.hidden = m !== "libraries"; build.hidden = m !== "builder";
     for (const b of $("cpMode").querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === m);
     if (m === "libraries") renderLibs();
-    else { renderSlots(); renderOpts(true); renderStage(); }
+    else { renderSlots(); renderOpts(true); renderStage(); refreshArt(); requestAnimationFrame(() => replay(false)); }
+    document.body.dataset.cp = m;
   }
   $("cpMode").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && b.dataset.v !== K.mode) { for (const x of $("cpMode").querySelectorAll("button")) x.classList.toggle("on", x === b); root.UI ? root.UI.swap(() => setMode(b.dataset.v)) : setMode(b.dataset.v); } };
 
-  root.Components = { onShow: () => setMode(K.mode), preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
+  // A palette sent back from the palette tool.
+  function usePalette(hexes) { K.follow = false; K.src = hexes.slice(); K.srcKey = "tool"; K.rc = fromSource(); K.slot = "color"; K.mode = "builder"; save(); }
+  const summary = () => `${K.mode}, ${K.mode === "builder" ? `${K.slot} token, ${K.view === "pages" ? LAYOUTS[K.layout][0] + " page" : "components"}, ${pageSize().join("×")}${K.fit ? " (fit)" : ""}` : `${K.fw} framework, ${K.cat} category`}`;
+  root.Components = { onShow: () => setMode(K.mode), usePalette, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
 })(window);
