@@ -20,6 +20,20 @@ float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 vec2 dp() { return vUv * uRes / uK; }
 vec2 toUv(vec2 d) { return d * uK / uRes; }
 vec4 tex(vec2 uv) { return texture(uTex, clamp(uv, vec2(0.0), vec2(1.0))); }
+// Halftone dot shapes, sized so the darkest dots just meet their neighbors.
+float sdTri(vec2 p, float r) { const float k = 1.7320508; p.y = -p.y - r * 0.25; p.x = abs(p.x) - r; p.y += r / k; if (p.x + k * p.y > 0.0) p = vec2(p.x - k * p.y, -k * p.x - p.y) / 2.0; p.x -= clamp(p.x, -2.0 * r, 0.0); return -length(p) * sign(p.y); }
+float sdStar(vec2 p, float r, float rf) {
+  const vec2 k1 = vec2(0.809016994, -0.587785252), k2 = vec2(-0.809016994, -0.587785252);
+  p.y = -p.y; p.x = abs(p.x); p -= 2.0 * max(dot(k1, p), 0.0) * k1; p -= 2.0 * max(dot(k2, p), 0.0) * k2; p.x = abs(p.x); p.y -= r;
+  vec2 ba = rf * vec2(-k1.y, k1.x) - vec2(0.0, 1.0); float h = clamp(dot(p, ba) / dot(ba, ba), 0.0, r);
+  return length(p - ba * h) * sign(p.y * ba.x - p.x * ba.y);
+}
+float dotSD(vec2 f, float r, float shape) {
+  if (shape < 0.5) return length(f) - r;
+  if (shape < 1.5) return max(abs(f.x), abs(f.y)) - r * 0.7;
+  if (shape < 2.5) return sdTri(f, r * 0.82);
+  return sdStar(f, r * 1.05, 0.45);
+}
 float sdBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
 // Frosted sample: n blur taps on a golden spiral, rotated and spread per pixel so the blur reads as frost
 // rather than ghosted copies, with red and blue pulled apart along disp.
@@ -57,7 +71,7 @@ vec3 liquid(vec2 uv, float sd, vec2 n, float bez, float refr, float frost, float
 uniform int uType; uniform int uN; uniform vec3 uCol[8]; uniform vec2 uPt[8];
 uniform float uWarp; uniform float uWarpScale; uniform float uSoft; uniform float uAngle;
 uniform float uScale; uniform float uDetail; uniform float uStretch; uniform float uContrast; uniform int uNoise;
-// Motion (all loop over uTime 0..1): 1 drift, 2 color flow, 3 breathe.
+// Motion (all loop over uTime 0..1): 1 drift, 2 color flow, 3 breathe, 4 pulse.
 uniform float uTime; uniform int uMotion; uniform float uMotAmt;
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -107,6 +121,38 @@ vec3 ramp(float t) {
   int i = min(int(floor(t)), uN - 2); float f = t - float(i); f = f * f * (3.0 - 2.0 * f);
   return mix(toLab(lin(uCol[i])), toLab(lin(uCol[i + 1])), f);
 }
+// 3D shapes: a raymarched solid lit from the upper left, its shading read through the color ramp.
+float gPh = 0.0;
+mat3 rotY(float t) { float c = cos(t), s = sin(t); return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
+mat3 rotX(float t) { float c = cos(t), s = sin(t); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
+float solidSD(vec3 p, float sz) {
+  float d;
+  if (uNoise == 0) d = length(p) - sz;
+  else if (uNoise == 1) d = length(vec2(length(p.xz) - sz * 0.78, p.y)) - sz * 0.32;
+  else if (uNoise == 2) { vec3 q = abs(p) - vec3(sz * 0.5); d = length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0) - sz * 0.16; }
+  else if (uNoise == 3) { vec3 q = p; q.y -= clamp(q.y, -sz * 0.6, sz * 0.6); d = length(q) - sz * 0.46; }
+  else d = length(p) - sz + 0.14 * sz * sin(2.6 * p.x / sz + gPh) * sin(2.6 * p.y / sz + gPh * 2.0) * sin(2.6 * p.z / sz - gPh);
+  d += uWarp * 0.045 * sz * sin(7.0 * p.x / sz + gPh) * sin(7.0 * p.y / sz - gPh) * sin(7.0 * p.z / sz);
+  return d * 0.8;
+}
+vec3 solid(vec2 c, float tw, float beat) {
+  gPh = uMotion == 3 ? tw : 0.0;
+  vec3 ro = vec3(0.0, 0.0, 3.2), rd = normalize(vec3(c.x, -c.y, -1.55));
+  mat3 R = transpose(rotY(uAngle + (uMotion == 1 ? tw : 0.0)) * rotX(0.5));
+  float sz = (0.35 + 0.6 * clamp(uScale, 0.1, 2.0)) * (1.0 + 0.1 * uMotAmt * beat);
+  float t = 0.0, md = 1e9, mt = 0.0;
+  for (int i = 0; i < 90; i++) { float d = solidSD(R * (ro + rd * t), sz); if (d < md) { md = d; mt = t; } if (d < 0.0005 || t > 7.0) break; t += d; }
+  vec3 bg = ramp(0.0);
+  float cov = 1.0 - smoothstep(0.0, 1.5 * mt / (1.55 * uRes.y), md);
+  if (cov <= 0.0) return bg;
+  vec3 pos = ro + rd * mt; vec2 e = vec2(1.0, -1.0) * 0.0015;
+  vec3 n = normalize(e.xyy * solidSD(R * (pos + e.xyy), sz) + e.yyx * solidSD(R * (pos + e.yyx), sz) + e.yxy * solidSD(R * (pos + e.yxy), sz) + e.xxx * solidSD(R * (pos + e.xxx), sz));
+  vec3 L = normalize(vec3(-0.6, 0.8, 0.7));
+  float wrap = dot(n, L) * 0.5 + 0.5, fr = pow(1.0 - clamp(dot(n, -rd), 0.0, 1.0), 3.0), sp = pow(clamp(dot(reflect(rd, n), L), 0.0, 1.0), 32.0);
+  vec3 lab = ramp(clamp((0.12 + 0.8 * wrap * wrap + 0.22 * fr - 0.5) * uContrast + 0.5, 0.0, 1.0));
+  lab.x += 0.3 * sp * uSoft / 1.6;
+  return mix(bg, lab, cov);
+}
 void main() {
   vec2 a = vec2(uRes.x / uRes.y, 1.0);
   vec2 p = vec2(vUv.x, 1.0 - vUv.y);
@@ -115,13 +161,17 @@ void main() {
   // Breathe: the warp is read from points travelling round two loops (whole turns only), so the field
   // morphs forward the whole time and lands back on its first frame without reversing.
   bool br = uMotion == 3;
-  vec2 L1 = br ? 1.5 * uMotAmt * vec2(cos(tw), sin(tw)) : vec2(0.0);
-  vec2 L2 = br ? 1.1 * uMotAmt * vec2(sin(tw + 1.3), cos(2.0 * tw + 0.7)) : vec2(0.0);
+  // Pulse: four soft beats per loop push the field out from the center, while it morphs a little.
+  float beat = uMotion == 4 ? pow(0.5 - 0.5 * cos(tw * 4.0), 3.0) : 0.0, lm = br ? 1.0 : uMotion == 4 ? 0.4 : 0.0;
+  vec2 L1 = lm * 1.5 * uMotAmt * vec2(cos(tw), sin(tw));
+  vec2 L2 = lm * 1.1 * uMotAmt * vec2(sin(tw + 1.3), cos(2.0 * tw + 0.7));
+  if (uType == 6) { o = vec4(srgb(fromLab(solid((p - 0.5) * a, tw, beat))), 1.0); return; }
+  p = 0.5 + (p - 0.5) * (1.0 - 0.07 * uMotAmt * beat);
   float warp = br ? max(uWarp, 0.7 * uMotAmt) * (1.0 + 0.2 * uMotAmt * sin(tw)) : uWarp;
   if (uType >= 1 && uType <= 3) p += drift * 0.03;
   if (warp > 0.0) { vec2 q = p * a * uWarpScale + drift * 0.6; p += warp * 0.3 * (vec2(fbm(q + vec2(1.7, 9.2) + L1), fbm(q + vec2(8.3, 2.8) + L2)) - 0.5); }
   vec3 lab;
-  if (uType >= 4) {
+  if (uType == 4 || uType == 5) {
     // Flow and noise generators: a rotated, stretched simplex field mapped through the color ramp.
     float ca = cos(uAngle), sa = sin(uAngle);
     vec2 q = mat2(ca, -sa, sa, ca) * ((p - 0.5) * a);
@@ -141,6 +191,18 @@ void main() {
       else if (uNoise == 4) { vec2 w = worley(q * 1.5); v = 1.0 - smoothstep(0.0, 0.35, w.y - w.x); }
       else if (uNoise == 5) v = 0.5 + 0.5 * sin(q.x * 4.0 + sfbm(q) * 5.0);
       else if (uNoise == 6) { float nn = neuro(q * 0.5); v = clamp(1.2 * pow(nn, 3.0) + pow(nn, 10.0) - 0.1, 0.0, 1.0); }
+      else if (uNoise == 8) {
+        // Aura: a soft glowing body of swirling color, its edge rippling, with a halo around it.
+        vec2 c = (p - 0.5) * a; float r = length(c), ang = atan(c.y, c.x); vec2 dv = vec2(cos(ang), sin(ang));
+        float R = (0.18 + 0.25 * clamp(uScale, 0.1, 2.0)) * (1.0 + 0.14 * uMotAmt * beat);
+        float edge = snoise(dv * 0.8 + uSeed * 0.37 + L1 * 0.4) * (0.025 + 0.05 * warp), soft = 0.04 + 0.14 / max(uStretch, 0.3);
+        float body = smoothstep(R + edge + soft, R + edge - soft, r);
+        vec2 sc = c * 1.7 + drift * 0.6 + uSeed * vec2(1.37, 2.91);
+        sc += (0.2 + 0.35 * warp) * vec2(snoise(c * 1.1 + L1), snoise(c * 1.1 + vec2(4.1, 1.7) + L2));
+        float sv = 0.5 * snoise(sc) + 0.12 * snoise(sc * 1.9 + vec2(3.0, 8.0));
+        float glow = exp(-pow((r - R - edge) / (soft * 2.5), 2.0)) * 0.32 + exp(-r * r / (R * R * 5.0)) * 0.18;
+        v = mix(glow, 0.62 + 0.5 * sv, body);
+      }
       else { vec2 c = (p - 0.5) * a; float ang = atan(c.y, c.x), r = length(c) / 0.36; float n = snoise(vec2(cos(ang), sin(ang)) * 0.9 / max(uScale, 0.1) + uSeed * 0.37) * (0.2 + warp * 0.3) + 0.08 * snoise(vec2(cos(ang), sin(ang)) * 2.4 + uSeed); v = exp(-pow((r - 1.0 - n) / (0.1 + 0.12 / max(uStretch, 0.3)), 2.0)) * (0.85 + 0.15 * sfbm(q * 2.0)); }
     }
     lab = ramp(clamp((v - 0.5) * uContrast + 0.5, 0.0, 1.0));
@@ -239,7 +301,7 @@ void main() {
   o = vec4(1.0 - (1.0 - c.rgb) * (1.0 - clamp(light, 0.0, 1.0)), c.a);
 }`,
 
-    cmyk: `uniform float uSize; uniform float uAngle; uniform vec3 uPaper;
+    cmyk: `uniform float uSize; uniform float uAngle; uniform vec3 uPaper; uniform float uShape;
 // Four-color halftone: cyan, magenta, yellow and black screens at their classic angles, overprinted on paper.
 float screenDot(vec2 d, float ang, int ch) {
   mat2 R = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
@@ -248,7 +310,7 @@ float screenDot(vec2 d, float ang, int ch) {
   float k = 1.0 - max(rgb.r, max(rgb.g, rgb.b)), den = max(1e-4, 1.0 - k);
   float v = ch == 0 ? (1.0 - rgb.r - k) / den : ch == 1 ? (1.0 - rgb.g - k) / den : ch == 2 ? (1.0 - rgb.b - k) / den : k;
   float rad = sqrt(clamp(v, 0.0, 1.0)) * 0.62, aa = 0.8 / (uSize * uK);
-  return smoothstep(rad + aa, rad - aa, length(f));
+  return rad < 0.004 ? 0.0 : smoothstep(aa, -aa, dotSD(f, rad, uShape));
 }
 void main() {
   vec2 d = dp(); vec3 col = uPaper;
@@ -328,15 +390,15 @@ void main() {
   o = c;
 }`,
 
-    halftone: `uniform float uSize; uniform float uAngle; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
+    halftone: `uniform float uSize; uniform float uAngle; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper; uniform float uShape;
 void main() {
   float ca = cos(uAngle), sa = sin(uAngle);
   mat2 R = mat2(ca, -sa, sa, ca);
   vec2 r = R * dp() / uSize, cell = floor(r) + 0.5;
   vec4 c = tex(toUv(transpose(R) * (cell * uSize)));
   float dark = uMono > 0.5 ? 1.0 - luma(c.rgb) : 0.25 + 0.75 * (1.0 - luma(c.rgb) * 0.6);
-  float rad = sqrt(clamp(dark, 0.0, 1.0)) * 0.72, dist = length(fract(r) - 0.5), aa = fwidth(dist);
-  float m = 1.0 - smoothstep(rad - aa, rad + aa, dist);
+  float rad = sqrt(clamp(dark, 0.0, 1.0)) * 0.72, sd = dotSD(fract(r) - 0.5, rad, uShape), aa = max(fwidth(sd), 1e-4);
+  float m = rad < 0.004 ? 0.0 : 1.0 - smoothstep(-aa, aa, sd);
   o = vec4(mix(uPaper, uMono > 0.5 ? uInk : c.rgb, m), 1.0);
 }`,
 
@@ -646,7 +708,7 @@ void main() {
         case "glass": return { uWidth: e.width, uAngle: rad(e.angle), uStr: e.strength, uFrost: e.frost ?? 0.2, uLight: e.light ?? 0.5 };
         case "mesh": return { uCell: e.cell, uStr: e.strength, uFrost: e.frost ?? 0.3, uGrout: e.grout ?? 1, uRim: e.rim ?? 0.6, uDisp: e.disp ?? 0.5, uRad: e.radius ?? 0.25 };
         case "pixel": return { uSize: e.size, uBevel: e.bevel };
-        case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
+        case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)) };
         case "ascii": {
           const set = e.set === "custom" ? " " + (e.custom || "#") : CHARSETS[e.set] || CHARSETS.ascii;
           atlas(set);
@@ -671,7 +733,7 @@ void main() {
         case "bulge": return { uAmt: e.amount, uRad: e.radius, uC: [e.x, 1 - e.y] };
         case "ripple": return { uAmp: e.amp, uLen: e.length, uDecay: e.decay, uShade: e.shade, uC: [e.x, 1 - e.y] };
         case "water": return { uAmt: e.amount, uScale: e.scale, uCaustic: e.caustic };
-        case "cmyk": return { uSize: e.size, uAngle: rad(e.angle), uPaper: paper };
+        case "cmyk": return { uSize: e.size, uAngle: rad(e.angle), uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)) };
         case "paper": return { uCrumple: e.crumple, uFiber: e.fiber, uScale: e.scale };
         case "heatmap": return { uGlow: e.glow, uMix: e.mix, uInvert: e.invert ? 1 : 0 };
         case "chrome": return { uStr: e.strength, uBands: e.bands, uSoft: e.soft, uTint: hex3(e.tint), uMix: e.mix };
@@ -692,12 +754,12 @@ void main() {
       if (job.grad) {
         const g = job.grad, n = Math.min(8, g.colors.length);
         draw("gradient", srcTex, targets.list[0].f, {
-          uType: ["mesh", "linear", "radial", "conic", "flow", "noise"].indexOf(g.type), uN: n,
+          uType: ["mesh", "linear", "radial", "conic", "flow", "noise", "solid"].indexOf(g.type), uN: n,
           uScale: g.scale ?? 1.2, uDetail: g.detail ?? 3, uStretch: g.stretch ?? 1, uContrast: g.contrast ?? 1,
-          uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring"].indexOf(g.noise || "clouds"),
+          uNoise: g.type === "solid" ? Math.max(0, ["sphere", "torus", "cube", "capsule", "blob"].indexOf(g.solid)) : ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring", "aura"].indexOf(g.noise || "clouds"),
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
-          uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle),
-          uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5,
+          uWarp: g.type === "solid" ? g.ripple ?? 0 : g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle),
+          uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5,
         }, w, h, k, job.seed);
         input = targets.list[0].t; ping = 1;
       } else {

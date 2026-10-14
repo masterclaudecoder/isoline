@@ -21,7 +21,8 @@
   --sunken: inset 0 1px 1.5px rgba(var(--shadow-rgb), 0.06), inset 0 0 0 1px rgba(var(--line-rgb), 0.05);
   --pop: 0 0 0 1px rgba(var(--line-rgb), 0.07), 0 6px 20px -8px rgba(var(--shadow-rgb), 0.14);
   --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* One family across the UI: figures use tabular numerals instead of a monospace face. */
+  --mono: var(--sans);
   color-scheme: light;
 }
 /* Dark theme: follows the system unless a theme is picked in settings. */
@@ -51,7 +52,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-
 button, input, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.mono { font-family: var(--mono); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 [hidden] { display: none !important; }
 .ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
@@ -1033,7 +1034,11 @@ kbd { font-family: var(--mono); }
 .k-kit { display: grid; gap: var(--k-s3); }
 
 /* document review pieces, shared by the sheet and the pages */
-.k-mark { width: 20px; height: 20px; fill: none; stroke: var(--k-accent); stroke-width: 2; stroke-linecap: round; }
+/* Margin's mark: a page with its margin rule and a note pinned to it, on an accent tile. */
+.k-mark { width: 1.3em; height: 1.3em; flex: none; overflow: visible; }
+.k-mark rect { fill: var(--k-accent); rx: clamp(4px, calc(var(--k-r) * 0.7), 9px); }
+.k-mark path { fill: none; stroke: var(--k-on-accent); stroke-width: 2; stroke-linecap: round; }
+.k-mark circle { fill: var(--k-accent); stroke: var(--k-on-accent); stroke-width: 2; }
 .k-thread { display: grid; gap: var(--k-s3); }
 .k-cmt { display: grid; grid-template-columns: auto 1fr; gap: var(--k-s3); align-items: start; font-size: var(--k-sm); }
 .k-cmt b { margin-right: var(--k-s2); }
@@ -1059,7 +1064,7 @@ kbd { font-family: var(--mono); }
 .k-nav { display: flex; align-items: center; gap: var(--k-s6); padding: var(--k-s6) 0; font-size: var(--k-sm); color: var(--k-muted); font-weight: 500; }
 .k-link { color: var(--k-text); font-weight: 600; }
 .k-under { text-decoration: underline; text-decoration-color: var(--k-border); text-underline-offset: 4px; text-decoration-thickness: 2px; }
-.k-brand { display: inline-flex; align-items: center; gap: var(--k-s2); color: var(--k-text); font-family: var(--k-head), system-ui; font-weight: var(--k-hw); font-size: var(--k-lg); letter-spacing: var(--k-track); }
+.k-brand { display: inline-flex; align-items: center; gap: 0.45em; color: var(--k-text); font-family: var(--k-head), system-ui; font-weight: var(--k-hw); font-size: var(--k-lg); letter-spacing: calc(var(--k-track) - 0.01em); }
 /* Home: the headline and its sentence share one row, then the product picture carries the page. */
 .k-hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: var(--k-s12); align-items: center; padding: var(--k-s12) 0 var(--k-s8); }
 .k-hero .k-h1 { max-width: 11em; }
@@ -1275,7 +1280,7 @@ kbd { font-family: var(--mono); }
 .rz-ne::after, .rz-nw::after, .rz-se::after, .rz-sw::after { width: 8px; height: 8px; left: 7px; top: 7px; }
 .rz:hover::after, .rz-layer.dragging[data-d="n"] .rz-n::after, .rz-layer.dragging[data-d="s"] .rz-s::after, .rz-layer.dragging[data-d="e"] .rz-e::after, .rz-layer.dragging[data-d="w"] .rz-w::after,
 .rz-layer.dragging[data-d="ne"] .rz-ne::after, .rz-layer.dragging[data-d="nw"] .rz-nw::after, .rz-layer.dragging[data-d="se"] .rz-se::after, .rz-layer.dragging[data-d="sw"] .rz-sw::after { background: var(--accent); }
-.rz-size { position: absolute; left: 50%; bottom: 14px; translate: -50% 4px; padding: 4px 9px; border-radius: 8px; background: var(--ink); color: var(--panel); font: 500 11.5px/1.2 "Geist Mono", ui-monospace, monospace; white-space: nowrap; opacity: 0; transition: opacity .18s ease, translate .24s var(--ease); }
+.rz-size { position: absolute; left: 50%; bottom: 14px; translate: -50% 4px; padding: 4px 9px; border-radius: 8px; background: var(--ink); color: var(--panel); font: 500 11.5px/1.2 var(--sans); font-variant-numeric: tabular-nums; white-space: nowrap; opacity: 0; transition: opacity .18s ease, translate .24s var(--ease); }
 .rz-layer.dragging .rz-size { opacity: 1; translate: -50% 0; }
 
 /* ---------- builder stage: a page of a real size ---------- */
@@ -1492,12 +1497,10 @@ a.btn { text-decoration: none; color: inherit; }
 }
 
 /* ---------- Surprise: the button worth pressing ---------- */
-/* An accent pill in the bar with a slow sheen and three twinkling sparks, and a burst on press. */
+/* An accent pill in the bar with three twinkling sparks, and a burst on press. */
 .stage-bar .bar-btn.surprise, .glass.glass-live .bar-btn.surprise { position: relative; overflow: hidden; isolation: isolate; color: var(--on-accent, #fff); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, #fff), var(--accent)); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.18); padding-left: 8px; margin-left: 2px; }
 .stage-bar .bar-btn.surprise:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 74%, #fff), color-mix(in srgb, var(--accent) 92%, #fff)); }
 .stage-bar .bar-btn.surprise:active { transform: scale(.97); }
-.bar-btn.surprise::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.45) 48%, transparent 66%); translate: -120% 0; animation: sheen 4.8s cubic-bezier(.45,0,.2,1) 1.2s infinite; }
-@keyframes sheen { 0%, 62% { translate: -120% 0; } 100% { translate: 120% 0; } }
 .bar-btn.surprise kbd { color: inherit; background: rgba(255,255,255,.18); box-shadow: inset 0 0 0 1px rgba(255,255,255,.28), inset 0 -1.5px 0 rgba(0,0,0,.12); opacity: 1; }
 .spark { position: relative; width: 16px; height: 16px; flex: none; }
 .spark svg { position: absolute; fill: currentColor; stroke: none; animation: twinkle 2.4s ease-in-out infinite; }
@@ -1506,19 +1509,16 @@ a.btn { text-decoration: none; color: inherit; }
 .spark svg:nth-child(3) { width: 5px; height: 5px; right: 1px; bottom: -1px; animation-delay: 1.5s; }
 @keyframes twinkle { 0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; } 45% { transform: scale(.45) rotate(45deg); opacity: .55; } 60% { transform: scale(1.15) rotate(90deg); opacity: 1; } }
 .spark-bit { position: fixed; z-index: 80; pointer-events: none; background: var(--accent); clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); }
-@media (prefers-reduced-motion: reduce) { .bar-btn.surprise::after, .spark svg { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .spark svg { animation: none; } }
 /* View transitions copy a bar's backdrop blur onto its transition group, which outlives the bar's own
    fade and left an empty frosted rectangle behind. The snapshots already hold how the bar looked. */
 ::view-transition-group(pt-bar), ::view-transition-group(stage-bar), ::view-transition-image-pair(pt-bar), ::view-transition-image-pair(stage-bar) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 
 /* ---------- build steps ---------- */
-/* Motion closes the list as a wide banner playing its loop, and invites a tap while the design is still. */
+/* Motion closes the list as a wide banner playing its loop. */
 .slot-motion .tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; row-gap: 10px; padding-top: 6px; }
 .slot-motion .tile-th { grid-column: 1 / -1; width: 100%; height: auto; aspect-ratio: 8 / 3; border-radius: 9px; }
 .slot-motion .tile .tile-text { padding-left: 4px; }
-.slot-motion .tile.still { background: color-mix(in srgb, var(--accent) 7%, var(--panel)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent); }
-.slot-motion .tile.still small { color: var(--accent-ink); font-weight: 600; }
-.slot-motion .tile.still .tile-th { opacity: .8; }
 @media (max-width: 900px) {
   .slot-fx, .slot-motion { grid-column: 1 / -1; }
 
@@ -1529,33 +1529,41 @@ a.btn { text-decoration: none; color: inherit; }
 /* ---------- builder token tiles: live specimens ---------- */
 .tok-th { position: relative; overflow: hidden; background: var(--k-bg); color: var(--k-text); box-shadow: inset 0 0 0 1px var(--hair); transition: background-color var(--k-dur) var(--k-ease); }
 .tok-th * { transition: all var(--k-dur) var(--k-ease); }
-.tt-ag { position: absolute; left: 7px; bottom: -9px; font: var(--k-hw) 36px/1 var(--k-head), system-ui, sans-serif; letter-spacing: var(--k-track); color: var(--k-text); }
-.tile:hover .tt-ag { translate: -4px 0; }
-.tt-ui { position: absolute; left: 10px; top: 9px; width: 70px; height: 44px; display: grid; align-content: start; gap: 4px; padding: 7px; background: var(--k-surface); border: 1px solid var(--k-border); border-radius: var(--k-r); }
+/* Each specimen loops through the range its token covers, so the tile shows what changes. */
+.tok-th :is(i, span, b) { transition: none; }
+.tt-ag { position: absolute; inset: 0; }
+.tt-ag span { position: absolute; left: 8px; bottom: -7px; font: var(--k-hw) 30px/1 var(--k-head), system-ui, sans-serif; letter-spacing: var(--k-track); color: var(--k-text); opacity: 0; animation: tt-font 6s var(--k-ease) infinite; }
+.tt-ag span:nth-child(2) { font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-style: italic; animation-delay: -4s; }
+.tt-ag span:nth-child(3) { font-family: "Courier New", monospace; font-weight: 700; letter-spacing: -0.04em; animation-delay: -2s; }
+@keyframes tt-font { 0% { opacity: 0; translate: 0 10px; } 6%, 30% { opacity: 1; translate: 0 0; } 36%, 100% { opacity: 0; translate: 0 -10px; } }
+.tt-ui { position: absolute; left: 8px; top: 7px; width: 70px; height: 44px; display: grid; align-content: start; gap: 4px; padding: 6px; background: var(--k-surface); border: 1px solid var(--k-border); border-radius: var(--k-r); animation: tt-surface 6s ease-in-out infinite; }
 .tt-ui i { display: block; height: 4px; border-radius: 2px; }
 .tt-l1 { width: 30px; background: var(--k-text); } .tt-l2 { width: 22px; background: var(--k-muted); opacity: .7; }
-.tt-pill { width: 22px; height: 9px !important; margin-top: 2px; border-radius: var(--k-rb) !important; background: var(--k-accent); }
-.tile:hover .tt-pill { width: 28px; }
-.tt-art { position: absolute; inset: 0; background: radial-gradient(120% 90% at 20% 0%, color-mix(in srgb, var(--k-accent) 55%, var(--k-bg)), var(--k-bg) 70%) center / cover; }
-.tile:hover .tt-art { scale: 1.08; }
-.tt-space { position: absolute; left: 9px; top: 9px; display: flex; gap: var(--k-s2); }
-.tt-space i { width: 18px; height: 26px; border-radius: 3px; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-border); }
-.tt-space i:nth-child(2) { background: var(--k-accent); box-shadow: none; }
-.tile:hover .tt-space { gap: var(--k-s4); }
-.tt-corner { position: absolute; left: 14px; top: 10px; width: 90px; height: 60px; background: var(--k-surface); border: 1.5px solid var(--k-border); border-radius: calc(var(--k-r) * 1.6); }
-.tt-corner::after { content: ""; position: absolute; left: 8px; top: 8px; width: 16px; height: 9px; border-radius: var(--k-rb); background: var(--k-accent); }
-.tile:hover .tt-corner { translate: 3px 3px; }
-.tt-card { position: absolute; left: 12px; top: 11px; width: 80px; height: 50px; background: var(--k-surface); border-radius: var(--k-r); box-shadow: var(--k-shadow); }
-.tile:hover .tt-card { translate: 0 -2px; }
-.tt-move { position: absolute; left: 8px; right: 8px; top: 50%; height: 10px; margin-top: -5px; border-radius: 99px; background: color-mix(in srgb, var(--k-text) 7%, var(--k-bg)); }
-.tt-move i { position: absolute; left: 0; top: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--k-accent); transition: none; animation: tt-move calc(var(--k-dur) * 2 + 1600ms) var(--k-ease) infinite; }
+.tt-pill { width: 24px; height: 9px !important; margin-top: 2px; border-radius: var(--k-rb) !important; background: var(--k-accent); animation: tt-hue 6s linear infinite; }
+@keyframes tt-hue { to { filter: hue-rotate(360deg); } }
+@keyframes tt-surface { 0%, 100% { background-color: var(--k-surface); } 50% { background-color: color-mix(in srgb, var(--k-accent) 22%, var(--k-surface)); } }
+.tt-art { position: absolute; inset: 0; background: linear-gradient(135deg, var(--k-accent), color-mix(in srgb, var(--k-accent) 30%, var(--k-bg)) 45%, var(--k-text)) 0 0 / 260% 260%; animation: tt-pan 5s ease-in-out infinite alternate; }
+@keyframes tt-pan { to { background-position: 100% 100%; } }
+.tt-space { position: absolute; left: 7px; top: 50%; translate: 0 -50%; display: flex; align-items: center; }
+.tt-space i { flex: none; width: 13px; height: 22px; border-radius: 3px; background: var(--k-surface); box-shadow: inset 0 0 0 1px var(--k-border); }
+.tt-space i:nth-of-type(2) { background: var(--k-accent); box-shadow: none; }
+.tt-space b { flex: none; position: relative; width: 4px; height: 10px; border-inline: 1px solid var(--k-accent); animation: tt-gap 3.2s var(--k-ease) infinite alternate; }
+.tt-space b::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--k-accent); }
+@keyframes tt-gap { to { width: 16px; } }
+.tt-corner { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; translate: -50% -50%; background: color-mix(in srgb, var(--k-accent) 18%, var(--k-surface)); border: 1.5px solid var(--k-accent); border-radius: 2px; animation: tt-round 3.2s var(--k-ease) infinite alternate; }
+@keyframes tt-round { to { border-radius: 15px; } }
+.tt-card { position: absolute; left: 50%; top: 9px; width: 34px; height: 20px; margin-left: -17px; background: color-mix(in srgb, var(--k-text) 7%, var(--k-surface)); border-radius: min(var(--k-r), 6px); outline: 1px solid color-mix(in srgb, var(--k-text) 16%, transparent); outline-offset: -1px; box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 1px 1px rgba(0,0,0,.2); animation: tt-lift 3.2s var(--k-ease) infinite alternate; }
+.tt-card::after { content: ""; position: absolute; left: 3px; right: 3px; top: 100%; height: 8px; margin-top: 4px; border-radius: 50%; background: rgba(0,0,0,.5); filter: blur(1.5px); opacity: .7; scale: .9 .6; animation: tt-ground 3.2s var(--k-ease) infinite alternate; }
+@keyframes tt-lift { to { translate: 0 -5px; box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 10px 14px -4px rgba(0,0,0,.6); } }
+@keyframes tt-ground { to { opacity: .25; scale: 1.25 1; filter: blur(4px); margin-top: 9px; } }
+.tt-move { position: absolute; left: 8px; right: 8px; top: 50%; height: 10px; margin-top: -5px; border-radius: 99px; background: color-mix(in srgb, var(--k-text) 9%, var(--k-bg)); }
+.tt-move i { position: absolute; left: 0; top: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--k-accent); animation: tt-move calc(var(--k-dur) * 2 + 1600ms) var(--k-ease) infinite; }
 @keyframes tt-move { 0%, 20% { left: 0; } 50%, 70% { left: calc(100% - 10px); } 100% { left: 0; } }
-.tt-rules { position: absolute; left: 9px; top: 8px; display: grid; gap: 5px; }
-.tt-rules i { display: block; height: 3px; width: 46px; border-radius: 2px; background: var(--k-muted); opacity: .55; }
-.tt-rules i:first-child { width: 34px; background: var(--k-text); opacity: 1; }
-.tt-rules i:nth-child(3) { width: 38px; } .tt-rules i:nth-child(4) { width: 26px; }
-.tile:hover .tt-rules i { width: 50px; }
-@media (prefers-reduced-motion: reduce) { .tt-move i { animation: none; } }
+.tt-rules { position: absolute; left: 9px; top: 7px; display: grid; gap: 5px; }
+.tt-rules i { display: block; height: 3px; width: 0; border-radius: 2px; background: var(--k-muted); animation: tt-write 4.8s var(--k-ease) infinite; }
+.tt-rules i:first-child { --w: 34px; background: var(--k-text); } .tt-rules i:nth-child(2) { --w: 46px; animation-delay: .3s; } .tt-rules i:nth-child(3) { --w: 38px; animation-delay: .6s; } .tt-rules i:nth-child(4) { --w: 26px; animation-delay: .9s; }
+@keyframes tt-write { 0% { width: 0; } 25%, 80% { width: var(--w); } 100% { width: 0; } }
+@media (prefers-reduced-motion: reduce) { .tok-th :is(i, span, b), .tok-th :is(i, span, b)::after { animation: none !important; } .tt-ag span:first-child { opacity: 1; } .tt-rules i { width: var(--w); } }
 @media (max-width: 640px) {
   .cp-build #cpSlots .tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; row-gap: 8px; }
   .cp-build #cpSlots .tile .tile-th { display: block !important; grid-column: 1 / -1; width: 100%; height: 52px; }
@@ -1574,3 +1582,45 @@ a.btn { text-decoration: none; color: inherit; }
 .dd-list .opt { padding: 7px 10px; font-size: 13px; }
 .dd-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .dd-pair > div { min-width: 0; }
+
+/* ---------- round L ---------- */
+/* Phones: the sticky next button keeps clear of the screen edge and the home indicator. */
+@media (max-width: 900px) {
+  .next-step { bottom: 0; margin-bottom: 0; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+}
+/* The builder's export menu opens from the right edge of the bar, like the studio's. */
+#cpExportMenu { right: 0; left: auto; max-width: calc(100vw - 24px); }
+/* Toasts are inverted from the page, so their text takes the panel color in both themes. */
+.toast { color: var(--panel); }
+.val-static { font-size: 12.5px; font-weight: 500; }
+
+/* Palette bar: related controls sit together in quiet wells, the send action stands apart. */
+.pt-bar { gap: 6px; }
+.pt-grp { display: inline-flex; align-items: center; gap: 1px; padding: 2px; border-radius: 12px; background: color-mix(in srgb, currentColor 5%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 6%, transparent); }
+.pt-grp .ib, .pt-grp .bar-btn { height: 32px; border-radius: 10px; }
+.pt-gen { font-weight: 600; }
+.pt-use { display: inline-flex; margin-left: 2px; }
+.pt-use .btn.primary { margin: 0; }
+#ptUse { border-radius: 10px 0 0 10px; padding-right: 10px; }
+.pt-use-more { border-radius: 0 10px 10px 0 !important; padding: 0 7px !important; margin-left: 1px !important; }
+.pt-use-more .ic { width: 14px; height: 14px; }
+.pt-use .pop { left: auto !important; right: 0; }
+@media (max-width: 900px) {
+  .pt-bar .pt-use { flex-basis: 100%; margin: 4px 0 0; }
+  .pt-use #ptUse { flex: 1; justify-content: center; }
+}
+.seg.wrap5 { grid-auto-flow: row; grid-template-columns: repeat(5, 1fr); margin-bottom: 10px; }
+.seg.wrap5 button { padding-inline: 2px; }
+
+/* Rich tooltips: a clip or live preview above the text. */
+.tip.rich { width: 232px; max-width: calc(100vw - 16px); padding: 5px 5px 7px; border-radius: 10px; }
+.tip.rich > span { display: block; padding: 6px 4px 0; }
+.tip-fig { overflow: hidden; border-radius: 6px; aspect-ratio: 8 / 5; background: color-mix(in srgb, var(--bg) 12%, transparent); }
+.tip-fig img, .tip-fig canvas { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* Words with a tooltip behind them get a quiet dotted underline. */
+.tipped { text-decoration: underline dotted color-mix(in srgb, currentColor 45%, transparent); text-underline-offset: 3px; cursor: help; }
+/* Live preview of a color strength: a small page in that tint. */
+.tp-kit { position: relative; width: 100%; height: 100%; padding: 14px 16px; display: grid; align-content: start; gap: 7px; font: 600 22px/1 var(--sans); }
+.tp-kit i { display: block; height: 5px; border-radius: 3px; background: currentColor; opacity: .55; }
+.tp-kit .tp-card { position: absolute; right: 14px; bottom: 14px; width: 92px; height: 56px; border-radius: 8px; border: 1px solid; padding: 9px; display: grid; align-content: start; gap: 6px; }
+.tp-kit .tp-pill { width: 40px; height: 12px; border-radius: 99px; }

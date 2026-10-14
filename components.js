@@ -128,6 +128,12 @@
     return { bg, surface, text, muted: C.mixOklab(bg, text, 0.6), border: C.mixOklab(bg, text, dark ? 0.17 : 0.12), accent };
   }
   const fromSource = () => ({ light: rolesFrom(K.src, false, K.tint), dark: rolesFrom(K.src, true, K.tint) });
+  // The strength options preview a small page in each tint, in the current mode.
+  root.UI?.tipPreview("tint", (tint) => {
+    if (!K.src) return "";
+    const r = rolesFrom(K.src, isDark(), tint);
+    return `<div class="tp-kit" style="background:${r.bg};color:${r.text}">Aa<i style="width:70px"></i><i style="width:52px;color:${r.muted}"></i><span class="tp-card" style="background:${r.surface};border-color:${r.border}"><i style="width:48px"></i><span class="tp-pill" style="background:${r.accent}"></span></span></div>`;
+  });
   const appRoles = (dark) => { const u = UI[dark ? "dark" : "light"]; return { ...u, border: C.mixOklab(u.bg, u.text, 0.1), accent: appAccent() }; };
   // Older saves kept a loose list of colors; they become role sets once.
   if (!K.rc && Array.isArray(K.colors) && !K.follow) { K.src = K.colors; K.rc = fromSource(); }
@@ -201,9 +207,9 @@
   const av = (t, i) => `<span class="k-av" style="--i:${i}">${t}</span>`;
   // The demo product is a document review tool, so the pages can show real content (drafts, comments,
   // sign-offs) instead of placeholder metrics. Each page is built for one task with one focal point.
-  const LOGO = `<span class="k-brand"><svg class="k-mark" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3.5v13M9 6h6.5M9 10h6.5M9 14h4"/></svg>Margin</span>`;
+  const LOGO = `<span class="k-brand"><svg class="k-mark" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24"/><path d="M8 5.5v13M12 8h5M12 12h5M12 16h3"/><circle cx="8" cy="12" r="2.4"/></svg>Margin</span>`;
   const NAV = (cta = "Start a document") => `<nav class="k-nav">${LOGO}<span class="k-nl">Product</span><span class="k-nl">Pricing</span><span class="k-nl">Changelog</span><span class="k-grow"></span><span class="k-link k-nl">Sign in</span><button class="k-btn k-sm">${cta}</button><button class="k-btn k-sm k-ghost k-icon k-burger" title="Menu">${ki("menu")}</button></nav>`;
-  const FOOT = `<footer class="k-foot"><div class="k-foot-top"><div class="k-foot-brand">${LOGO}<p class="k-small">Drafts, comments and sign-off in one place.</p></div><div class="k-foot-cols">${[["Product", ["Review", "Sign-off", "Publishing", "Changelog"]], ["Company", ["About", "Careers", "Contact"]], ["Help", ["Guides", "Templates", "Status"]]].map(([h, l]) => `<div><b>${h}</b>${l.map((x) => `<span>${x}</span>`).join("")}</div>`).join("")}</div></div><div class="k-foot-base"><span>© 2026 Margin</span><span class="k-grow"></span><span>Privacy</span><span>Terms</span></div></footer>`;
+  const FOOT = `<footer class="k-foot"><div class="k-foot-top"><div class="k-foot-brand">${LOGO}<p class="k-small">Write, review and sign off without the email chain.</p></div><div class="k-foot-cols">${[["Product", ["Review", "Sign-off", "Publishing", "Changelog"]], ["Company", ["About", "Careers", "Contact"]], ["Help", ["Guides", "Templates", "Status"]]].map(([h, l]) => `<div><b>${h}</b>${l.map((x) => `<span>${x}</span>`).join("")}</div>`).join("")}</div></div><div class="k-foot-base"><span>© 2026 Margin</span><span class="k-grow"></span><span>Privacy</span><span>Terms</span></div></footer>`;
   const thread = (open = true) => `<div class="k-thread">
       <div class="k-cmt">${av("LW", 1)}<div><b>Lin Wei</b><span class="k-small">10:42</span><p>Can we say what changes for existing customers here? The pricing page links to this line.</p></div></div>
       <div class="k-cmt">${av("AL", 0)}<div><b>Ada Lovelace</b><span class="k-small">10:51</span><p>Good catch. Added a sentence on renewals.</p></div></div>
@@ -428,7 +434,7 @@
   // Tile copy follows the studio's rule: the title names the choice, the subtitle lists its facts.
   const MOVE_NAME = { none: "None", fade: "Fade", rise: "Rise", sink: "Sink", scale: "Scale", blur: "Blur" };
   const EASE_NAME = { linear: "Linear", out: "Ease out", inout: "Ease in and out", spring: "Spring" };
-  const ELEV_FACT = { none: "Flat surfaces", hairline: "1px outline", soft: "Soft drop shadow", crisp: "Tight shadow", lifted: "Deep shadow" };
+  const ELEV_FACT = { none: "No shadow", hairline: "1px outline", soft: "24px blur, faint", crisp: "6px blur, close", lifted: "40px blur, deep" };
   const cap = (t) => t[0].toUpperCase() + t.slice(1);
   const slotInfo = {
     type: () => { const f = fonts(), p = PAIRS[K.pair]; return [!K.head && !K.body && p ? p[0] : "Custom", f.head === f.body ? f.head : `${f.head} and ${f.body}`]; },
@@ -445,10 +451,10 @@
   // a scrap of interface, a corner, a lifted card, a moving dot. They change as the tokens do, at the
   // token duration and easing.
   const TOK_TH = {
-    type: `<span class="tt-ag">Ag</span>`,
+    type: `<span class="tt-ag"><span>Ag</span><span>Ag</span><span>Ag</span></span>`,
     color: `<span class="tt-ui"><i class="tt-l1"></i><i class="tt-l2"></i><i class="tt-pill"></i></span>`,
     artwork: `<span class="tt-art" id="cpArtTile"></span>`,
-    spacing: `<span class="tt-space"><i></i><i></i><i></i></span>`,
+    spacing: `<span class="tt-space"><i></i><b></b><i></i><b></b><i></i></span>`,
     radius: `<span class="tt-corner"></span>`,
     elevation: `<span class="tt-card"></span>`,
     motion: `<span class="tt-move"><i></i></span>`,
@@ -461,7 +467,7 @@
     for (const t of $("cpSlots").querySelectorAll("[data-s]")) {
       const [title, fact] = slotInfo[t.dataset.s]();
       t.classList.toggle("on", K.slot === t.dataset.s);
-      setText(t.querySelector("b"), title); setText(t.querySelector("small"), fact);
+      setText(t.querySelector(".tile-text b"), title); setText(t.querySelector("small"), fact);
     }
   }
   $("cpSlots").addEventListener("click", (e) => { const t = e.target.closest("[data-s]"); if (t) setSlot(t.dataset.s); });
@@ -486,7 +492,8 @@
   }
   function seg(host, opts, get, set, cls = "") {
     const el = document.createElement("div"); el.className = "seg sm " + cls;
-    el.innerHTML = opts.map(([v, l]) => `<button data-v="${v}" class="${String(get()) === String(v) ? "on" : ""}">${l}</button>`).join("");
+    // An option can carry a tooltip, and a live preview for it: [value, label, tip, preview].
+    el.innerHTML = opts.map(([v, l, t, pv]) => `<button data-v="${v}" class="${String(get()) === String(v) ? "on" : ""}"${t ? ` data-tip="${esc(t)}"` : ""}${pv ? ` data-tip-preview="${pv}"` : ""}>${l}</button>`).join("");
     el.onclick = (e) => { const b = e.target.closest("button[data-v]"); if (!b) return; set(isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v); for (const x of el.querySelectorAll("button")) x.classList.toggle("on", x === b); changed(); };
     host.appendChild(el); return el;
   }
@@ -565,9 +572,9 @@
     if (K.slot === "type") {
       const f = fonts();
       o.insertAdjacentHTML("beforeend", `<div class="ff-pair">${[["head", "Headings", f.head, f.weight], ["body", "Body", f.body, 400]].map(([role, label, name, w]) => `<button class="ff-trigger" data-role="${role}" aria-haspopup="listbox"><small>${label}</small><span style="font-family:'${esc(name)}', system-ui;font-weight:${w}">${esc(name)}</span><em>${kindOf(name)}</em>${ic("chev")}</button>`).join("")}</div>
-        <p class="hint">Choose the body font first, for easy reading. Then pick a heading with some contrast, like a serif over a sans or a heavier weight.</p>`);
+`);
       o.querySelector(".ff-pair").onclick = (e) => { const b = e.target.closest(".ff-trigger"); if (!b) return; if (ff?.anchor === b) closeFF(); else fontPicker(b, b.dataset.role); };
-      sub(o, "Pairings");
+      o.insertAdjacentHTML("beforeend", `<h3 class="sub"><span class="tipped" data-tip="Pick the body font first, for reading. Then a heading with some contrast, like a serif over a sans or a heavier weight">Pairings</span></h3>`);
       const g = document.createElement("div"); g.className = "cp-pairs";
       const custom0 = K.head || K.body;
       g.innerHTML = PAIRS.map(([n, h, b, w], k) => { loadFont(h); loadFont(b); return `<button class="pair${K.pair === k && !custom0 ? " on" : ""}${k >= 6 ? " extra" : ""}" data-k="${k}" title="${h === b ? h : `${h} and ${b}`}"><span class="pair-aa" style="font-family:'${h}';font-weight:${w}">Aa</span><span class="pair-t"><b>${n}</b><small style="font-family:'${b}'">${h === b ? h : `${h}, ${b}`}</small></span></button>`; }).join("");
@@ -617,8 +624,7 @@
       if (pal) $("cpToPal").onclick = () => { const r = roles(); pal.load(K.src && !K.follow ? K.src : [r.bg, r.surface, r.muted, r.text, r.accent], "components"); root.Shell?.go("palettes"); };
       if (!K.follow && K.src) {
         sub(o, "Strength");
-        seg(o, [["neutral", "Neutral"], ["tinted", "Tinted"], ["bold", "Bold"]], () => K.tint, (v) => { K.tint = v; K.rc = fromSource(); setTimeout(paintRoles, 0); });
-        o.insertAdjacentHTML("beforeend", `<p class="hint">${{ neutral: "Grey page and text, the palette only in the accent.", tinted: "Page and text lean toward the palette's hue.", bold: "The palette's own lightest and darkest colors." }[K.tint]}</p>`);
+        seg(o, [["neutral", "Neutral", "Grey page and text. The palette shows only in the accent", "tint:neutral"], ["tinted", "Tinted", "Page and text lean toward the palette's hue", "tint:tinted"], ["bold", "Bold", "The palette's own lightest and darkest colors", "tint:bold"]], () => K.tint, (v) => { K.tint = v; K.rc = fromSource(); setTimeout(paintRoles, 0); });
       }
       sub(o, "Mode");
       seg(o, [["auto", "Match the app"], ["light", "Light"], ["dark", "Dark"]], () => (K.dark == null ? "auto" : K.dark ? "dark" : "light"), (v) => { K.dark = v === "auto" ? null : v === "dark"; renderStageSegs(); setTimeout(() => renderOpts(), 0); });
@@ -635,12 +641,12 @@
       paintRoles();
     } else if (K.slot === "artwork") {
       sub(o, "Picture", true);
-      seg(o, [["none", "None"], ["studio", "Studio design"]], () => K.art, (v) => { K.art = v; refreshArt(); setTimeout(() => renderOpts(), 0); });
+      seg(o, [["none", "None", "Plain backgrounds"], ["studio", "Studio design", "Your Studio design as the backdrop. It refreshes each time you come back"]], () => K.art, (v) => { K.art = v; refreshArt(); setTimeout(() => renderOpts(), 0); });
       if (K.art === "studio") {
         o.insertAdjacentHTML("beforeend", `<div class="cp-art"><span class="cp-art-th" id="cpArtTh"></span><span class="cp-art-t"><b>Your Studio design</b><small>${esc((root.Studio?.describe?.() || "").split(". ").slice(0, 2).join(", ").replace(/ by /, "×").replace(/px,/, ","))}</small></span></div><p class="hint">Shows behind the product picture on the home page and as the article cover.</p><div class="pt-actions"><a class="btn sm" href="#/studio">${ic("grid")}Edit in Studio</a><button class="btn sm ghost" id="cpArtRe">${ic("reset")}Refresh</button></div>`);
         $("cpArtRe").onclick = () => refreshArt();
         paintArtThumb();
-      } else o.insertAdjacentHTML("beforeend", `<p class="hint">Use the design from the Studio as the backdrop for your pages. It updates whenever you come back here.</p>`);
+      }
     } else if (K.slot === "spacing") {
       sub(o, "Base unit"); seg(o, [[4, "4px"], [8, "8px"]], () => K.unit, (v) => { K.unit = v; paintScale(); });
       sub(o, "Density"); seg(o, [[0.8, "Compact"], [1, "Regular"], [1.25, "Roomy"]], () => K.density, (v) => { K.density = v; paintScale(); });
@@ -677,7 +683,7 @@
       o.insertAdjacentHTML("beforeend", `<button class="btn sm cp-replay" id="cpReplayOpt">${ic("play")}Play out and back in</button>`);
       $("cpReplayOpt").onclick = () => replay(true);
     } else if (K.slot === "rules") {
-      o.insertAdjacentHTML("beforeend", `<p class="hint">These go into the brief you copy for agents. Edit, switch off or add your own.</p>`);
+      o.insertAdjacentHTML("beforeend", `<p class="hint">Agents get these with your tokens.</p>`);
       const list = document.createElement("div"); list.className = "cp-rules";
       K.rules.forEach((r) => (r.id ||= Math.random().toString(36).slice(2, 9)));
       list.innerHTML = K.rules.map((r, k) => `<div class="cp-rule${r.on ? "" : " off"}" data-k="${k}" data-key="${r.id}"><span class="switch"><input type="checkbox"${r.on ? " checked" : ""} aria-label="Use this rule"><span></span></span><textarea class="field autosize" rows="1" aria-label="Rule ${k + 1}" placeholder="Write a rule">${esc(r.t)}</textarea><button class="ib xs" title="Delete rule">${ic("x")}</button></div>`).join("") || `<p class="note cp-norules">No rules yet. Agents will follow only the tokens.</p>`;
@@ -727,11 +733,15 @@
   const canvas = $("cpCanvas"), frame = $("kitFrame");
   const roomOf = () => { const cs = getComputedStyle(canvas); return [Math.floor(canvas.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)), Math.floor(canvas.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom))]; };
   const pageSize = () => (K.fit ? roomOf() : [K.pw, K.ph]);
-  let zoom = 1, rzZoom = 0;
+  let zoom = 1, rzZoom = 0, fitKey = "";
   function fitKit() {
     const kit = $("kit"), [aw, ah] = roomOf(); if (!kit || aw < 40 || ah < 40) return;
     const [w, h] = pageSize();
     zoom = K.fit ? 1 : rzZoom || Math.min(1, aw / w, ah / h);
+    // Picking a size glides the frame there; dragging or resizing the window tracks directly.
+    const key = K.fit ? "fit" : K.pw + "x" + K.ph;
+    frame.style.transition = !rzZoom && fitKey && key !== fitKey ? "width .42s var(--ease), height .42s var(--ease)" : "";
+    fitKey = key;
     frame.style.width = Math.round(w * zoom) + "px"; frame.style.height = Math.round(h * zoom) + "px";
     // The page is as wide as the frame minus its vertical scrollbar, so it never scrolls sideways.
     const sb = frame.offsetWidth - frame.clientWidth;

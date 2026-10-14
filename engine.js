@@ -386,6 +386,7 @@
   }
 
   // ---------- render ----------
+  let svgSeq = 0;
   function buildSVG(s, opts = {}) {
     const w = opts.w || s.w, h = opts.h || s.h, k = w / s.w;
     const field = buildField(s, w, h, opts.res || s.res);
@@ -417,7 +418,7 @@
     const sigma = Math.pow(s.smooth, 1.5) * 48 * k;
     const minLen = (opts.minLen ?? s.minLen) * k;
     const every = s.indexEvery;
-    let body = "", count = 0;
+    let body = "", defs = "", count = 0;
 
     const mode = s.mode || "lines";
     if (mode !== "lines") {
@@ -432,11 +433,19 @@
         return d;
       };
       const band = Math.max(0.02, Math.min(0.98, s.band ?? 0.5));
+      // Gradient bands: each band runs through the inks on either side of it, lit along the pattern angle.
+      // Ids stay unique when several of these SVGs sit inline on one page.
+      const uid = (++svgSeq).toString(36), dp = 1.5 / Math.max(2, levels.length), turn = `rotate(${Math.round(-(s.angle || 0) + 90)} .5 .5)`;
       levels.forEach((lv, i) => {
         const next = levels[i + 1] ? levels[i + 1].t : lv.t + (i > 0 ? lv.t - levels[i - 1].t : span / 10);
-        const color = inkFor(s, lv.pos, i, mode === "layers" || s.gradient);
         const d = mode === "layers" ? ringsAt(lv.t) : ringsAt(lv.t) + ringsAt(lv.t + band * (next - lv.t));
-        if (d) { body += `<path d="${d}" fill="${color}" fill-rule="evenodd"/>`; count++; }
+        if (!d) return;
+        if (mode === "shaded") {
+          const id = `gb${uid}-${i}`;
+          defs += `<linearGradient id="${id}" x1="0" y1="0" x2="1" y2="0" gradientTransform="${turn}"><stop offset="0" stop-color="${inkFor(s, lv.pos - dp, i, true)}"/><stop offset="1" stop-color="${inkFor(s, lv.pos + dp, i, true)}"/></linearGradient>`;
+          body += `<path d="${d}" fill="url(#${id})" fill-rule="evenodd"/>`;
+        } else body += `<path d="${d}" fill="${inkFor(s, lv.pos, i, mode === "layers" || s.gradient)}" fill-rule="evenodd"/>`;
+        count++;
       });
       levels.length = 0;
     }
@@ -475,7 +484,7 @@
     }
     const bg = s.transparent ? "" : `<rect width="${w}" height="${h}" fill="${s.bg}"/>`;
     const op = s.opacity < 1 ? ` opacity="${s.opacity}"` : "";
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${bg}<g stroke-linecap="round" stroke-linejoin="round"${op}>${body}</g></svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${defs ? `<defs>${defs}</defs>` : ""}${bg}<g stroke-linecap="round" stroke-linejoin="round"${op}>${body}</g></svg>`;
     return { svg, count };
   }
 

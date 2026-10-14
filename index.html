@@ -118,7 +118,7 @@
         <button class="btn primary" id="exportBtn" aria-haspopup="true">Export<svg class="ic chev"><use href="#i-chev"/></svg></button>
         <div class="pop export" id="exportMenu" hidden>
           <div class="seg" id="fmt"><button data-v="svg">SVG</button><button data-v="png">PNG</button><button data-v="video">MP4</button><button data-v="gif">GIF</button></div>
-          <p class="note" id="rasterNote" hidden>Gradients, noise and effects export as PNG.</p>
+          <p class="note" id="rasterNote" hidden>Gradients, images and effects export as PNG.</p>
           <div class="seg" id="pngScale" hidden>
             <button data-v="1">1×</button><button data-v="2">2×</button><button data-v="3">3×</button><button data-v="4">4×</button>
           </div>
@@ -132,7 +132,7 @@
             <span class="label">Frame rate</span><div class="seg sm" id="gifFps"><button data-v="15">15</button><button data-v="20">20</button><button data-v="30">30</button></div>
             <span class="label">Loops</span><div class="seg sm" id="gifLoops"><button data-v="1">1</button><button data-v="2">2</button><button data-v="4">4</button></div>
           </div>
-          <p class="note" id="vidNote" hidden>Still designs export as a gentle drift. Pick a motion in the Motion step for more control.</p>
+          <p class="note" id="vidNote" hidden>Still designs export with a slow drift. Pick a motion for more control.</p>
           <label class="label" for="fname">File</label>
           <input class="field mono" id="fname" spellcheck="false">
           <dl class="facts" id="facts"></dl>
@@ -183,6 +183,13 @@
         <div data-gen="noise">
           <h3 class="sub first">Noise type</h3>
           <div class="cards three" id="noiseTypes"></div>
+        </div>
+        <div data-gen="solid">
+          <h3 class="sub first">Form</h3>
+          <div class="cards three" id="solidTypes"></div>
+        </div>
+        <div data-gen="image">
+          <div class="sub-head first"><h3 class="sub">Picture</h3><button class="btn sm ghost" id="imgReplace"><svg class="ic"><use href="#i-up"/></svg>Replace</button></div>
         </div>
         <h3 class="sub">Variations</h3>
         <div class="cards three" id="variations"></div>
@@ -248,8 +255,7 @@
       </div>
 
       <div class="panel-sec" data-panel="motion">
-        <div class="seg wrap4" id="motionType"><button data-v="still">Still</button><button data-v="drift">Drift</button><button data-v="flow">Flow</button><button data-v="breathe">Breathe</button></div>
-        <p class="hint" id="motionHint"></p>
+        <div class="seg wrap5" id="motionType"><button data-v="still">Still</button><button data-v="drift" data-tip="The pattern glides round in a loop" data-tip-preview="motion:drift">Drift</button><button data-v="flow" data-tip="Lines flow outward and gradient colors sway" data-tip-preview="motion:flow">Flow</button><button data-v="breathe" data-tip="The shape keeps morphing and flows back into itself" data-tip-preview="motion:breathe">Breathe</button><button data-v="pulse" data-tip="The field swells on four soft beats per loop" data-tip-preview="motion:pulse">Pulse</button></div>
         <div id="motionCtrls"></div>
         <div id="motionMore">
           <div class="ex-grid motion-grid">
@@ -262,7 +268,7 @@
           <p class="hint mono" id="bezVals"></p>
         </div>
         <button class="btn play-btn" id="playBtn"><svg class="ic"><use href="#i-play"/></svg><span>Play</span></button>
-        <p class="note play-note">The preview may stutter on slower devices. Exports render every frame, so videos and GIFs play smoothly.</p>
+        <p class="note play-note">Exports render every frame, so they play smoothly even when the preview stutters.</p>
       </div>
 
       <div class="panel-sec" data-panel="addfx">
@@ -295,33 +301,45 @@
   <section class="page pt" data-page="palettes" hidden>
     <div class="pt-cols" id="ptCols"></div>
     <div class="pt-bar glass" data-frost="14" role="toolbar" aria-label="Palette">
-      <button class="ib" id="ptUndo" title="Undo (⌘Z)" aria-label="Undo"><svg class="ic"><use href="#i-undo"/></svg></button>
-      <button class="ib" id="ptRedo" title="Redo (⇧⌘Z)" aria-label="Redo"><svg class="ic"><use href="#i-redo"/></svg></button>
-      <span class="bar-sep"></span>
-      <button class="bar-btn" id="ptGen">Generate<kbd>Space</kbd></button>
-      <button class="bar-btn" id="ptVary" title="Small changes to the unlocked colors">Vary<kbd>V</kbd></button>
-      <div class="menu-wrap up">
-        <button class="bar-btn pt-mode-btn" id="ptModeBtn" aria-haspopup="true" aria-label="Harmony"><span class="pt-dots" id="ptDots"></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
-        <div class="pop pt-modes" id="ptModeMenu" hidden></div>
+      <div class="pt-grp" role="group" aria-label="History">
+        <button class="ib" id="ptUndo" title="Undo (⌘Z)" aria-label="Undo"><svg class="ic"><use href="#i-undo"/></svg></button>
+        <button class="ib" id="ptRedo" title="Redo (⇧⌘Z)" aria-label="Redo"><svg class="ic"><use href="#i-redo"/></svg></button>
       </div>
-      <span class="bar-sep"></span>
-      <button class="ib" id="ptSort" title="Sort by lightness" aria-label="Sort by lightness"><svg class="ic"><use href="#i-sort"/></svg></button>
-      <button class="ib" id="ptWeights" title="Show proportions (60-30-10)" aria-label="Show proportions"><svg class="ic"><use href="#i-columns"/></svg></button>
-      <div class="menu-wrap up">
-        <button class="bar-btn" id="ptSavedBtn" aria-haspopup="true"><svg class="ic"><use href="#i-heart"/></svg>Saved</button>
-        <div class="pop pt-saved" id="ptSavedMenu" hidden></div>
-      </div>
-      <div class="menu-wrap up">
-        <button class="bar-btn" id="ptExportBtn" aria-haspopup="true">Export<svg class="ic chev"><use href="#i-chev"/></svg></button>
-        <div class="pop" id="ptExportMenu" hidden>
-          <button class="opt" data-ex="hex"><span><svg class="ic"><use href="#i-copy"/></svg>Copy hex codes</span></button>
-          <button class="opt" data-ex="css"><span><svg class="ic"><use href="#i-copy"/></svg>Copy CSS variables</span></button>
-          <button class="opt" data-ex="json"><span><svg class="ic"><use href="#i-copy"/></svg>Copy JSON</span></button>
-          <button class="opt" data-ex="link"><span><svg class="ic"><use href="#i-copy"/></svg>Copy link</span></button>
-          <button class="opt" data-ex="png"><span><svg class="ic"><use href="#i-down"/></svg>Download PNG</span></button>
+      <div class="pt-grp" role="group" aria-label="Create">
+        <button class="bar-btn pt-gen" id="ptGen">Generate<kbd>Space</kbd></button>
+        <button class="bar-btn" id="ptVary" title="Small changes to the unlocked colors">Vary<kbd>V</kbd></button>
+        <div class="menu-wrap up">
+          <button class="bar-btn pt-mode-btn" id="ptModeBtn" aria-haspopup="true" aria-label="Harmony" title="Harmony"><span class="pt-dots" id="ptDots"></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+          <div class="pop pt-modes" id="ptModeMenu" hidden></div>
         </div>
       </div>
-      <button class="btn primary sm" id="ptUse">Use in Studio<svg class="ic"><use href="#i-next"/></svg></button>
+      <div class="pt-grp" role="group" aria-label="View">
+        <button class="ib" id="ptSort" title="Sort by lightness" aria-label="Sort by lightness"><svg class="ic"><use href="#i-sort"/></svg></button>
+        <button class="ib" id="ptWeights" title="Show proportions (60-30-10)" aria-label="Show proportions"><svg class="ic"><use href="#i-columns"/></svg></button>
+      </div>
+      <div class="pt-grp" role="group" aria-label="Library">
+        <div class="menu-wrap up">
+          <button class="bar-btn" id="ptSavedBtn" aria-haspopup="true"><svg class="ic"><use href="#i-heart"/></svg>Saved</button>
+          <div class="pop pt-saved" id="ptSavedMenu" hidden></div>
+        </div>
+        <div class="menu-wrap up">
+          <button class="bar-btn" id="ptExportBtn" aria-haspopup="true">Export<svg class="ic chev"><use href="#i-chev"/></svg></button>
+          <div class="pop" id="ptExportMenu" hidden>
+            <button class="opt" data-ex="hex"><span><svg class="ic"><use href="#i-copy"/></svg>Copy hex codes</span></button>
+            <button class="opt" data-ex="css"><span><svg class="ic"><use href="#i-copy"/></svg>Copy CSS variables</span></button>
+            <button class="opt" data-ex="json"><span><svg class="ic"><use href="#i-copy"/></svg>Copy JSON</span></button>
+            <button class="opt" data-ex="link"><span><svg class="ic"><use href="#i-copy"/></svg>Copy link</span></button>
+            <button class="opt" data-ex="png"><span><svg class="ic"><use href="#i-down"/></svg>Download PNG</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="menu-wrap up pt-use">
+        <button class="btn primary sm" id="ptUse">Use in Studio</button><button class="btn primary sm pt-use-more" id="ptUseMore" aria-haspopup="true" aria-label="Use somewhere else"><svg class="ic chev"><use href="#i-chev"/></svg></button>
+        <div class="pop" id="ptUseMenu" hidden>
+          <button class="opt" data-use="studio"><span><svg class="ic"><use href="#i-next"/></svg>Use in Studio</span></button>
+          <button class="opt" data-use="components"><span><svg class="ic"><use href="#i-next"/></svg>Use in Builder</span></button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -385,5 +403,6 @@
 <script src="shell.js"></script>
 <script src="agent.js"></script>
 <script src="glass.js"></script>
+<script src="tips.js"></script>
 </body>
 </html>

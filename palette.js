@@ -299,12 +299,15 @@
   $("ptSort").onclick = () => { st.cols.sort((a, b) => C.toOklch(a.hex)[0] - C.toOklch(b.hex)[0]); snap(); glide(() => render(true)); save(); };
   // The bottom button sends the palette back to whichever tool opened it, the studio by default.
   let from = "studio";
-  const setFrom = (f) => { from = f === "components" ? "components" : "studio"; $("ptUse").firstChild.textContent = from === "components" ? "Use in Components" : "Use in Studio"; };
-  $("ptUse").onclick = () => {
+  const PT_MENUS = ["ptModeMenu", "ptSavedMenu", "ptExportMenu", "ptUseMenu"];
+  const setFrom = (f) => { from = f === "components" ? "components" : "studio"; $("ptUse").textContent = from === "components" ? "Use in Builder" : "Use in Studio"; };
+  const useIn = (to) => {
     const hexes = st.cols.map((c) => c.hex);
-    if (from === "components") { root.Components?.usePalette(hexes); root.Shell?.go("components"); }
+    if (to === "components") { root.Components?.usePalette(hexes); root.Shell?.go("components"); }
     else { root.Studio?.usePalette(hexes); root.Shell?.go("studio"); }
   };
+  $("ptUse").onclick = () => useIn(from);
+  $("ptUseMenu").onclick = (e) => { const b = e.target.closest("[data-use]"); if (!b) return; $("ptUseMenu").hidden = true; useIn(b.dataset.use); };
   let dotsKey = "";
   function syncBar() {
     const m = MODES.find((x) => x[0] === st.mode) || MODES[0], sample = sampleOf(m[0]), key = m[0] + sample.join();
@@ -325,7 +328,7 @@
   function renderSaved() {
     const cur = st.cols.map((c) => c.hex).join();
     const isSaved = saved.some((p) => p.colors.join() === cur);
-    $("ptSavedMenu").innerHTML = `<button class="opt" data-s="toggle"><span>${ic("heart")}${isSaved ? "Remove this palette" : "Save this palette"}</span></button>` + (saved.length ? `<div class="set-sep"></div>` + saved.map((p, i) => `<div class="pt-saved-row"><button class="pt-strip" data-s="load" data-i="${i}" aria-label="Load ${p.name}">${p.colors.map((c) => `<i style="background:${c}"></i>`).join("")}</button><span>${p.name}</span><button class="ib xs" data-s="del" data-i="${i}" aria-label="Delete ${p.name}">${ic("x")}</button></div>`).join("") : `<p class="note pt-empty">Saved palettes also show up in the studio's Colors panel.</p>`);
+    $("ptSavedMenu").innerHTML = `<button class="opt" data-s="toggle"><span>${ic("heart")}${isSaved ? "Remove this palette" : "Save this palette"}</span></button>` + (saved.length ? `<div class="set-sep"></div>` + saved.map((p, i) => `<div class="pt-saved-row"><button class="pt-strip" data-s="load" data-i="${i}" aria-label="Load ${p.name}">${p.colors.map((c) => `<i style="background:${c}"></i>`).join("")}</button><span>${p.name}</span><button class="ib xs" data-s="del" data-i="${i}" aria-label="Delete ${p.name}">${ic("x")}</button></div>`).join("") : "");
   }
   $("ptSavedMenu").onclick = (e) => {
     const b = e.target.closest("[data-s]"); if (!b) return;
@@ -355,10 +358,10 @@
     try { await navigator.clipboard.writeText(text); root.toastMsg?.("Copied"); } catch (e) { root.toastMsg?.("Clipboard is blocked here"); }
   }
   $("ptExportMenu").onclick = (e) => { const b = e.target.closest("[data-ex]"); if (!b) return; $("ptExportMenu").hidden = true; exportAs(b.dataset.ex); };
-  for (const [btn, menu] of [["ptModeBtn", "ptModeMenu"], ["ptSavedBtn", "ptSavedMenu"], ["ptExportBtn", "ptExportMenu"]]) {
-    $(btn).addEventListener("click", (e) => { e.stopPropagation(); const m = $(menu), open = m.hidden; for (const id of ["ptModeMenu", "ptSavedMenu", "ptExportMenu"]) $(id).hidden = true; if (menu === "ptSavedMenu" && open) renderSaved(); if (menu === "ptModeMenu" && open) renderModes(); m.hidden = !open; });
+  for (const [btn, menu] of [["ptModeBtn", "ptModeMenu"], ["ptSavedBtn", "ptSavedMenu"], ["ptExportBtn", "ptExportMenu"], ["ptUseMore", "ptUseMenu"]]) {
+    $(btn).addEventListener("click", (e) => { e.stopPropagation(); const m = $(menu), open = m.hidden; for (const id of PT_MENUS) $(id).hidden = true; if (menu === "ptSavedMenu" && open) renderSaved(); if (menu === "ptModeMenu" && open) renderModes(); m.hidden = !open; });
   }
-  document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".pt-bar .menu-wrap")) for (const id of ["ptModeMenu", "ptSavedMenu", "ptExportMenu"]) $(id).hidden = true; });
+  document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".pt-bar .menu-wrap")) for (const id of PT_MENUS) $(id).hidden = true; });
 
   // Keyboard, only while the palette page is open. Holding Space keeps generating at a readable pace.
   let lastGen = 0;

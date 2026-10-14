@@ -32,9 +32,20 @@
     tip.style.top = Math.round(Math.max(8, Math.min(H - h - 8, y))) + "px";
     tip.dataset.dir = dir;
   }
+  // Rich tooltips: data-tip-media names a recorded clip in window.TIP_MEDIA, shown above the text;
+  // data-tip-preview="name:value" draws a live preview with a function registered through UI.tipPreview.
+  const previews = {};
   function show(el) {
     const t = textOf(el); if (!t) return;
-    target = el; tip.textContent = t;
+    target = el;
+    const media = el.dataset.tipMedia && window.TIP_MEDIA?.[el.dataset.tipMedia], [pn, pv] = (el.dataset.tipPreview || "").split(":"), draw = previews[pn];
+    if (media || draw) {
+      const fig = document.createElement("div"), cap = document.createElement("span");
+      fig.className = "tip-fig"; cap.textContent = t;
+      if (media) { const img = new Image(); img.alt = ""; img.onload = () => { if (target === el) place(el); }; img.src = media; fig.appendChild(img); }
+      else { const out = draw(pv, el); if (typeof out === "string") fig.innerHTML = out; else if (out) fig.appendChild(out); }
+      tip.replaceChildren(fig, cap); tip.classList.add("rich");
+    } else { tip.classList.remove("rich"); tip.textContent = t; }
     if (!tip.isConnected) document.body.appendChild(tip);
     tip.hidden = false; place(el);
   }
@@ -243,5 +254,5 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") openDD?.close(); });
   addEventListener("scroll", (e) => { if (openDD && !openDD.pop.contains(e.target)) openDD.close(); }, true);
 
-  root.UI = { flip, swap, autosize, collapse, resizable, dropdown, tip: { show, hide }, reduce };
+  root.UI = { flip, swap, autosize, collapse, resizable, dropdown, tip: { show, hide }, tipPreview: (name, fn) => (previews[name] = fn), reduce };
 })(window);

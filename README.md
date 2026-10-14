@@ -5,7 +5,7 @@ Topographic patterns, palettes and design tokens. Static site: open `index.html`
 Live at **https://masterclaudecoder.github.io/isoline/**. Every push to the main branch deploys it through GitHub Actions (`.github/workflows/pages.yml`). The workflow also captures previews for new libraries and commits them to `previews/`. Pages has to be switched on once in the repository settings (Settings, Pages, Source: GitHub Actions).
 
 ## Pages
-The home page (`#/`) shows three tools as large cards. Moving between pages is a seamless transition: the top bar stays put, pages crossfade, a tool's preview morphs into the tool, and floating bars pull up from the bottom once their page lands.
+The home page (`#/`) shows three tools as large cards. Moving between pages is one continuous transition: the top bar stays put, pages crossfade, a tool's preview morphs into the tool, and floating bars pull up from the bottom once their page lands.
 - **Studio** (`#/studio`): the pattern, gradient, effects and motion editor described below. An orange button pinned to the foot of each panel moves on to the next step.
 - **Palettes** (`#/palettes`):
   - Space generates new colors for every unlocked column, using OKLCH harmonies (auto, analogous, monochrome, complement, triad, split, pastel, vivid, earthy).
@@ -13,7 +13,7 @@ The home page (`#/`) shows three tools as large cards. Moving between pages is a
   - The harmony button shows the chosen harmony as color dots. Its menu lists every harmony with a sample drawn from your palette's hue, and a tooltip says what each one does.
   - V (Vary) nudges colors instead of replacing them, and the proportions toggle sizes the columns 60-30-10.
   - Columns show their nearest name and contrast, and can be locked, edited, shaded, added or removed. Drag a grip to reorder: the column follows the pointer and the others slide aside. New columns grow in, removed ones fold away, and sorting or undo glides each color to its new place.
-  - Export copies hex codes, CSS variables, JSON or a share link (`#/palettes/2f6fdb-...`), or downloads a PNG. **Use in Studio** applies the palette there.
+  - Export copies hex codes, CSS variables, JSON or a share link (`#/palettes/2f6fdb-...`), or downloads a PNG. **Use in Studio** applies the palette there, and its arrow offers **Use in Builder**.
   - The bar is smoked, frosted glass with white text, so it stays legible over any color. In Chromium browsers its rim also bends what's behind it.
 - **Components** (`#/components`) has two modes:
   - **Libraries:** a directory of about 120 UI, headless, animation, effects, icon, chart, form, 3D, styling and font libraries, filterable by framework, category and search. Each card is a window onto the site. At deploy time `tools/previews.mjs` saves each library's own OpenGraph banner, or a screenshot of its page when it has none, into `previews/` (kept in the repository). Copies without those files (like the single-file build) fall back to the [11ty OpenGraph image service](https://www.11ty.dev/docs/services/opengraph/), then to a pane drawn from the site's icon. Picks come first, then one section per category.
@@ -34,8 +34,10 @@ The left column is the build, made of one slot per layer: **Preset, Generator, S
 - **Contours** (vector, exports SVG; coming from a gradient, they start as bands in its colors): Blobs, Terrain, Flow, Rings, Ridges, Dunes, Lines, Strata, Waves. Scale, detail, warp, liquify, angle and metaball points. Double-click the canvas to add a peak, then drag to move it or scroll to resize it.
 - **Mesh:** draggable color points blended in OKLab.
 - **Flow:** domain-warped simplex noise for soft, flowing color fields. Pair it with Grain.
-- **Noise:** clouds, ridges, billow, cells, veins, marble, neuro and smoke ring, with scale, detail, stretch, angle, warp and contrast.
+- **Noise:** clouds, ridges, billow, cells, veins, marble, neuro, smoke ring and aura (a soft glowing body of swirling color, made to pair with Pulse), with scale, detail, stretch, angle, warp and contrast.
 - **Linear, Radial, Conic** gradients.
+- **3D shape:** a raymarched sphere, torus, cube, capsule or blob, lit from the upper left and shaded through your colors. Size, angle, ripple, shine and contrast. Drift turns it, Breathe morphs the surface, Pulse beats it.
+- **Image:** your own picture, filling the canvas, as a base for effects. It is kept in the browser outside the design state (one at a time), so undo history and saved settings stay small.
 
 ## Colors
 **Your colors** come first: a background plus up to six inks for contours, or up to eight stops for gradients. With more than two inks, plain contours cycle through them level by level, and blended or layered contours run a smooth ramp through them. Below that are palette tabs: Suggested (harmonies from your strongest color, plus the closest library palette), Curated, Brands, and Saved. Every palette card is resampled to your number of colors and applies at that count.
@@ -43,22 +45,25 @@ The left column is the build, made of one slot per layer: **Preset, Generator, S
 The color picker has two modes: a color field, or sliders for the chosen format (HEX, RGB, HSL, HSB, OKLCH). Move toward its top-right corner to switch modes. It shows the nearest color name, from the "best of" list of [color-name-list](https://github.com/meodai/color-name-list) (MIT). You can paste any of those formats into its fields. Print inks only appear when an ink-only print effect is in the stack.
 
 ## Motion
-The Motion slot makes the design loop seamlessly:
+The Motion slot makes the design loop without a visible seam:
 - **Drift:** the field glides round a circle.
 - **Flow:** contour lines flow outward, or a gradient's colors sway.
 - **Breathe:** the shape keeps morphing along a closed path through the noise, so it never visibly reverses and flows back into where it started.
+- **Pulse:** four soft beats per loop push the field out from the center while it morphs a little.
+
+Hovering a motion type plays it on your own design in the tooltip.
 
 Each motion has a loop length, amplitude and seed, plus loop, ping-pong or once playback, forward or reverse, and easing. The easing is a preset or a custom cubic bezier you drag. Effects with randomness have their own seed. Play previews the loop on the canvas. Playback draws contours at the size they appear on screen, and if it still runs slow the preview gets lighter once and a note offers to remove effects or stop motion. Exports always render every frame at full quality. Video is a format in the Export menu, alongside SVG and PNG, and every export shows its progress. **Export MP4** renders every frame at an exact timestamp using the browser's video encoder (H.264, or VP9 where H.264 isn't available) and [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (MIT). Browsers without WebCodecs record a WebM in real time.
 
 ## Lines (contours only)
-Lines (strokes), Bands (filled stripes, PewDiePie-style) or Layers (stacked fills). Count or gap, bias, weight, swell, taper, accent lines, smoothing and cleanup.
+Lines (strokes), Bands (filled stripes, PewDiePie-style), Layers (stacked fills) or Gradient (bands shaded through the inks on either side of them). Count or gap, bias, weight, swell, taper, accent lines, smoothing and cleanup.
 
 ## Effects (WebGL2, run top to bottom)
 - **Distort:** liquify, waves, twirl, bulge, ripples, water (with caustics), kaleidoscope
 - **Glass** (iOS-style bezel refraction, frost, hairline highlights and slight dispersion, with rounded glass blocks): fluted glass, glass blocks, liquid glass
 - **Light:** progressive blur, glow, relief, god rays, vignette
 - **Color:** gradient map, posterize, heatmap, liquid metal
-- **Print:** halftone, CMYK halftone, engrave, risograph, dither
+- **Print:** halftone and CMYK halftone (circle, square, triangle or star dots), engrave, risograph, dither
 - **Stylize:** pixels, crystallize, ASCII, scanlines, chromatic
 - **Texture:** paper, film grain
 
@@ -85,6 +90,8 @@ Files:
 - `components.js`: the library directory and token builder.
 - `libs.js`: the library list.
 - `tools/previews.mjs`: captures library preview images (run by the Pages workflow).
+- `tools/record.mjs`: records tooltip clips. It drives the real UI with a scripted pointer, draws a cursor that follows on a damped spring with click ripples, and writes animated WebP to `previews/tips/` and `tips.js`.
+- `tips.js`: the recorded tooltip clips as data URLs.
 - `agent.js`: the agent API and briefs.
 - `glass.js`: liquid glass bars.
 - `brand.js`: the logo.

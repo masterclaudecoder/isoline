@@ -24,7 +24,7 @@ A palette can be passed in the URL: #/palettes/2f6fdb-6a9f7a-d8a51f.
 - Isoline.studio.svg() returns the vector SVG (contours without effects)
 - await Isoline.studio.png(2) returns a PNG Blob
 - Isoline.studio.describe() returns a plain-language description
-Key settings: source ("contours" or "gradient"), pattern, mode ("lines", "bands", "layers"), levels, gap, weight,
+Key settings: source ("contours" or "gradient"), pattern, mode ("lines", "bands", "layers", "shaded" for gradient bands), levels, gap, weight,
 line, line2, mids (extra inks), bg, grad.type ("mesh", "flow", "noise", "linear", "radial", "conic"), grad.colors,
 fx.<id>.on with fxOrder for the effect stack, motion { type, dur, amt, mode, dir, ease }.
 
