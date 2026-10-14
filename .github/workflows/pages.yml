@@ -5,7 +5,7 @@ name: Pages
 
 on:
   push:
-    branches: [claude/dreamy-edison-0dx0xi]
+    branches: [claude/dreamy-edison-0dx0xi, claude/funny-faraday-awdls8]
   workflow_dispatch:
 
 permissions:

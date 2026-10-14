@@ -282,9 +282,18 @@ void main() {
     else {
       // Triplanar: the preset is projected from three sides and blended by the surface direction, so
       // there's no seam or pinched pole on any form.
-      vec3 nl = Ri * n, w = pow(abs(nl), vec3(4.0)); w /= w.x + w.y + w.z;
-      vec3 tp = sp3 * 0.5 + 0.5;
-      alb = texture(uTex2, tp.zy).rgb * w.x + texture(uTex2, tp.xz).rgb * w.y + texture(uTex2, tp.xy).rgb * w.z;
+      vec3 nl = Ri * n;
+      if (uKind == 6 || uKind == 7) {
+        // Faceted forms: their slanted faces sit between the three axes, where a triplanar blend would
+        // stack three copies of the texture. Each face takes one projection along its own normal instead.
+        vec3 up = abs(nl.y) < 0.97 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+        vec3 tu = normalize(cross(up, nl)), tv = cross(nl, tu);
+        alb = texture(uTex2, vec2(dot(sp3, tu), dot(sp3, tv)) * 0.5 + 0.5).rgb;
+      } else {
+        vec3 w = pow(abs(nl), vec3(8.0)); w /= w.x + w.y + w.z;
+        vec3 tp = sp3 * 0.5 + 0.5;
+        alb = texture(uTex2, tp.zy).rgb * w.x + texture(uTex2, tp.xz).rgb * w.y + texture(uTex2, tp.xy).rgb * w.z;
+      }
     }
     col = alb * (0.42 + 0.72 * wrap) + vec3(0.18 * fr) + uShine * 0.55 * sp;
   }
@@ -478,37 +487,43 @@ void main() {
   vec2 L2 = lm * 1.5 * uMotAmt * vec2(sin(tw + 1.3), -cos(tw + 1.3));
   p = 0.5 + (p - 0.5) * (1.0 - 0.07 * uMotAmt * beat);
   if (uType == 6) {
-    // Aura, after the reactive background of Yandex Music's My Wave: a soft body of color over a dark
-    // ground, its outline wobbling in a few lobes, with thin light rings nested inside it. Each ring
-    // is a smaller copy of the outline whose lobes turn a little with depth, the way stacked
-    // translucent layers look. No glow is baked in: bloom or god rays go on top as effects.
+    // Aura, after the reactive background of Yandex Music's My Wave: a soft, glowing body of color over a
+    // dark ground, its outline bulging unevenly, with faint light rings nested inside it. The outline is
+    // warped in two dimensions as well as wobbled round its angle, so it reads as a drifting blob rather
+    // than a star. Each ring is a smaller copy of the outline whose lobes turn a little with depth, the way
+    // stacked translucent layers look, and rings are soft, sized against their own spacing.
     float ca = cos(uAngle), sa = sin(uAngle);
     vec2 c = (p - 0.5) * a;
     if (uMotion == 1) { float r0 = tw; c = mat2(cos(r0), -sin(r0), sin(r0), cos(r0)) * c; }
-    float r = length(c), th = atan(c.y, c.x);
-    vec2 dv = vec2(cos(th), sin(th));
     float R = 0.4 * clamp(uScale, 0.1, 6.0) * (1.0 + 0.1 * uMotAmt * beat);
-    float u = r / max(R, 1e-3);
-    float lob = snoise(dv * 0.7 + uSeed * vec2(0.37, 0.71) + L1 * 0.35 + vec2(0.25, -0.15) * u) * 0.8
-              + snoise(dv * 1.1 + uSeed * vec2(1.3, 0.2) + L2 * 0.35 - vec2(0.1, 0.2) * u) * 0.2;
+    vec2 cn = c / max(R, 1e-3);
+    vec2 wq = cn * 0.85 + uSeed * vec2(0.37, 0.71);
+    cn += 0.3 * uWarp * vec2(snoise(wq + L1 * 0.3), snoise(wq + vec2(5.2, 1.3) + L2 * 0.3)) * smoothstep(0.0, 0.9, length(cn));
+    float u = length(cn), th = atan(cn.y, cn.x);
+    vec2 dv = vec2(cos(th), sin(th));
+    float lob = snoise(dv * 0.75 + uSeed * vec2(0.37, 0.71) + L1 * 0.35 + vec2(0.25, -0.15) * u) * 0.6
+              + snoise(dv * 1.6 + uSeed * vec2(1.3, 0.2) + L2 * 0.35 - vec2(0.1, 0.2) * u) * 0.28
+              + snoise(dv * 3.2 + uSeed * vec2(0.6, 1.9) - L1 * 0.25 + vec2(0.3, 0.1) * u) * 0.07;
     // f is 1 on the outline and grows evenly outwards from the middle, whatever the lobes do. Inner
-    // rings wobble less, so the middle settles toward a round core.
-    float f = u / (1.0 + 0.32 * uWarp * lob * (0.45 + 0.55 * smoothstep(0.0, 1.0, u)));
-    float edge = 0.2 + 0.25 * clamp(uSoft, 0.3, 5.0);
-    float body = 1.0 - smoothstep(1.0 - edge * 0.8, 1.0 + edge, f);
+    // rings wobble less, so the middle settles toward a rounder core.
+    float f = u / (1.0 + 0.42 * uWarp * lob * (0.35 + 0.65 * smoothstep(0.0, 1.0, u)));
+    float edge = 0.22 + 0.28 * clamp(uSoft, 0.3, 5.0);
+    float body = 1.0 - smoothstep(1.0 - edge, 1.0 + edge * 1.1, f);
+    // Light spills past the outline into the dark, as from a lit haze.
+    float halo = exp(-max(f - 1.0, 0.0) * 2.6 / clamp(uSoft, 0.5, 5.0)) * (1.0 - body);
     // Color: lighter toward the middle, turning through the palette round the body.
     vec2 cr = mat2(ca, -sa, sa, ca) * c / max(R, 0.05);
     float swirl = 0.5 + 0.5 * snoise(cr * 0.55 + uSeed * vec2(0.9, 0.4) + L2 * 0.25);
     float t = 0.25 + 0.75 * clamp(0.45 * body + 0.3 * (1.0 - clamp(f, 0.0, 1.0)) + 0.25 * swirl, 0.0, 1.0);
     vec3 fill = ramp(t), bg = ramp(0.0);
-    // Rings: evenly spaced in f, a fixed width on screen, kept off the very middle and faded at the rim.
+    // Rings: evenly spaced in f, soft, their width a share of the spacing (never under a pixel or so),
+    // kept off the very middle and faded toward the rim.
     float N = clamp(uDetail, 1.0, 8.0) + 0.5, ph = f * N - (uMotion == 2 ? uTime * 2.0 : 0.0);
-    float dn = abs(fract(ph + 0.5) - 0.5) / max(fwidth(ph), 1e-4);
-    float wpx = (2.0 + 4.0 * uStretch) * uRes.y / 900.0;
-    float line = (exp(-dn * dn / (wpx * wpx)) * 0.75 + exp(-dn / (wpx * 4.0)) * 0.25) * smoothstep(0.3, 0.75, f * N) * smoothstep(0.12, 0.7, body);
-    vec3 lab2 = mix(bg, fill, body);
-    lab2.x += line * 0.16 * uContrast * (1.0 + 0.5 * uMotAmt * beat);
-    lab2.yz *= 1.0 - line * 0.2 * min(uContrast, 1.5);
+    float dr = abs(fract(ph + 0.5) - 0.5), w = max(0.045 * uStretch, fwidth(ph) * 1.2);
+    float line = (exp(-dr * dr / (w * w)) * 0.55 + exp(-dr / (w * 3.5)) * 0.45) * smoothstep(0.3, 0.8, f * N) * smoothstep(0.15, 0.8, body);
+    vec3 lab2 = mix(bg, fill, max(body, halo * 0.45));
+    lab2 = mix(lab2, ramp(min(t + 0.2, 1.0)), clamp(line * 0.35 * uContrast, 0.0, 1.0));
+    lab2.x += line * 0.09 * uContrast * (1.0 + 0.5 * uMotAmt * beat);
     o = vec4(srgb(fromLab(lab2)), 1.0); return;
   }
   // Breathe on fields: a slow swell in and out from the middle, eased at both ends.
@@ -539,6 +554,15 @@ void main() {
       else if (uNoise == 4) { vec2 w = worley(q * 1.5); v = 1.0 - smoothstep(0.0, 0.35, w.y - w.x); }
       else if (uNoise == 5) v = 0.5 + 0.5 * sin(q.x * 4.0 + sfbm(q) * 5.0);
       else if (uNoise == 6) { float nn = neuro(q * 0.5); v = clamp(1.2 * pow(nn, 3.0) + pow(nn, 10.0) - 0.1, 0.0, 1.0); }
+      else if (uNoise == 9) {
+        // Smoke: thin veils that curl and fold, a ridge taken along a twice-warped field, thinning out
+        // where the slow density field drops away.
+        vec2 w1 = vec2(snoise(q * 0.45 + L1), snoise(q * 0.45 + vec2(5.2, 1.3) + L2));
+        vec2 w2 = vec2(snoise(q * 0.8 + 1.1 * w1 + vec2(1.7, 9.2)), snoise(q * 0.8 + 1.1 * w1 + vec2(8.3, 2.8)));
+        float r = 1.0 - abs(snoise(q * 0.55 + 0.9 * w2)), fine = sfbm(q * 1.4 + 1.5 * w2);
+        float dens = smoothstep(-0.9, 0.7, snoise(q * 0.3 + 0.6 * w1 + 4.4) + 0.35 * snoise(q * 0.7 + w2));
+        v = clamp(dens * (0.3 + 0.85 * pow(r, 2.5)) * (0.85 + 0.3 * fine), 0.0, 1.0);
+      }
       else { vec2 c = (p - 0.5) * a; float ang = atan(c.y, c.x), r = length(c) / 0.36; float n = snoise(vec2(cos(ang), sin(ang)) * 0.9 / max(uScale, 0.1) + uSeed * 0.37) * (0.2 + warp * 0.3) + 0.08 * snoise(vec2(cos(ang), sin(ang)) * 2.4 + uSeed); v = exp(-pow((r - 1.0 - n) / (0.1 + 0.12 / max(uStretch, 0.3)), 2.0)) * (0.85 + 0.15 * sfbm(q * 2.0)); }
     }
     lab = ramp(clamp((v - 0.5) * uContrast + 0.5, 0.0, 1.0));
@@ -623,6 +647,51 @@ void main() {
   vec2 dir = d / max(r, 1e-3);
   vec4 c = tex(vUv + toUv(dir * sin(ph) * uAmp * fade));
   o = vec4(c.rgb * (1.0 + uShade * 0.18 * cos(ph) * fade), c.a);
+}`,
+
+    sea: `uniform float uAmt; uniform float uScale; uniform float uCaustic; uniform float uChop; uniform float uDepth; uniform float uSpeed; uniform float uTime;
+// Water: looking down through a sunlit, moving surface. Long swells and a finer chop bend what lies
+// beneath, and the light the surface focuses slides over it in soft, shifting ribbons. Every wave and
+// ribbon moves a whole number of turns per loop, so animations meet their first frame.
+float T;
+float waves(vec2 q) {
+  float h = 0.5 * sin(dot(q, vec2(0.83, 0.55)) + T + 1.3 * vnoise(q * 0.35));
+  h += 0.32 * sin(dot(q, vec2(-0.42, 0.91)) * 1.7 - 2.0 * T + 0.7);
+  h += 0.22 * sin(dot(q, vec2(0.97, -0.24)) * 2.6 + 2.0 * T + 2.1);
+  h += uChop * (0.2 * sin(dot(q, vec2(0.2, -0.98)) * 4.3 - 3.0 * T + 4.0 + 2.0 * vnoise(q * 0.8)) + 0.12 * sin(dot(q, vec2(-0.77, -0.64)) * 6.1 + 4.0 * T + 1.0) + 0.08 * sin(dot(q, vec2(0.6, 0.8)) * 8.7 - 5.0 * T + 2.0 * vnoise(q * 1.3 + 4.0)));
+  return h;
+}
+// The classic tileable water light (after joltz0r): a few rounds of a swirling map whose bright folds
+// read as sunlight on a pool floor.
+float caustic(vec2 p) {
+  vec2 i = p; float c = 1.0;
+  for (int n = 0; n < 5; n++) {
+    float t = T * (n == 0 ? -2.0 : n == 1 ? -1.0 : n == 2 ? 1.0 : n == 3 ? 0.0 : 1.0);
+    i = p + vec2(cos(t - i.x) + sin(t + i.y), sin(t - i.y) + cos(t + i.x));
+    c += 1.0 / length(vec2(p.x / (sin(i.x + t) / 0.005), p.y / (cos(i.y + t) / 0.005)));
+  }
+  c = 1.17 - pow(c / 5.0, 1.4);
+  return clamp(pow(abs(c), 6.0), 0.0, 1.5);
+}
+void main() {
+  T = 6.2831853 * uTime * uSpeed;
+  vec2 q = dp() / uScale * 6.0;
+  // A slow, still warp so the swells never line up into stripes.
+  q += 0.9 * vec2(fbm(q * 0.22 + 3.1), fbm(q * 0.22 + 7.7));
+  float e = 0.04;
+  vec2 g = vec2(waves(q + vec2(e, 0.0)) - waves(q - vec2(e, 0.0)), waves(q + vec2(0.0, e)) - waves(q - vec2(0.0, e))) / (2.0 * e);
+  vec2 off = g * uAmt * uScale * 0.03, bend = toUv(off);
+  // Red bends a touch less than blue, as through real water.
+  vec3 col = vec3(tex(vUv + bend * 0.96).r, tex(vUv + bend).g, tex(vUv + bend * 1.05).b);
+  col = mix(col, col * vec3(0.5, 0.82, 0.92) + vec3(0.0, 0.07, 0.1), clamp(uDepth, 0.0, 1.0));
+  // Light lands on the floor, so it is read where the floor is seen: through the same bend.
+  vec2 cp = (dp() + off * 0.6) / uScale * 6.0 + uSeed * vec2(0.37, 0.91);
+  float px = uScale / 6.0 * uK, l = caustic(cp) * smoothstep(6.0, 16.0, px);
+  l *= 0.7 + 0.3 * smoothstep(0.2, 0.8, fbm(q * 0.3 + 11.0));
+  float face = clamp(-dot(g, vec2(0.6, -0.8)) * 0.05 * min(uAmt, 2.0), -0.1, 0.1);
+  col *= 1.0 + face;
+  vec3 light = vec3(0.92, 1.0, 0.97) * l * uCaustic * 0.85;
+  o = vec4(1.0 - (1.0 - clamp(col, 0.0, 1.0)) * (1.0 - clamp(light, 0.0, 1.0)), tex(vUv).a);
 }`,
 
     water: `uniform float uAmt; uniform float uScale; uniform float uCaustic;
@@ -792,9 +861,30 @@ void main() {
   vec4 c = tex(toUv((cell + 0.5) * uCell));
   float v = luma(c.rgb); if (uInvert < 0.5) v = 1.0 - v;
   float idx = floor(clamp(v, 0.0, 0.999) * uCount);
-  vec2 l = fract(d / uCell); l.y = 1.0 - l.y;
-  float g = texture(uAtlas, vec2((idx + l.x) / uCount, l.y)).r;
+  vec2 g2 = d / uCell, l = fract(g2);
+  // Gradients from the unwrapped position, so the mip level doesn't jump at every cell edge.
+  vec2 sc = vec2(1.0 / uCount, 1.0);
+  float g = textureGrad(uAtlas, vec2((idx + l.x) / uCount, l.y), dFdx(g2) * sc, dFdy(g2) * sc).r;
   o = vec4(mix(uPaper, uMono > 0.5 ? uInk : c.rgb, g), 1.0);
+}`,
+
+    glyphs: `uniform sampler2D uAtlas; uniform float uCell; uniform float uCount; uniform float uMono; uniform float uGamma; uniform float uChange; uniform float uBack; uniform vec3 uInk; uniform vec3 uPaper; uniform float uTime;
+// Glyph field: every cell holds a random character whose opacity follows the brightness underneath, like
+// a screen of text lit from behind. Shuffle swaps each cell's character a whole number of times per
+// loop, every cell at its own moment, so the field flickers and still loops.
+void main() {
+  vec2 d = dp(), g2 = d / uCell, cell = floor(g2);
+  vec4 c = tex(toUv((cell + 0.5) * uCell));
+  float v = pow(clamp(luma(c.rgb), 0.0, 1.0), uGamma);
+  float h = hash(cell + uSeed * 0.731), slot = uChange > 0.5 ? floor(fract(uTime + h) * uChange) : 0.0;
+  float idx = min(floor(hash(cell * 1.618 + vec2(slot * 7.31, slot * 3.17) + uSeed * 0.37) * uCount), uCount - 1.0);
+  vec2 l = fract(g2);
+  vec2 sc = vec2(1.0 / uCount, 1.0);
+  float a = textureGrad(uAtlas, vec2((idx + l.x) / uCount, l.y), dFdx(g2) * sc, dFdy(g2) * sc).r * v;
+  if (uMono > 0.5) { o = vec4(mix(uPaper, uInk, a), 1.0); return; }
+  // In color, each glyph takes the hue underneath at full strength; its opacity carries the brightness.
+  vec3 fg = mix(c.rgb, c.rgb / max(max(c.r, max(c.g, c.b)), 0.06), 0.75);
+  o = vec4(mix(c.rgb * uBack, clamp(fg, 0.0, 1.0), a), 1.0);
 }`,
 
     dither: `uniform float uMat; uniform float uLevels; uniform float uMono; uniform float uPix; uniform vec3 uInk; uniform vec3 uPaper;
@@ -970,8 +1060,16 @@ void main() {
   };
 
   // Default pipeline order when effects are added; the app can reorder freely.
-  const ORDER = ["liquify", "wave", "swirl", "bulge", "ripple", "water", "kaleido", "glass", "mesh", "lens", "rays", "chrome", "heatmap", "paper", "cmyk", "blur", "bloom", "emboss", "gradmap", "posterize", "pixel", "voronoi", "halftone", "linescreen", "riso", "ascii", "dither", "scan", "chroma", "vignette", "grain"];
+  const ORDER = ["liquify", "wave", "swirl", "bulge", "ripple", "sea", "water", "kaleido", "glass", "mesh", "lens", "rays", "chrome", "heatmap", "paper", "cmyk", "blur", "bloom", "emboss", "gradmap", "posterize", "pixel", "voronoi", "halftone", "linescreen", "riso", "ascii", "glyphs", "dither", "scan", "chroma", "vignette", "grain"];
   const CHARSETS = { ascii: " .:-=+*#%@", blocks: " ░▒▓█", dots: " ·•●", binary: " 01", lines: " ─═│╬" };
+  // Glyph field sets: picked at random per cell, so order doesn't matter and there's no blank.
+  const GLYPHSETS = {
+    alnum: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+    hex: "0123456789abcdef",
+    binary: "01",
+    symbols: "+-*/=<>#%&@$!?^~:;|{}[]()",
+    kana: "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789",
+  };
 
   const hex3 = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
   const rad = (d) => (d * Math.PI) / 180;
@@ -1025,7 +1123,7 @@ void main() {
       return t;
     };
     const srcTex = newTex(), atlasTex = newTex();
-    let targets = null, atlasKey = "", atlasN = 1;
+    let targets = null;
 
     function ensureTargets(w, h) {
       if (targets && targets.w === w && targets.h === h) return;
@@ -1041,23 +1139,47 @@ void main() {
       targets = { w, h, list };
     }
 
-    function atlas(chars) {
-      const key = chars + (document.fonts?.check('16px "Geist Mono"') ? "|font" : "");
-      if (key === atlasKey) return;
-      atlasKey = key;
-      const glyphs = [...chars];
-      atlasN = Math.max(1, glyphs.length);
-      const cs = 64, c = document.createElement("canvas");
-      c.width = cs * atlasN; c.height = cs;
-      const x = c.getContext("2d");
-      x.fillStyle = "#000"; x.fillRect(0, 0, c.width, c.height);
-      x.fillStyle = "#fff"; x.textAlign = "center"; x.textBaseline = "middle";
-      x.font = `500 ${cs * 0.96}px "Geist Mono", ui-monospace, Menlo, monospace`;
-      x.lineWidth = cs * 0.035; x.strokeStyle = "#fff";
-      glyphs.forEach((g, i) => { x.fillText(g, i * cs + cs / 2, cs * 0.54); x.strokeText(g, i * cs + cs / 2, cs * 0.54); });
-      gl.bindTexture(gl.TEXTURE_2D, atlasTex);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+    // Glyph atlases, one row of square cells per character set and font, kept so two text effects in one
+    // stack don't rebuild each other's every frame. Each glyph is drawn smaller than its cell and the
+    // atlas is mipmapped, so letters stay legible when the cells are only a few pixels across.
+    const FONTS = {
+      geist: '"Geist Mono", ui-monospace, Menlo, Consolas, monospace',
+      ui: '"Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif',
+      mono: 'ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace',
+    };
+    const atlases = new Map(), fontAsked = new Set();
+    let atlasTexCur = atlasTex;
+    function atlas(chars, font = "geist", weight = 500) {
+      const fam = FONTS[font] || FONTS.geist, spec = `${weight} 48px ${fam}`;
+      // Web fonts load on first use; until then the fallback is drawn, and the atlas is redrawn once it lands.
+      let ready = true;
+      try { ready = font === "mono" || document.fonts.check(spec); if (!ready && !fontAsked.has(spec)) { fontAsked.add(spec); document.fonts.load(spec); } } catch (e) {}
+      const key = chars + "|" + font + "|" + weight + (ready ? "|ok" : "");
+      let a = atlases.get(key);
+      if (!a) {
+        if (atlases.size > 6) { for (const v of atlases.values()) gl.deleteTexture(v.t); atlases.clear(); }
+        const glyphs = [...chars], n = Math.max(1, glyphs.length);
+        const cs = Math.max(16, Math.min(64, Math.floor(maxSize / n))), c = document.createElement("canvas");
+        c.width = cs * n; c.height = cs;
+        const x = c.getContext("2d");
+        x.fillStyle = "#000"; x.fillRect(0, 0, c.width, c.height);
+        x.fillStyle = "#fff"; x.textAlign = "center"; x.textBaseline = "alphabetic";
+        x.font = `${weight} ${Math.round(cs * 0.74)}px ${fam}`;
+        // Centered on the ink of a capital, so letters, digits and symbols share one baseline.
+        const m = x.measureText("H"), asc = m.actualBoundingBoxAscent || cs * 0.52, base = cs / 2 + asc / 2;
+        glyphs.forEach((g, i) => x.fillText(g, i * cs + cs / 2, base));
+        const t = newTex();
+        gl.bindTexture(gl.TEXTURE_2D, t);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        a = { t, n };
+        atlases.set(key, a);
+      }
+      atlasTexCur = a.t;
+      return a.n;
     }
 
     function draw(name, input, output, uniforms, w, h, k, seed) {
@@ -1067,7 +1189,7 @@ void main() {
       gl.viewport(0, 0, w, h);
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, input);
       gl.uniform1i(loc("uTex"), 0);
-      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, atlasTexCur);
       gl.uniform1i(loc("uAtlas"), 1);
       gl.uniform2f(loc("uRes"), w, h);
       gl.uniform1f(loc("uK"), k);
@@ -1125,6 +1247,9 @@ void main() {
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      // Mipmaps keep fine stripes in a preset from breaking into moiré when the form is small.
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
       objTexs.set(key, t);
       return t;
     }
@@ -1185,8 +1310,11 @@ void main() {
         case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)) };
         case "ascii": {
           const set = e.set === "custom" ? " " + (e.custom || "#") : CHARSETS[e.set] || CHARSETS.ascii;
-          atlas(set);
-          return { uCell: e.cell, uCount: atlasN, uMono: e.mono ? 1 : 0, uInvert: e.invert ? 1 : 0, uInk: ink, uPaper: paper };
+          return { uCell: e.cell, uCount: atlas(set, e.font), uMono: e.mono ? 1 : 0, uInvert: e.invert ? 1 : 0, uInk: ink, uPaper: paper };
+        }
+        case "glyphs": {
+          const set = e.set === "custom" ? [...new Set(e.custom || "")].filter((ch) => ch.trim()).join("") || "#" : GLYPHSETS[e.set] || GLYPHSETS.alnum;
+          return { uCell: e.cell, uCount: atlas(set, e.font), uMono: e.mono ? 1 : 0, uGamma: e.contrast ?? 1, uChange: Math.round(e.change ?? 0), uBack: e.back ?? 0, uInk: ink, uPaper: paper };
         }
         case "dither": return { uMat: e.matrix, uLevels: e.levels, uMono: e.mono ? 1 : 0, uPix: e.pix, uInk: ink, uPaper: paper };
         case "chroma": return { uAmt: e.amount };
@@ -1207,6 +1335,7 @@ void main() {
         case "bulge": return { uAmt: e.amount, uRad: e.radius, uC: [e.x, 1 - e.y] };
         case "ripple": return { uAmp: e.amp, uLen: e.length, uDecay: e.decay, uShade: e.shade, uC: [e.x, 1 - e.y] };
         case "water": return { uAmt: e.amount, uScale: e.scale, uCaustic: e.caustic };
+        case "sea": return { uAmt: e.amount, uScale: e.scale, uCaustic: e.caustic, uChop: e.chop ?? 0.5, uDepth: e.depth ?? 0.3, uSpeed: Math.round(e.speed ?? 1) };
         case "cmyk": return { uSize: e.size, uAngle: rad(e.angle), uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)) };
         case "paper": return { uCrumple: e.crumple, uFiber: e.fiber, uScale: e.scale };
         case "heatmap": return { uGlow: e.glow, uMix: e.mix, uInvert: e.invert ? 1 : 0 };
@@ -1230,7 +1359,7 @@ void main() {
         draw("gradient", srcTex, targets.list[0].f, {
           uType: ["mesh", "linear", "radial", "conic", "flow", "noise", "aura"].indexOf(g.type), uN: n,
           uScale: g.scale ?? 1.2, uDetail: g.detail ?? 3, uStretch: g.stretch ?? 1, uContrast: g.contrast ?? 1,
-          uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring", "aura"].indexOf(g.noise || "clouds"),
+          uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring", "aura", "smoke"].indexOf(g.noise || "clouds"),
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
           uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle),
           uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5,
@@ -1268,6 +1397,7 @@ void main() {
         if (!e || !e.on || !SHADERS[id]) continue;
         const out = targets.list[ping];
         const un = effectUniforms(id, e, ink, paper);
+        un.uTime = job.time || 0;
         if (id === "chrome" && floatOK) {
           const a = floatTarget("chA", w, h, "half"), b = floatTarget("chB", w, h, "half"), sg = Math.max(0.8, (e.soft || 8) * k * 0.7);
           draw("hblur", input, a.f, { uDir2: [1, 0], uSigma: sg, uFirst: 1 }, w, h, k, 0);

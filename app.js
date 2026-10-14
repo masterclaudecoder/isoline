@@ -11,13 +11,16 @@
   const ic = (name, cls = "") => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 
   // ---------- effect catalog: [id, name, category, defaults, params] ----------
+  // Text effects pick the face their characters are drawn in.
+  const FONT_SEG = { seg: "font", label: "Font", options: [["geist", "Geist Mono"], ["ui", "Interface"], ["mono", "System mono"]] };
   const FXC = [
     ["liquify", "Liquify", "Distort", { amount: 0.5, scale: 220 }, [{ k: "amount", label: "Amount", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.9] }, { k: "scale", label: "Size", min: 20, max: 1200, step: 5, log: true, fmt: px, rand: [120, 500] }]],
     ["wave", "Waves", "Distort", { amp: 14, length: 220, angle: 0 }, [{ k: "amp", label: "Amplitude", min: 0, max: 160, step: 0.5, fmt: px, rand: [6, 30] }, { k: "length", label: "Wavelength", min: 10, max: 1200, step: 5, log: true, fmt: px, rand: [120, 400] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }]],
     ["swirl", "Twirl", "Distort", { amount: 3, radius: 0.55, x: 0.5, y: 0.5 }, [{ k: "amount", label: "Turn", min: -12, max: 12, step: 0.05, fmt: f2, rand: [-5, 5] }, { k: "radius", label: "Radius", min: 0.05, max: 1.5, step: 0.01, fmt: f2, rand: [0.35, 0.9] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }]],
     ["bulge", "Bulge", "Distort", { amount: 0.6, radius: 0.45, x: 0.5, y: 0.5 }, [{ k: "amount", label: "Amount", min: -1, max: 0.95, step: 0.01, fmt: f2, rand: [-0.5, 0.8] }, { k: "radius", label: "Radius", min: 0.05, max: 1.5, step: 0.01, fmt: f2, rand: [0.3, 0.7] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }]],
     ["ripple", "Ripples", "Distort", { amp: 10, length: 60, decay: 0.6, shade: 1, x: 0.5, y: 0.5 }, [{ k: "amp", label: "Amplitude", min: 0, max: 60, step: 0.5, fmt: px, rand: [4, 16] }, { k: "length", label: "Wavelength", min: 8, max: 400, step: 1, log: true, fmt: px, rand: [30, 120] }, { k: "decay", label: "Reach", min: 0.05, max: 3, step: 0.01, fmt: f2, rand: [0.3, 1.2] }, { k: "shade", label: "Light", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.5] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }]],
-    ["water", "Water", "Distort", { amount: 1, scale: 320, caustic: 0.6 }, [{ k: "amount", label: "Refraction", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 1.6] }, { k: "scale", label: "Size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [180, 520] }, { k: "caustic", label: "Caustics", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 1] }]],
+    ["sea", "Water", "Distort", { amount: 1, scale: 360, caustic: 0.7, chop: 0.5, depth: 0.25, speed: 1 }, [{ k: "amount", label: "Refraction", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 1.6] }, { k: "scale", label: "Wave size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [200, 600] }, { k: "caustic", label: "Light", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "chop", label: "Chop", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.9] }, { k: "depth", label: "Depth tint", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.5] }, { k: "speed", label: "Speed", min: 0, max: 4, step: 1, fmt: (v) => v + "× per loop", hard: [0, 12] }]],
+    ["water", "Caustic web", "Distort", { amount: 1, scale: 320, caustic: 0.6 }, [{ k: "amount", label: "Refraction", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 1.6] }, { k: "scale", label: "Size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [180, 520] }, { k: "caustic", label: "Caustics", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 1] }]],
     ["kaleido", "Kaleidoscope", "Distort", { segments: 6, rotate: 0, zoom: 1 }, [{ k: "segments", label: "Segments", min: 2, max: 16, step: 1, hard: [2, 64], rand: [4, 10] }, { k: "rotate", label: "Rotate", min: 0, max: 360, step: 1, fmt: deg }, { k: "zoom", label: "Zoom", min: 0.3, max: 3, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.7, 1.6] }]],
     ["glass", "Fluted glass", "Glass", { width: 44, angle: 90, strength: 0.9, frost: 0.2, light: 0.4 }, [{ k: "width", label: "Rib width", min: 4, max: 300, step: 1, log: true, fmt: px, rand: [24, 90] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }, { k: "strength", label: "Refraction", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.4] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.5] }, { k: "light", label: "Highlight", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.3, 0.7] }]],
     ["mesh", "Glass blocks", "Glass", { cell: 120, radius: 0, strength: 0.7, frost: 0.25, grout: 1, rim: 0.6, disp: 0.5 }, [{ k: "cell", label: "Block size", min: 12, max: 400, step: 1, log: true, fmt: px, rand: [70, 180] }, { k: "radius", label: "Corner radius", min: 0, max: 0.5, step: 0.01, fmt: pct, pct: true, rand: [0.12, 0.35] }, { k: "strength", label: "Refraction", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.1, 0.5] }, { k: "grout", label: "Gap", min: 0, max: 4, step: 0.05, fmt: f2, rand: [0.5, 1.5] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
@@ -38,7 +41,8 @@
     ["dither", "Dither", "Print", { matrix: 4, levels: 2, mono: true, pix: 2 }, [{ seg: "matrix", options: [[2, "2×2"], [4, "4×4"], [8, "8×8"]] }, { k: "levels", label: "Levels", min: 2, max: 8, step: 1, hard: [2, 32] }, { k: "pix", label: "Pixel", min: 1, max: 16, step: 1, fmt: px, rand: [2, 4], hard: [1, 128] }, { sw: "mono", label: "Ink only" }]],
     ["pixel", "Pixels", "Stylize", { size: 16, bevel: 0.5 }, [{ k: "size", label: "Size", min: 2, max: 160, step: 1, log: true, fmt: px, rand: [10, 36] }, { k: "bevel", label: "Bevel", min: 0, max: 1, step: 0.01, fmt: f2 }]],
     ["voronoi", "Crystallize", "Stylize", { cell: 42, edge: 0.06 }, [{ k: "cell", label: "Cell", min: 6, max: 300, step: 1, log: true, fmt: px, rand: [24, 80] }, { k: "edge", label: "Edges", min: 0, max: 0.5, step: 0.01, fmt: f2 }]],
-    ["ascii", "ASCII", "Stylize", { cell: 14, set: "ascii", custom: "", mono: true, invert: false }, [{ seg: "set", options: [["ascii", "ASCII"], ["blocks", "Blocks"], ["dots", "Dots"], ["binary", "01"], ["custom", "Custom"]] }, { text: "custom", label: "Characters", when: (e) => e.set === "custom" }, { k: "cell", label: "Cell", min: 4, max: 80, step: 1, log: true, fmt: px, rand: [10, 20] }, { sw: "mono", label: "Ink only" }, { sw: "invert", label: "Invert" }]],
+    ["ascii", "ASCII", "Stylize", { cell: 14, set: "ascii", custom: "", font: "geist", mono: true, invert: false }, [{ seg: "set", options: [["ascii", "ASCII"], ["blocks", "Blocks"], ["dots", "Dots"], ["binary", "01"], ["custom", "Custom"]] }, FONT_SEG, { text: "custom", label: "Characters", when: (e) => e.set === "custom" }, { k: "cell", label: "Cell", min: 4, max: 80, step: 1, log: true, fmt: px, rand: [10, 20] }, { sw: "mono", label: "Ink only" }, { sw: "invert", label: "Invert" }]],
+    ["glyphs", "Glyph field", "Stylize", { cell: 12, set: "alnum", custom: "", font: "geist", contrast: 1.2, change: 2, back: 0, mono: false }, [{ seg: "set", options: [["alnum", "Letters"], ["hex", "Hex"], ["binary", "01"], ["symbols", "Symbols"], ["kana", "Kana"], ["custom", "Custom"]] }, { text: "custom", label: "Characters", when: (e) => e.set === "custom" }, FONT_SEG, { k: "cell", label: "Cell", min: 4, max: 80, step: 1, log: true, fmt: px, rand: [8, 18] }, { k: "contrast", label: "Contrast", min: 0.3, max: 4, step: 0.01, log: true, fmt: f2, rand: [0.8, 2] }, { k: "change", label: "Shuffle", min: 0, max: 12, step: 1, fmt: (v) => (v ? v + "× per loop" : "Off"), hard: [0, 60] }, { k: "back", label: "Backdrop", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.3] }, { sw: "mono", label: "Ink only" }]],
     ["scan", "Scanlines", "Stylize", { spacing: 4, strength: 0.25 }, [{ k: "spacing", label: "Spacing", min: 2, max: 40, step: 0.5, fmt: px, rand: [3, 7] }, { k: "strength", label: "Strength", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.15, 0.4] }]],
     ["chroma", "Chromatic", "Stylize", { amount: 6 }, [{ k: "amount", label: "Shift", min: 0, max: 60, step: 0.5, fmt: px, rand: [2, 10] }]],
     ["paper", "Paper", "Texture", { crumple: 0.3, fiber: 0.6, scale: 420 }, [{ k: "crumple", label: "Crumple", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.3, 1.2] }, { k: "fiber", label: "Fibres", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 1] }, { k: "scale", label: "Size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [160, 480] }]],
@@ -47,7 +51,7 @@
   const FXI = Object.fromEntries(FXC.map(([id, name, cat, d, p]) => [id, { id, name, cat, d, p }]));
   const FX_IDS = FXC.map((f) => f[0]);
   // Effects with randomness get their own seed; 0 follows the design's seed.
-  const SEEDED = new Set(["liquify", "voronoi", "grain", "water", "paper", "riso", "rays"]);
+  const SEEDED = new Set(["liquify", "voronoi", "grain", "water", "sea", "glyphs", "paper", "riso", "rays"]);
   const FX_DEFAULTS = Object.fromEntries(FXC.map(([id, , , d]) => [id, { on: false, ...d, ...(SEEDED.has(id) ? { seed: 0 } : {}) }]));
   const FX_CATS = [...new Set(FXC.map((f) => f[2]))];
 
@@ -64,7 +68,7 @@
     ["image", "Image", "Your own picture"],
   ];
   const GEN_LABEL = Object.fromEntries(GENS.map((g) => [g[0], g[1]]));
-  const NOISE_TYPES = [["clouds", "Clouds"], ["ridges", "Ridges"], ["billow", "Billow"], ["cells", "Cells"], ["veins", "Veins"], ["marble", "Marble"], ["neuro", "Neuro"], ["ring", "Smoke ring"]];
+  const NOISE_TYPES = [["clouds", "Clouds"], ["ridges", "Ridges"], ["billow", "Billow"], ["cells", "Cells"], ["veins", "Veins"], ["marble", "Marble"], ["neuro", "Neuro"], ["ring", "Smoke ring"], ["smoke", "Smoke"]];
   // Objects: forms and pictures placed over the design, before effects. Forms take a material: lit in
   // the palette, wrapped in the design underneath, wrapped in a preset, or glass.
   const OBJ_KINDS = [["sphere", "Sphere"], ["torus", "Torus"], ["cube", "Cube"], ["capsule", "Capsule"], ["blob", "Blob"], ["pyramid", "Pyramid"], ["diamond", "Diamond"], ["image", "Picture"]];
@@ -299,6 +303,7 @@
     ["Noise", "Neuro", { ...G("noise", "Iris", { noise: "neuro", scale: 1, detail: 3, warp: 0.2, stretch: 1, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Noise", "Halo", { ...G("noise", "Dusk", { noise: "ring", scale: 0.8, detail: 3, warp: 0.6, stretch: 1, contrast: 1, angle: 0 }), fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Noise", "Aura", { ...G("aura", ["#050407", "#7a0f5c", "#e0336f", "#f2a81d", "#f4e04d"], { scale: 1, detail: 3, warp: 0.7, stretch: 1, soft: 1.6, contrast: 1, angle: 20 }), fx: { grain: { amount: 0.05, size: 1.2, soft: true } } }],
+    ["Noise", "Smoke", { ...G("noise", ["#060608", "#1d1d22", "#5b5b66", "#c9c9d1", "#ffffff"], { noise: "smoke", scale: 1.4, detail: 4, warp: 0.3, stretch: 1.2, contrast: 1.1, angle: 25 }), fx: { glyphs: { cell: 11, set: "alnum", font: "geist", contrast: 1.3, change: 2, back: 0, mono: false } }, motion: { type: "breathe", dur: 10, amt: 0.5 } }],
     ["Noise", "Lagoon", { ...G("aura", ["#02161c", "#05607a", "#0fb5d0", "#3fe3ef", "#b8fbff"], { scale: 2.6, detail: 3, warp: 0.5, stretch: 1.4, soft: 2.4, contrast: 1.2, angle: -30 }), motion: { type: "breathe", dur: 12, amt: 0.6 } }],
     ["Gradients", "Orb", { ...G("radial", "Dusk", { warp: 0.2, soft: 1.6 }), objects: [{ kind: "blob", x: 0.5, y: 0.5, size: 0.62, tilt: 29, spin: 25, mat: "shaded", shine: 0.6, ripple: 0.3, shadow: 0.35 }], fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Gradients", "Ring", { ...G("radial", "Glacier", { warp: 0, soft: 2 }), objects: [{ kind: "torus", x: 0.5, y: 0.5, size: 0.66, tilt: 29, spin: -30, mat: "shaded", shine: 0.8, shadow: 0.3 }], fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
@@ -851,7 +856,7 @@
   const patCards = {};
   for (const p of T.PATTERNS) { const c = card(p.label, () => { S.pattern = p.id; update({ fade: true }); }); $("patterns").appendChild(c); patCards[p.id] = c; }
   const noiseCards = {};
-  const NOISE_TIP = { clouds: "Soft, billowing noise", ridges: "Sharp crests like mountain ridges", billow: "Puffy, rounded swells", cells: "Stone-like cells", veins: "Thin lines between cells", marble: "Banded, swirling stone", neuro: "Knotted, glowing filaments", ring: "A soft ring of smoke" };
+  const NOISE_TIP = { clouds: "Soft, billowing noise", ridges: "Sharp crests like mountain ridges", billow: "Puffy, rounded swells", cells: "Stone-like cells", veins: "Thin lines between cells", marble: "Banded, swirling stone", neuro: "Knotted, glowing filaments", ring: "A soft ring of smoke", smoke: "Curling veils of smoke" };
   for (const [id, label] of NOISE_TYPES) { const c = card(label, () => { S.grad.noise = id; update({ fade: true }); }); c.dataset.tip = NOISE_TIP[id]; $("noiseTypes").appendChild(c); noiseCards[id] = c; }
   $("imgReplace").onclick = () => pickImage();
   const varCards = [];
@@ -1172,6 +1177,7 @@
         const seg = document.createElement("div");
         seg.className = "seg sm wrap";
         seg.innerHTML = p.options.map(([v, l]) => `<button data-v="${v}">${l}</button>`).join("");
+        if (p.label) { const lb = document.createElement("div"); lb.className = "label fx-seg-label"; lb.textContent = p.label; body.appendChild(lb); }
         body.appendChild(seg);
         makeSeg(seg, () => e()[p.seg], (v) => (e()[p.seg] = v));
       } else if (p.sw) makeSwitch(body, p.label, () => e()[p.sw], (v) => (e()[p.sw] = v));
@@ -1241,7 +1247,7 @@
     const g = st.grad;
     g.scale = clamp(g.scale, 0.25, 2.5); g.detail = Math.min(g.detail, 5); g.warp = Math.min(g.warp, 1);
     const f = st.fx;
-    f.pixel.size = Math.max(f.pixel.size, 8); f.ascii.cell = Math.max(f.ascii.cell, 9); f.halftone.size = Math.max(f.halftone.size, 6);
+    f.pixel.size = Math.max(f.pixel.size, 8); f.ascii.cell = Math.max(f.ascii.cell, 9); f.glyphs.cell = Math.max(f.glyphs.cell, 8); f.sea.amount = Math.min(f.sea.amount, 2); f.halftone.size = Math.max(f.halftone.size, 6);
     f.glass.width = Math.max(f.glass.width, 18); f.mesh.cell = Math.max(f.mesh.cell, 40); f.grain.amount = Math.min(f.grain.amount, 0.25);
     f.chroma.amount = Math.min(f.chroma.amount, 12); f.liquify.amount = Math.min(f.liquify.amount, 1);
     f.blur.amount = Math.min(f.blur.amount, 70); f.bloom.intensity = Math.min(f.bloom.intensity, 1.3); f.voronoi.cell = Math.max(f.voronoi.cell, 18);
@@ -2738,7 +2744,7 @@
     for (const [id, c] of Object.entries(fxCards)) c.classList.toggle("added", S.fxOrder.includes(id));
     varCards.forEach((c) => c.classList.toggle("on", c._seed === S.seed));
     if (panel === "colors") { renderPalettes(); renderMine(); }
-    $("inkSec").hidden = !S.fxOrder.some((id) => ["halftone", "linescreen", "ascii", "dither"].includes(id) && S.fx[id].mono);
+    $("inkSec").hidden = !S.fxOrder.some((id) => ["halftone", "linescreen", "ascii", "glyphs", "dither"].includes(id) && S.fx[id].mono);
     $("gradient").checked = S.gradient || S.mode === "layers" || S.mode === "shaded";
     $("gradient").disabled = S.mode === "layers" || S.mode === "shaded";
     $("transparent").checked = S.transparent;

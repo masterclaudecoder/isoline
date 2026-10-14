@@ -305,6 +305,7 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
 .seg.sm button { height: 26px; font-size: 12px; }
 .seg.wrap { grid-auto-flow: row; grid-template-columns: repeat(3, 1fr); }
 .fx-body .seg { margin-bottom: 14px; }
+.fx-seg-label { margin: 0 0 7px; }
 
 .swatches { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
 .swatches.off { opacity: .35; pointer-events: none; }
@@ -335,7 +336,12 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
 .menu-wrap { position: relative; }
 .pop { position: absolute; top: calc(100% + 8px); z-index: 30; background: var(--panel); border-radius: 14px; box-shadow: var(--pop); padding: 6px; min-width: 230px; }
 #sizeMenu { left: 50%; transform: translateX(-50%); max-height: min(70vh, 520px); overflow-y: auto; overscroll-behavior: contain; }
-.pop.export { right: 0; width: 300px; padding: 14px; display: grid; gap: 10px; }
+.pop.export { right: 0; width: 300px; padding: 14px; display: flex; flex-direction: column; }
+/* Spacing is a margin, not a gap: rows that fold away take their margin down with them, where a gap
+   would stay until the fold ends and then snap the rows below up. */
+.pop.export > * { min-height: 0; flex-shrink: 0; }
+.pop.export > * + * { margin-top: 10px; }
+.pop.export > .label { display: block; }
 .pop.settings { right: 0; width: 310px; padding: 8px; }
 @keyframes pop { from { opacity: 0; transform: translateY(-4px); } }
 .pop h3 { font-size: 12px; font-weight: 600; color: var(--muted); margin: 10px 10px 4px; }
