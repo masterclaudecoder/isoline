@@ -254,5 +254,34 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") openDD?.close(); });
   addEventListener("scroll", (e) => { if (openDD && !openDD.pop.contains(e.target)) openDD.close(); }, true);
 
-  root.UI = { flip, swap, autosize, collapse, resizable, dropdown, tip: { show, hide }, tipPreview: (name, fn) => (previews[name] = fn), reduce };
+  // ---------- option groups ----------
+  // A titled group of related controls that folds open and closed. Each group remembers whether it was
+  // left open, by its key, across visits. wrapGroup moves existing nodes inside, so their handlers stay.
+  const GROUPS = "isoline.groups";
+  let groupState = {};
+  try { groupState = JSON.parse(localStorage.getItem(GROUPS) || "{}"); } catch (e) {}
+  function group(title, { key = title, open = true, hint = "" } = {}) {
+    const g = document.createElement("section"), isOpen = groupState[key] ?? open;
+    g.className = "grp" + (isOpen ? " open" : "");
+    g.innerHTML = `<button type="button" class="grp-h" aria-expanded="${isOpen}"><span class="grp-t">${title}</span>${hint ? `<span class="grp-hint"></span>` : ""}<svg class="ic"><use href="#i-chev"/></svg></button><div class="grp-b"><div class="grp-in"></div></div>`;
+    const h = g.querySelector(".grp-h");
+    h.onclick = () => {
+      const now = !g.classList.contains("open");
+      g.classList.toggle("open", now); h.setAttribute("aria-expanded", now);
+      groupState[key] = now; try { localStorage.setItem(GROUPS, JSON.stringify(groupState)); } catch (e) {}
+    };
+    g.body = g.querySelector(".grp-in");
+    g.setHint = (t) => { const el = g.querySelector(".grp-hint"); if (el && el.textContent !== t) el.textContent = t; };
+    return g;
+  }
+  function wrapGroup(nodes, title, opts) {
+    nodes = nodes.filter(Boolean);
+    if (!nodes.length) return null;
+    const g = group(title, opts);
+    nodes[0].before(g);
+    for (const n of nodes) g.body.appendChild(n);
+    return g;
+  }
+
+  root.UI = { flip, swap, autosize, collapse, resizable, dropdown, group, wrapGroup, tip: { show, hide }, tipPreview: (name, fn) => (previews[name] = fn), reduce };
 })(window);

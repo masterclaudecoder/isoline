@@ -26,7 +26,7 @@ The home page (`#/`) shows three tools as large cards. Moving between pages is o
 Everything animates: menus, popovers and dialogs fade in and out, rows and sections fold open and closed, segmented controls slide their selection, lists glide when they reorder, and theme changes crossfade. Every surface shares one hover. Tooltips are custom and appear after a short pause.
 
 ## How it works
-The left column is the build, made of one slot per layer: **Preset, Generator, Shape, Lines, Colors, Effects, Motion**. Click a slot to open its options in the middle column; every choice there has a live preview of your current design. The Motion tile plays a small loop of your design when motion is on. Effects stack: `+ Add effect` adds another, the count badge shows how many there are, drag the grip to reorder them, and × removes one.
+The left column is the build, made of one slot per layer: **Preset, Generator, Shape, Lines, Colors, Objects, Effects, Motion**. Click a slot to open its options in the middle column; every choice there has a live preview of your current design. Options are grouped into collapsible sections that remember whether you left them open, and a closed group shows a short summary of its values. The Motion tile plays a small loop of your design when motion is on. Effects stack: `+ Add effect` adds another, the count badge shows how many there are, drag the grip to reorder them, and × removes one.
 
 ## Generators
 - **Canvas:** drag the handles that appear near the canvas edges to resize it. Your colors overlap when they run out of room, wrap only when they truly don't fit, and drag to reorder. Edit in Palettes opens them in the palette tool, and its button brings them back.
@@ -34,10 +34,19 @@ The left column is the build, made of one slot per layer: **Preset, Generator, S
 - **Contours** (vector, exports SVG; coming from a gradient, they start as bands in its colors): Blobs, Terrain, Flow, Rings, Ridges, Dunes, Lines, Strata, Waves. Scale, detail, warp, liquify, angle and metaball points. Double-click the canvas to add a peak, then drag to move it or scroll to resize it.
 - **Mesh:** draggable color points blended in OKLab.
 - **Flow:** domain-warped simplex noise for soft, flowing color fields. Pair it with Grain.
-- **Noise:** clouds, ridges, billow, cells, veins, marble, neuro, smoke ring and aura (a soft glowing body of swirling color, made to pair with Pulse), with scale, detail, stretch, angle, warp and contrast.
+- **Noise:** clouds, ridges, billow, cells, veins, marble, neuro, smoke ring and aura (glowing strands of light woven round a ring over a dark ground, made to pair with Pulse), with scale, detail, stretch, angle, warp and contrast.
 - **Linear, Radial, Conic** gradients.
-- **3D shape:** a raymarched sphere, torus, cube, capsule or blob, lit from the upper left and shaded through your colors. Size, angle, ripple, shine and contrast. Drift turns it, Breathe morphs the surface, Pulse beats it.
 - **Image:** your own picture, filling the canvas, as a base for effects. It is kept in the browser outside the design state (one at a time), so undo history and saved settings stay small.
+
+## Objects
+Objects sit on top of any generator, before effects, so effects apply to them too. Add up to eight: a sphere, torus, cube, capsule or blob, raymarched and lit from the upper left, or a picture card. Each has its own material:
+- **Shaded:** lit through your colors.
+- **Design:** wraps your current design round the shape, so it inherits the generator, lines and colors.
+- **Preset:** wraps a saved preset round it.
+- **Glass:** refracts what's behind it.
+- Pictures show as a photo or recolored through your palette.
+
+Drag an object on the canvas to move it, its corner to resize and its top handle to rotate (hold Shift to snap). Placement, orientation (tilt and spin) and surface (shine, ripple, rounding, shadow) are in its panel, along with duplicate and remove. Drift turns objects, Breathe bobs them and Pulse beats them. Designs made with the old 3D shape generator open as a gradient with the same shape as an object.
 
 ## Colors
 **Your colors** come first: a background plus up to six inks for contours, or up to eight stops for gradients. With more than two inks, plain contours cycle through them level by level, and blended or layered contours run a smooth ramp through them. Below that are palette tabs: Suggested (harmonies from your strongest color, plus the closest library palette), Curated, Brands, and Saved. Every palette card is resampled to your number of colors and applies at that count.
@@ -56,13 +65,15 @@ Hovering a motion type plays it on your own design in the tooltip.
 Each motion has a loop length, amplitude and seed, plus loop, ping-pong or once playback, forward or reverse, and easing. The easing is a preset or a custom cubic bezier you drag. Effects with randomness have their own seed. Play previews the loop on the canvas. Playback draws contours at the size they appear on screen, and if it still runs slow the preview gets lighter once and a note offers to remove effects or stop motion. Exports always render every frame at full quality. Video is a format in the Export menu, alongside SVG and PNG, and every export shows its progress. **Export MP4** renders every frame at an exact timestamp using the browser's video encoder (H.264, or VP9 where H.264 isn't available) and [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (MIT). Browsers without WebCodecs record a WebM in real time.
 
 ## Lines (contours only)
+Contours draw on the GPU while previewing and playing, so dense bands stay smooth in motion. Exports still use the vector path where it applies.
+
 Lines (strokes), Bands (filled stripes, PewDiePie-style), Layers (stacked fills) or Gradient (bands shaded through the inks on either side of them). Count or gap, bias, weight, swell, taper, accent lines, smoothing and cleanup.
 
 ## Effects (WebGL2, run top to bottom)
 - **Distort:** liquify, waves, twirl, bulge, ripples, water (with caustics), kaleidoscope
 - **Glass** (iOS-style bezel refraction, frost, hairline highlights and slight dispersion, with rounded glass blocks): fluted glass, glass blocks, liquid glass
 - **Light:** progressive blur, glow, relief, god rays, vignette
-- **Color:** gradient map, posterize, heatmap, liquid metal
+- **Color:** gradient map, posterize, heatmap, liquid metal (lit from a smoothed height map, so edges stay clean)
 - **Print:** halftone and CMYK halftone (circle, square, triangle or star dots), engrave, risograph, dither
 - **Stylize:** pixels, crystallize, ASCII, scanlines, chromatic
 - **Texture:** paper, film grain
@@ -72,6 +83,7 @@ Lines (strokes), Bands (filled stripes, PewDiePie-style), Layers (stacked fills)
 - A dice in each panel randomizes just that layer.
 - Motion closes the build list as a wide tile playing the loop.
 - **Safe values** (in settings): keeps everything in ranges that render cleanly. **Unlock values** lets you type past slider limits, after you confirm.
+- **Designs** (top bar, `⌘S`): save the current design to this browser and keep up to 30 versions of each. Open, rename, copy or delete one (with undo). Import or export one design or all of them as JSON. Designs saved by an older or newer version show what may look different before they open. **Copy link** makes a share link that holds the whole design in the URL, so it can be bookmarked or sent.
 - Click any value to type it. Settings import and export as JSON. `⌘Z` / `⇧⌘Z` undo and redo.
 - **Export:** SVG for contours, PNG 1–4× for everything, MP4 or GIF for motion, or `C` to copy for Figma.
 - **Theme:** Auto, light or dark, plus an accent color, in settings.

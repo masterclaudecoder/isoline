@@ -385,6 +385,54 @@
     return mix(inks[k], inks[k + 1], f - k);
   }
 
+  // ---------- GPU spec ----------
+  // Everything the WebGL contour renderer needs to rebuild this exact field on the GPU: the same seeded
+  // permutation table, points and bumps, so playback and drags match the still render. Swell and taper
+  // draw variable-width outlines, which only the SVG path can do, so those designs return null.
+  const permCache = new Map();
+  function permFor(seed) {
+    if (permCache.has(seed)) return permCache.get(seed);
+    const rand = mulberry32(seed), p = new Uint8Array(256), perm = new Float32Array(512);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    for (let i = 255; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; }
+    for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+    if (permCache.size > 16) permCache.clear();
+    permCache.set(seed, perm);
+    return perm;
+  }
+  function gpuSpec(s, res) {
+    if (s.swell > 0 || s.taper > 0) return null;
+    const w = s.w, h = s.h;
+    const cols = Math.max(2, Math.round(w / res)), rows = Math.max(2, Math.round(h / res));
+    if (cols > 4000 || rows > 4000) return null;
+    const sc = Math.max(4, s.scale), rand = mulberry32(s.seed ^ 0x9e3779b9);
+    const feats = [], auto = [];
+    for (let i = 0; i < 24; i++) {
+      const r = s.bumpSize * (0.6 + rand() * 0.8);
+      feats.push([rand() * w, rand() * h, r, (0.7 + rand() * 0.6) * (rand() < 0.3 ? -1 : 1)]);
+      auto.push([(0.08 + rand() * 0.84) * w, (0.08 + rand() * 0.84) * h, (0.25 + rand() * 0.45) * sc, 0.6 + rand() * 0.6]);
+    }
+    feats.length = Math.min(feats.length, s.features);
+    auto.length = Math.min(auto.length, Math.max(1, s.features));
+    const pts = s.usePoints && s.points ? s.points.map((p) => [p.x * w, p.y * h, Math.max(2, p.r), p.s]) : [];
+    if (pts.length > 32) return null;
+    const src = pts.length ? pts : auto;
+    const ang = ((s.angle + 90) * Math.PI) / 180;
+    const inks = [s.line, ...(s.mids || []), s.line2].slice(0, 8);
+    return {
+      cols, rows, nx: cols + 1, ny: rows + 1, sx: w / cols, sy: h / rows, w, h,
+      perm: permFor(s.seed), pattern: PATTERNS.findIndex((p) => p.id === s.pattern),
+      pts: src, user: pts.length ? 1 : 0, feats,
+      sc, oct: s.octaves, P: Math.max(0.3, s.falloff), bump: s.bump, liquify: s.liquify || 0, liqScale: Math.max(4, sc * (s.liqScale || 1)),
+      warp: s.warp || 0, loop: [s.loopX || 0, s.loopY || 0], drift: [s.driftX || 0, s.driftY || 0], dir: [Math.cos(ang), Math.sin(ang)],
+      sigma: Math.pow(s.smooth, 1.5) * 48,
+      lin: LINEAR.has(s.pattern), gap: Math.max(0.5, s.gap), phase: s.phase || 0, levels: s.levels, g: Math.pow(2, s.bias),
+      mode: ["lines", "bands", "layers", "shaded"].indexOf(s.mode || "lines"), band: Math.max(0.02, Math.min(0.98, s.band ?? 0.5)),
+      weight: s.weight, every: s.indexEvery || 0, indexWeight: s.indexWeight, blend: s.gradient ? 1 : 0, angle: s.angle || 0,
+      inks, bg: s.bg, clear: s.transparent ? 1 : 0, opacity: s.opacity ?? 1,
+    };
+  }
+
   // ---------- render ----------
   let svgSeq = 0;
   function buildSVG(s, opts = {}) {
@@ -488,5 +536,5 @@
     return { svg, count };
   }
 
-  root.Topo = { PATTERNS, LINEAR, ANGLED, buildSVG, mulberry32, makeNoise };
+  root.Topo = { PATTERNS, LINEAR, ANGLED, buildSVG, gpuSpec, buildField, mulberry32, makeNoise };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -64,10 +64,326 @@ vec3 liquid(vec2 uv, float sd, vec2 n, float bez, float refr, float frost, float
 }
 `;
 
+  // Linear light and OKLab, shared by the shaders that mix palette colors.
+  const COLOR = `
+vec3 lin(vec3 c) { return pow(c, vec3(2.2)); }
+vec3 srgb(vec3 c) { return pow(max(c, 0.0), vec3(1.0 / 2.2)); }
+vec3 toLab(vec3 c) {
+  float l = pow(0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b, 1.0 / 3.0);
+  float m = pow(0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b, 1.0 / 3.0);
+  float s = pow(0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b, 1.0 / 3.0);
+  return vec3(0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s, 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s);
+}
+vec3 fromLab(vec3 c) {
+  float l = c.x + 0.3963377774 * c.y + 0.2158037573 * c.z, m = c.x - 0.1055613458 * c.y - 0.0638541728 * c.z, s = c.x - 0.0894841775 * c.y - 1.2914855480 * c.z;
+  l = l * l * l; m = m * m * m; s = s * s * s;
+  return vec3(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
+}
+`;
+
   const SHADERS = {
     copy: `void main() { o = tex(vUv); }`,
 
-    gradient: `
+    // Contour field, a port of engine.js buildField: one texel per grid point, in design pixels.
+    field: `
+uniform sampler2D uTex2; uniform int uPattern; uniform float uSc; uniform int uOct; uniform float uP; uniform float uBump;
+uniform float uLiq; uniform float uLiqScale; uniform float uWarpA; uniform vec2 uLoop; uniform vec2 uDrift; uniform vec2 uDir;
+uniform vec2 uCell; uniform vec4 uPts[32]; uniform int uNPts; uniform int uUser; uniform vec4 uFeat[24]; uniform int uNFeat;
+int perm(int i) { return int(texelFetch(uTex2, ivec2(i, 0), 0).r + 0.5); }
+const float GX[8] = float[8](1., -1., 1., -1., 1., -1., 0., 0.);
+const float GY[8] = float[8](1., 1., -1., -1., 0., 0., 1., -1.);
+float sn(float xin, float yin) {
+  const float F2 = 0.36602540378443865, G2 = 0.21132486540518713;
+  float s = (xin + yin) * F2, fi = floor(xin + s), fj = floor(yin + s), t = (fi + fj) * G2;
+  float x0 = xin - (fi - t), y0 = yin - (fj - t);
+  int i1 = x0 > y0 ? 1 : 0, j1 = 1 - i1;
+  float x1 = x0 - float(i1) + G2, y1 = y0 - float(j1) + G2, x2 = x0 - 1.0 + 2.0 * G2, y2 = y0 - 1.0 + 2.0 * G2;
+  int ii = int(fi) & 255, jj = int(fj) & 255;
+  float n = 0.0, tt; int g;
+  tt = 0.5 - x0 * x0 - y0 * y0;
+  if (tt > 0.0) { g = perm(ii + perm(jj)) & 7; tt *= tt; n += tt * tt * (GX[g] * x0 + GY[g] * y0); }
+  tt = 0.5 - x1 * x1 - y1 * y1;
+  if (tt > 0.0) { g = perm(ii + i1 + perm(jj + j1)) & 7; tt *= tt; n += tt * tt * (GX[g] * x1 + GY[g] * y1); }
+  tt = 0.5 - x2 * x2 - y2 * y2;
+  if (tt > 0.0) { g = perm(ii + 1 + perm(jj + 1)) & 7; tt *= tt; n += tt * tt * (GX[g] * x2 + GY[g] * y2); }
+  return 70.0 * n;
+}
+float fbmS(float x, float y, int o) {
+  float a = 1.0, q = 1.0, sum = 0.0, norm = 0.0;
+  for (int i = 0; i < 12; i++) { if (i >= o) break; sum += a * sn(x * q, y * q); norm += a; a *= 0.5; q *= 2.03; }
+  return sum / norm;
+}
+float ridgedS(float x, float y, int o) {
+  float a = 1.0, q = 1.0, sum = 0.0, norm = 0.0;
+  for (int i = 0; i < 12; i++) { if (i >= o) break; float r = 1.0 - abs(sn(x * q, y * q)); sum += a * r * r; norm += a; a *= 0.5; q *= 2.03; }
+  return sum / norm;
+}
+float pointSum(vec2 p, bool userOnly, bool px) {
+  if (userOnly && uUser == 0) return 0.0;
+  float v = 0.0;
+  for (int i = 0; i < 32; i++) {
+    if (i >= uNPts) break;
+    vec4 q = uPts[i]; vec2 d = p - q.xy;
+    v += q.w * (px ? q.z : 1.0) * pow(1.0 + dot(d, d) / (q.z * q.z * uP), -uP);
+  }
+  return v;
+}
+void main() {
+  vec2 ij = floor(gl_FragCoord.xy);
+  float px = ij.x * uCell.x + uDrift.x, py = ij.y * uCell.y + uDrift.y;
+  if (uLiq > 0.0) {
+    float u0 = px / uLiqScale, v0 = py / uLiqScale;
+    float qx = sn(u0 + 1.3, v0 + 7.1), qy = sn(u0 + 8.2, v0 + 2.8);
+    px += uLiq * uLiqScale * 0.06 * sn(u0 + 1.2 * qx + 4.7, v0 + 1.2 * qy + 1.9);
+    py += uLiq * uLiqScale * 0.06 * sn(u0 + 1.2 * qx + 9.2, v0 + 1.2 * qy + 5.3);
+  }
+  if (uWarpA > 0.0) {
+    float u0 = px / uSc, v0 = py / uSc;
+    float dx = uWarpA * uSc * 0.5 * fbmS(u0 + 5.2 + uLoop.x, v0 + 1.3 + uLoop.y, 2);
+    float dy = uWarpA * uSc * 0.5 * fbmS(u0 + 1.7 - uLoop.y, v0 + 9.2 + uLoop.x, 2);
+    px += dx; py += dy;
+  }
+  float u = px / uSc, v = py / uSc, val; vec2 p = vec2(px, py); float lin = px * uDir.x + py * uDir.y;
+  if (uPattern == 0) val = pointSum(p, false, false) + (uOct > 1 ? 0.06 * fbmS(u, v, uOct - 1) : 0.0);
+  else if (uPattern == 1) val = fbmS(u, v, uOct) + 0.8 * pointSum(p, true, false);
+  else if (uPattern == 4) val = ridgedS(u, v, uOct) + 0.6 * pointSum(p, true, false);
+  else if (uPattern == 2) val = sin((u * uDir.x + v * uDir.y) * 2.4 + fbmS(u * 0.45, v * 0.45, uOct) * 2.2) + pointSum(p, true, false);
+  else if (uPattern == 5) val = 1.0 - abs(sin((u * uDir.x + v * uDir.y) * 1.6 + uBump * 1.2 * fbmS(u * 0.4, v * 0.4, uOct))) + 0.6 * pointSum(p, true, false);
+  else if (uPattern == 6) val = lin + pointSum(p, true, true);
+  else if (uPattern == 7) {
+    val = lin + pointSum(p, true, true);
+    for (int i = 0; i < 24; i++) { if (i >= uNFeat) break; vec4 f = uFeat[i]; vec2 d = p - f.xy; val += uBump * f.w * f.z * exp(-dot(d, d) / (2.0 * f.z * f.z)); }
+  }
+  else if (uPattern == 8) val = lin + uBump * uSc * 0.35 * fbmS(u * 0.5, v * 0.5, uOct) + pointSum(p, true, true);
+  else if (uPattern == 3) {
+    // Log-sum-exp form of the smooth minimum, so far points don't underflow in single precision.
+    float smk = 40.0, m = 1e30;
+    for (int i = 0; i < 32; i++) { if (i >= uNPts) break; m = min(m, length(p - uPts[i].xy) / max(0.15, abs(uPts[i].w)) / smk); }
+    float acc = 0.0;
+    for (int i = 0; i < 32; i++) { if (i >= uNPts) break; acc += exp(m - length(p - uPts[i].xy) / max(0.15, abs(uPts[i].w)) / smk); }
+    val = smk * (m - log(acc));
+  }
+  else val = fbmS(u, v, uOct);
+  o = vec4(val, 0.0, 0.0, 1.0);
+}`,
+
+    // One object over the picture so far: a lit 3D form or a picture card, placed, turned and tilted.
+    // Forms are raymarched in their own unit space; materials read the palette, the design underneath
+    // (wrapped onto the surface so it turns with the form), a texture (a preset or a picture), or
+    // refract what's behind like glass. A soft contact shadow sits under each one.
+    object: COLOR + `
+uniform int uKind; uniform vec2 uC; uniform float uSz; uniform float uRot; uniform float uTilt; uniform float uSpin;
+uniform int uMat; uniform float uShine; uniform float uRipple; uniform float uShadow; uniform float uAsp; uniform float uRound;
+uniform vec3 uCol[8]; uniform int uN; uniform sampler2D uTex2; uniform int uHasTex;
+uniform float uTime; uniform int uMotion; uniform float uMotAmt;
+float gPh = 0.0;
+mat3 rotY(float t) { float c = cos(t), s = sin(t); return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
+mat3 rotX(float t) { float c = cos(t), s = sin(t); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
+vec3 ramp(float t) {
+  t = clamp(t, 0.0, 1.0) * float(uN - 1);
+  int i = min(int(floor(t)), uN - 2); float f = t - float(i); f = f * f * (3.0 - 2.0 * f);
+  return mix(toLab(lin(uCol[i])), toLab(lin(uCol[i + 1])), f);
+}
+float sd(vec3 p) {
+  float d;
+  if (uKind == 0) d = length(p) - 1.0;
+  else if (uKind == 1) d = length(vec2(length(p.xz) - 0.72, p.y)) - 0.3;
+  else if (uKind == 2) { vec3 q = abs(p) - vec3(0.6); d = length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0) - 0.16; }
+  else if (uKind == 3) { vec3 q = p; q.y -= clamp(q.y, -0.55, 0.55); d = length(q) - 0.44; }
+  else d = length(p) - 0.95 + 0.14 * sin(2.6 * p.x + gPh) * sin(2.6 * p.y + gPh * 2.0) * sin(2.6 * p.z - gPh);
+  d += uRipple * 0.045 * sin(7.0 * p.x + gPh) * sin(7.0 * p.y - gPh) * sin(7.0 * p.z);
+  return d * 0.8;
+}
+vec2 toPx(vec2 l) { float c = cos(uRot), s = sin(uRot); return uC + mat2(c, s, -s, c) * vec2(l.x, -l.y) * uSz; }
+vec4 texAt(vec2 px) { return tex(vec2(px.x / uRes.x, 1.0 - px.y / uRes.y)); }
+void main() {
+  float tw = 6.2831853 * uTime, beat = uMotion == 4 ? pow(0.5 - 0.5 * cos(tw * 4.0), 3.0) : 0.0;
+  gPh = uMotion == 3 ? tw : 0.0;
+  vec2 C = uC + (uMotion == 3 ? vec2(0.0, 0.04 * uMotAmt * uSz * sin(tw)) : vec2(0.0));
+  float S = uSz * (1.0 + 0.08 * uMotAmt * beat), spin = uSpin + (uMotion == 1 ? tw : 0.0);
+  vec2 pp = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
+  vec4 base = tex(vUv);
+  float c = cos(uRot), s = sin(uRot);
+  vec2 q = mat2(c, -s, s, c) * (pp - C) / S; q.y = -q.y;
+  // Contact shadow: a soft ellipse a little below the form, darkening what's underneath.
+  vec2 sq = (pp - C - vec2(0.06, 0.95) * S) / (S * vec2(1.0, 0.26));
+  base.rgb *= 1.0 - uShadow * 0.5 * exp(-dot(sq, sq) * 1.6);
+  mat3 R = rotY(spin) * rotX(uTilt), Ri = transpose(R);
+  vec3 ro = vec3(q, 3.0), rd = vec3(0.0, 0.0, -1.0), L = normalize(vec3(-0.6, 0.8, 0.7));
+  float px = 1.0 / S;
+  if (uKind == 5) {
+    // Picture card: a rounded rectangle on a plane, hit by the view ray.
+    vec3 n = R * vec3(0.0, 0.0, 1.0);
+    if (abs(n.z) < 1e-3) { o = base; return; }
+    float t = dot(n, -ro) / dot(n, rd); vec3 lp = Ri * (ro + rd * t);
+    vec2 hb = uAsp >= 1.0 ? vec2(1.0, 1.0 / uAsp) : vec2(uAsp, 1.0);
+    float rr = uRound * min(hb.x, hb.y) * 0.5, d = sdBox(lp.xy, hb, rr);
+    float cov = clamp(0.5 - d / (px / max(0.2, abs(n.z))), 0.0, 1.0);
+    if (cov <= 0.0) { o = base; return; }
+    vec2 uv = lp.xy / hb * 0.5 + 0.5; if (n.z < 0.0) uv.x = 1.0 - uv.x;
+    vec3 col = uHasTex == 1 ? texture(uTex2, vec2(uv.x, 1.0 - uv.y)).rgb : vec3(0.85);
+    if (uMat == 4) col = srgb(fromLab(ramp(luma(col))));
+    float lit = 0.88 + 0.12 * dot(n * sign(n.z), L), sp = pow(max(0.0, dot(reflect(rd, n * sign(n.z)), L)), 40.0);
+    col = col * lit + uShine * 0.5 * sp;
+    o = vec4(mix(base.rgb, clamp(col, 0.0, 1.0), cov), base.a); return;
+  }
+  float t = 0.0, md = 1e9, mt = 0.0;
+  for (int i = 0; i < 80; i++) { float d = sd(Ri * (ro + rd * t)); if (d < md) { md = d; mt = t; } if (d < 0.0005 || t > 6.0) break; t += d; }
+  float cov = 1.0 - smoothstep(0.0, 1.5 * px, md);
+  if (cov <= 0.0) { o = base; return; }
+  vec3 pos = ro + rd * mt; vec2 e = vec2(1.0, -1.0) * 0.0015;
+  vec3 n = normalize(e.xyy * sd(Ri * (pos + e.xyy)) + e.yyx * sd(Ri * (pos + e.yyx)) + e.yxy * sd(Ri * (pos + e.yxy)) + e.xxx * sd(Ri * (pos + e.xxx)));
+  float wrap = dot(n, L) * 0.5 + 0.5, fr = pow(1.0 - clamp(dot(n, -rd), 0.0, 1.0), 3.0), sp = pow(clamp(dot(reflect(rd, n), L), 0.0, 1.0), 32.0);
+  vec3 col;
+  if (uMat == 0) {
+    vec3 lab = ramp(clamp(0.12 + 0.8 * wrap * wrap + 0.22 * fr, 0.0, 1.0));
+    lab.x += 0.3 * sp * uShine;
+    col = srgb(fromLab(lab));
+  } else if (uMat == 3) {
+    // Glass: what's behind bends through the form, with a bright rim and a highlight.
+    vec2 off = n.xy * vec2(1.0, -1.0) * S * 0.45 * (0.4 + fr);
+    vec2 bp = pp + mat2(c, s, -s, c) * off;
+    col = vec3(texAt(bp + vec2(1.5, 0.0) * fr * 4.0).r, texAt(bp).g, texAt(bp - vec2(1.5, 0.0) * fr * 4.0).b);
+    col = mix(col, vec3(1.0), 0.06 + 0.5 * fr) + uShine * 0.8 * sp;
+  } else {
+    vec3 sp3 = Ri * pos, alb;
+    if (uMat == 1 || uHasTex == 0) alb = texAt(toPx(sp3.xy * 0.95)).rgb;
+    else { float u = atan(sp3.z, sp3.x) / 6.2831853 + 0.5, v = 0.5 - asin(clamp(normalize(sp3).y, -1.0, 1.0)) / 3.14159265; alb = texture(uTex2, vec2(u, v)).rgb; }
+    col = alb * (0.42 + 0.72 * wrap) + vec3(0.18 * fr) + uShine * 0.55 * sp;
+  }
+  o = vec4(mix(base.rgb, clamp(col, 0.0, 1.0), cov), base.a);
+}`,
+
+    // Min and max of the field, four by four texels per pass until one is left.
+    fminmax: `
+uniform int uFirst; uniform ivec2 uIn;
+void main() {
+  ivec2 b = ivec2(floor(gl_FragCoord.xy)) * 4; float lo = 1e30, hi = -1e30;
+  for (int j = 0; j < 4; j++) for (int i = 0; i < 4; i++) {
+    ivec2 q = b + ivec2(i, j); if (q.x >= uIn.x || q.y >= uIn.y) continue;
+    vec4 t = texelFetch(uTex, q, 0); lo = min(lo, t.r); hi = max(hi, uFirst == 1 ? t.r : t.g);
+  }
+  o = vec4(lo, hi, 0.0, 1.0);
+}`,
+
+    // Separable Gaussian on the field grid: the GPU stand-in for smoothing each contour line.
+    fblur: `
+uniform vec2 uDir2; uniform float uSigma; uniform ivec2 uIn;
+void main() {
+  ivec2 c = ivec2(floor(gl_FragCoord.xy)); int r = int(min(64.0, ceil(uSigma * 3.0)));
+  float s = 0.0, wsum = 0.0;
+  for (int i = -64; i <= 64; i++) {
+    if (i < -r || i > r) continue;
+    ivec2 q = clamp(c + ivec2(uDir2) * i, ivec2(0), uIn - 1);
+    float w = exp(-float(i * i) / (2.0 * uSigma * uSigma)); s += w * texelFetch(uTex, q, 0).r; wsum += w;
+  }
+  o = vec4(s / wsum, 0.0, 0.0, 1.0);
+}`,
+
+    // Gaussian blur of brightness (first pass) or of the previous pass, for the liquid metal height.
+    hblur: `
+uniform vec2 uDir2; uniform float uSigma; uniform int uFirst;
+void main() {
+  int r = int(min(48.0, ceil(uSigma * 2.6))); float s = 0.0, wsum = 0.0; vec2 st = uDir2 / uRes;
+  for (int i = -48; i <= 48; i++) {
+    if (i < -r || i > r) continue;
+    vec4 t = tex(vUv + st * float(i)); float w = exp(-float(i * i) / (2.0 * uSigma * uSigma));
+    s += w * (uFirst == 1 ? luma(t.rgb) : t.r); wsum += w;
+  }
+  o = vec4(s / wsum, 0.0, 0.0, 1.0);
+}`,
+
+    // Contours shaded straight from the field: lines, bands, stacked layers or shaded bands, antialiased
+    // by the field's own slope, with the canvas edge cutting regions cleanly.
+    contours: `
+uniform sampler2D uTex2; uniform vec2 uCell; uniform ivec2 uIn; uniform vec2 uDesign;
+uniform int uMode; uniform float uLin; uniform float uGap; uniform float uPh; uniform float uLevels; uniform float uG;
+uniform float uWeight; uniform float uEvery; uniform float uIdxW; uniform float uBand; uniform float uBlend;
+uniform vec3 uInk[8]; uniform int uNInk; uniform vec3 uBg; uniform float uClear; uniform float uOpacity; uniform float uAng;
+float F(ivec2 q) { return texelFetch(uTex, clamp(q, ivec2(0), uIn - 1), 0).r; }
+float cr(float a, float b, float c, float d, float t) { return b + 0.5 * t * (c - a + t * (2.0 * a - 5.0 * b + 4.0 * c - d + t * (3.0 * (b - c) + d - a))); }
+float field(vec2 g) {
+  vec2 i = floor(g), t = g - i; ivec2 b = ivec2(i);
+  float r[4];
+  for (int j = 0; j < 4; j++) r[j] = cr(F(b + ivec2(-1, j - 1)), F(b + ivec2(0, j - 1)), F(b + ivec2(1, j - 1)), F(b + ivec2(2, j - 1)), t.x);
+  return cr(r[0], r[1], r[2], r[3], t.y);
+}
+float fmin, fmax, span;
+float rOf(float v) {
+  if (uLin > 0.5) return v / uGap - uPh;
+  float tn = clamp((v - fmin) / span, 0.0, 1.0);
+  return (uLevels + 1.0) * pow(tn, 1.0 / uG) - uPh;
+}
+float tOf(float idx) { return uLin > 0.5 ? (idx + uPh) * uGap : fmin + pow((idx + uPh) / (uLevels + 1.0), uG) * span; }
+vec2 range() {
+  if (uLin > 0.5) { float a = floor(fmin / uGap - uPh); if ((a + uPh) * uGap <= fmin) a += 1.0; float b = ceil(fmax / uGap - uPh); if ((b + uPh) * uGap >= fmax) b -= 1.0; return vec2(a, b); }
+  float a = -ceil(uPh) + 1.0; if (a + uPh <= 0.0) a += 1.0;
+  float b = uLevels; if (b + uPh >= uLevels + 1.0) b -= 1.0;
+  return vec2(a, b);
+}
+vec3 ink(float idx, float i0, bool blend) {
+  float pos = clamp((tOf(idx) - fmin) / span, 0.0, 1.0);
+  if (uNInk == 2 && !blend) return uInk[0];
+  if (!blend) { int k = int(mod(idx - i0, float(uNInk))); return uInk[k]; }
+  float f = pos * float(uNInk - 1); int k = min(uNInk - 2, int(floor(f)));
+  return mix(uInk[k], uInk[k + 1], f - float(k));
+}
+vec2 rg;
+vec4 layer(float n) { return n < rg.x ? vec4(uBg, 0.0) : vec4(ink(min(n, rg.y), rg.x, true), 1.0); }
+vec3 inkAt(float pos) {
+  float f = clamp(pos, 0.0, 1.0) * float(uNInk - 1); int k = min(uNInk - 2, int(floor(f)));
+  return mix(uInk[k], uInk[k + 1], f - float(k));
+}
+void main() {
+  vec4 mm = texelFetch(uTex2, ivec2(0), 0); fmin = mm.r; fmax = mm.g; span = max(1e-9, fmax - fmin);
+  vec2 dp = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y) * uDesign / uRes;
+  float r = rOf(field(dp / uCell));
+  float gr = max(1e-6, length(vec2(dFdx(r), dFdy(r))));
+  rg = range();
+  vec3 col = uBg; float a = 0.0;
+  if (uMode == 0) {
+    float idx = floor(r + 0.5);
+    if (idx >= rg.x && idx <= rg.y) {
+      bool major = uEvery > 0.5 && mod(idx, uEvery) < 0.5;
+      // Exact coverage of a one-pixel box by the stroke, so hairlines fade instead of breaking up.
+      float sw = uWeight * (major ? uIdxW : 1.0) * uRes.x / uDesign.x, d = abs(r - idx) / gr;
+      a = clamp(min(d + 0.5, sw * 0.5) - max(d - 0.5, -sw * 0.5), 0.0, 1.0);
+      // Where lines crowd closer than a few pixels, each pixel would hit or miss one at random. Those
+      // stretches fade to the share of the area the lines cover, which is what the eye sees anyway.
+      a = mix(a, min(1.0, sw * gr), smoothstep(0.22, 0.5, gr));
+      col = ink(idx, 1.0, uBlend > 0.5);
+    }
+  } else if (uMode == 2) {
+    // Layers: each contour stacks its color on everything above it.
+    float idx = floor(r), f = r - idx;
+    vec4 c = mix(layer(idx - 1.0), layer(idx), clamp(f / gr + 0.5, 0.0, 1.0));
+    c = mix(c, layer(idx + 1.0), clamp((f - 1.0) / gr + 0.5, 0.0, 1.0));
+    col = c.rgb; a = c.a;
+  } else {
+    // Bands: from each contour part way to the next, measured on the field like the SVG renderer.
+    float idx = floor(r);
+    for (int k = 0; k <= 1; k++) {
+      float id = idx + float(k);
+      if (id < rg.x || id > rg.y) continue;
+      float t0 = tOf(id), t1 = id + 1.0 <= rg.y ? tOf(id + 1.0) : 2.0 * t0 - tOf(id - 1.0);
+      float top = rOf(t0 + uBand * (t1 - t0)) - id, fr = r - id;
+      float cov = mix(clamp(min(fr, top - fr) / gr + 0.5, 0.0, 1.0), uBand, smoothstep(0.3, 0.7, gr));
+      if (cov > a) {
+        a = cov;
+        if (uMode == 3) {
+          float th = radians(-uAng + 90.0), x = dot(dp / uDesign - 0.5, vec2(cos(th), sin(th))) + 0.5;
+          float dq = 1.5 / max(2.0, rg.y - rg.x + 1.0);
+          col = inkAt((t0 - fmin) / span + dq * (2.0 * x - 1.0));
+        } else col = ink(id, rg.x, uBlend > 0.5);
+      }
+    }
+  }
+  a *= uOpacity;
+  if (uClear > 0.5) o = vec4(col, a);
+  else o = vec4(mix(uBg, col, a), 1.0);
+}`,
+
+    gradient: COLOR + `
 uniform int uType; uniform int uN; uniform vec3 uCol[8]; uniform vec2 uPt[8];
 uniform float uWarp; uniform float uWarpScale; uniform float uSoft; uniform float uAngle;
 uniform float uScale; uniform float uDetail; uniform float uStretch; uniform float uContrast; uniform int uNoise;
@@ -102,56 +418,11 @@ vec2 worley(vec2 p) {
   for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 g = vec2(float(x), float(y)); float d = length(g + cellPt(i + g) - f); if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) f2 = d; }
   return vec2(f1, f2);
 }
-vec3 lin(vec3 c) { return pow(c, vec3(2.2)); }
-vec3 srgb(vec3 c) { return pow(max(c, 0.0), vec3(1.0 / 2.2)); }
-vec3 toLab(vec3 c) {
-  float l = pow(0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b, 1.0 / 3.0);
-  float m = pow(0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b, 1.0 / 3.0);
-  float s = pow(0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b, 1.0 / 3.0);
-  return vec3(0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s, 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s);
-}
-vec3 fromLab(vec3 c) {
-  float l = c.x + 0.3963377774 * c.y + 0.2158037573 * c.z, m = c.x - 0.1055613458 * c.y - 0.0638541728 * c.z, s = c.x - 0.0894841775 * c.y - 1.2914855480 * c.z;
-  l = l * l * l; m = m * m * m; s = s * s * s;
-  return vec3(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s);
-}
 vec3 ramp(float t) {
   if (uMotion == 2) t += 0.22 * uMotAmt * sin(6.2831853 * uTime);
   t = clamp(t, 0.0, 1.0) * float(uN - 1);
   int i = min(int(floor(t)), uN - 2); float f = t - float(i); f = f * f * (3.0 - 2.0 * f);
   return mix(toLab(lin(uCol[i])), toLab(lin(uCol[i + 1])), f);
-}
-// 3D shapes: a raymarched solid lit from the upper left, its shading read through the color ramp.
-float gPh = 0.0;
-mat3 rotY(float t) { float c = cos(t), s = sin(t); return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
-mat3 rotX(float t) { float c = cos(t), s = sin(t); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
-float solidSD(vec3 p, float sz) {
-  float d;
-  if (uNoise == 0) d = length(p) - sz;
-  else if (uNoise == 1) d = length(vec2(length(p.xz) - sz * 0.78, p.y)) - sz * 0.32;
-  else if (uNoise == 2) { vec3 q = abs(p) - vec3(sz * 0.5); d = length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0) - sz * 0.16; }
-  else if (uNoise == 3) { vec3 q = p; q.y -= clamp(q.y, -sz * 0.6, sz * 0.6); d = length(q) - sz * 0.46; }
-  else d = length(p) - sz + 0.14 * sz * sin(2.6 * p.x / sz + gPh) * sin(2.6 * p.y / sz + gPh * 2.0) * sin(2.6 * p.z / sz - gPh);
-  d += uWarp * 0.045 * sz * sin(7.0 * p.x / sz + gPh) * sin(7.0 * p.y / sz - gPh) * sin(7.0 * p.z / sz);
-  return d * 0.8;
-}
-vec3 solid(vec2 c, float tw, float beat) {
-  gPh = uMotion == 3 ? tw : 0.0;
-  vec3 ro = vec3(0.0, 0.0, 3.2), rd = normalize(vec3(c.x, -c.y, -1.55));
-  mat3 R = transpose(rotY(uAngle + (uMotion == 1 ? tw : 0.0)) * rotX(0.5));
-  float sz = (0.35 + 0.6 * clamp(uScale, 0.1, 2.0)) * (1.0 + 0.1 * uMotAmt * beat);
-  float t = 0.0, md = 1e9, mt = 0.0;
-  for (int i = 0; i < 90; i++) { float d = solidSD(R * (ro + rd * t), sz); if (d < md) { md = d; mt = t; } if (d < 0.0005 || t > 7.0) break; t += d; }
-  vec3 bg = ramp(0.0);
-  float cov = 1.0 - smoothstep(0.0, 1.5 * mt / (1.55 * uRes.y), md);
-  if (cov <= 0.0) return bg;
-  vec3 pos = ro + rd * mt; vec2 e = vec2(1.0, -1.0) * 0.0015;
-  vec3 n = normalize(e.xyy * solidSD(R * (pos + e.xyy), sz) + e.yyx * solidSD(R * (pos + e.yyx), sz) + e.yxy * solidSD(R * (pos + e.yxy), sz) + e.xxx * solidSD(R * (pos + e.xxx), sz));
-  vec3 L = normalize(vec3(-0.6, 0.8, 0.7));
-  float wrap = dot(n, L) * 0.5 + 0.5, fr = pow(1.0 - clamp(dot(n, -rd), 0.0, 1.0), 3.0), sp = pow(clamp(dot(reflect(rd, n), L), 0.0, 1.0), 32.0);
-  vec3 lab = ramp(clamp((0.12 + 0.8 * wrap * wrap + 0.22 * fr - 0.5) * uContrast + 0.5, 0.0, 1.0));
-  lab.x += 0.3 * sp * uSoft / 1.6;
-  return mix(bg, lab, cov);
 }
 void main() {
   vec2 a = vec2(uRes.x / uRes.y, 1.0);
@@ -165,7 +436,6 @@ void main() {
   float beat = uMotion == 4 ? pow(0.5 - 0.5 * cos(tw * 4.0), 3.0) : 0.0, lm = br ? 1.0 : uMotion == 4 ? 0.4 : 0.0;
   vec2 L1 = lm * 1.5 * uMotAmt * vec2(cos(tw), sin(tw));
   vec2 L2 = lm * 1.1 * uMotAmt * vec2(sin(tw + 1.3), cos(2.0 * tw + 0.7));
-  if (uType == 6) { o = vec4(srgb(fromLab(solid((p - 0.5) * a, tw, beat))), 1.0); return; }
   p = 0.5 + (p - 0.5) * (1.0 - 0.07 * uMotAmt * beat);
   float warp = br ? max(uWarp, 0.7 * uMotAmt) * (1.0 + 0.2 * uMotAmt * sin(tw)) : uWarp;
   if (uType >= 1 && uType <= 3) p += drift * 0.03;
@@ -192,16 +462,26 @@ void main() {
       else if (uNoise == 5) v = 0.5 + 0.5 * sin(q.x * 4.0 + sfbm(q) * 5.0);
       else if (uNoise == 6) { float nn = neuro(q * 0.5); v = clamp(1.2 * pow(nn, 3.0) + pow(nn, 10.0) - 0.1, 0.0, 1.0); }
       else if (uNoise == 8) {
-        // Aura: a soft glowing body of swirling color, its edge rippling, with a halo around it.
-        vec2 c = (p - 0.5) * a; float r = length(c), ang = atan(c.y, c.x); vec2 dv = vec2(cos(ang), sin(ang));
-        float R = (0.18 + 0.25 * clamp(uScale, 0.1, 2.0)) * (1.0 + 0.14 * uMotAmt * beat);
-        float edge = snoise(dv * 0.8 + uSeed * 0.37 + L1 * 0.4) * (0.025 + 0.05 * warp), soft = 0.04 + 0.14 / max(uStretch, 0.3);
-        float body = smoothstep(R + edge + soft, R + edge - soft, r);
-        vec2 sc = c * 1.7 + drift * 0.6 + uSeed * vec2(1.37, 2.91);
-        sc += (0.2 + 0.35 * warp) * vec2(snoise(c * 1.1 + L1), snoise(c * 1.1 + vec2(4.1, 1.7) + L2));
-        float sv = 0.5 * snoise(sc) + 0.12 * snoise(sc * 1.9 + vec2(3.0, 8.0));
-        float glow = exp(-pow((r - R - edge) / (soft * 2.5), 2.0)) * 0.32 + exp(-r * r / (R * R * 5.0)) * 0.18;
-        v = mix(glow, 0.62 + 0.5 * sv, body);
+        // Aura, after Yandex Music's My Wave: a bundle of thin glowing strands winding round a ring, each
+        // displaced by the same slow noise at a slightly different phase so they weave in and out of
+        // each other, over a soft inner glow. Strands add up as light, so crossings flare.
+        vec2 c = (p - 0.5) * a; float r = length(c), ang = atan(c.y, c.x) - (uMotion == 1 ? tw : 0.0);
+        vec2 dv = vec2(cos(ang), sin(ang));
+        float R = (0.16 + 0.2 * clamp(uScale, 0.1, 2.0)) * (1.0 + 0.1 * uMotAmt * beat);
+        float amp = (0.08 + 0.14 * warp) * (1.0 + 0.8 * uMotAmt * beat), wid = (0.5 + 1.0 / max(uStretch, 0.3)) / uRes.y;
+        float shared = snoise(dv * 0.7 + uSeed * 0.37 + L2 * 0.3) * 0.5;
+        vec3 bg = fromLab(ramp(0.0)), acc = vec3(0.0);
+        for (int i = 0; i < 28; i++) {
+          float fi = float(i) / 27.0;
+          float n = snoise(dv * 0.95 + vec2(fi * 3.1, fi * 2.3) + uSeed * 0.61 + L1 * 0.45) * 0.8 + shared;
+          float d = r - R * (1.0 + amp * n * (0.4 + 1.2 * fi));
+          float line = exp(-d * d / (wid * wid)) * 0.2 + exp(-abs(d) / (wid * 7.0)) * 0.018;
+          float hue = 0.25 + 0.75 * clamp(0.5 + 0.5 * sin(ang + fi * 2.4 + uSeed), 0.0, 1.0);
+          acc += max(fromLab(ramp(hue)), 0.0) * line;
+        }
+        vec3 core = max(fromLab(ramp(0.55)), 0.0) * exp(-r * r / (R * R * 0.9)) * 0.22 * (1.0 + 0.6 * uMotAmt * beat);
+        vec3 rgb = bg + acc * (0.9 + 0.1 * uContrast) + core;
+        o = vec4(srgb(rgb / (1.0 + 0.25 * max(0.0, max(rgb.r, max(rgb.g, rgb.b)) - 1.0))), 1.0); return;
       }
       else { vec2 c = (p - 0.5) * a; float ang = atan(c.y, c.x), r = length(c) / 0.36; float n = snoise(vec2(cos(ang), sin(ang)) * 0.9 / max(uScale, 0.1) + uSeed * 0.37) * (0.2 + warp * 0.3) + 0.08 * snoise(vec2(cos(ang), sin(ang)) * 2.4 + uSeed); v = exp(-pow((r - 1.0 - n) / (0.1 + 0.12 / max(uStretch, 0.3)), 2.0)) * (0.85 + 0.15 * sfbm(q * 2.0)); }
     }
@@ -351,16 +631,23 @@ void main() {
 }`,
 
     chrome: `uniform float uStr; uniform float uBands; uniform float uSoft; uniform vec3 uTint; uniform float uMix;
+uniform sampler2D uTex2; uniform int uHasH;
 // Liquid metal: brightness becomes a soft height field whose surface reflects a banded studio environment.
-// Heights are averaged over two rings of samples, so hard color edges become smooth slopes. A single
-// small ring left steep steps that flashed as the edges moved in motion.
-float Lm(vec2 uv) { float s = luma(tex(uv).rgb) * 0.5; for (int i = 0; i < 8; i++) { float a = float(i) * 0.7854; vec2 d = vec2(cos(a), sin(a)) * uSoft; s += luma(tex(uv + toUv(d * 0.55)).rgb) + 0.75 * luma(tex(uv + toUv(d.yx * vec2(1.0, -1.0) * 1.1)).rgb); } return s / 14.5; }
+// The height is a true Gaussian blur of brightness made in two passes beforehand, so dense lines melt
+// into smooth slopes instead of aliasing into smears. The ring average is the fallback without float targets.
+float Lm(vec2 uv) {
+  if (uHasH == 1) return texture(uTex2, clamp(uv, vec2(0.0), vec2(1.0))).r;
+  float s = luma(tex(uv).rgb) * 0.5; for (int i = 0; i < 8; i++) { float a = float(i) * 0.7854; vec2 d = vec2(cos(a), sin(a)) * uSoft; s += luma(tex(uv + toUv(d * 0.55)).rgb) + 0.75 * luma(tex(uv + toUv(d.yx * vec2(1.0, -1.0) * 1.1)).rgb); } return s / 14.5;
+}
 void main() {
   vec4 c = tex(vUv); vec2 e = toUv(vec2(uSoft, 0.0)), f = toUv(vec2(0.0, uSoft));
-  vec2 g = vec2(Lm(vUv + e) - Lm(vUv - e), Lm(vUv + f) - Lm(vUv - f));
+  // With a blurred height the slope is read over one pixel and scaled to match: differences taken a whole
+  // blur radius apart beat against fine ridges and made moire.
+  if (uHasH == 1) { e = vec2(1.0 / uRes.x, 0.0); f = vec2(0.0, 1.0 / uRes.y); }
+  vec2 g = vec2(Lm(vUv + e) - Lm(vUv - e), Lm(vUv + f) - Lm(vUv - f)) * (uHasH == 1 ? uSoft * uK : 1.0);
   vec3 n = normalize(vec3(-g * uStr * 6.0, 1.0));
   vec3 R = reflect(vec3(0.0, 0.0, -1.0), n);
-  float t = R.y * 0.5 + 0.5 + luma(c.rgb) * 0.35;
+  float t = R.y * 0.5 + 0.5 + Lm(vUv) * 0.35;
   float env = 0.5 + 0.42 * cos(t * uBands * 6.2831853 + 0.6) * (0.75 + 0.25 * R.x);
   env = 0.1 + 0.9 * mix(env, smoothstep(0.1, 0.95, env), 0.4) + pow(max(0.0, dot(R, normalize(vec3(-0.4, 0.6, 0.7)))), 24.0) * 0.6;
   vec3 metal = clamp(env * mix(vec3(1.0), uTint, 0.7), 0.0, 1.0);
@@ -592,6 +879,8 @@ void main() {
   const hex3 = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
   const rad = (d) => (d * Math.PI) / 180;
 
+  const OBJ_KINDS = ["sphere", "torus", "cube", "capsule", "blob", "image"];
+  const INTS = new Set(["uKind", "uMat", "uHasTex", "uType", "uN", "uNoise", "uMotion", "uPattern", "uOct", "uNPts", "uUser", "uNFeat", "uFirst", "uMode", "uNInk", "uHasH"]);
   function createFX(canvas) {
     const gl = canvas.getContext("webgl2", { premultipliedAlpha: false, preserveDrawingBuffer: true, antialias: false, alpha: true });
     if (!gl) return null;
@@ -689,7 +978,11 @@ void main() {
       for (const [u, v] of Object.entries(uniforms)) {
         const l = loc(u);
         if (l == null) continue;
-        if (u === "uType" || u === "uN" || u === "uNoise" || u === "uMotion") gl.uniform1i(l, v);
+        if (INTS.has(u)) gl.uniform1i(l, v);
+        else if (u === "uIn") gl.uniform2i(l, v[0], v[1]);
+        else if (u === "uTex2") { gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, v); gl.uniform1i(l, 2); }
+        else if ((u === "uPts" || u === "uFeat") && v.length) gl.uniform4fv(l, v.flat());
+        else if (u === "uInk" && v.length) gl.uniform3fv(l, v.flat());
         else if (typeof v === "number") gl.uniform1f(l, v);
         else if (v.length === 3 && typeof v[0] === "number") gl.uniform3fv(l, v);
         else if (v.length === 2 && typeof v[0] === "number") gl.uniform2fv(l, v);
@@ -700,6 +993,80 @@ void main() {
       gl.enableVertexAttribArray(0);
       gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+
+    // ---------- contours on the GPU ----------
+    // Rendering to float textures needs EXT_color_buffer_float. Without it contours stay on the SVG path.
+    const floatOK = !!gl.getExtension("EXT_color_buffer_float"), floatLinear = !!gl.getExtension("OES_texture_float_linear");
+    const permTex = gl.createTexture(), fbos = new Map();
+    let permSeed = null;
+    // Float render targets, kept by size and role so a playing animation allocates nothing per frame.
+    function floatTarget(role, w, h, fmt) {
+      const key = role, have = fbos.get(key);
+      if (have && have.w === w && have.h === h) return have;
+      if (have) { gl.deleteTexture(have.t); gl.deleteFramebuffer(have.f); }
+      const t = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      const filt = fmt === "half" ? gl.LINEAR : gl.NEAREST;
+      for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, filt], [gl.TEXTURE_MAG_FILTER, filt], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+      if (fmt === "half") { if (floatLinear) gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, w, h, 0, gl.RED, gl.FLOAT, null); else gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, w, h, 0, gl.RED, gl.HALF_FLOAT, null); }
+      else gl.texImage2D(gl.TEXTURE_2D, 0, fmt === "rg" ? gl.RG32F : gl.R32F, w, h, 0, fmt === "rg" ? gl.RG : gl.RED, gl.FLOAT, null);
+      const f = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+      const out = { t, f, w, h };
+      fbos.set(key, out);
+      return out;
+    }
+    // Object textures (pictures and presets), uploaded once per key and kept while in use.
+    const objTexs = new Map();
+    function objTex(key, src) {
+      let t = objTexs.get(key);
+      if (t) return t;
+      if (objTexs.size > 12) { for (const v of objTexs.values()) gl.deleteTexture(v); objTexs.clear(); }
+      t = newTex();
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      objTexs.set(key, t);
+      return t;
+    }
+    function contourPass(c, output, w, h) {
+      if (permSeed !== c.perm) {
+        permSeed = c.perm;
+        gl.bindTexture(gl.TEXTURE_2D, permTex);
+        for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.NEAREST], [gl.TEXTURE_MAG_FILTER, gl.NEAREST]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, 512, 1, 0, gl.RED, gl.FLOAT, c.perm);
+      }
+      const fld = floatTarget("field", c.nx, c.ny);
+      draw("field", null, fld.f, {
+        uTex2: permTex, uPattern: c.pattern, uSc: c.sc, uOct: c.oct, uP: c.P, uBump: c.bump, uLiq: c.liquify, uLiqScale: c.liqScale,
+        uWarpA: c.warp, uLoop: c.loop, uDrift: c.drift, uDir: c.dir, uCell: [c.sx, c.sy],
+        uPts: c.pts, uNPts: c.pts.length, uUser: c.user, uFeat: c.feats.length ? c.feats : [[0, 0, 1, 0]], uNFeat: c.feats.length,
+      }, c.nx, c.ny, 1, 0);
+      // Min and max come from the raw field, as on the CPU, so levels land in the same places.
+      let src = fld, iw = c.nx, ih = c.ny, n = 0;
+      while (iw > 1 || ih > 1 || n === 0) {
+        const ow = Math.max(1, Math.ceil(iw / 4)), oh = Math.max(1, Math.ceil(ih / 4)), dst = floatTarget("mm" + n, ow, oh, "rg");
+        draw("fminmax", src.t, dst.f, { uFirst: n === 0 ? 1 : 0, uIn: [iw, ih] }, ow, oh, 1, 0);
+        src = dst; iw = ow; ih = oh; n++;
+      }
+      const mm = src;
+      let fieldTex = fld.t;
+      const sg = c.sigma / Math.max(c.sx, c.sy);
+      if (sg > 0.3) {
+        const b1 = floatTarget("blurA", c.nx, c.ny), b2 = floatTarget("blurB", c.nx, c.ny);
+        draw("fblur", fld.t, b1.f, { uDir2: [1, 0], uSigma: sg, uIn: [c.nx, c.ny] }, c.nx, c.ny, 1, 0);
+        draw("fblur", b1.t, b2.f, { uDir2: [0, 1], uSigma: sg, uIn: [c.nx, c.ny] }, c.nx, c.ny, 1, 0);
+        fieldTex = b2.t;
+      }
+      draw("contours", fieldTex, output, {
+        uTex2: mm.t, uCell: [c.sx, c.sy], uIn: [c.nx, c.ny], uDesign: [c.w, c.h],
+        uMode: c.mode, uLin: c.lin ? 1 : 0, uGap: c.gap, uPh: c.phase, uLevels: c.levels, uG: c.g,
+        uWeight: c.weight, uEvery: c.every, uIdxW: c.indexWeight, uBand: c.band, uBlend: c.blend,
+        uInk: c.inks.map(hex3), uNInk: c.inks.length, uBg: hex3(c.bg), uClear: c.clear, uOpacity: c.opacity, uAng: c.angle,
+      }, w, h, 1, 0);
     }
 
     function effectUniforms(id, e, ink, paper) {
@@ -754,13 +1121,16 @@ void main() {
       if (job.grad) {
         const g = job.grad, n = Math.min(8, g.colors.length);
         draw("gradient", srcTex, targets.list[0].f, {
-          uType: ["mesh", "linear", "radial", "conic", "flow", "noise", "solid"].indexOf(g.type), uN: n,
+          uType: ["mesh", "linear", "radial", "conic", "flow", "noise"].indexOf(g.type), uN: n,
           uScale: g.scale ?? 1.2, uDetail: g.detail ?? 3, uStretch: g.stretch ?? 1, uContrast: g.contrast ?? 1,
-          uNoise: g.type === "solid" ? Math.max(0, ["sphere", "torus", "cube", "capsule", "blob"].indexOf(g.solid)) : ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring", "aura"].indexOf(g.noise || "clouds"),
+          uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring", "aura"].indexOf(g.noise || "clouds"),
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
-          uWarp: g.type === "solid" ? g.ripple ?? 0 : g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle),
+          uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle),
           uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5,
         }, w, h, k, job.seed);
+        input = targets.list[0].t; ping = 1;
+      } else if (job.contours) {
+        contourPass(job.contours, targets.list[0].f, w, h);
         input = targets.list[0].t; ping = 1;
       } else {
         gl.bindTexture(gl.TEXTURE_2D, srcTex);
@@ -768,20 +1138,40 @@ void main() {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, job.image);
         input = srcTex;
       }
+      if (job.objects?.length) {
+        const cols = (job.palette || ["#222222", "#dddddd"]).slice(0, 8).map(hex3), sz = Math.min(w, h);
+        for (const ob of job.objects) {
+          const out = targets.list[ping], tx = ob.tex ? objTex(ob.texKey, ob.tex) : null;
+          draw("object", input, out.f, {
+            uKind: OBJ_KINDS.indexOf(ob.kind), uC: [ob.x * w, ob.y * h], uSz: Math.max(1, ob.size * sz * 0.5), uRot: rad(ob.rot || 0), uTilt: rad(ob.tilt || 0), uSpin: rad(ob.spin || 0),
+            uMat: ["shaded", "design", "preset", "glass", "palette", "photo"].indexOf(ob.mat), uShine: ob.shine ?? 0.6, uRipple: ob.ripple || 0, uShadow: ob.shadow ?? 0.4, uAsp: ob.asp || 1, uRound: ob.round ?? 0.2,
+            uCol: cols, uN: cols.length, uTex2: tx || srcTex, uHasTex: tx ? 1 : 0,
+            uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5,
+          }, w, h, k, job.seed);
+          input = out.t; ping = 1 - ping;
+        }
+      }
       const ink = hex3(job.ink), paper = hex3(job.paper);
       for (const id of job.order || ORDER) {
         const e = job.fx[id];
         if (!e || !e.on || !SHADERS[id]) continue;
         const out = targets.list[ping];
-        draw(id, input, out.f, effectUniforms(id, e, ink, paper), w, h, k, e.seed ? e.seed : job.seed);
+        const un = effectUniforms(id, e, ink, paper);
+        if (id === "chrome" && floatOK) {
+          const a = floatTarget("chA", w, h, "half"), b = floatTarget("chB", w, h, "half"), sg = Math.max(0.8, (e.soft || 8) * k * 0.7);
+          draw("hblur", input, a.f, { uDir2: [1, 0], uSigma: sg, uFirst: 1 }, w, h, k, 0);
+          draw("hblur", a.t, b.f, { uDir2: [0, 1], uSigma: sg, uFirst: 0 }, w, h, k, 0);
+          un.uTex2 = b.t; un.uHasH = 1;
+        }
+        draw(id, input, out.f, un, w, h, k, e.seed ? e.seed : job.seed);
         input = out.t; ping = 1 - ping;
       }
       draw("copy", input, null, {}, w, h, k, job.seed);
       return { w, h };
     }
 
-    return { render, maxSize, warm, ready };
+    return { render, maxSize, warm, ready, floatOK };
   }
 
-  root.TopoFX = { createFX, ORDER, CHARSETS };
+  root.TopoFX = { createFX, ORDER, CHARSETS, OBJ_KINDS };
 })(window);

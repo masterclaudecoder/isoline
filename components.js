@@ -562,6 +562,8 @@
 
   // A contrast readout: the ratio, then the WCAG level it reaches.
   const level = (r) => (r >= 7 ? ["AAA", "ok"] : r >= 4.5 ? ["AA", "ok"] : r >= 3 ? ["Large text", "warn"] : ["Low", "bad"]);
+  // A folding group of options, remembered open or closed like the Studio's.
+  const grp = (host, title, open = true) => { if (!root.UI?.group) return host; const g = root.UI.group(title, { key: "cp-" + title, open }); host.appendChild(g); return g.body; };
   function renderOpts(enter) {
     const o = $("cpOpts");
     $("cpOptTitle").textContent = SLOTS.find((s) => s[0] === K.slot)[1];
@@ -585,7 +587,7 @@
         g.classList.toggle("all", !!K.morePairs);
         o.querySelector(".cp-more").onclick = (e) => { K.morePairs = !K.morePairs; save(); g.classList.toggle("all", K.morePairs); e.currentTarget.textContent = K.morePairs ? "Show fewer" : `Show all ${PAIRS.length}`; };
       }
-      sub(o, "Your fonts");
+      const fontsG = grp(o, "Your fonts", false);
       const mine = document.createElement("div"); mine.className = "cp-mine";
       mine.innerHTML = [...custom].map((f) => `<div class="cp-font" data-key="${esc(f)}" data-f="${esc(f)}"><span style="font-family:'${esc(f)}'">${esc(f)}</span><button class="btn sm ghost" data-use="head">Headings</button><button class="btn sm ghost" data-use="body">Body</button><button class="ib xs" data-del title="Remove ${esc(f)}">${ic("x")}</button></div>`).join("") +
         `<label class="btn sm cp-up">${ic("up")}Upload a font<input type="file" accept=".woff2,.woff,.ttf,.otf" multiple hidden></label>`;
@@ -599,11 +601,12 @@
         for (const file of e.target.files) { const name = file.name.replace(/\.(woff2?|ttf|otf)$/i, "").replace(/[-_]+/g, " "); if (await addFont(name, await file.arrayBuffer())) root.toastMsg?.(`Added ${name}`); }
         renderOpts();
       };
-      o.appendChild(mine);
-      sub(o, "Scale");
-      seg(o, [[1.125, "1.125"], [1.2, "1.2"], [1.25, "1.25"], [1.333, "1.333"], [1.414, "1.414"]], () => K.scale, (v) => (K.scale = v));
-      slider(o, "Base size", 13, 20, 1, () => K.base, (v) => (K.base = v), (v) => v + "px");
-      slider(o, "Heading tracking", -0.06, 0.04, 0.005, () => K.tracking, (v) => (K.tracking = v), (v) => (+v).toFixed(3) + "em");
+      fontsG.appendChild(mine);
+      const sizeG = grp(o, "Sizes");
+      sub(sizeG, "Scale", true);
+      seg(sizeG, [[1.125, "1.125"], [1.2, "1.2"], [1.25, "1.25"], [1.333, "1.333"], [1.414, "1.414"]], () => K.scale, (v) => (K.scale = v));
+      slider(sizeG, "Base size", 13, 20, 1, () => K.base, (v) => (K.base = v), (v) => v + "px");
+      slider(sizeG, "Heading tracking", -0.06, 0.04, 0.005, () => K.tracking, (v) => (K.tracking = v), (v) => (+v).toFixed(3) + "em");
     } else if (K.slot === "color") {
       // Where the colors come from, how strongly the page takes their hue, then every role in detail.
       const pal = root.Palettes;
@@ -663,24 +666,26 @@
       g.onclick = (e) => { const b = e.target.closest("[data-e]"); if (!b) return; K.elevation = b.dataset.e; for (const x of g.children) x.classList.toggle("on", x === b); changed(); };
       o.appendChild(g);
     } else if (K.slot === "motion") {
-      slider(o, "Duration", 60, 700, 10, () => K.dur, (v) => (K.dur = v), (v) => v + "ms");
-      sub(o, "Easing"); dd(seg(o, [["linear", "Linear"], ["out", "Out"], ["inout", "In and out"], ["spring", "Spring"]], () => K.ease, (v) => (K.ease = v)), "Easing");
-      o.insertAdjacentHTML("beforeend", `<button class="cp-demo" id="cpDemo"><i></i><span>Click to replay</span></button>`);
+      const timing = grp(o, "Timing");
+      slider(timing, "Duration", 60, 700, 10, () => K.dur, (v) => (K.dur = v), (v) => v + "ms");
+      sub(timing, "Easing"); dd(seg(timing, [["linear", "Linear"], ["out", "Out"], ["inout", "In and out"], ["spring", "Spring"]], () => K.ease, (v) => (K.ease = v)), "Easing");
+      timing.insertAdjacentHTML("beforeend", `<button class="cp-demo" id="cpDemo"><i></i><span>Click to replay</span></button>`);
       const demo = $("cpDemo");
       demo.style.setProperty("--dur", K.dur + "ms"); demo.style.setProperty("--ease", EASE[K.ease]);
       demo.onclick = () => { demo.classList.remove("go"); void demo.offsetWidth; demo.classList.add("go"); };
       // How things arrive and leave: menus, dialogs, toasts and page sections all use these.
-      const pair = document.createElement("div"); pair.className = "dd-pair"; o.appendChild(pair);
+      const inout = grp(o, "Enter and exit");
+      const pair = document.createElement("div"); pair.className = "dd-pair"; inout.appendChild(pair);
       const colA = document.createElement("div"), colB = document.createElement("div"); pair.append(colA, colB);
       sub(colA, "Appear");
       dd(seg(colA, [["none", "None"], ["fade", "Fade"], ["rise", "Rise"], ["scale", "Scale"], ["blur", "Blur"]], () => K.enter, (v) => { K.enter = v; setTimeout(() => replay(false), 0); }), "Appear");
       sub(colB, "Disappear");
       dd(seg(colB, [["none", "None"], ["fade", "Fade"], ["sink", "Sink"], ["scale", "Scale"], ["blur", "Blur"]], () => K.exit, (v) => { K.exit = v; setTimeout(() => replay(true), 0); }), "Disappear");
-      slider(o, "Stagger", 0, 120, 5, () => K.stagger, (v) => (K.stagger = v), (v) => (v ? v + "ms" : "Off"));
+      slider(inout, "Stagger", 0, 120, 5, () => K.stagger, (v) => (K.stagger = v), (v) => (v ? v + "ms" : "Off"));
       // When it plays: once as the page loads, or as each section scrolls into view and back out.
-      sub(o, "Plays");
-      seg(o, [["load", "On load"], ["scroll", "On scroll"]], () => K.trigger, (v) => { K.trigger = v; setTimeout(() => replay(false), 0); });
-      o.insertAdjacentHTML("beforeend", `<button class="btn sm cp-replay" id="cpReplayOpt">${ic("play")}Play out and back in</button>`);
+      sub(inout, "Plays");
+      seg(inout, [["load", "On load"], ["scroll", "On scroll"]], () => K.trigger, (v) => { K.trigger = v; setTimeout(() => replay(false), 0); });
+      inout.insertAdjacentHTML("beforeend", `<button class="btn sm cp-replay" id="cpReplayOpt">${ic("play")}Play out and back in</button>`);
       $("cpReplayOpt").onclick = () => replay(true);
     } else if (K.slot === "rules") {
       o.insertAdjacentHTML("beforeend", `<p class="hint">Agents get these with your tokens.</p>`);

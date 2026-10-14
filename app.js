@@ -60,13 +60,19 @@
     ["linear", "Linear", "Straight blend"],
     ["radial", "Radial", "Blend from the center"],
     ["conic", "Conic", "Blend around a point"],
-    ["solid", "3D shape", "Lit solid forms"],
     ["image", "Image", "Your own picture"],
   ];
   const GEN_LABEL = Object.fromEntries(GENS.map((g) => [g[0], g[1]]));
   const NOISE_TYPES = [["clouds", "Clouds"], ["ridges", "Ridges"], ["billow", "Billow"], ["cells", "Cells"], ["veins", "Veins"], ["marble", "Marble"], ["neuro", "Neuro"], ["ring", "Smoke ring"], ["aura", "Aura"]];
-  const SOLIDS = [["sphere", "Sphere"], ["torus", "Torus"], ["cube", "Cube"], ["capsule", "Capsule"], ["blob", "Blob"]];
-  const SOLID_LABEL = Object.fromEntries(SOLIDS);
+  // Objects: forms and pictures placed over the design, before effects. Forms take a material: lit in
+  // the palette, wrapped in the design underneath, wrapped in a preset, or glass.
+  const OBJ_KINDS = [["sphere", "Sphere"], ["torus", "Torus"], ["cube", "Cube"], ["capsule", "Capsule"], ["blob", "Blob"], ["image", "Picture"]];
+  const OBJ_LABEL = Object.fromEntries(OBJ_KINDS);
+  const OBJ_MATS = [["shaded", "Shaded", "Lit in your palette"], ["design", "Design", "Wrapped in the design underneath"], ["preset", "Preset", "Wrapped in a preset of your choice"], ["glass", "Glass", "Bends what's behind it"]];
+  const PIC_MATS = [["photo", "Photo", "The picture as it is"], ["palette", "Palette", "The picture in your colors"]];
+  const MAT_LABEL = Object.fromEntries([...OBJ_MATS, ...PIC_MATS].map(([k, l]) => [k, l]));
+  const OBJ_DEFAULT = { kind: "sphere", x: 0.5, y: 0.5, size: 0.5, rot: 0, tilt: 20, spin: 30, mat: "shaded", preset: "Prism", shine: 0.6, ripple: 0, round: 0.15, shadow: 0.4, image: "" };
+  const objId = () => "o" + Math.random().toString(36).slice(2, 8);
   const NOISE_LABEL = Object.fromEntries(NOISE_TYPES);
   // Palettes: [name, colors dark to light, contour roles [lines, blend, background] when they differ from the default pick]
   const CURATED = [
@@ -123,7 +129,7 @@
   };
   const PALS = PAL_GROUPS.flatMap(([group, list]) => list.map(([name, colors, roles]) => ({ name, group, colors, roles: roles || rolesOf(colors) })).sort((a, b) => bgKey(a.roles[2]) - bgKey(b.roles[2])));
   const PAL_BY = Object.fromEntries(PALS.map((p) => [p.name, p]));
-  const ramp = (n) => PAL_BY[n].colors.slice();
+  const ramp = (n) => (Array.isArray(n) ? n.slice() : PAL_BY[n].colors.slice());
   const palState = (n) => { const [line, line2, bg] = PAL_BY[n].roles; return { line, line2, bg }; };
 
   // ---------- defaults ----------
@@ -137,8 +143,8 @@
     levels: 20, gap: 18, bias: 0, weight: 1.2, swell: 0, swellSize: 260, taper: 0,
     indexEvery: 0, indexWeight: 2, smooth: 0.7, res: 4, minLen: 12,
     ...palState("Paper"), gradient: false, transparent: false, opacity: 1,
-    grad: { type: "flow", colors: ramp("Prism"), points: [{ x: 0.18, y: 0.22 }, { x: 0.8, y: 0.2 }, { x: 0.72, y: 0.8 }, { x: 0.2, y: 0.84 }, { x: 0.48, y: 0.5 }], angle: -25, warp: 0.5, warpScale: 1.6, soft: 1.6, scale: 0.45, detail: 2, stretch: 1.8, contrast: 1, noise: "clouds", solid: "sphere", ripple: 0, image: "" },
-    fx: clone(FX_DEFAULTS), fxOrder: [], ink: "#1b1b1b", paper: "#f1ede4",
+    grad: { type: "flow", colors: ramp("Prism"), points: [{ x: 0.18, y: 0.22 }, { x: 0.8, y: 0.2 }, { x: 0.72, y: 0.8 }, { x: 0.2, y: 0.84 }, { x: 0.48, y: 0.5 }], angle: -25, warp: 0.5, warpScale: 1.6, soft: 1.6, scale: 0.45, detail: 2, stretch: 1.8, contrast: 1, noise: "clouds", image: "" },
+    fx: clone(FX_DEFAULTS), fxOrder: [], objects: [], ink: "#1b1b1b", paper: "#f1ede4",
     fmt: "svg", pngScale: 2,
     motion: { type: "still", dur: 6, amt: 0.5, mode: "loop", dir: 1, ease: "linear", bez: [0.42, 0, 0.58, 1], seed: 0 }, vid: { size: 1080, fps: 30, loops: 1 }, gif: { size: 480, fps: 20 },
   };
@@ -156,6 +162,14 @@
     if (!T.PATTERNS.some((p) => p.id === out.pattern)) out.pattern = DEFAULTS.pattern;
     if (!Array.isArray(out.points)) out.points = [];
     const g = out.grad;
+    // The 3D shape generator became objects: its form moves onto a soft radial background.
+    if (g.type === "solid") {
+      const sz = 0.35 + 0.6 * clamp(+src.grad.scale || 0.6, 0.1, 2);
+      if (!Array.isArray(src.objects) || !src.objects.length) out.objects = [{ ...OBJ_DEFAULT, id: objId(), kind: OBJ_LABEL[src.grad.solid] ? src.grad.solid : "sphere", size: +(sz * 0.95).toFixed(3), tilt: 29, spin: +src.grad.angle || 0, shine: clamp((+src.grad.soft || 1.6) / 2.6, 0, 1), ripple: +src.grad.ripple || 0 }];
+      g.type = "radial"; g.warp = 0;
+    }
+    delete g.solid; delete g.ripple;
+    out.objects = (Array.isArray(out.objects) ? out.objects : []).filter((o) => o && OBJ_LABEL[o.kind]).slice(0, 8).map((o) => ({ ...OBJ_DEFAULT, ...o, id: typeof o.id === "string" ? o.id : objId() }));
     if (!GENS.some((x) => x[0] === g.type && x[0] !== "contours")) g.type = "mesh";
     if (!Array.isArray(g.colors) || g.colors.length < 2) g.colors = DEFAULTS.grad.colors.slice();
     g.colors = g.colors.slice(0, 8);
@@ -190,8 +204,14 @@
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const newSeed = () => Math.floor(Math.random() * 999999);
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
-  const toast = (msg) => { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2000); };
-  const isRaster = (st) => st.source === "gradient" || st.fxOrder.some((id) => st.fx[id]?.on);
+  // A short message at the bottom. With an action it gets a button and stays up a little longer.
+  const toast = (msg, opt = {}) => {
+    const t = $("toast"); t.textContent = msg;
+    if (opt.action) { const b = document.createElement("button"); b.textContent = opt.action; b.onclick = () => { t.classList.remove("show"); opt.onAction?.(); }; t.append(b); }
+    t.classList.toggle("act", !!opt.action); t.classList.add("show"); clearTimeout(t._h);
+    t._h = setTimeout(() => t.classList.remove("show"), opt.action ? 5000 : 2000);
+  };
+  const isRaster = (st) => st.source === "gradient" || st.fxOrder.some((id) => st.fx[id]?.on) || !!st.objects?.length;
   const getPath = (o, p) => p.split(".").reduce((a, k) => (a == null ? a : a[k]), o);
   const setPath = (o, p, v) => { const ks = p.split("."), last = ks.pop(); ks.reduce((a, k) => a[k], o)[last] = v; };
   const patLabel = (id) => T.PATTERNS.find((p) => p.id === id)?.label || id;
@@ -230,9 +250,10 @@
     ["Noise", "Clouds", { ...G("noise", "Glacier", { noise: "clouds", scale: 1, detail: 5, warp: 0.3, stretch: 1.4, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Noise", "Neuro", { ...G("noise", "Iris", { noise: "neuro", scale: 1, detail: 3, warp: 0.2, stretch: 1, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Noise", "Halo", { ...G("noise", "Dusk", { noise: "ring", scale: 0.8, detail: 3, warp: 0.6, stretch: 1, contrast: 1, angle: 0 }), fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
-    ["Noise", "Aura", { ...G("noise", "Iris", { noise: "aura", scale: 0.5, detail: 3, warp: 0.7, stretch: 1.4, contrast: 1, angle: 0 }), fx: { bloom: { threshold: 0.6, radius: 30, intensity: 0.6 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
-    ["Gradients", "Orb", { ...G("solid", "Dusk", { solid: "blob", scale: 0.55, ripple: 0.3, soft: 1.6, contrast: 1.1, angle: 25 }), fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
-    ["Gradients", "Ring", { ...G("solid", "Glacier", { solid: "torus", scale: 0.6, ripple: 0, soft: 2, contrast: 1, angle: -30 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
+    ["Noise", "Aura", { ...G("noise", ["#07060f", "#3b1d8f", "#c13cff", "#ff5f6d", "#ffc371"], { noise: "aura", scale: 0.5, detail: 3, warp: 0.7, stretch: 1.4, contrast: 1, angle: 0 }), fx: { bloom: { threshold: 0.7, radius: 24, intensity: 0.35 }, grain: { amount: 0.06, size: 1.2, soft: true } } }],
+    ["Gradients", "Orb", { ...G("radial", "Dusk", { warp: 0.2, soft: 1.6 }), objects: [{ kind: "blob", x: 0.5, y: 0.5, size: 0.62, tilt: 29, spin: 25, mat: "shaded", shine: 0.6, ripple: 0.3, shadow: 0.35 }], fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
+    ["Gradients", "Ring", { ...G("radial", "Glacier", { warp: 0, soft: 2 }), objects: [{ kind: "torus", x: 0.5, y: 0.5, size: 0.66, tilt: 29, spin: -30, mat: "shaded", shine: 0.8, shadow: 0.3 }], fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
+    ["Gradients", "Glass orbs", { ...G("flow", "Prism", { warp: 0.6, scale: 0.45 }), objects: [{ kind: "sphere", x: 0.34, y: 0.42, size: 0.44, mat: "glass", shine: 0.9, shadow: 0.25 }, { kind: "capsule", x: 0.7, y: 0.58, size: 0.4, rot: -30, tilt: 10, spin: 60, mat: "glass", shine: 0.9, shadow: 0.25 }] }],
     ["Effects", "Chrome", { pattern: "blobs", usePoints: true, falloff: 1.1, warp: 0.3, octaves: 2, levels: 14, mode: "layers", smooth: 0.7, line: "#1b1b1b", line2: "#f1ede4", bg: "#1b1b1b", fx: { chrome: { strength: 1.2, bands: 2.4, soft: 8, tint: "#d9dde3", mix: 1 } } }],
     ["Effects", "Thermal", { ...G("noise", "Ink", { noise: "clouds", scale: 0.9, detail: 4, warp: 0.4, stretch: 1.2, contrast: 1.1, angle: 0 }), fx: { heatmap: { glow: 14, mix: 1 } } }],
     ["Effects", "Press", { ...G("flow", "Prism", { scale: 0.45, detail: 2, warp: 0.5, stretch: 1.8, angle: -25 }), fx: { cmyk: { size: 9, angle: 0 }, paper: { crumple: 0.35, fiber: 0.7, scale: 420 } }, paper: "#f4efe4" }],
@@ -256,16 +277,18 @@
     while (st.grad.points.length < st.grad.colors.length) st.grad.points.push(clone(DEFAULTS.grad.points[st.grad.points.length % 5]));
     st.fx = clone(FX_DEFAULTS); st.fxOrder = [];
     for (const [id, v] of Object.entries(fx || {})) { st.fx[id] = { ...st.fx[id], ...v, on: true }; st.fxOrder.push(id); }
+    st.objects = (rest.objects || []).map((o, i) => ({ ...OBJ_DEFAULT, ...o, id: "p" + i }));
     resolved.set(look, st);
     return st;
   }
   const LAYERS = {
-    shape: ["source", "pattern", "scale", "octaves", "warp", "liquify", "liqScale", "angle", "features", "bump", "bumpSize", "usePoints", "falloff", "grad.type", "grad.warp", "grad.warpScale", "grad.soft", "grad.angle", "grad.scale", "grad.detail", "grad.stretch", "grad.contrast", "grad.noise", "grad.solid", "grad.ripple"],
+    shape: ["source", "pattern", "scale", "octaves", "warp", "liquify", "liqScale", "angle", "features", "bump", "bumpSize", "usePoints", "falloff", "grad.type", "grad.warp", "grad.warpScale", "grad.soft", "grad.angle", "grad.scale", "grad.detail", "grad.stretch", "grad.contrast", "grad.noise"],
     style: ["mode", "band", "levels", "gap", "bias", "weight", "swell", "swellSize", "taper", "indexEvery", "indexWeight", "smooth"],
     color: ["line", "line2", "mids", "gradient", "bg", "transparent", "opacity", "grad.colors", "ink", "paper"],
+    objects: ["objects"],
     effects: ["fx", "fxOrder"],
   };
-  const LAYER_NAMES = { shape: "Shape", style: "Lines", color: "Colors", effects: "Effects" };
+  const LAYER_NAMES = { shape: "Shape", style: "Lines", color: "Colors", objects: "Objects", effects: "Effects" };
   function applyLook(look, layers = Object.keys(LAYERS)) {
     const src = resolveLook(look);
     for (const L of layers) for (const key of LAYERS[L]) setPath(S, key, clone(getPath(src, key)));
@@ -433,7 +456,6 @@
     if (id === "shape") {
       if (g === "contours") return [patLabel(S.pattern), activePoints() ? `${S.points.length} points, seed ${S.seed}` : `Scale ${S.scale}px, seed ${S.seed}`];
       if (g === "noise") return [NOISE_LABEL[gr.noise], `Scale ${sc(gr.scale)}, seed ${S.seed}`];
-      if (g === "solid") return [SOLID_LABEL[gr.solid] || "Sphere", `Size ${sc(gr.scale)}, angle ${gr.angle}°`];
       if (g === "image") return IMG ? ["Image", `${IMG.el.naturalWidth}×${IMG.el.naturalHeight}px`] : ["Image", "No picture yet"];
       if (g === "flow") return ["Flow field", `Scale ${sc(gr.scale)}, seed ${S.seed}`];
       if (g === "mesh") return ["Mesh", `${gr.colors.length} points, softness ${f2(gr.soft)}`];
@@ -461,13 +483,40 @@
     wrap.innerHTML = `<div class="slot-label">${label}</div><button class="tile" data-slot="${id}"><span class="tile-th" data-th="${id}">${id === "colors" ? `<span class="tile-sw"></span>` : ""}</span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
     slotList.appendChild(wrap); slotEls[id] = wrap;
   });
+  const objSlot = document.createElement("div");
+  objSlot.className = "slot slot-fx slot-obj";
+  objSlot.innerHTML = `<div class="slot-label">Objects<span class="count" hidden></span></div><div class="fx-tiles" id="objTiles"><button class="tile add" data-slot="addobj"><span class="tile-plus">${ic("plus")}</span><span class="tile-text"><b>Add object</b><small>Optional</small></span></button></div>`;
+  slotList.appendChild(objSlot);
+  const objTiles = objSlot.querySelector(".fx-tiles"), objAdd = objSlot.querySelector(".tile.add"), objCount = objSlot.querySelector(".count");
+  const objOf = () => (P.slot.startsWith("obj:") ? S.objects.find((o) => o.id === P.slot.slice(4)) : null);
+  const objName = (o) => { const same = S.objects.filter((x) => x.kind === o.kind); return OBJ_LABEL[o.kind] + (same.length > 1 ? " " + (same.indexOf(o) + 1) : ""); };
+  const objFact = (o) => `${MAT_LABEL[o.mat] || "Shaded"}, ${Math.round(o.size * 100)}% wide`;
+  function objTile(o) {
+    const t = document.createElement("div");
+    t.className = "tile fx obj"; t.dataset.obj = o.id;
+    t.innerHTML = `<button class="tile-main" data-slot="obj:${o.id}"><span class="tile-th" data-th="obj:${o.id}"></span><span class="tile-text"><b></b><small></small></span></button><button class="ib xs" data-remove-obj="${o.id}" aria-label="Remove" title="Remove">${ic("x")}</button>`;
+    return t;
+  }
+  function renderObjTiles() {
+    const have = new Map([...objTiles.querySelectorAll("[data-obj]")].map((n) => [n.dataset.obj, n]));
+    for (const o of S.objects) {
+      let t = have.get(o.id);
+      if (!t) t = objTile(o);
+      objTiles.insertBefore(t, objAdd); have.delete(o.id);
+      t.classList.toggle("on", P.slot === "obj:" + o.id);
+      setText(t.querySelector("b"), objName(o)); setText(t.querySelector("small"), objFact(o));
+    }
+    for (const t of have.values()) { if (!animOK()) { t.remove(); continue; } t.animate([{ opacity: 1 }, { opacity: 0, transform: "scale(.95)" }], { duration: 180, easing: EASE }).onfinish = () => t.remove(); }
+    objAdd.classList.toggle("on", P.slot === "addobj");
+    objCount.hidden = !S.objects.length; objCount.textContent = S.objects.length;
+  }
   const fxSlot = document.createElement("div");
   fxSlot.className = "slot slot-fx";
   fxSlot.innerHTML = `<div class="slot-label">Effects<span class="count" hidden></span></div><div class="fx-tiles" id="fxTiles"><button class="tile add" data-slot="addfx"><span class="tile-plus">${ic("plus")}</span><span class="tile-text"><b>Add effect</b><small></small></span></button></div>`;
   slotList.appendChild(fxSlot);
   const fxTiles = fxSlot.querySelector(".fx-tiles"), addTile = fxSlot.querySelector(".tile.add"), countEl = fxSlot.querySelector(".count");
   const motionSlot = document.createElement("div");
-  // Motion is the last step and the easiest to miss, so its tile is a wide banner with the loop playing.
+  // Motion's tile plays the loop, so the last step reads as movement at a glance.
   motionSlot.className = "slot slot-motion";
   motionSlot.innerHTML = `<div class="slot-label">Motion</div><button class="tile" data-slot="motion"><span class="tile-th" data-th="motion"></span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
   slotList.appendChild(motionSlot);
@@ -482,7 +531,7 @@
     return t;
   }
   function renderSlots() {
-    const key = JSON.stringify([gen(), S.fxOrder, P.slot, ...SLOT_DEFS.map(([id]) => slotInfo(id)), slotColors(), S.motion, S.fxOrder.map(fxFact)]);
+    const key = JSON.stringify([gen(), S.fxOrder, P.slot, ...SLOT_DEFS.map(([id]) => slotInfo(id)), slotColors(), S.motion, S.fxOrder.map(fxFact), S.objects.map((o) => [o.id, objName(o), objFact(o)])]);
     if (key === slotKey) return;
     slotKey = key;
     const tiles = () => [...slotList.querySelectorAll(".tile")];
@@ -511,6 +560,7 @@
       t.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.95)" }], { duration: 200, easing: EASE }).onfinish = () => t.remove();
     }
     addTile.classList.toggle("on", P.slot === "addfx");
+    renderObjTiles();
     { const t = motionSlot.querySelector(".tile"), m = S.motion; t.classList.toggle("on", P.slot === "motion"); setText(t.querySelector("b"), MOTION_NAME[m.type]); t.classList.toggle("still", m.type === "still"); setText(t.querySelector("small"), m.type === "still" ? "No motion yet" : `${m.dur}s, ${{ loop: "looping", pingpong: "ping-pong", once: "once" }[m.mode]}`); }
     setText(addTile.querySelector("small"), "Optional");
     for (const t of fxTiles.querySelectorAll("[data-fx]")) setText(t.querySelector("small"), fxFact(t.dataset.fx));
@@ -527,6 +577,8 @@
     schedulePreviews(120);
   }
   $("slotList").addEventListener("click", (e) => {
+    const ro = e.target.closest("[data-remove-obj]");
+    if (ro) { const id = ro.dataset.removeObj; S.objects = S.objects.filter((o) => o.id !== id); if (P.slot === "obj:" + id) P.slot = "addobj"; update(); return; }
     const rm = e.target.closest("[data-remove]");
     if (rm) { const id = rm.dataset.remove; removeFx(id); if (P.slot === "fx:" + id) P.slot = "addfx"; update(); return; }
     const t = e.target.closest("[data-slot]");
@@ -554,17 +606,17 @@
     window.addEventListener("pointercancel", up);
   });
 
-  const PANEL_TITLE = { preset: "Preset", generator: "Generator", shape: "Shape", lines: "Lines", colors: "Colors", addfx: "Add effect", motion: "Motion" };
+  const PANEL_TITLE = { preset: "Preset", generator: "Generator", shape: "Shape", lines: "Lines", colors: "Colors", addobj: "Add object", object: "Object", addfx: "Add effect", motion: "Motion" };
   function setSlot(id) {
     picker.close();
     if (id === "colors" && P.slot !== "colors") revealPalette();
     P.slot = id; savePrefs();
-    syncUI();
+    syncUI(); drawOverlay();
     $("options").scrollTop = 0;
     if (window.matchMedia("(max-width: 900px)").matches) $("options").scrollIntoView({ behavior: "smooth", block: "start" });
     schedulePreviews(0);
   }
-  function panelOf(slot) { return slot.startsWith("fx:") ? "effect" : slot; }
+  function panelOf(slot) { return slot.startsWith("fx:") ? "effect" : slot.startsWith("obj:") ? "object" : slot; }
   const fxOf = () => (P.slot.startsWith("fx:") ? P.slot.slice(3) : null);
 
   // Dice in the options header randomizes whatever the open panel controls.
@@ -579,6 +631,11 @@
     else if (p === "colors") randomPalette();
     else if (p === "effect") { randomizeFx(fxOf()); }
     else if (p === "addfx") { randomEffects(); }
+    else if (p === "addobj") { addObject(pick(OBJ_KINDS.filter(([k]) => k !== "image"))[0]); return; }
+    else if (p === "object") {
+      const o = objOf();
+      if (o) Object.assign(o, { rot: Math.round(rnd(-35, 35)), tilt: Math.round(rnd(-30, 45)), spin: Math.round(rnd(-90, 90)), shine: +rnd(0.3, 0.9).toFixed(2), ...(o.kind === "image" ? { mat: pick(["photo", "palette"]) } : { kind: pick(OBJ_KINDS.filter(([k]) => k !== "image"))[0], mat: pick(["shaded", "shaded", "design", "glass", "preset"]), preset: pick(PRESETS)[1] }) });
+    }
     else if (p === "motion") {
       // A new motion: a moving type, then its sliders, playback, direction and easing.
       if (S.motion.type === "still" || Math.random() < 0.6) S.motion.type = pick(["drift", "flow", "breathe", "pulse"].filter((x) => x !== S.motion.type));
@@ -687,8 +744,6 @@
   for (const p of T.PATTERNS) { const c = card(p.label, () => { S.pattern = p.id; update({ fade: true }); }); $("patterns").appendChild(c); patCards[p.id] = c; }
   const noiseCards = {};
   for (const [id, label] of NOISE_TYPES) { const c = card(label, () => { S.grad.noise = id; update({ fade: true }); }); $("noiseTypes").appendChild(c); noiseCards[id] = c; }
-  const solidCards = {};
-  for (const [id, label] of SOLIDS) { const c = card(label, () => { S.grad.solid = id; update({ fade: true }); }); $("solidTypes").appendChild(c); solidCards[id] = c; }
   $("imgReplace").onclick = () => pickImage();
   const varCards = [];
   for (let i = 0; i < 6; i++) { const c = card("", () => { S.seed = c._seed; update({ fade: true }); }); c.classList.add("var"); $("variations").appendChild(c); varCards.push(c); }
@@ -712,16 +767,13 @@
   const isG = (...t) => () => t.includes(gen());
   [
     { label: "Scale", ...bindKey(gr, "scale"), min: 0.1, max: 6, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.35, 1.2], when: isG("flow", "noise") },
-    { label: "Size", ...bindKey(gr, "scale"), min: 0.1, max: 2, step: 0.01, fmt: (v) => f2(v) + "×", rand: [0.35, 0.8], when: isG("solid") },
     { label: "Detail", ...bindKey(gr, "detail"), min: 1, max: 8, step: 1, rand: [2, 4], when: isG("flow", "noise") },
     { label: "Softness", ...bindKey(gr, "soft"), min: 0.5, max: 4, step: 0.05, fmt: f2, rand: [1.3, 2.2], when: isG("mesh") },
-    { label: "Shine", ...bindKey(gr, "soft"), min: 0, max: 4, step: 0.05, fmt: f2, rand: [0.8, 2.4], when: isG("solid") },
-    { label: "Warp", ...bindKey(gr, "warp"), min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 0.8], when: () => gen() !== "image" && gen() !== "solid" },
-    { label: "Ripple", ...bindKey(gr, "ripple"), min: 0, max: 2, step: 0.01, fmt: (v) => (v ? f2(v) : "Off"), rand: [0, 0.6], when: isG("solid") },
+    { label: "Warp", ...bindKey(gr, "warp"), min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 0.8], when: () => gen() !== "image" },
     { label: "Warp size", ...bindKey(gr, "warpScale"), min: 0.2, max: 8, step: 0.05, log: true, fmt: (v) => f2(v) + "×", rand: [1, 2.5], when: () => isG("mesh", "linear", "radial", "conic")() && S.grad.warp > 0 },
     { label: "Stretch", ...bindKey(gr, "stretch"), min: 0.3, max: 5, step: 0.05, log: true, fmt: (v) => f2(v) + "×", rand: [1, 2.4], when: isG("flow", "noise") },
-    { label: "Angle", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("linear", "conic", "flow", "noise", "solid") },
-    { label: "Contrast", ...bindKey(gr, "contrast"), min: 0.3, max: 3, step: 0.01, fmt: f2, rand: [0.8, 1.3], when: isG("flow", "noise", "solid") },
+    { label: "Angle", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("linear", "conic", "flow", "noise") },
+    { label: "Contrast", ...bindKey(gr, "contrast"), min: 0.3, max: 3, step: 0.01, fmt: f2, rand: [0.8, 1.3], when: isG("flow", "noise") },
   ].forEach((c) => makeSlider($("gradCtrls"), { group: "gradient", ...c }));
   $("seed").onchange = (e) => { S.seed = clamp(Math.floor(+e.target.value || 0), 0, 999999); update({ fade: true }); };
   const variationSeed = (i) => (S.seed * 31 + (i + 1) * 7919) % 999999;
@@ -1143,17 +1195,17 @@
 
   // ---------- next step ----------
   // Each panel ends with a way on to the next layer; the last step opens Export.
-  const STEP_ORDER = () => ["preset", "generator", "shape", ...(gen() === "contours" ? ["lines"] : []), "colors", "addfx", "motion"];
+  const STEP_ORDER = () => ["preset", "generator", "shape", ...(gen() === "contours" ? ["lines"] : []), "colors", "addobj", "addfx", "motion"];
   function nextOf(slot) {
-    const p = panelOf(slot) === "effect" ? "addfx" : slot, order = STEP_ORDER(), i = order.indexOf(p);
+    const p = panelOf(slot) === "effect" ? "addfx" : panelOf(slot) === "object" ? "addobj" : slot, order = STEP_ORDER(), i = order.indexOf(p);
     return i < 0 || i === order.length - 1 ? "export" : order[i + 1];
   }
   $("nextBtn").onclick = () => { const n = nextOf(P.slot); if (n === "export") { closeMenus(); $("exportBtn").click(); } else setSlot(n); };
   function syncNext() {
     const n = nextOf(P.slot);
     setText($("nextKicker"), n === "export" ? "Finish" : "Continue");
-    setText($("nextLbl"), n === "export" ? "Export" : PANEL_TITLE[n]);
-    setText($("nextSub"), n === "addfx" || n === "motion" ? "Optional" : "");
+    setText($("nextLbl"), n === "export" ? "Export" : n === "addobj" ? "Objects" : n === "addfx" ? "Effects" : PANEL_TITLE[n]);
+    setText($("nextSub"), n === "addfx" || n === "addobj" || n === "motion" ? "Optional" : "");
   }
 
   // ---------- motion ----------
@@ -1276,9 +1328,8 @@
     const fctx = frameCanvas.getContext("2d", { willReadFrequently: true });
     async function drawFrame(i) {
       const st = motionState(S, motionT(S.motion.mode === "once" ? Math.min(1, i / Math.max(1, frames - 1)) : (i / fps / S.motion.dur) % 1));
-      if (isRaster(st) && FXR) {
-        const image = st.source === "contours" ? await rasterize(rasterCanvas, T.buildSVG(st, { w: W, h: H }).svg, W, H) : null;
-        FXR.render(job(st, W, H, image));
+      if ((isRaster(st) || (st.source === "contours" && FXR?.floatOK && T.gpuSpec(st, st.res))) && FXR) {
+        FXR.render(await fxJob(FXR, st, W, H));
         fctx.clearRect(0, 0, W, H); fctx.drawImage(fxCanvas, 0, 0, W, H);
       } else await rasterize(frameCanvas, T.buildSVG(st, { w: W, h: H }).svg, W, H);
       return fctx;
@@ -1382,8 +1433,23 @@
   // ---------- canvas overlay ----------
   const art = $("art"), artSvg = $("artSvg"), fxCanvas = $("fx"), ov = $("ov"), wrap = $("wrap");
   const handleList = (st = S) => (st.source === "gradient" ? (st.grad.type === "mesh" ? st.grad.points : null) : st.usePoints && st.showPoints ? st.points : null);
+  // The open object gets a ring with a move handle in the middle, a size handle on the ring and a
+  // rotate handle above it. Positions come from the state being painted, so they track motion tweens.
+  function objOverlay(st, o) {
+    const u = S.w / Math.max(1, art.clientWidth), ns = 'vector-effect="non-scaling-stroke"', A = accentNow();
+    const x = o.x * S.w, y = o.y * S.h, r = (o.size * Math.min(S.w, S.h)) / 2, a = ((o.rot || 0) * Math.PI) / 180;
+    const rx = x + Math.cos(a) * r, ry = y + Math.sin(a) * r, tx = x + Math.sin(a) * (r + 26 * u), ty = y - Math.cos(a) * (r + 26 * u);
+    return `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${A}" stroke-width="1.25" stroke-dasharray="4 4" ${ns} pointer-events="none"/>`
+      + `<circle class="ob" cx="${x}" cy="${y}" r="${r}" fill="transparent"/>`
+      + `<line x1="${x + Math.sin(a) * r}" y1="${y - Math.cos(a) * r}" x2="${tx}" y2="${ty}" stroke="${A}" stroke-width="1.25" ${ns} pointer-events="none"/>`
+      + `<circle class="obt" cx="${tx}" cy="${ty}" r="${6 * u}" fill="#fff" stroke="${A}" stroke-width="1.5" ${ns}/>`
+      + `<circle class="obs" cx="${rx}" cy="${ry}" r="${6 * u}" fill="#fff" stroke="${A}" stroke-width="1.5" ${ns}/>`
+      + `<circle cx="${x}" cy="${y}" r="${4 * u}" fill="${A}" stroke="#fff" stroke-width="1.5" ${ns} pointer-events="none"/>`;
+  }
   function drawOverlay(st = S) {
     ov.setAttribute("viewBox", `0 0 ${S.w} ${S.h}`);
+    const o = objOf(), so = o && (st.objects || []).find((x) => x.id === o.id);
+    if (so) { ov.classList.remove("off"); ov.innerHTML = objOverlay(st, so); return; }
     const grad = st.source === "gradient", list = handleList(st);
     ov.classList.toggle("off", !list);
     if (!list) { ov.innerHTML = ""; return; }
@@ -1405,7 +1471,15 @@
   const toArt = (e) => { const r = ov.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * S.w, ((e.clientY - r.top) / r.height) * S.h]; };
   let drag = null;
   ov.addEventListener("pointerdown", (e) => {
-    const t = e.target, i = t.dataset?.i, list = handleList();
+    const t = e.target, o = objOf();
+    if (o && t.classList?.contains("ob") || o && t.classList?.contains("obs") || o && t.classList?.contains("obt")) {
+      const [x, y] = toArt(e);
+      drag = { obj: t.classList.contains("obs") ? "size" : t.classList.contains("obt") ? "turn" : "move", dx: o.x * S.w - x, dy: o.y * S.h - y };
+      ov.setPointerCapture(e.pointerId); ov.classList.add("dragging"); e.preventDefault();
+      return;
+    }
+    if (o) return;
+    const i = t.dataset?.i, list = handleList();
     if (i == null || !list) { if (sel != null) { sel = null; syncUI(); drawOverlay(); } return; }
     sel = +i;
     const p = list[sel], [x, y] = toArt(e);
@@ -1414,6 +1488,15 @@
     syncUI(); drawOverlay(); e.preventDefault();
   });
   ov.addEventListener("pointermove", (e) => {
+    if (drag?.obj) {
+      const o = objOf(); if (!o) return;
+      const [x, y] = toArt(e);
+      if (drag.obj === "move") { o.x = +clamp((x + drag.dx) / S.w, -0.2, 1.2).toFixed(4); o.y = +clamp((y + drag.dy) / S.h, -0.2, 1.2).toFixed(4); }
+      else if (drag.obj === "size") o.size = +clamp((2 * Math.hypot(x - o.x * S.w, y - o.y * S.h)) / Math.min(S.w, S.h), 0.05, 2).toFixed(3);
+      else { let a = Math.round((Math.atan2(x - o.x * S.w, -(y - o.y * S.h)) * 180) / Math.PI); if (e.shiftKey) a = Math.round(a / 15) * 15; o.rot = a; }
+      drawOverlay(); syncUI(); render(true);
+      return;
+    }
     const list = handleList();
     if (!drag || !list) return;
     const p = list[sel], [x, y] = toArt(e);
@@ -1467,7 +1550,7 @@
   window.syncSize = syncSize;
 
   // ---------- menus + modals ----------
-  const menus = { sizeBtn: sizeMenu, exportBtn: $("exportMenu"), settingsBtn: $("settingsMenu") };
+  const menus = { sizeBtn: sizeMenu, exportBtn: $("exportMenu"), settingsBtn: $("settingsMenu"), designsBtn: $("designsMenu") };
   function closeMenus() { Object.values(menus).forEach((m) => (m.hidden = true)); }
   for (const [btn, menu] of Object.entries(menus)) {
     $(btn).onclick = (e) => {
@@ -1477,6 +1560,7 @@
       menu.hidden = !open;
       if (open && menu === sizeMenu) { const [w, h] = sizer().get(), fitting = !!sizer().fitting?.(); for (const o of sizeMenu.querySelectorAll(".opt")) o.classList.toggle("on", o.hasAttribute("data-fit") ? fitting : !fitting && +o.dataset.w === w && +o.dataset.h === h); }
       if (open && menu.id === "exportMenu") refreshExport();
+      if (open && menu.id === "designsMenu") dzSync();
     };
   }
   document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".menu-wrap")) closeMenus(); });
@@ -1518,7 +1602,7 @@
   };
   $("unlockCancel").onclick = () => closeModal("unlockModal");
   $("unlockOk").onclick = () => { P.unlock = true; savePrefs(); $("unlock").checked = true; closeModal("unlockModal"); toast("Values unlocked"); };
-  const settingsJSON = () => JSON.stringify({ app: "isoline", version: 5, settings: S }, null, 2);
+  const settingsJSON = () => JSON.stringify({ app: "isoline", version: 5, appVersion: VERSION, settings: S }, null, 2);
   $("exportSettings").onclick = () => { closeMenus(); download(new Blob([settingsJSON()], { type: "application/json" }), `isoline-settings-${S.seed}.json`, "Settings saved"); };
   $("copySettings").onclick = async () => { closeMenus(); try { await navigator.clipboard.writeText(settingsJSON()); toast("Settings copied"); } catch (e) { toast("Clipboard is blocked here. Use Download settings."); } };
   $("importSettings").onclick = () => { closeMenus(); $("importErr").hidden = true; $("importText").value = ""; openModal("importModal"); $("importText").focus(); };
@@ -1569,7 +1653,7 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.7", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "1.8", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
@@ -1581,15 +1665,202 @@
   $("importOk").onclick = () => {
     try {
       const data = JSON.parse($("importText").value);
-      const src = data && data.settings ? data.settings : data;
-      if (!src || typeof src !== "object" || !("pattern" in src || "grad" in src)) throw new Error("not settings");
-      S = withDefaults(src); sel = null;
-      closeModal("importModal"); update(); toast("Settings imported");
+      importData(data);
+      closeModal("importModal");
     } catch (err) {
       $("importErr").textContent = "That isn't an Isoline settings file. Paste the JSON from Copy settings or choose a downloaded .json.";
       $("importErr").hidden = false;
     }
   };
+  // ---------- saved designs ----------
+  // Designs live in this browser's storage, each with its own history of saved versions. Every version
+  // records the settings schema and app version it was saved with, so opening one made by a newer
+  // Isoline, or one that needs a picture this browser doesn't have, says what will change first.
+  const SCHEMA = 5, LIB = "isoline-designs-v1", MAX_VERSIONS = 30;
+  let lib = (() => { try { const v = JSON.parse(localStorage.getItem(LIB) || "null"); return Array.isArray(v?.items) ? v.items : []; } catch (e) { return []; } })();
+  const saveLib = () => {
+    try { localStorage.setItem(LIB, JSON.stringify({ schema: 1, items: lib })); return true; }
+    catch (e) { toast("Browser storage is full. Delete or export some designs first."); return false; }
+  };
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const libItem = (id) => lib.find((d) => d.id === id);
+  const latest = (d) => d.versions[d.versions.length - 1];
+  const sameState = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const ago = (t) => {
+    const s = Math.max(0, (Date.now() - t) / 1000);
+    if (s < 50) return "just now";
+    if (s < 3600) return `${Math.round(s / 60)} min ago`;
+    if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+    const d = new Date(t);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", ...(d.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}) });
+  };
+  const when = (t) => new Date(t).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  async function thumbURL() {
+    try { const c = await window.Studio.snapshot(160, 100); return c.toDataURL("image/jpeg", 0.82); } catch (e) { return ""; }
+  }
+  // What opening src will change, in plain words. An empty list means it opens exactly as saved.
+  function compat(src, meta = {}) {
+    const notes = [], names = (ids) => ids.map((x) => `"${x}"`).join(", ");
+    if (meta.schema > SCHEMA) notes.push(`It was saved with a newer Isoline${meta.app ? ` (${meta.app})` : ""}, so settings this version doesn't know are left out.`);
+    else { const extra = Object.keys(src).filter((k) => !(k in DEFAULTS) && !k.startsWith("_")); if (extra.length) notes.push(`${extra.length === 1 ? "One setting isn't" : `${extra.length} settings aren't`} known to this version and ${extra.length === 1 ? "is" : "are"} left out.`); }
+    if (src.pattern && !T.PATTERNS.some((p) => p.id === src.pattern)) notes.push(`The ${names([src.pattern])} pattern isn't available, so Terrain stands in.`);
+    const g = src.grad || {};
+    if (g.type && !GENS.some((x) => x[0] === g.type)) notes.push(`The ${names([g.type])} generator isn't available, so Mesh stands in.`);
+    if (g.noise && !NOISE_TYPES.some((x) => x[0] === g.noise)) notes.push(`The ${names([g.noise])} noise isn't available.`);
+    const fx = (src.fxOrder || []).filter((id) => !FX_IDS.includes(id));
+    if (fx.length) notes.push(`${fx.length === 1 ? "The effect" : "The effects"} ${names(fx)} ${fx.length === 1 ? "isn't" : "aren't"} available and ${fx.length === 1 ? "is" : "are"} left out.`);
+    if (src.source === "gradient" && g.type === "image" && g.image && g.image !== IMG?.id) notes.push("Its picture isn't stored in this browser, so a placeholder shows until you add one.");
+    return notes;
+  }
+  let pending = null;
+  // Opens src after showing what will change, if anything. Undo returns to the design before.
+  function openState(src, meta, then) {
+    const notes = compat(src, meta);
+    const go = () => { S = withDefaults(src); sel = null; update({ fade: true }); then?.(); };
+    if (!notes.length) return go();
+    pending = go;
+    $("compatList").innerHTML = notes.map((n) => `<li>${esc(n)}</li>`).join("");
+    openModal("compatModal");
+  }
+  $("compatOk").onclick = () => { closeModal("compatModal"); const f = pending; pending = null; f?.(); };
+  $("compatCancel").onclick = () => { pending = null; closeModal("compatModal"); };
+
+  function dzSync() {
+    const cur = libItem(P.designId);
+    if (!cur && P.designId) { P.designId = null; savePrefs(); }
+    const dirty = cur && !sameState(latest(cur).state, S);
+    if (document.activeElement !== $("dzName")) $("dzName").value = cur?.name || "";
+    $("dzState").textContent = !cur ? "Not saved yet" : dirty ? `Changed since version ${cur.versions.length}` : `Saved, ${cur.versions.length === 1 ? "1 version" : cur.versions.length + " versions"}`;
+    $("dzState").classList.toggle("dirty", !!dirty);
+    $("dzCopy").hidden = !cur;
+    $("dzExportAll").disabled = !lib.length;
+    const list = $("dzList");
+    if (!lib.length) { list.innerHTML = `<p class="dz-empty">Saved designs show up here, with every version you save.</p>`; return; }
+    const open = list.dataset.open || "";
+    list.innerHTML = lib.slice().sort((a, b) => b.updated - a.updated).map((d) => `
+      <div class="dz-item${d.id === P.designId ? " on" : ""}${d.id === open ? " open" : ""}" data-id="${d.id}">
+        <button class="dz-main" data-act="open" title="Open the latest version">
+          <span class="dz-thumb">${d.thumb ? `<img src="${d.thumb}" alt="">` : ""}</span>
+          <span class="dz-text"><b>${esc(d.name || "Untitled design")}</b><small>${d.versions.length === 1 ? "1 version" : d.versions.length + " versions"}, ${ago(d.updated)}</small></span>
+        </button>
+        <button class="ib xs" data-act="versions" title="Versions" aria-label="Versions"><svg class="ic"><use href="#i-history"/></svg></button>
+        <button class="ib xs" data-act="download" title="Download .json" aria-label="Download"><svg class="ic"><use href="#i-down"/></svg></button>
+        <button class="ib xs" data-act="delete" title="Delete" aria-label="Delete"><svg class="ic"><use href="#i-trash"/></svg></button>
+        <div class="dz-vers"><div>${d.versions.map((v, i) => ({ v, i })).reverse().map(({ v, i }) => `<button class="opt" data-act="restore" data-v="${i}"><span>Version ${i + 1}</span><span class="mono">${when(v.at)}</span></button>`).join("")}</div></div>
+      </div>`).join("");
+  }
+  async function saveDesign(asNew = false) {
+    let cur = asNew ? null : libItem(P.designId);
+    const name = $("dzName").value.trim() || cur?.name || `Design ${lib.length + 1}`;
+    if (cur && sameState(latest(cur).state, S) && cur.name === name) { toast("No changes since the last version"); return; }
+    const thumb = await thumbURL(), now = Date.now(), version = { at: now, schema: SCHEMA, app: VERSION, state: clone(S) };
+    if (cur && sameState(latest(cur).state, S)) { cur.name = name; cur.updated = now; }
+    else if (cur) { cur.name = name; cur.versions.push(version); if (cur.versions.length > MAX_VERSIONS) cur.versions.splice(0, cur.versions.length - MAX_VERSIONS); cur.thumb = thumb || cur.thumb; cur.updated = now; }
+    else { cur = { id: uid(), name: asNew && libItem(P.designId) ? `${name} copy` : name, created: now, updated: now, thumb, versions: [version] }; lib.push(cur); }
+    if (!saveLib()) return;
+    P.designId = cur.id; savePrefs(); dzSync();
+    toast(cur.versions.length > 1 ? `Saved version ${cur.versions.length} of ${cur.name}` : `Saved ${cur.name}`);
+  }
+  $("dzSave").onclick = () => saveDesign();
+  $("dzCopy").onclick = () => saveDesign(true);
+  $("dzName").onkeydown = (e) => { if (e.key === "Enter") saveDesign(); };
+  $("dzList").onclick = (e) => {
+    const b = e.target.closest("[data-act]"), item = e.target.closest(".dz-item");
+    if (!b || !item) return;
+    const d = libItem(item.dataset.id); if (!d) return;
+    const act = b.dataset.act;
+    if (act === "versions") { const list = $("dzList"); list.dataset.open = list.dataset.open === d.id ? "" : d.id; item.classList.toggle("open"); for (const x of list.querySelectorAll(".dz-item.open")) if (x !== item) x.classList.remove("open"); return; }
+    if (act === "download") { download(new Blob([JSON.stringify({ app: "isoline", kind: "design", ...d }, null, 2)], { type: "application/json" }), `${(d.name || "design").replace(/[^\w-]+/g, "-").toLowerCase()}.isoline.json`, "Design saved"); return; }
+    if (act === "delete") {
+      lib = lib.filter((x) => x !== d); saveLib();
+      if (P.designId === d.id) { P.designId = null; savePrefs(); }
+      item.classList.add("leaving"); setTimeout(dzSync, 220);
+      toastUndo(`Deleted ${d.name}`, () => { lib.push(d); saveLib(); dzSync(); });
+      return;
+    }
+    const v = act === "restore" ? d.versions[+b.dataset.v] : latest(d);
+    closeMenus();
+    openState(v.state, v, () => { P.designId = d.id; savePrefs(); toast(act === "restore" ? `Opened version ${+b.dataset.v + 1} of ${d.name}` : `Opened ${d.name}`); });
+  };
+  const toastUndo = (msg, undo) => toast(msg, { action: "Undo", onAction: undo });
+  $("dzExportAll").onclick = () => download(new Blob([JSON.stringify({ app: "isoline", kind: "designs", schema: 1, items: lib }, null, 2)], { type: "application/json" }), "isoline-designs.json", `${lib.length === 1 ? "1 design" : lib.length + " designs"} saved`);
+  // Takes design files, whole libraries, or plain settings. Designs join the library; settings open.
+  function importData(data) {
+    const items = data?.kind === "designs" ? data.items : data?.kind === "design" ? [data] : null;
+    if (items) {
+      const ok = items.filter((d) => Array.isArray(d?.versions) && d.versions.length && d.versions.every((v) => v && typeof v.state === "object"));
+      if (!ok.length) throw new Error("empty");
+      for (const d of ok) { const copy = { id: libItem(d.id) ? uid() : d.id || uid(), name: String(d.name || "Imported design").slice(0, 60), created: d.created || Date.now(), updated: Date.now(), thumb: typeof d.thumb === "string" && d.thumb.startsWith("data:image/") ? d.thumb : "", versions: d.versions.slice(-MAX_VERSIONS) }; lib.push(copy); }
+      if (!saveLib()) return;
+      dzSync();
+      const first = lib[lib.length - ok.length], v = latest(first);
+      openState(v.state, v, () => { P.designId = first.id; savePrefs(); });
+      toast(ok.length === 1 ? `Imported ${first.name}` : `Imported ${ok.length} designs`);
+      return true;
+    }
+    const src = data && data.settings ? data.settings : data;
+    if (!src || typeof src !== "object" || !("pattern" in src || "grad" in src)) throw new Error("not settings");
+    openState(src, { schema: data.version, app: data.appVersion }, () => toast("Settings imported"));
+    return true;
+  }
+  $("dzImport").onchange = async (e) => {
+    const f = e.target.files?.[0]; e.target.value = "";
+    if (!f) return;
+    closeMenus();
+    try { importData(JSON.parse(await f.text())); } catch (err) { toast("That file isn't an Isoline design or settings file."); }
+  };
+
+  // ---------- share links ----------
+  // A link holds only what differs from the defaults, deflated and base64url encoded in the hash, so
+  // most designs fit in a short URL. Pictures stay out: they're too big and belong to their owner.
+  function diffOf(a, d) {
+    if (typeof a !== "object" || a === null || Array.isArray(a) || typeof d !== "object" || d === null || Array.isArray(d)) return JSON.stringify(a) === JSON.stringify(d) ? undefined : a;
+    const out = {};
+    for (const k of Object.keys(a)) { const v = diffOf(a[k], d[k]); if (v !== undefined) out[k] = v; }
+    return Object.keys(out).length ? out : undefined;
+  }
+  function mergeInto(base, over) {
+    for (const [k, v] of Object.entries(over || {})) base[k] = v && typeof v === "object" && !Array.isArray(v) && base[k] && typeof base[k] === "object" && !Array.isArray(base[k]) ? mergeInto(base[k], v) : v;
+    return base;
+  }
+  const b64u = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+  async function pipe(bytes, Stream, mode) { const out = new Response(new Blob([bytes]).stream().pipeThrough(new Stream(mode))); return new Uint8Array(await out.arrayBuffer()); }
+  async function shareCode(st) {
+    const body = JSON.stringify({ s: SCHEMA, a: VERSION, d: diffOf(st, DEFAULTS) || {} }), raw = new TextEncoder().encode(body);
+    if (window.CompressionStream) { try { return "z" + b64u(await pipe(raw, CompressionStream, "deflate-raw")); } catch (e) {} }
+    return "j" + b64u(raw);
+  }
+  async function readCode(code) {
+    const bytes = unb64u(code.slice(1));
+    const raw = code[0] === "z" ? await pipe(bytes, DecompressionStream, "deflate-raw") : bytes;
+    const v = JSON.parse(new TextDecoder().decode(raw));
+    return { state: mergeInto(clone(DEFAULTS), v.d), meta: { schema: v.s, app: v.a } };
+  }
+  $("dzShare").onclick = async () => {
+    const st = clone(S); delete st.fmt; delete st.pngScale;
+    const url = `${location.origin}${location.pathname}#/studio?d=${await shareCode(st)}`;
+    closeMenus();
+    const pic = S.source === "gradient" && S.grad.type === "image" ? " Pictures aren't included in links." : "";
+    try { await navigator.clipboard.writeText(url); toast(`Link copied. Anyone with it opens this design.${pic}`); }
+    catch (e) { history.replaceState(null, "", url); toast(`Clipboard is blocked here. The link is in the address bar.${pic}`); }
+  };
+  async function openShared() {
+    const m = location.hash.match(/[?&]d=([\w-]+)/);
+    if (!m) return;
+    history.replaceState(null, "", location.pathname + location.search + "#/studio");
+    try {
+      const { state, meta } = await readCode(m[1]);
+      openState(state, meta, () => { P.designId = null; savePrefs(); toast("Opened a shared design. Save it to keep it."); });
+    } catch (e) { toast("That link is damaged, so the design couldn't open."); }
+  }
+  addEventListener("hashchange", openShared);
+  setTimeout(openShared, 0);
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s" && window.Shell?.route === "studio") { e.preventDefault(); saveDesign(); }
+  });
+
   $("resetAll").onclick = () => { closeMenus(); S = withDefaults(null); sel = null; P.slot = "preset"; update(); toast("Reset. Undo with ⌘Z"); };
 
   // ---------- export ----------
@@ -1631,9 +1902,9 @@
     if (!FXR) throw new Error("no webgl");
     const sc = Math.min(scale, FXR.maxSize / Math.max(S.w, S.h)), w = Math.round(S.w * sc), h = Math.round(S.h * sc);
     await step(on, "Drawing the pattern", 0.1);
-    const image = S.source === "contours" ? await rasterize(rasterCanvas, current.svg, w, h) : null;
+    const jb = await fxJob(FXR, S, w, h);
     await step(on, S.fxOrder.length ? `Applying ${S.fxOrder.length === 1 ? "the effect" : S.fxOrder.length + " effects"}` : "Rendering", 0.35);
-    FXR.render(job(S, w, h, image));
+    FXR.render(jb);
     await step(on, "Compressing the PNG", 0.65);
     const blob = await new Promise((r) => fxCanvas.toBlob(r, "image/png"));
     render(false);
@@ -1705,6 +1976,93 @@
   }
   $("copy").onclick = copyOut;
 
+  // ---------- option groups ----------
+  // Long panels fold into titled groups. A closed group sums up its values in its header, so nothing
+  // set inside it goes unseen. Groups with nothing to show for the current design hide themselves.
+  function groupOf(nodes, title, { open = true, hint } = {}) {
+    const g = UI.wrapGroup(nodes, title, { key: "studio-" + title, open, hint: hint ? "1" : "" });
+    if (!g) return null;
+    syncers.push(() => {
+      g.hidden = ![...g.body.children].some((c) => !c.hidden);
+      if (hint) g.setHint(hint());
+    });
+    return g;
+  }
+  const rowsOf = (host, labels) => [...host.children].filter((r) => labels.includes(r.querySelector(".label")?.textContent));
+  const facts = (...xs) => xs.filter(Boolean).join(", ");
+  groupOf([...rowsOf($("shape"), ["Scale", "Detail", "Angle", "Features", "Bulge", "Bulge size"]), document.querySelector(".seed-row")], "Scale and detail", { hint: () => facts(px(S.scale), `seed ${S.seed}`) });
+  groupOf(rowsOf($("shape"), ["Warp", "Liquify", "Liquify size"]), "Distortion", { hint: () => facts(`warp ${f2(S.warp)}`, S.liquify ? `liquify ${f2(S.liquify)}` : "") });
+  groupOf([document.querySelector(".pts-head"), document.querySelector(".pt-actions"), $("ptHint"), $("pointCtrls")], "Points", { open: false, hint: () => (S.usePoints ? `${S.points.length} in use` : "Off") });
+  groupOf([$("gradCtrls"), $("gradHint")], "Fine-tune", { hint: () => facts(`warp ${f2(S.grad.warp)}`) });
+  groupOf(rowsOf($("lines"), ["Count", "Gap", "Bias", "Thickness"]), "Spacing", { hint: () => (linear() ? px(S.gap) + " gap" : S.levels + " levels") });
+  groupOf(rowsOf($("lines"), ["Weight", "Swell", "Swell size", "Taper"]), "Stroke", { hint: () => facts(f2(S.weight) + "px", S.swell ? "swell" : "", S.taper ? "taper" : "") });
+  groupOf(rowsOf($("lines"), ["Accent every", "Accent weight"]), "Accent lines", { open: false, hint: () => (S.indexEvery ? `every ${S.indexEvery}` : "Off") });
+  groupOf(rowsOf($("lines"), ["Smooth", "Grid", "Clean"]), "Detail", { open: false, hint: () => facts(`smooth ${f2(S.smooth)}`, `grid ${px(S.res)}`) });
+  { const sec = document.querySelector('.panel-sec[data-panel="colors"] [data-gen="contours"]'); groupOf([...sec.children], "Fine-tune", { hint: () => facts(S.gradient || S.mode !== "lines" ? "blended" : "", S.transparent ? "transparent" : "", S.opacity < 1 ? pct(S.opacity) : "") }); }
+  groupOf([$("motionMore")], "Timing", { open: false, hint: () => facts({ loop: "loop", pingpong: "ping-pong", once: "once" }[S.motion.mode], S.motion.ease === "linear" ? "linear" : S.motion.ease) });
+
+  // ---------- objects ----------
+  // New objects land off-centre, staggered, so a second one doesn't hide the first.
+  const SPOTS = [[0.5, 0.5], [0.32, 0.4], [0.68, 0.6], [0.66, 0.34], [0.34, 0.66], [0.5, 0.3], [0.5, 0.7], [0.22, 0.5]];
+  function addObject(kind, image = "") {
+    if (S.objects.length >= 8) { toast("Eight objects is the most a design holds"); return; }
+    const [x, y] = SPOTS.find(([a, b]) => !S.objects.some((o) => Math.hypot(o.x - a, o.y - b) < 0.08)) || [rnd(0.25, 0.75), rnd(0.25, 0.75)];
+    const o = { ...OBJ_DEFAULT, id: objId(), kind, x, y, image, size: S.objects.length ? 0.36 : 0.5, mat: kind === "image" ? "photo" : "shaded", spin: kind === "image" ? 0 : 30, tilt: kind === "image" ? 0 : 20, shadow: kind === "image" ? 0.3 : 0.4 };
+    S.objects.push(o);
+    P.slot = "obj:" + o.id;
+    update(); schedulePreviews(0);
+  }
+  const objKindCards = {};
+  for (const [id, label] of OBJ_KINDS) {
+    const c = card(label, () => (id === "image" ? pickPicture((pid) => addObject("image", pid)) : addObject(id)), id === "image" ? "From your files" : "");
+    $("objKinds").appendChild(c); objKindCards[id] = c;
+  }
+  const objFormCards = {};
+  for (const [id, label] of OBJ_KINDS.filter(([k]) => k !== "image")) {
+    const c = card(label, () => { const o = objOf(); if (!o || o.kind === id) return; o.kind = id; update(); });
+    $("objForms").appendChild(c); objFormCards[id] = c;
+  }
+  $("objPicReplace").onclick = () => pickPicture((pid) => { const o = objOf(); if (o) { o.image = pid; update(); } });
+  $("objDup").onclick = () => { const o = objOf(); if (!o || S.objects.length >= 8) return toast("Eight objects is the most a design holds"); const c = { ...clone(o), id: objId(), x: clamp(o.x + 0.06, 0, 1), y: clamp(o.y + 0.06, 0, 1) }; S.objects.push(c); P.slot = "obj:" + c.id; update(); };
+  $("objRemove").onclick = () => { const o = objOf(); if (!o) return; S.objects = S.objects.filter((x) => x !== o); P.slot = S.objects.length ? "obj:" + S.objects[S.objects.length - 1].id : "addobj"; update(); };
+  const ob = (key) => ({ get: () => objOf()?.[key] ?? OBJ_DEFAULT[key], set: (v) => { const o = objOf(); if (o) o[key] = v; } });
+  const isPic = () => objOf()?.kind === "image";
+  {
+    const host = $("objGroups"), G = (title, open = true) => { const g = UI.group(title, { key: "obj-" + title, open }); host.appendChild(g); return g.body; };
+    const mat = G("Material");
+    const seg = document.createElement("div"); seg.className = "seg sm grid2"; seg.id = "objMat";
+    seg.innerHTML = [...OBJ_MATS, ...PIC_MATS].map(([v, l, tip]) => `<button data-v="${v}" data-tip="${tip}">${l}</button>`).join("");
+    mat.appendChild(seg);
+    makeSeg(seg, () => objOf()?.mat, (v) => { const o = objOf(); if (o) o.mat = v; });
+    syncers.push(() => { const pic = isPic(); for (const b of seg.children) if (b.dataset.v) b.hidden = pic !== PIC_MATS.some(([k]) => k === b.dataset.v); });
+    const pr = document.createElement("div"); pr.className = "label-row obj-preset";
+    pr.innerHTML = `<span class="label">Preset</span>`;
+    const pseg = document.createElement("div"); pseg.className = "seg"; pseg.innerHTML = PRESETS.map(([, n]) => `<button data-v="${n}">${n}</button>`).join("");
+    pr.appendChild(pseg); mat.appendChild(pr);
+    makeSeg(pseg, () => objOf()?.preset, (v) => { const o = objOf(); if (o) o.preset = v; });
+    UI.dropdown(pseg, { label: "Preset" });
+    syncers.push(() => (pr.hidden = isPic() || objOf()?.mat !== "preset"));
+    const place = G("Placement");
+    const pct = (v) => Math.round(v * 100) + "%";
+    makeSlider(place, { label: "Left to right", ...ob("x"), min: 0, max: 1, step: 0.001, pct: true, fmt: pct, rand: [0.2, 0.8] });
+    makeSlider(place, { label: "Top to bottom", ...ob("y"), min: 0, max: 1, step: 0.001, pct: true, fmt: pct, rand: [0.2, 0.8] });
+    makeSlider(place, { label: "Size", ...ob("size"), min: 0.05, max: 1.5, step: 0.005, pct: true, fmt: pct, rand: [0.25, 0.7] });
+    makeSlider(place, { label: "Rotate", ...ob("rot"), min: -180, max: 180, step: 1, fmt: deg, rand: [-40, 40] });
+    const turn = G("Orientation");
+    makeSlider(turn, { label: "Tilt", ...ob("tilt"), min: -90, max: 90, step: 1, fmt: deg, rand: [-35, 45] });
+    makeSlider(turn, { label: "Spin", ...ob("spin"), min: -180, max: 180, step: 1, fmt: deg, rand: [-90, 90] });
+    const surf = G("Surface", false);
+    makeSlider(surf, { label: "Shine", ...ob("shine"), min: 0, max: 1, step: 0.01, pct: true, fmt: pct, rand: [0.3, 0.9] });
+    makeSlider(surf, { label: "Ripple", ...ob("ripple"), min: 0, max: 2, step: 0.01, fmt: (v) => (v ? f2(v) : "Off"), rand: [0, 0.6], when: () => !isPic() });
+    makeSlider(surf, { label: "Corners", ...ob("round"), min: 0, max: 1, step: 0.01, pct: true, fmt: pct, rand: [0, 0.5], when: isPic });
+    makeSlider(surf, { label: "Shadow", ...ob("shadow"), min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Off"), rand: [0.2, 0.6] });
+    syncers.push(() => {
+      const o = objOf(); if (!o) return;
+      $("objForms").hidden = isPic(); $("objPicRow").hidden = !isPic();
+      for (const [id, c] of Object.entries(objFormCards)) c.classList.toggle("on", id === o.kind);
+    });
+  }
+
   // ---------- keyboard ----------
   const SLOT_KEYS = ["preset", "generator", "shape", "lines", "colors", "addfx", "motion"];
   document.addEventListener("keydown", (e) => {
@@ -1720,6 +2078,7 @@
     else if (key === "c") copyOut();
     else if (key === "e") $("exportBtn").click();
     else if (/^[1-7]$/.test(key)) { const s = SLOT_KEYS[+key - 1]; if (s !== "lines" || gen() === "contours") setSlot(s); }
+    else if ((e.key === "Delete" || e.key === "Backspace") && objOf()) { e.preventDefault(); $("objRemove").click(); }
     else if ((e.key === "Delete" || e.key === "Backspace") && sel != null) {
       e.preventDefault();
       if (S.source === "gradient") { if (S.grad.colors.length > 2) { S.grad.colors.splice(sel, 1); S.grad.points.splice(sel, 1); } }
@@ -1770,7 +2129,77 @@
     });
   }
   const isImg = (st) => st.source === "gradient" && st.grad.type === "image";
-  const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image: isImg(st) ? imageCanvas(st, w, h) : image, grad: st.source === "gradient" && !isImg(st) ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper, time: st._t || 0, motion: st._t != null ? st.motion.type : "still", motionAmt: st.motion?.amt });
+  const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image: isImg(st) ? imageCanvas(st, w, h) : image, grad: st.source === "gradient" && !isImg(st) ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper, time: st._t || 0, motion: st._t != null ? st.motion.type : "still", motionAmt: st.motion?.amt, objects: objectsFor(st), palette: paletteOf(st) });
+  // Objects read the design's colors darkest first, so shading runs from shadow to highlight.
+  const paletteOf = (st) => (st.source === "gradient" ? st.grad.colors : [st.bg, st.line, ...(st.mids || []), st.line2]).slice().sort((a, b) => lum(a) - lum(b));
+  function objectsFor(st) {
+    return (st.objects || []).map((o) => {
+      const t = o.kind === "image" ? picTex(o.image) : o.mat === "preset" ? presetTex(o.preset) : null;
+      return { ...o, asp: t?.asp || 1, tex: t?.el || null, texKey: t?.key };
+    });
+  }
+
+  // ---------- pictures for objects ----------
+  // Kept in this browser, scaled to at most 1400px so a handful fit in storage. Designs hold only ids.
+  const PICS_KEY = "isoline.pictures", PICS = new Map();
+  const picTex = (id) => { const p = PICS.get(id); return p ? { el: p.el, key: "pic:" + id, asp: p.el.naturalWidth / Math.max(1, p.el.naturalHeight) } : null; };
+  function loadPic(id, url) {
+    const el = new Image();
+    el.onload = () => { PICS.set(id, { el, url }); if (S.objects.some((o) => o.image === id)) { render(); schedulePreviews(); } };
+    el.src = url;
+  }
+  try { for (const [id, url] of Object.entries(JSON.parse(localStorage.getItem(PICS_KEY) || "{}"))) loadPic(id, url); } catch (e) {}
+  function storePics() {
+    // Pictures no object uses, here or in a saved design, are let go first.
+    const used = new Set([...S.objects.map((o) => o.image), ...lib.flatMap((d) => d.versions.flatMap((v) => (v.state.objects || []).map((o) => o.image)))]);
+    const keep = {};
+    for (const [id, p] of PICS) if (used.has(id)) keep[id] = p.url;
+    try { localStorage.setItem(PICS_KEY, JSON.stringify(keep)); return true; } catch (e) { return false; }
+  }
+  function pickPicture(then) {
+    const inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*";
+    inp.onchange = () => {
+      const f = inp.files?.[0]; if (!f) return;
+      const url0 = URL.createObjectURL(f), el = new Image();
+      el.onload = () => {
+        const sc = Math.min(1, 1400 / Math.max(el.naturalWidth, el.naturalHeight)), c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(el.naturalWidth * sc)); c.height = Math.max(1, Math.round(el.naturalHeight * sc));
+        c.getContext("2d").drawImage(el, 0, 0, c.width, c.height); URL.revokeObjectURL(url0);
+        const url = /png|webp|gif|svg/.test(f.type) ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.86), id = "i" + Date.now().toString(36);
+        const img = new Image();
+        img.onload = () => { PICS.set(id, { el: img, url }); then(id); if (!storePics()) toast("This picture is too big to keep after a reload. It works until then."); };
+        img.src = url;
+      };
+      el.onerror = () => toast("That file couldn't be read as a picture.");
+      el.src = url0;
+    };
+    inp.click();
+  }
+  // A preset as a texture: rendered once at a modest size, then wrapped onto forms.
+  const presetTexs = new Map();
+  function presetTex(name) {
+    const have = presetTexs.get(name);
+    if (have instanceof HTMLCanvasElement) return { el: have, key: "pre:" + name, asp: 1.6 };
+    if (!have && TFX) {
+      presetTexs.set(name, "pending");
+      setTimeout(async () => {
+        const p = PRESETS.find((x) => x[1] === name); if (!p) return;
+        const st = { ...resolveLook(p[2]), objects: [] }, W = 512, H = 320, c = document.createElement("canvas");
+        c.width = W; c.height = H;
+        if (isRaster(st)) { TFX.render(await fxJob(TFX, st, W, H, document.createElement("canvas"))); c.getContext("2d").drawImage(thumbCanvas, 0, 0); }
+        else await rasterize(c, T.buildSVG({ ...st, w: W, h: H }, { w: W, h: H }).svg, W, H);
+        presetTexs.set(name, c); render(); schedulePreviews();
+      }, 0);
+    }
+    return null;
+  }
+  // A render job for the effects pipeline R. Contours come from the GPU field where R supports it, which
+  // antialiases dense lines properly; otherwise the SVG is rasterized. res is the grid in output pixels.
+  async function fxJob(R, st, w, h, canvas = rasterCanvas, res) {
+    const gpu = st.source === "contours" && R?.floatOK ? T.gpuSpec(st, Math.max(st.res, res ? (res * st.w) / w : 0)) : null;
+    if (gpu || st.source !== "contours") return { ...job(st, w, h, null), contours: gpu };
+    return job(st, w, h, await rasterize(canvas, T.buildSVG(st, { w, h, ...(res ? { res } : {}) }).svg, w, h));
+  }
   // While a resize handle is held the scale stays put, so the edge tracks the pointer.
   let rzScale = 0, lowRes = 0, fitWH = "";
   const room = () => { const cs = getComputedStyle(wrap); return [wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)]; };
@@ -1804,12 +2233,16 @@
     let raster = isRaster(st);
     if (raster && !FXR) { raster = false; if (!fxWarned) { fxWarned = true; toast("This browser can't run WebGL2, so gradients and effects are off."); } }
     let svg = "";
-    if (st.source === "contours") svg = T.buildSVG(st, play && playRes ? { res: playRes } : draft ? { res: Math.max(st.res * 2, 7) } : {}).svg;
+    // Playback and drags draw contours on the GPU straight from the field, which keeps bands and dense
+    // lines smooth. Stills keep the SVG path, which is what exports use.
+    const gpu = st.source === "contours" && (play || draft || raster) && FXR?.floatOK ? T.gpuSpec(st, Math.max(st.res, 1.6 / Math.max(0.05, art.clientWidth / st.w))) : null;
+    if (gpu) raster = true;
+    else if (st.source === "contours") svg = T.buildSVG(st, play && playRes ? { res: playRes } : draft ? { res: Math.max(st.res * 2, 7) } : {}).svg;
     if (raster) {
       const { w, h } = previewDims(st, draft);
       let image = null;
-      if (st.source === "contours") { image = await rasterize(rasterCanvas, svg, w, h); if (tok !== paintTok) return null; }
-      FXR.render(job(st, w, h, image));
+      if (svg) { image = await rasterize(rasterCanvas, svg, w, h); if (tok !== paintTok) return null; }
+      FXR.render({ ...job(st, w, h, image), contours: gpu });
     } else artSvg.innerHTML = svg;
     fxCanvas.hidden = !raster; artSvg.hidden = raster;
     art.classList.toggle("clear", st.source === "contours" && st.transparent);
@@ -1873,12 +2306,11 @@
       return swapIn(slot, svgNode(T.buildSVG(s, { w: W, h: H, res: 2.5 * z, minLen: 8 }).svg.replace(/^<svg([^>]*?) width="\d+" height="\d+" viewBox="[^"]*"/, `<svg$1 width="${w}" height="${h}" viewBox="${(W - w) / 2} ${(H - h) / 2} ${w} ${h}"`)));
     }
     const W = w * 2, H = h * 2;
-    const image = s.source === "contours" ? await rasterize(thumbRaster, T.buildSVG(s, { w: W, h: H, res: 2.5 }).svg, W, H) : null;
-    TFX.render(job(s, W, H, image));
+    TFX.render(await fxJob(TFX, s, W, H, thumbRaster, 2.5));
     return putCanvas(slot, thumbCanvas, W, H);
   }
   const slotOf = (c) => c.querySelector(".th");
-  const noFx = (st) => ({ ...st, fxOrder: [] });
+  const noFx = (st) => ({ ...st, fxOrder: [], objects: [] });
   // Shape previews: strokes in the design's own colors, so the pattern reads without the fills.
   const strokes = (st) => (st.source === "contours" ? readable({ ...st, gradient: false, mode: "lines", transparent: false, opacity: 1, swell: 0, taper: 0, indexEvery: 0 }) : st);
   // Stroke modes need ink that stands off the paper; layered looks often share them.
@@ -1894,8 +2326,8 @@
     if (final && current.raster) {
       const sw = fxCanvas.width, sh = Math.min(fxCanvas.height, sw * 0.625);
       x.drawImage(fxCanvas, 0, (fxCanvas.height - sh) / 2, sw, sh, 0, 0, W, H);
-    } else if (S.source === "gradient") {
-      TFX.render(job({ ...noFx(S), h: Math.round(S.w * 0.625) }, W, H, null));
+    } else if (S.source === "gradient" || S.objects.length) {
+      TFX.render(await fxJob(TFX, { ...S, fxOrder: [], h: Math.round(S.w * 0.625) }, W, H, document.createElement("canvas"), 2.5));
       x.drawImage(thumbCanvas, 0, 0, W, H);
     } else await rasterize(baseCanvas, T.buildSVG({ ...S, h: Math.round(S.w * 0.625) }, { w: W, h: H, res: 2.5 }).svg, W, H);
   }
@@ -1930,9 +2362,11 @@
     if (p === "shape") {
       if (gen() === "contours") for (const pt of T.PATTERNS) jobs.push(() => thumb(slotOf(patCards[pt.id]), lightLines(strokes({ ...noFx(S), pattern: pt.id })), 130));
       if (gen() === "noise") for (const [id] of NOISE_TYPES) jobs.push(() => thumb(slotOf(noiseCards[id]), { ...noFx(S), grad: { ...S.grad, noise: id } }, 130));
-      if (gen() === "solid") for (const [id] of SOLIDS) jobs.push(() => thumb(slotOf(solidCards[id]), { ...noFx(S), grad: { ...S.grad, solid: id } }, 130));
       varCards.forEach((c, i) => { c._seed = variationSeed(i); jobs.push(() => thumb(slotOf(c), { ...S, seed: c._seed }, 130)); });
     }
+    for (const o of S.objects) tileJob("obj:" + o.id, { ...noFx(S), objects: [{ ...o, x: 0.5, y: 0.5, size: Math.min(0.9, Math.max(0.6, o.size)) }] });
+    if (p === "addobj") for (const [id] of OBJ_KINDS) if (id !== "image" || [...PICS.keys()].length) jobs.push(() => thumb(slotOf(objKindCards[id]), { ...noFx(S), objects: [{ ...OBJ_DEFAULT, kind: id, image: [...PICS.keys()].pop() || "", mat: id === "image" ? "photo" : "shaded", size: 0.62, tilt: id === "image" ? 0 : 20 }] }, 130));
+    if (p === "object" && objOf() && !isPic()) { const o = objOf(); for (const id of Object.keys(objFormCards)) jobs.push(() => thumb(slotOf(objFormCards[id]), { ...noFx(S), objects: [{ ...o, kind: id, x: 0.5, y: 0.5, size: 0.62 }] }, 130)); }
     if (p === "lines" && gen() === "contours") for (const m of Object.keys(modeCards)) jobs.push(() => thumb(slotOf(modeCards[m]), lightLines(readable({ ...noFx(S), mode: m })), 130));
     if (p === "addfx" && TFX) {
       jobs.push(() => effectBase(260, 163));
@@ -1951,18 +2385,16 @@
     if (key === motionKey && el.children.length) return;
     motionKey = key;
     const tok = ++motionTok;
-    // A wide strip, since the Motion tile is a banner.
     // A still design previews a gentle drift, so the tile always reads as movement.
-    if (reduceMotion.matches) { await thumb(el, S, 128, 0.375); return; }
+    if (reduceMotion.matches) { await thumb(el, S, 64); return; }
     const still = S.motion.type === "still", M = still ? { ...S.motion, type: "drift", amt: 0.45, mode: "loop", dir: 1, ease: "linear", seed: 0 } : S.motion, base = still ? { ...S, motion: M } : S;
-    const N = 24, w = 128, h = 48, W = 256, H = 96, frames = [];
+    const N = 24, w = 64, h = 40, W = 128, H = 80, frames = [];
     for (let k = 0; k < N; k++) {
-      const st = { ...motionState(base, motionT(k / N, M)), h: Math.round(S.w * 0.375) };
+      const st = { ...motionState(base, motionT(k / N, M)), h: Math.round(S.w * 0.625) };
       const f = document.createElement("canvas"); f.width = W; f.height = H;
       if (!isRaster(st) || !TFX) await rasterize(f, thumbSVG(st, w, h), W, H);
       else {
-        const image = st.source === "contours" ? await rasterize(thumbRaster, T.buildSVG(st, { w: W, h: H, res: 2.5 }).svg, W, H) : null;
-        TFX.render(job(st, W, H, image)); f.getContext("2d").drawImage(thumbCanvas, 0, 0);
+        TFX.render(await fxJob(TFX, st, W, H, thumbRaster, 2.5)); f.getContext("2d").drawImage(thumbCanvas, 0, 0);
       }
       frames.push(f);
       if (tok !== motionTok) return;
@@ -2013,7 +2445,7 @@
   function animateFrom(from, fade) {
     const to = clone(S);
     if (!from || reduceMotion.matches) return render();
-    if (fade || discrete(from, to) || (isRaster(to) && to.source === "contours")) { crossfade(render()); return; }
+    if (fade || discrete(from, to) || (isRaster(to) && to.source === "contours" && !FXR?.floatOK)) { crossfade(render()); return; }
     cancelAnimationFrame(raf); cancelAnimationFrame(anim);
     const t0 = performance.now(), dur = 380;
     let busy = false;
@@ -2067,6 +2499,7 @@
     const g = gen();
     if (P.slot === "lines" && g !== "contours") P.slot = "shape";
     if (P.slot.startsWith("fx:") && !S.fxOrder.includes(fxOf())) P.slot = "addfx";
+    if (P.slot.startsWith("obj:") && !objOf()) P.slot = "addobj";
     const panel = panelOf(P.slot);
     for (const s of document.querySelectorAll(".panel-sec")) s.hidden = s.dataset.panel !== panel;
     if (P.slot !== shownSlot) { shownSlot = P.slot; enterPanel(document.querySelector(`.panel-sec[data-panel="${panel}"]`)); }
@@ -2075,7 +2508,7 @@
     for (const el of [$("variations"), $("variations").previousElementSibling, $("variations").nextElementSibling]) el.hidden = g === "image";
     for (const sec of document.querySelectorAll(".panel-sec")) { for (const c of sec.children) c.classList.remove("lead"); [...sec.children].find((c) => !c.hidden)?.classList.add("lead"); }
     const fid = fxOf();
-    $("optTitle").textContent = fid ? FXI[fid].name : swapping && panel === "addfx" ? `Swap ${FXI[swapping].name}` : PANEL_TITLE[panel];
+    $("optTitle").textContent = fid ? FXI[fid].name : panel === "object" ? objName(objOf()) : swapping && panel === "addfx" ? `Swap ${FXI[swapping].name}` : PANEL_TITLE[panel];
     optDice.title = optDice.ariaLabel = panel === "preset" ? "Surprise me" : `Randomize ${$("optTitle").textContent.toLowerCase()}`;
     if (fid !== bodyFor) { $("fxBodyHost").innerHTML = ""; if (fid) $("fxBodyHost").appendChild(fxBodies[fid]); bodyFor = fid; }
     if (fid) $("fxLede").innerHTML = `<span>${FXI[fid].cat}</span><span>Step ${S.fxOrder.indexOf(fid) + 1} of ${S.fxOrder.length}</span>`;
@@ -2137,7 +2570,7 @@
     const { width: w, height: h } = c, st = { ...motionState(st0, motionT(t, st0.motion)), w: st0.w, h: st0.h };
     const sc = Math.max(w / st.w, h / st.h), dw = Math.round(st.w * sc), dh = Math.round(st.h * sc);
     let src;
-    if (isRaster(st) && TFX) { const image = st.source === "contours" ? await rasterize(document.createElement("canvas"), T.buildSVG(st, { w: dw, h: dh, res: 2.5 }).svg, dw, dh) : null; TFX.render(job(st, dw, dh, image)); src = thumbCanvas; }
+    if (isRaster(st) && TFX) { TFX.render(await fxJob(TFX, st, dw, dh, document.createElement("canvas"), 2.5)); src = thumbCanvas; }
     else src = await rasterize(document.createElement("canvas"), T.buildSVG(st, { w: dw, h: dh, res: 2.5 }).svg, dw, dh);
     c.getContext("2d").drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
   }
@@ -2175,8 +2608,7 @@
       const x = c.getContext("2d"), sc = Math.max(w / S.w, h / S.h), dw = Math.round(S.w * sc), dh = Math.round(S.h * sc);
       let src;
       if (isRaster(S) && TFX) {
-        const image = S.source === "contours" ? await rasterize(document.createElement("canvas"), T.buildSVG(S, { w: dw, h: dh }).svg, dw, dh) : null;
-        TFX.render(job(S, dw, dh, image)); src = thumbCanvas;
+        TFX.render(await fxJob(TFX, S, dw, dh, document.createElement("canvas"))); src = thumbCanvas;
       } else src = await rasterize(document.createElement("canvas"), current.svg || T.buildSVG(S).svg, dw, dh);
       x.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
       return c;

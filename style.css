@@ -70,6 +70,8 @@ textarea::-webkit-scrollbar-thumb { border-width: 3px; }
 
 /* ---------- shell + top bar ---------- */
 .shell { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; padding: 10px 12px 12px; gap: 10px; }
+/* The visible height on mobile browsers, so bars pinned to the bottom never sit under the address bar. */
+@supports (height: 100dvh) { .shell { height: 100dvh; } }
 .top {
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
   background: var(--panel); border-radius: 16px; box-shadow: var(--raised); padding: 8px 8px 8px 16px; min-height: 58px;
@@ -435,7 +437,7 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
   .stage { order: -1; height: 46vh; min-height: 240px; }
   .canvas-wrap { padding: 16px 16px 64px; }
   .slots, .options { overflow: visible; }
-  #slotList { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 12px; }
+  #slotList { display: grid; }
   .pop.export, .pop.settings { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; }
 }
 
@@ -1515,16 +1517,19 @@ a.btn { text-decoration: none; color: inherit; }
 ::view-transition-group(pt-bar), ::view-transition-group(stage-bar), ::view-transition-image-pair(pt-bar), ::view-transition-image-pair(stage-bar) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 
 /* ---------- build steps ---------- */
-/* Motion closes the list as a wide banner playing its loop. */
-.slot-motion .tile { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; row-gap: 10px; padding-top: 6px; }
-.slot-motion .tile-th { grid-column: 1 / -1; width: 100%; height: auto; aspect-ratio: 8 / 3; border-radius: 9px; }
-.slot-motion .tile .tile-text { padding-left: 4px; }
+/* Narrow screens lay the steps out on an even two-column grid. Every step takes one cell, and steps that
+   hold several tiles (objects, effects) stack them inside their cell. */
 @media (max-width: 900px) {
-  .slot-fx, .slot-motion { grid-column: 1 / -1; }
-
+  #slotList { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+  #slotList > .slot[hidden] { display: none; }
+  #slotList > .slot { border-top: 1px solid var(--hair); padding-top: 10px; }
+  #slotList > .slot:nth-child(-n + 2) { border-top: 0; padding-top: 0; }
+  #slotList { align-items: start; }
 }
-.slot-motion .tile-th canvas, .slot-motion .tile-th svg { object-fit: cover; }
-@media (max-width: 900px) { .slot-colors { grid-column: 1 / -1; } }
+@media (max-width: 540px) {
+  #slotList { grid-template-columns: minmax(0, 1fr); }
+  #slotList > .slot:nth-child(2) { border-top: 1px solid var(--hair); padding-top: 10px; }
+}
 
 /* ---------- builder token tiles: live specimens ---------- */
 .tok-th { position: relative; overflow: hidden; background: var(--k-bg); color: var(--k-text); box-shadow: inset 0 0 0 1px var(--hair); transition: background-color var(--k-dur) var(--k-ease); }
@@ -1624,3 +1629,78 @@ a.btn { text-decoration: none; color: inherit; }
 .tp-kit i { display: block; height: 5px; border-radius: 3px; background: currentColor; opacity: .55; }
 .tp-kit .tp-card { position: absolute; right: 14px; bottom: 14px; width: 92px; height: 56px; border-radius: 8px; border: 1px solid; padding: 9px; display: grid; align-content: start; gap: 6px; }
 .tp-kit .tp-pill { width: 40px; height: 12px; border-radius: 99px; }
+
+/* ---------- saved designs ---------- */
+.pop.designs { right: 0; width: 340px; padding: 8px; display: grid; gap: 2px; }
+#designsBtn .lbl { margin: 0 2px; }
+.dz-head { display: flex; gap: 6px; padding: 2px; }
+.dz-name { height: 32px; font-size: 13.5px; font-weight: 500; min-width: 0; }
+.dz-head .btn { height: 32px; flex: none; }
+.dz-state { margin: 4px 10px 4px; font-size: 12px; color: var(--muted); transition: color .2s; }
+.dz-state.dirty { color: var(--accent); }
+.dz-list { max-height: min(46vh, 360px); overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 2px; padding: 2px 0; }
+.dz-empty { margin: 6px 10px 8px; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.dz-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 2px; border-radius: 10px; padding-right: 4px; transition: background .16s, opacity .2s, translate .22s var(--ease); }
+.dz-item:hover, .dz-item.open { background: var(--well); }
+.dz-item.leaving { opacity: 0; translate: 8px 0; }
+.dz-item .ib.xs { opacity: 0; transition: opacity .16s; }
+.dz-item:hover .ib.xs, .dz-item.open .ib.xs, .dz-item .ib.xs:focus-visible { opacity: 1; }
+@media (hover: none) { .dz-item .ib.xs { opacity: 1; } }
+.dz-main { display: flex; align-items: center; gap: 10px; min-width: 0; border: 0; background: none; padding: 6px; border-radius: 10px; text-align: left; }
+.dz-thumb { width: 48px; height: 30px; flex: none; border-radius: 6px; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); overflow: hidden; }
+.dz-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dz-text { display: grid; min-width: 0; gap: 1px; }
+.dz-text b { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dz-text small { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dz-item.on .dz-text b { color: var(--accent); }
+.dz-vers { grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; transition: grid-template-rows .26s var(--ease); }
+.dz-vers > div { min-height: 0; overflow: hidden; display: grid; padding: 0 4px; max-height: 220px; overflow-y: auto; }
+.dz-item.open .dz-vers { grid-template-rows: 1fr; }
+.dz-item.open .dz-vers > div { padding-bottom: 4px; }
+.dz-vers .opt { padding: 6px 10px 6px 64px; font-size: 12.5px; }
+.dz-foot { display: flex; gap: 6px; padding: 2px; }
+.dz-foot .btn { flex: 1; justify-content: center; }
+.compat-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--ink-2); line-height: 1.5; font-size: 14px; }
+.toast.act { pointer-events: auto; display: flex; align-items: center; gap: 14px; padding-right: 8px; }
+.toast button { border: 0; background: color-mix(in srgb, currentColor 16%, transparent); color: inherit; font: inherit; font-weight: 600; padding: 5px 10px; border-radius: 8px; }
+.toast button:hover { background: color-mix(in srgb, currentColor 26%, transparent); }
+@media (max-width: 860px) { .pop.designs { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; } #designsBtn .lbl { display: none; } }
+
+/* ---------- option groups ---------- */
+.grp { border-top: 1px solid var(--hair); margin: 0 -2px; padding: 0 2px; }
+.grp-h { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; padding: 13px 0 11px; font-size: 13px; font-weight: 600; color: var(--ink); text-align: left; border-radius: 6px; }
+.grp-h .grp-t { flex: none; }
+.grp-hint { flex: 1; min-width: 0; text-align: right; font-size: 12px; font-weight: 500; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 1; transition: opacity .2s; }
+.grp.open .grp-hint { opacity: 0; }
+.grp-h .ic { width: 15px; height: 15px; color: var(--muted); margin-left: auto; flex: none; transition: rotate .28s var(--ease), color .16s; rotate: -90deg; }
+.grp-hint + .ic { margin-left: 0; }
+.grp.open .grp-h .ic { rotate: 0deg; }
+.grp-h:hover .ic { color: var(--ink); }
+.grp-b { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s var(--ease); }
+.grp.open .grp-b { grid-template-rows: 1fr; }
+.grp-in { min-height: 0; overflow: hidden; opacity: 0; transition: opacity .2s ease; padding: 0 4px; margin: 0 -4px; }
+.grp.open .grp-in { opacity: 1; padding-bottom: 10px; transition: opacity .26s ease .06s; }
+.grp:not(.open) .grp-in { visibility: hidden; transition: opacity .16s ease, visibility 0s .3s; }
+.grp-in > .ctrl:first-child, .grp-in > .label-row:first-child { margin-top: 0; }
+.overlay .ob { cursor: grab; }
+.overlay .obs { cursor: nwse-resize; }
+.overlay .obt { cursor: alias; }
+.overlay.dragging .ob { cursor: grabbing; }
+.obj-preset { margin-top: 10px; }
+.obj-preset .dd { flex: 1; min-width: 0; display: flex; justify-content: flex-end; }
+.dd-pop .dd-list { max-height: min(50vh, 360px); overflow-y: auto; overscroll-behavior: contain; }
+#objMat { margin-bottom: 2px; }
+.seg.grid2 { grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); }
+.seg button[hidden] { display: none; }
+/* Sections inside a step are divided by a hairline, the same one option groups use. */
+.panel-sec > h3.sub:not(.first), .panel-sec > .sub-head:not(.first), .panel-sec [data-gen] > h3.sub:not(.first), .panel-sec [data-gen] > .sub-head:not(.first), .panel-sec > .pal-head + .pal-view + #inkSec > h3.sub { border-top: 1px solid var(--hair); padding-top: 14px; margin-top: 16px; }
+.panel-sec > .grp:first-child, .panel-sec .lead.grp { border-top: 0; }
+.panel-sec > .cards + .grp, .panel-sec > .take + .grp { margin-top: 14px; }
+.grp + .fx-actions, .grp + .play-btn { margin-top: 12px; }
+.pts-head { margin: 0 0 10px !important; align-items: center; }
+.pts-head .label { font-size: 12.5px; }
+.grp[hidden] { display: none; }
+#cpOpts > h3.sub:not(.first), #cpOpts > .sub-head:not(.first) { border-top: 1px solid var(--hair); padding-top: 14px; margin-top: 18px; }
+#cpOpts > .grp { margin-top: 14px; }
+#cpOpts > .grp:first-child { margin-top: 0; border-top: 0; }
+.grp-in > .dd-pair h3.sub { margin-top: 12px; }

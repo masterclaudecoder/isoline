@@ -42,23 +42,32 @@
     if (r === "components") root.Components?.onShow();
     root.syncSize?.();
   }
+  // want is where the latest navigation is headed. A transition shows its page a frame or more after it
+  // starts, so a second click in that window compares against want, not the page still on screen, and
+  // a transition that lands on a page nobody wants any more is corrected straight away.
+  let want = null;
   function go(r, push = true) {
-    if (r === route) return;
+    if (r === (want ?? route)) return;
+    want = r;
     if (push) history.pushState(null, "", hashFor(r));
     const from = route; Shell.from = from;
     const dir = ORDER[r] >= ORDER[from] ? "fwd" : "back";
     document.documentElement.dataset.dir = dir;
-    if (reduce.matches || from == null) return show(r);
+    if (reduce.matches || from == null) { want = null; return show(r); }
     if (document.startViewTransition) {
       const html = document.documentElement;
       html.classList.add("vt");
-      document.startViewTransition(() => show(r, true)).finished.finally(() => html.classList.remove("vt"));
+      // A busy main thread can hold the snapshot back; past a moment the page just switches.
+      const late = setTimeout(() => vt.skipTransition?.(), 450);
+      const vt = document.startViewTransition(() => { clearTimeout(late); if (want === r) show(r, true); });
+      vt.updateCallbackDone.catch(() => {}).finally(() => { if (want === r && route !== r) show(r); });
+      vt.finished.finally(() => { html.classList.remove("vt"); if (want === r) want = null; });
       return;
     }
     // Fallback: the old page eases out, then the new one eases in.
     const old = document.querySelector(`.page[data-page="${from}"]`);
     old.classList.add("leaving");
-    setTimeout(() => { old.classList.remove("leaving"); show(r); const nu = document.querySelector(`.page[data-page="${r}"]`); nu.classList.add("arriving"); setTimeout(() => nu.classList.remove("arriving"), 460); }, 200);
+    setTimeout(() => { old.classList.remove("leaving"); if (want !== r) return; want = null; show(r); const nu = document.querySelector(`.page[data-page="${r}"]`); nu.classList.add("arriving"); setTimeout(() => nu.classList.remove("arriving"), 460); }, 200);
   }
 
   // Home previews: the studio's current design and the palette tool's current colors.

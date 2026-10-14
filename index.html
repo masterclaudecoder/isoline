@@ -71,6 +71,10 @@
     <symbol id="i-search" viewBox="0 0 20 20"><circle cx="9" cy="9" r="5"/><path d="m16 16-3.4-3.4"/></symbol>
     <symbol id="i-panel" viewBox="0 0 20 20"><rect x="3.5" y="4" width="13" height="12" rx="2.5"/><path d="M8.5 4v12M5.6 7.5h.9M5.6 10h.9"/></symbol>
     <symbol id="i-chat" viewBox="0 0 20 20"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5v6.5a1.5 1.5 0 0 1-1.5 1.5H9l-3.5 3v-3h0A1.5 1.5 0 0 1 4 12Z"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 20 20"><path d="M3.5 6A1.5 1.5 0 0 1 5 4.5h3l1.6 1.8H15A1.5 1.5 0 0 1 16.5 7.8v6.7A1.5 1.5 0 0 1 15 16H5a1.5 1.5 0 0 1-1.5-1.5Z"/></symbol>
+    <symbol id="i-link" viewBox="0 0 20 20"><path d="M8.6 11.4a3 3 0 0 0 4.3 0l2.3-2.3a3 3 0 0 0-4.3-4.3l-.9.9M11.4 8.6a3 3 0 0 0-4.3 0l-2.3 2.3a3 3 0 0 0 4.3 4.3l.9-.9"/></symbol>
+    <symbol id="i-history" viewBox="0 0 20 20"><path d="M4.5 10a5.5 5.5 0 1 0 1.6-3.9"/><path d="M4.5 4v3.5H8M10 7v3.2l2.2 1.4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 20 20"><path d="M4.5 6h11M8 6V4.5h4V6M6 6l.7 9.5h6.6L14 6"/></symbol>
     <symbol id="i-out" viewBox="0 0 20 20"><path d="M7.5 5.5h7v7M14.5 5.5l-9 9"/></symbol>
   </defs>
 </svg>
@@ -112,6 +116,25 @@
           <button class="opt" id="feedbackBtn"><span><svg class="ic"><use href="#i-chat"/></svg>Send feedback</span></button>
           <button class="opt danger" id="resetAll"><span><svg class="ic"><use href="#i-reset"/></svg>Reset to defaults</span></button>
           <div class="set-ver"><span id="verLine"></span><button class="btn sm" id="verReload" hidden>Reload</button></div>
+        </div>
+      </div>
+      <div class="menu-wrap" data-for="studio">
+        <button class="btn" id="designsBtn" aria-haspopup="true"><svg class="ic"><use href="#i-folder"/></svg><span class="lbl">Designs</span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+        <div class="pop designs" id="designsMenu" hidden>
+          <div class="dz-head">
+            <input class="field dz-name" id="dzName" maxlength="60" spellcheck="false" aria-label="Design name" placeholder="Untitled design">
+            <button class="btn primary sm" id="dzSave" title="Save (⌘S)">Save</button>
+          </div>
+          <p class="dz-state" id="dzState"></p>
+          <button class="opt" id="dzCopy" hidden><span><svg class="ic"><use href="#i-copy"/></svg>Save as a new design</span></button>
+          <button class="opt" id="dzShare"><span><svg class="ic"><use href="#i-link"/></svg>Copy share link</span></button>
+          <div class="set-sep"></div>
+          <div class="dz-list" id="dzList"></div>
+          <div class="set-sep"></div>
+          <div class="dz-foot">
+            <label class="btn sm">Import<input type="file" id="dzImport" accept=".json,application/json" hidden></label>
+            <button class="btn sm" id="dzExportAll">Export all</button>
+          </div>
         </div>
       </div>
       <div class="menu-wrap" data-for="studio">
@@ -184,21 +207,16 @@
           <h3 class="sub first">Noise type</h3>
           <div class="cards three" id="noiseTypes"></div>
         </div>
-        <div data-gen="solid">
-          <h3 class="sub first">Form</h3>
-          <div class="cards three" id="solidTypes"></div>
-        </div>
         <div data-gen="image">
           <div class="sub-head first"><h3 class="sub">Picture</h3><button class="btn sm ghost" id="imgReplace"><svg class="ic"><use href="#i-up"/></svg>Replace</button></div>
         </div>
         <h3 class="sub">Variations</h3>
         <div class="cards three" id="variations"></div>
-        <h3 class="sub">Fine-tune</h3>
         <div data-gen="contours">
           <div id="shape"></div>
           <div class="seed-row"><label class="label" for="seed">Seed</label><input class="field mono" id="seed" type="number" min="0" max="999999"></div>
-          <div class="sub-head">
-            <h3 class="sub">Points</h3>
+          <div class="sub-head pts-head">
+            <span class="label">Shape with your own points</span>
             <div class="gh-tools">
               <button class="ib" id="showPoints" title="Show handles" aria-label="Show handles"><svg class="ic"><use href="#i-eye"/></svg></button>
               <label class="switch" title="Use points"><input type="checkbox" id="usePoints" aria-label="Use points"><span></span></label>
@@ -220,7 +238,6 @@
 
       <div class="panel-sec" data-panel="lines">
         <div class="cards three" id="modes"></div>
-        <h3 class="sub">Fine-tune</h3>
         <div id="lines"></div>
       </div>
 
@@ -228,7 +245,6 @@
         <div class="sub-head first"><h3 class="sub">Your colors</h3><span class="val-static mono" id="stopCount"></span></div>
         <div class="mine" id="mine"></div>
         <div data-gen="contours">
-          <h3 class="sub">Fine-tune</h3>
           <label class="label-row switch-row" for="gradient"><span class="label">Blend between colors</span><span class="switch"><input type="checkbox" id="gradient"><span></span></span></label>
           <label class="label-row switch-row" for="transparent"><span class="label">Transparent background</span><span class="switch"><input type="checkbox" id="transparent"><span></span></span></label>
           <div id="color"></div>
@@ -242,6 +258,21 @@
         <div id="inkSec">
           <h3 class="sub">Print inks</h3>
           <div class="roles" id="inks"></div>
+        </div>
+      </div>
+
+      <div class="panel-sec" data-panel="addobj">
+        <div class="cards three" id="objKinds"></div>
+        <p class="hint">Objects sit on the design and under effects. Drag one on the canvas to move it.</p>
+      </div>
+
+      <div class="panel-sec" data-panel="object">
+        <div class="cards three" id="objForms"></div>
+        <div class="sub-head first" id="objPicRow"><h3 class="sub">Picture</h3><button class="btn sm ghost" id="objPicReplace"><svg class="ic"><use href="#i-up"/></svg>Replace</button></div>
+        <div id="objGroups"></div>
+        <div class="fx-actions">
+          <button class="btn sm" id="objDup"><svg class="ic"><use href="#i-copy"/></svg>Duplicate</button>
+          <button class="btn sm ghost" id="objRemove"><svg class="ic"><use href="#i-x"/></svg>Remove</button>
         </div>
       </div>
 
@@ -357,6 +388,17 @@
     <h3 id="unlockTitle">Unlock values?</h3>
     <p>You'll be able to type values far past the slider limits. Extreme ones, like a 1px grid or thousands of lines, can freeze or crash this tab.</p>
     <div class="dialog-actions"><button class="btn" id="unlockCancel">Cancel</button><button class="btn primary" id="unlockOk">Unlock</button></div>
+  </div>
+</div>
+
+<div class="modal" id="compatModal" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="compatTitle">
+    <h3 id="compatTitle">Open with changes?</h3>
+    <ul class="compat-list" id="compatList"></ul>
+    <div class="dialog-actions">
+      <span class="grow"></span>
+      <button class="btn" id="compatCancel">Cancel</button><button class="btn primary" id="compatOk">Open anyway</button>
+    </div>
   </div>
 </div>
 
