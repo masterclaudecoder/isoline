@@ -11,8 +11,11 @@ precision highp float;
 in vec2 vUv; out vec4 o;
 uniform sampler2D uTex; uniform vec2 uRes; uniform float uK; uniform float uSeed;
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+// Quintic fade: its slope and curvature are both continuous across cell edges. With the plain smoothstep
+// fade the curvature jumped at every edge, and effects that light by curvature (caustics, water) drew
+// the noise grid as faint rectangles.
 float vnoise(vec2 p) {
-  vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f); float s = uSeed * 0.013;
+  vec2 i = floor(p), f = fract(p), u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0); float s = uSeed * 0.013;
   return mix(mix(hash(i + s), hash(i + vec2(1, 0) + s), u.x), mix(hash(i + vec2(0, 1) + s), hash(i + vec2(1, 1) + s), u.x), u.y);
 }
 float fbm(vec2 p) { float a = 0.5, r = 0.0; for (int i = 0; i < 4; i++) { r += a * vnoise(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return r; }
@@ -176,7 +179,7 @@ void main() {
     object: COLOR + `
 uniform int uKind; uniform vec2 uC; uniform float uSz; uniform float uRot; uniform float uTilt; uniform float uSpin;
 uniform int uMat; uniform float uShine; uniform float uRipple; uniform float uShadow; uniform float uAsp; uniform float uRound;
-uniform vec3 uCol[8]; uniform int uN; uniform sampler2D uTex2; uniform int uHasTex;
+uniform vec3 uCol[8]; uniform int uN; uniform sampler2D uTex2; uniform int uHasTex; uniform sampler2D uDes;
 uniform float uTime; uniform int uMotion; uniform float uMotAmt;
 uniform float uRefr; uniform float uFrost; uniform float uDisp; uniform float uRim; uniform vec3 uTint; uniform float uTintAmt;
 float gPh = 0.0;
@@ -227,6 +230,9 @@ float sd(vec3 p) {
 }
 vec2 toPx(vec2 l) { float c = cos(uRot), s = sin(uRot); return uC + mat2(c, s, -s, c) * vec2(l.x, -l.y) * uSz; }
 vec4 texAt(vec2 px) { return tex(vec2(px.x / uRes.x, 1.0 - px.y / uRes.y)); }
+// The surface picture: the design as it was before any objects (so one never wears another), or the
+// preset texture once it's ready.
+vec3 skin(vec2 uv) { uv = clamp(uv, 0.002, 0.998); return uMat == 1 || uHasTex == 0 ? texture(uDes, uv).rgb : texture(uTex2, vec2(uv.x, 1.0 - uv.y)).rgb; }
 void main() {
   float tw = 6.2831853 * uTime, beat = uMotion == 4 ? pow(0.5 - 0.5 * cos(tw * 4.0), 3.0) : 0.0;
   gPh = uMotion == 3 ? tw : 0.0;
@@ -293,23 +299,20 @@ void main() {
     float rim = pow(1.0 - abs(n.z), 4.0), face = clamp(dot(n.xy, vec2(-0.6, 0.8)), 0.0, 1.0);
     col = mix(col, vec3(1.0), 0.04 + 0.28 * fr) + uRim * rim * (0.25 + 0.75 * face) * 0.7 + uShine * 0.8 * sp;
   } else {
-    vec3 sp3 = Ri * pos, alb;
-    if (uMat == 1 || uHasTex == 0) alb = texAt(toPx(sp3.xy * 0.95)).rgb;
-    else {
-      // Triplanar: the preset is projected from three sides and blended by the surface direction, so
-      // there's no seam or pinched pole on any form.
-      vec3 nl = Ri * n;
-      if (uKind == 6 || uKind == 7) {
-        // Faceted forms: their slanted faces sit between the three axes, where a triplanar blend would
-        // stack three copies of the texture. Each face takes one projection along its own normal instead.
-        vec3 up = abs(nl.y) < 0.97 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-        vec3 tu = normalize(cross(up, nl)), tv = cross(nl, tu);
-        alb = texture(uTex2, vec2(dot(sp3, tu), dot(sp3, tv)) * 0.5 + 0.5).rgb;
-      } else {
-        vec3 w = pow(abs(nl), vec3(8.0)); w /= w.x + w.y + w.z;
-        vec3 tp = sp3 * 0.5 + 0.5;
-        alb = texture(uTex2, tp.zy).rgb * w.x + texture(uTex2, tp.xz).rgb * w.y + texture(uTex2, tp.xy).rgb * w.z;
-      }
+    // The design or the preset is wrapped onto the form, the whole picture across each side, so it turns
+    // with the form and never lines up with what's behind it (which would read as a see-through window).
+    vec3 sp3 = Ri * pos, nl = Ri * n, alb;
+    if (uKind == 6 || uKind == 7) {
+      // Faceted forms: their slanted faces sit between the three axes, where a triplanar blend would
+      // stack three copies of the texture. Each face takes one projection along its own normal instead.
+      vec3 up = abs(nl.y) < 0.97 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+      vec3 tu = normalize(cross(up, nl)), tv = cross(nl, tu);
+      alb = skin(vec2(dot(sp3, tu), dot(sp3, tv)) * 0.5 + 0.5);
+    } else {
+      // Triplanar with a sharp blend: each side shows one projection, mixing only across the rounded edges.
+      vec3 w = pow(abs(nl), vec3(16.0)); w /= w.x + w.y + w.z;
+      vec3 tp = sp3 * 0.5 + 0.5;
+      alb = skin(tp.zy) * w.x + skin(tp.xz) * w.y + skin(tp.xy) * w.z;
     }
     col = alb * (0.42 + 0.72 * wrap) + vec3(0.18 * fr) + uShine * 0.55 * sp;
   }
@@ -1009,20 +1012,65 @@ void main() {
   o = c;
 }`,
 
-    halftone: `uniform float uSize; uniform float uAngle; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper; uniform float uShape;
+    halftone: `uniform float uSize; uniform float uAngle; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper; uniform float uShape; uniform float uHex; uniform float uTurn;
+// Halftone: one dot per lattice point, sized by how dark the picture is there. Every shape grows by area
+// from nothing at white, meets its neighbours at mid grey and closes into solid ink at black: circles
+// touch at 50% and merge, squares stand on their corners so 50% is an exact checkerboard, and triangles
+// alternate up and down so they tile the plane outright. The lattice is square or hexagonal.
+float dark(vec3 c) { return uMono > 0.5 ? 1.0 - luma(c) : 0.25 + 0.75 * (1.0 - luma(c) * 0.6); }
+// Size from darkness: area-proportional up to touching at 50%, then the gaps shrink by area to nothing.
+float grow(float d, float touch, float full) { d = clamp(d, 0.0, 1.0); return d < 0.5 ? touch * sqrt(d * 2.0) : full - (full - touch) * sqrt(2.0 - d * 2.0); }
+vec2 turn(vec2 f, vec2 id) { if (uTurn < 0.5 || uShape < 0.5) return f; float a = hash(id + 17.3) * 6.2831853, c = cos(a), s = sin(a); return mat2(c, -s, s, c) * f; }
+// Signed distance of one dot (in lattice units) for a darkness d.
+float dotAt(vec2 f, float d, vec2 id) {
+  f = turn(f, id);
+  bool hx = uHex > 0.5;
+  if (uShape < 0.5) return length(f) - grow(d, 0.5, hx ? 0.5774 : 0.7072);
+  if (uShape < 1.5) return (abs(f.x) + abs(f.y)) * 0.7071 - grow(d, 0.3536, hx ? 0.62 : 0.7072);
+  if (uShape < 2.5) return sdTri(f, grow(d, 0.45, hx ? 1.05 : 1.25));
+  return sdStar(f, grow(d, 0.62, 1.15), 0.45);
+}
 void main() {
   float ca = cos(uAngle), sa = sin(uAngle);
   mat2 R = mat2(ca, -sa, sa, ca);
-  vec2 r = R * dp() / uSize, base = floor(r) + 0.5; float aa = 0.8 / (uSize * uK), m = 0.0; vec3 ink = uInk;
-  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
-    vec2 cell = base + vec2(float(i), float(j));
-    vec4 c = tex(toUv(transpose(R) * (cell * uSize)));
-    float dark = uMono > 0.5 ? 1.0 - luma(c.rgb) : 0.25 + 0.75 * (1.0 - luma(c.rgb) * 0.6);
-    float rad = sqrt(clamp(dark, 0.0, 1.0)) * (uMono > 0.5 ? 0.72 : 0.62);
-    float mi = rad < 0.004 ? 0.0 : smoothstep(aa, -aa, dotSD(r - cell, rad, uShape));
-    if (mi > m) { m = mi; if (uMono < 0.5) ink = c.rgb; }
+  vec2 r = R * dp() / uSize; float aa = 0.8 / (uSize * uK), sdm = 1e9; vec3 ink = uInk;
+  if (uShape > 1.5 && uShape < 2.5 && uTurn < 0.5) {
+    // Triangles tile the plane in rows of alternating up and down ones; each scales about its centre.
+    const float H = 0.8660254;
+    vec2 g = vec2(r.x - 0.5 * r.y / H, r.y / H), cell = floor(g), f = fract(g);
+    bool up = f.x + f.y < 1.0;
+    vec2 ck = cell + (up ? vec2(1.0 / 3.0) : vec2(2.0 / 3.0)), cen = vec2(ck.x + 0.5 * ck.y, ck.y * H);
+    vec4 c = tex(toUv(transpose(R) * (cen * uSize)));
+    float s = sqrt(clamp(dark(c.rgb), 0.0, 1.0));
+    vec2 p = r - cen; if (!up) p.y = -p.y;
+    float e = max(-p.y, max(dot(p, vec2(0.8660254, 0.5)), dot(p, vec2(-0.8660254, 0.5))));
+    // Full triangles overlap by a hair, so solid ink shows no seams between them.
+    float sd = e - 0.2887 * s - aa * smoothstep(0.9, 1.0, s);
+    float m = s < 0.02 ? 0.0 : smoothstep(aa, -aa, sd);
+    o = vec4(mix(uPaper, uMono > 0.5 ? uInk : c.rgb, m), 1.0); return;
   }
-  o = vec4(mix(uPaper, ink, m), 1.0);
+  if (uHex > 0.5) {
+    // Hexagonal lattice: rows half a step apart, offset by half a dot.
+    const float H = 0.8660254; float j0 = floor(r.y / H);
+    for (int j = -1; j <= 2; j++) {
+      float row = j0 + float(j), off = mod(row, 2.0) * 0.5, i0 = floor(r.x - off);
+      for (int i = -1; i <= 1; i++) {
+        vec2 id = vec2(i0 + float(i), row), cen = vec2(id.x + 0.5 + off, row * H + 0.5 * H);
+        vec4 c = tex(toUv(transpose(R) * (cen * uSize)));
+        float d = dark(c.rgb), sd = d < 0.004 ? 1e9 : dotAt(r - cen, d, id);
+        if (sd < sdm) { sdm = sd; if (uMono < 0.5) ink = c.rgb; }
+      }
+    }
+  } else {
+    vec2 base = floor(r) + 0.5;
+    for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+      vec2 cell = base + vec2(float(i), float(j));
+      vec4 c = tex(toUv(transpose(R) * (cell * uSize)));
+      float d = dark(c.rgb), sd = d < 0.004 ? 1e9 : dotAt(r - cell, d, cell);
+      if (sd < sdm) { sdm = sd; if (uMono < 0.5) ink = c.rgb; }
+    }
+  }
+  o = vec4(mix(uPaper, ink, smoothstep(aa, -aa, sdm)), 1.0);
 }`,
 
     ascii: `uniform sampler2D uAtlas; uniform float uCell; uniform float uCount; uniform float uMono; uniform float uInvert; uniform vec3 uInk; uniform vec3 uPaper;
@@ -1299,7 +1347,8 @@ void main() {
     function ensureTargets(w, h) {
       if (targets && targets.w === w && targets.h === h) return;
       if (targets) targets.list.forEach(({ t, f }) => { gl.deleteTexture(t); gl.deleteFramebuffer(f); });
-      const list = [0, 1].map(() => {
+      // Two to ping-pong between, and a third that holds the design as it was before objects drew on it.
+      const list = [0, 1, 2].map(() => {
         const t = newTex();
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
         const f = gl.createFramebuffer();
@@ -1371,6 +1420,7 @@ void main() {
         if (INTS.has(u)) gl.uniform1i(l, v);
         else if (u === "uIn") gl.uniform2i(l, v[0], v[1]);
         else if (u === "uTex2") { gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, v); gl.uniform1i(l, 2); }
+        else if (u === "uDes") { gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, v); gl.uniform1i(l, 3); }
         else if ((u === "uPts" || u === "uFeat" || u === "uP" || u === "uV") && v.length) gl.uniform4fv(l, v.flat());
         else if (u === "uInk" && v.length) gl.uniform3fv(l, v.flat());
         else if (typeof v === "number") gl.uniform1f(l, v);
@@ -1489,7 +1539,7 @@ void main() {
         case "glass": return { uWidth: e.width, uAngle: rad(e.angle), uStr: e.strength, uFrost: e.frost ?? 0.2, uLight: e.light ?? 0.5 };
         case "mesh": return { uCell: e.cell, uStr: e.strength, uFrost: e.frost ?? 0.3, uGrout: e.grout ?? 1, uRim: e.rim ?? 0.6, uDisp: e.disp ?? 0.5, uRad: e.radius ?? 0.25 };
         case "pixel": return { uSize: e.size, uBevel: e.bevel };
-        case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)) };
+        case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)), uHex: e.grid === "hex" ? 1 : 0, uTurn: e.turn ? 1 : 0 };
         case "ascii": {
           const set = e.set === "custom" ? " " + (e.custom || "#") : CHARSETS[e.set] || CHARSETS.ascii;
           return { uCell: e.cell, uCount: atlas(set, e.font), uMono: e.mono ? 1 : 0, uInvert: e.invert ? 1 : 0, uInk: ink, uPaper: paper };
@@ -1618,6 +1668,11 @@ void main() {
       // Objects draw under the effects unless set to sit over them. Each keeps its own motion: off, or
       // the design's loop run a whole number of times faster, slower or backwards, so it still loops.
       const cols = (job.palette || ["#222222", "#dddddd"]).slice(0, 8).map(hex3), sz = Math.min(w, h);
+      // Objects that wear the design read it from a copy made before any of them drew, so none wears another.
+      let des = srcTex;
+      if ((job.objects || []).some((o) => o.kind !== "image" && (o.mat === "design" || (o.mat === "preset" && !o.tex)))) {
+        draw("copy", input, targets.list[2].f, {}, w, h, k, job.seed); des = targets.list[2].t;
+      }
       const drawObjects = (list) => {
         for (const ob of list) {
           const out = targets.list[ping], tx = ob.tex ? objTex(ob.texKey, ob.tex) : null, sp = ob.speed ?? 1, t = (job.time || 0) * sp;
@@ -1625,7 +1680,7 @@ void main() {
             uKind: OBJ_KINDS.indexOf(ob.kind), uC: [ob.x * w, ob.y * h], uSz: Math.max(1, ob.size * sz * 0.5), uRot: rad(ob.rot || 0), uTilt: rad(ob.tilt || 0), uSpin: rad(ob.spin || 0),
             uMat: ["shaded", "design", "preset", "glass", "palette", "photo", "vanta"].indexOf(ob.mat), uShine: ob.shine ?? 0.6, uRipple: ob.ripple || 0, uShadow: ob.shadow ?? 0.4, uAsp: ob.asp || 1, uRound: ob.round ?? 0.2,
             uRefr: ob.refract ?? 1, uFrost: ob.frost || 0, uDisp: ob.disp ?? 0.3, uRim: ob.rim ?? 0.5, uTint: hex3(ob.tint || "#ffffff"), uTintAmt: ob.tintAmt || 0,
-            uCol: cols, uN: cols.length, uTex2: tx || srcTex, uHasTex: tx ? 1 : 0,
+            uCol: cols, uN: cols.length, uTex2: tx || srcTex, uHasTex: tx ? 1 : 0, uDes: des,
             uTime: t - Math.floor(t), uMotion: ob.anim === false || !sp ? 0 : ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5,
           }, w, h, k, job.seed);
           input = out.t; ping = 1 - ping;

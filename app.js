@@ -34,7 +34,7 @@
     ["posterize", "Posterize", "Color", { levels: 5 }, [{ k: "levels", label: "Levels", min: 2, max: 16, step: 1, hard: [2, 64], rand: [3, 7] }]],
     ["heatmap", "Heatmap", "Color", { glow: 12, mix: 1, invert: false }, [{ k: "glow", label: "Glow", min: 0, max: 80, step: 0.5, fmt: px, rand: [4, 24] }, { k: "mix", label: "Mix", min: 0, max: 1, step: 0.01, fmt: pct, pct: true }, { sw: "invert", label: "Invert" }]],
     ["chrome", "Liquid metal", "Color", { strength: 1, bands: 2.2, soft: 6, tint: "#d9dde3", mix: 1 }, [{ color: "tint", label: "Tint" }, { k: "strength", label: "Depth", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.6, 1.6] }, { k: "bands", label: "Reflections", min: 0.5, max: 6, step: 0.05, fmt: f2, rand: [1.4, 3.2] }, { k: "soft", label: "Softness", min: 1, max: 40, step: 0.5, fmt: px, rand: [3, 12] }, { k: "mix", label: "Mix", min: 0, max: 1, step: 0.01, fmt: pct, pct: true }]],
-    ["halftone", "Halftone", "Print", { shape: "circle", size: 10, angle: 45, mono: true }, [{ seg: "shape", options: [["circle", "Circle"], ["square", "Square"], ["triangle", "Triangle"], ["star", "Star"]] }, { k: "size", label: "Dot size", min: 3, max: 80, step: 0.5, log: true, fmt: px, rand: [6, 18] }, { k: "angle", label: "Angle", min: 0, max: 90, step: 1, fmt: deg }, { sw: "mono", label: "Ink only" }]],
+    ["halftone", "Halftone", "Print", { shape: "circle", size: 10, angle: 45, mono: true, grid: "square", turn: false }, [{ seg: "shape", options: [["circle", "Circle"], ["square", "Square"], ["triangle", "Triangle"], ["star", "Star"]] }, { seg: "grid", label: "Grid", options: [["square", "Square"], ["hex", "Hex"]], when: (e) => e.shape !== "triangle" || e.turn }, { k: "size", label: "Dot size", min: 3, max: 80, step: 0.5, log: true, fmt: px, rand: [6, 18] }, { k: "angle", label: "Angle", min: 0, max: 90, step: 1, fmt: deg }, { sw: "turn", label: "Random turn", when: (e) => e.shape !== "circle" }, { sw: "mono", label: "Ink only" }]],
     ["cmyk", "CMYK halftone", "Print", { shape: "circle", size: 9, angle: 0 }, [{ seg: "shape", options: [["circle", "Circle"], ["square", "Square"], ["triangle", "Triangle"], ["star", "Star"]] }, { k: "size", label: "Dot size", min: 3, max: 60, step: 0.5, log: true, fmt: px, rand: [6, 14] }, { k: "angle", label: "Angle", min: 0, max: 90, step: 1, fmt: deg }]],
     ["linescreen", "Engrave", "Print", { spacing: 7, angle: 30, mono: true }, [{ k: "spacing", label: "Line spacing", min: 3, max: 60, step: 0.5, log: true, fmt: px, rand: [5, 12] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }, { sw: "mono", label: "Ink only" }]],
     ["riso", "Risograph", "Print", { size: 7, offset: 4, grain: 0.3, inkA: "#ff48b0", inkB: "#0078bf", paper: "#f3efe6" }, [{ color: "inkA", label: "Ink 1" }, { color: "inkB", label: "Ink 2" }, { color: "paper", label: "Paper" }, { k: "size", label: "Dot size", min: 3, max: 40, step: 0.5, log: true, fmt: px, rand: [5, 10] }, { k: "offset", label: "Misregister", min: 0, max: 30, step: 0.5, fmt: px, rand: [1, 6] }, { k: "grain", label: "Grain", min: 0, max: 1, step: 0.01, fmt: f2 }]],
@@ -647,23 +647,27 @@
   motionSlot.innerHTML = `<div class="slot-label">Motion</div><button class="tile" data-slot="motion"><span class="tile-th" data-th="motion"></span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
   slotList.appendChild(motionSlot);
   const EASE = "cubic-bezier(.2,.8,.2,1)";
-  // On narrow screens a stack of effects or objects folds into a deck of overlapping cards, like the
-  // color strip. Tapping the deck spreads it into the full list, where the grips reorder it.
-  const narrowStack = matchMedia("(max-width: 900px)"), stackOpen = { fx: false, obj: false };
-  narrowStack.addEventListener("change", () => { slotKey = ""; renderSlots(); });
+  // Two or more effects or objects fold into a deck of overlapping cards with their names beside it, like
+  // the color strip, so the column doesn't fill with rows. Clicking the deck spreads it into the full
+  // list, where the grips reorder it, and Fold gathers it up again.
+  const stackOpen = { fx: false, obj: false };
   for (const [k, slot] of [["fx", fxSlot], ["obj", objSlot]]) {
+    const sum = document.createElement("span"); sum.className = "stack-sum"; sum.setAttribute("aria-hidden", "true");
+    slot.querySelector(".fx-tiles").insertBefore(sum, slot.querySelector(".tile.add"));
     const b = document.createElement("button"); b.className = "stack-fold"; b.textContent = "Fold"; b.hidden = true;
     b.onclick = () => { stackOpen[k] = false; slotKey = ""; renderSlots(); };
     slot.querySelector(".slot-label").appendChild(b);
     slot.addEventListener("click", (e) => {
-      if (!slot.classList.contains("folded") || !e.target.closest(".tile.fx")) return;
+      if (!slot.classList.contains("folded") || !e.target.closest(".tile.fx, .stack-sum")) return;
       e.stopPropagation(); stackOpen[k] = true; slotKey = ""; renderSlots();
     }, true);
   }
   function syncStacks() {
     for (const [k, slot, n] of [["fx", fxSlot, S.fxOrder.length], ["obj", objSlot, S.objects.length]]) {
-      const deck = narrowStack.matches && n >= 2;
+      const deck = n >= 2;
       if (!deck) stackOpen[k] = false;
+      const names = k === "fx" ? S.fxOrder.map((id) => FXI[id].name) : S.objects.map(objName);
+      slot.querySelector(".stack-sum").innerHTML = `<b>${names.length} ${k === "fx" ? "effects" : "objects"}</b><small>${names.join(", ")}</small>`;
       slot.classList.toggle("fx-stack", deck); slot.classList.toggle("folded", deck && !stackOpen[k]);
       slot.querySelector(".stack-fold").hidden = !(deck && stackOpen[k]);
       [...slot.querySelectorAll(".tile.fx:not(.leaving)")].forEach((t, i) => t.style.setProperty("--i", i));
@@ -1224,7 +1228,11 @@
         if (p.label) { const lb = document.createElement("div"); lb.className = "label fx-seg-label"; lb.textContent = p.label; body.appendChild(lb); }
         body.appendChild(seg);
         makeSeg(seg, () => e()[p.seg], (v) => (e()[p.seg] = v));
-      } else if (p.sw) makeSwitch(body, p.label, () => e()[p.sw], (v) => (e()[p.sw] = v));
+        if (p.when) { const lb = p.label ? seg.previousElementSibling : null; syncers.push(() => { seg.hidden = !p.when(e()); if (lb) lb.hidden = seg.hidden; }); }
+      } else if (p.sw) {
+        makeSwitch(body, p.label, () => e()[p.sw], (v) => (e()[p.sw] = v));
+        if (p.when) { const row = body.lastElementChild; syncers.push(() => (row.hidden = !p.when(e()))); }
+      }
       else if (p.color) makeColor(body, p.label, () => e()[p.color], (v) => (e()[p.color] = v));
       else if (p.text) {
         const row = document.createElement("div");
@@ -1735,15 +1743,20 @@
   const handleList = (st = S) => (st.source === "gradient" ? (st.grad.type === "mesh" ? st.grad.points : null) : st.usePoints && st.showPoints ? st.points : null);
   // The open object gets a ring with a move handle in the middle, a size handle on the ring and a
   // rotate handle above it. Positions come from the state being painted, so they track motion tweens.
+  // Selected object: drag it to move, the white handle to size, and three rings to turn it. The circle
+  // turns it in the picture's plane, the upright ring tilts it toward or away, the flat ring spins it.
+  const RINGS = [["obz", "#3e8cf0", "Rotate"], ["obx", "#e5484d", "Tilt"], ["oby", "#2fb36d", "Spin"]];
   function objOverlay(st, o) {
     const u = S.w / Math.max(1, art.clientWidth), ns = 'vector-effect="non-scaling-stroke"', A = accentNow();
-    const x = o.x * S.w, y = o.y * S.h, r = (o.size * Math.min(S.w, S.h)) / 2, a = ((o.rot || 0) * Math.PI) / 180;
-    const rx = x + Math.cos(a) * r, ry = y + Math.sin(a) * r, tx = x + Math.sin(a) * (r + 26 * u), ty = y - Math.cos(a) * (r + 26 * u);
-    return `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${A}" stroke-width="1.25" stroke-dasharray="4 4" ${ns} pointer-events="none"/>`
-      + `<circle class="ob" cx="${x}" cy="${y}" r="${r}" fill="transparent"/>`
-      + `<line x1="${x + Math.sin(a) * r}" y1="${y - Math.cos(a) * r}" x2="${tx}" y2="${ty}" stroke="${A}" stroke-width="1.25" ${ns} pointer-events="none"/>`
-      + `<circle class="obt" cx="${tx}" cy="${ty}" r="${6 * u}" fill="#fff" stroke="${A}" stroke-width="1.5" ${ns}/>`
-      + `<circle class="obs" cx="${rx}" cy="${ry}" r="${6 * u}" fill="#fff" stroke="${A}" stroke-width="1.5" ${ns}/>`
+    const x = o.x * S.w, y = o.y * S.h, r = (o.size * Math.min(S.w, S.h)) / 2, R = r + 10 * u, deg = o.rot || 0, a = (deg * Math.PI) / 180;
+    const rx = x + Math.cos(a) * R, ry = y + Math.sin(a) * R, on = drag?.obj;
+    const rings = [[R, R], [R * 0.3, R], [R, R * 0.3]].map(([ex, ey], i) => {
+      const [cls, col, tip] = RINGS[i], hot = on === cls, sw = hot ? 2.5 : 1.5;
+      return `<g transform="rotate(${deg} ${x} ${y})"><ellipse cx="${x}" cy="${y}" rx="${ex}" ry="${ey}" fill="none" stroke="${col}" stroke-opacity="${!on || hot ? 0.95 : 0.3}" stroke-width="${sw}" ${ns} pointer-events="none"/>`
+        + `<ellipse class="obr ${cls}" cx="${x}" cy="${y}" rx="${ex}" ry="${ey}" fill="none" stroke="transparent" stroke-width="14" ${ns}><title>${tip}</title></ellipse></g>`;
+    }).join("");
+    return `<circle class="ob" cx="${x}" cy="${y}" r="${r}" fill="transparent"/>` + rings
+      + `<circle class="obs" cx="${rx}" cy="${ry}" r="${6 * u}" fill="#fff" stroke="${A}" stroke-width="1.5" ${ns}><title>Size</title></circle>`
       + `<circle cx="${x}" cy="${y}" r="${4 * u}" fill="${A}" stroke="#fff" stroke-width="1.5" ${ns} pointer-events="none"/>`;
   }
   function drawOverlay(st = S) {
@@ -1768,13 +1781,17 @@
     });
     ov.innerHTML = out;
   }
+  // A drag on the canvas while the loop plays is drawn by the loop's next frame; painting the still design
+  // in between would flash it against the motion.
+  const liveDraw = () => { if (!playing || held) render(true); };
   const toArt = (e) => { const r = ov.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * S.w, ((e.clientY - r.top) / r.height) * S.h]; };
   let drag = null;
   ov.addEventListener("pointerdown", (e) => {
     const t = e.target, o = objOf();
-    if (o && t.classList?.contains("ob") || o && t.classList?.contains("obs") || o && t.classList?.contains("obt")) {
+    const ring = RINGS.find(([c]) => t.classList?.contains(c))?.[0];
+    if (o && (ring || t.classList?.contains("ob") || t.classList?.contains("obs"))) {
       const [x, y] = toArt(e);
-      drag = { obj: t.classList.contains("obs") ? "size" : t.classList.contains("obt") ? "turn" : "move", dx: o.x * S.w - x, dy: o.y * S.h - y };
+      drag = { obj: ring || (t.classList.contains("obs") ? "size" : "move"), dx: o.x * S.w - x, dy: o.y * S.h - y, x0: x, y0: y, tilt: o.tilt || 0, spin: o.spin || 0, a0: (Math.atan2(y - o.y * S.h, x - o.x * S.w) * 180) / Math.PI - (o.rot || 0) };
       ov.setPointerCapture(e.pointerId); ov.classList.add("dragging"); e.preventDefault();
       return;
     }
@@ -1793,8 +1810,16 @@
       const [x, y] = toArt(e);
       if (drag.obj === "move") { o.x = +clamp((x + drag.dx) / S.w, -0.2, 1.2).toFixed(4); o.y = +clamp((y + drag.dy) / S.h, -0.2, 1.2).toFixed(4); }
       else if (drag.obj === "size") o.size = +clamp((2 * Math.hypot(x - o.x * S.w, y - o.y * S.h)) / Math.min(S.w, S.h), 0.05, 2).toFixed(3);
-      else { let a = Math.round((Math.atan2(x - o.x * S.w, -(y - o.y * S.h)) * 180) / Math.PI); if (e.shiftKey) a = Math.round(a / 15) * 15; o.rot = a; }
-      drawOverlay(); syncUI(); render(true);
+      else if (drag.obj === "obz") { let a = Math.round((Math.atan2(y - o.y * S.h, x - o.x * S.w) * 180) / Math.PI - drag.a0); if (e.shiftKey) a = Math.round(a / 15) * 15; o.rot = ((a + 540) % 360) - 180; }
+      else {
+        // Tilt and spin follow the pointer along the ring, measured in the object's own turned frame:
+        // a drag of a quarter of the ring is a quarter turn.
+        const a = ((o.rot || 0) * Math.PI) / 180, ddx = x - drag.x0, ddy = y - drag.y0, k = 90 / Math.max(8, (o.size * Math.min(S.w, S.h)) / 2);
+        const lx = ddx * Math.cos(a) + ddy * Math.sin(a), ly = -ddx * Math.sin(a) + ddy * Math.cos(a), snap = (v) => (e.shiftKey ? Math.round(v / 15) * 15 : Math.round(v));
+        if (drag.obj === "obx") o.tilt = clamp(snap(drag.tilt + ly * k), -90, 90);
+        else o.spin = ((snap(drag.spin + lx * k) + 540) % 360) - 180;
+      }
+      drawOverlay(); syncUI(); liveDraw();
       return;
     }
     const list = handleList();
@@ -1802,7 +1827,7 @@
     const p = list[sel], [x, y] = toArt(e);
     if (drag.mode === "m") { p.x = +clamp((x + drag.dx) / S.w, -0.3, 1.3).toFixed(4); p.y = +clamp((y + drag.dy) / S.h, -0.3, 1.3).toFixed(4); }
     else p.r = Math.round(clamp(Math.hypot(x - p.x * S.w, y - p.y * S.h), 10, 1400));
-    drawOverlay(); syncUI(); render(true);
+    drawOverlay(); syncUI(); liveDraw();
   });
   const endDrag = () => { if (!drag) return; drag = null; ov.classList.remove("dragging"); update({ instant: true }); };
   ov.addEventListener("pointerup", endDrag);
@@ -1821,7 +1846,7 @@
     sel = +i;
     const p = S.points[sel];
     p.r = Math.round(clamp(p.r * Math.exp(-e.deltaY * 0.0015), 10, 1400));
-    drawOverlay(); syncUI(); render(true);
+    drawOverlay(); syncUI(); liveDraw();
     clearTimeout(wheelT); wheelT = setTimeout(() => update({ instant: true }), 180);
   }, { passive: false });
 
@@ -1850,8 +1875,12 @@
   window.syncSize = syncSize;
 
   // ---------- menus + modals ----------
-  const menus = { sizeBtn: sizeMenu, exportBtn: $("exportMenu"), settingsBtn: $("settingsMenu"), designsBtn: $("designsMenu") };
-  function closeMenus() { Object.values(menus).forEach((m) => (m.hidden = true)); }
+  const menus = { sizeBtn: sizeMenu, exportBtn: $("exportMenu"), settingsBtn: $("settingsMenu"), designsBtn: $("designsMenu"), shareBtn: $("shareMenu") };
+  // The bigger menus dim and blur the page behind them, so the eye lands on the menu.
+  const SCRIMMED = ["exportMenu", "designsMenu", "shareMenu", "cpExportMenu"];
+  const syncScrim = () => document.body.classList.toggle("scrimmed", SCRIMMED.some((id) => $(id) && !$(id).hidden));
+  window.syncScrim = syncScrim;
+  function closeMenus() { Object.values(menus).forEach((m) => (m.hidden = true)); syncScrim(); }
   for (const [btn, menu] of Object.entries(menus)) {
     $(btn).onclick = (e) => {
       e.stopPropagation();
@@ -1861,6 +1890,7 @@
       if (open && menu === sizeMenu) { const [w, h] = sizer().get(), fitting = !!sizer().fitting?.(); for (const o of sizeMenu.querySelectorAll(".opt")) o.classList.toggle("on", o.hasAttribute("data-fit") ? fitting : !fitting && +o.dataset.w === w && +o.dataset.h === h); }
       if (open && menu.id === "exportMenu") refreshExport();
       if (open && menu.id === "designsMenu") dzSync();
+      syncScrim();
     };
   }
   document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".menu-wrap")) closeMenus(); });
@@ -1953,7 +1983,7 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.11", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "1.12", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
@@ -2344,15 +2374,16 @@
     const seg = document.createElement("div"); seg.className = "seg sm grid2"; seg.id = "objMat";
     seg.innerHTML = [...OBJ_MATS, ...PIC_MATS].map(([v, l, tip]) => `<button data-v="${v}" data-tip="${tip}">${l}</button>`).join("");
     mat.appendChild(seg);
-    makeSeg(seg, () => objOf()?.mat, (v) => { const o = objOf(); if (o) o.mat = v; });
-    syncers.push(() => { const pic = isPic(); for (const b of seg.children) if (b.dataset.v) b.hidden = b.dataset.v !== "vanta" && pic !== PIC_MATS.some(([k]) => k === b.dataset.v); });
+    // Forms list Vantablack among the presets, as a surface to wrap them in; pictures keep it as a button.
+    makeSeg(seg, () => { const o = objOf(); return o?.mat === "vanta" && !isPic() ? "preset" : o?.mat; }, (v) => { const o = objOf(); if (o) o.mat = v; });
+    syncers.push(() => { const pic = isPic(); for (const b of seg.children) if (b.dataset.v) b.hidden = b.dataset.v === "vanta" ? !pic : pic !== PIC_MATS.some(([k]) => k === b.dataset.v); });
     const pr = document.createElement("div"); pr.className = "label-row obj-preset";
     pr.innerHTML = `<span class="label">Preset</span>`;
-    const pseg = document.createElement("div"); pseg.className = "seg"; pseg.innerHTML = PRESETS.map(([, n]) => `<button data-v="${n}">${n}</button>`).join("");
+    const pseg = document.createElement("div"); pseg.className = "seg"; pseg.innerHTML = [`<button data-v="Vantablack" data-tip="Flat black that swallows the light">Vantablack</button>`, ...PRESETS.map(([, n]) => `<button data-v="${n}">${n}</button>`)].join("");
     pr.appendChild(pseg); mat.appendChild(pr);
-    makeSeg(pseg, () => objOf()?.preset, (v) => { const o = objOf(); if (o) o.preset = v; });
+    makeSeg(pseg, () => (objOf()?.mat === "vanta" ? "Vantablack" : objOf()?.preset), (v) => { const o = objOf(); if (!o) return; if (v === "Vantablack") o.mat = "vanta"; else { o.mat = "preset"; o.preset = v; } });
     UI.dropdown(pseg, { label: "Preset" });
-    syncers.push(() => (pr.hidden = isPic() || objOf()?.mat !== "preset"));
+    syncers.push(() => (pr.hidden = isPic() || !["preset", "vanta"].includes(objOf()?.mat)));
     const place = G("Placement");
     const pct = (v) => Math.round(v * 100) + "%";
     makeSlider(place, { label: "Left to right", ...ob("x"), min: 0, max: 1, step: 0.001, pct: true, fmt: pct, rand: [0.2, 0.8] });
@@ -2445,7 +2476,7 @@
   const thumbCanvas = document.createElement("canvas");
   try { FXR = window.TopoFX.createFX(fxCanvas); } catch (e) { FXR = null; }
   try { TFX = window.TopoFX.createFX(thumbCanvas); } catch (e) { TFX = null; }
-  setTimeout(() => { FXR?.warm?.(); TFX?.warm?.(); }, 0);
+  (window.introDone || Promise.resolve()).then(() => setTimeout(() => { FXR?.warm?.(); TFX?.warm?.(); }, 0));
   let showT = 0;
   let current = { svg: "", raster: false }, raf = 0, anim = 0, painted = null, paintTok = 0, fxWarned = false;
   const rasterCanvas = document.createElement("canvas"), thumbRaster = document.createElement("canvas"), baseCanvas = document.createElement("canvas");
@@ -2605,6 +2636,7 @@
   function enqueue(jobs) { queue = jobs; if (!pumping) pump(); }
   async function pump() {
     pumping = true;
+    await window.introDone;
     while (queue.length) {
       // Thumbnails wait while shaders are still compiling in the background rather than blocking on them.
       for (let n = 0; TFX?.ready && !TFX.ready() && n < 60; n++) await new Promise((r) => setTimeout(r, 50));

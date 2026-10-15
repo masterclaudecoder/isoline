@@ -86,22 +86,15 @@ Follow the rules in Isoline.components.brief("design"). The user edits them in C
   meta.type = "text/markdown"; meta.id = "isoline-agent-guide"; meta.textContent = GUIDE;
   document.head.appendChild(meta);
 
-  // "Copy for agents" in the top bar: one click copies the agent guide. It shares a well with the
-  // settings button, drawn like the size control, so the right side reads as one group.
+  // "Copy for agents": one click copies the agent guide.
   function forAgents() { return GUIDE; }
-  const wrap = document.createElement("button");
-  wrap.className = "tb"; wrap.id = "aiSplit"; wrap.title = "Copies the agent guide";
-  wrap.innerHTML = `<span class="tb-ic" aria-hidden="true"><svg class="ic"><use href="#i-copy"/></svg><svg class="ic"><use href="#i-check"/></svg></span><span class="tb-l">Copy for agents</span>`;
-  const right = document.querySelector(".top-right"), group = document.createElement("div");
-  group.className = "top-group";
-  group.append(wrap, $settingsWrap());
-  right.insertBefore(group, right.firstChild);
-  function $settingsWrap() { return document.getElementById("settingsBtn").closest(".menu-wrap"); }
+  // It lives in the Share menu in the top bar.
+  const wrap = document.getElementById("aiCopy");
   let doneT = 0;
   wrap.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(forAgents());
-      wrap.classList.add("done"); clearTimeout(doneT); doneT = setTimeout(() => wrap.classList.remove("done"), 1600);
+      wrap.classList.add("done"); clearTimeout(doneT); doneT = setTimeout(() => { wrap.classList.remove("done"); document.getElementById("shareMenu").hidden = true; root.syncScrim?.(); }, 700);
       root.toastMsg?.("Copied for your agent");
     } catch (err) { root.toastMsg?.("Clipboard is blocked here"); }
   });

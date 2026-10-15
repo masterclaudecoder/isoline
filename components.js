@@ -324,20 +324,26 @@
   if (!LAYOUTS[K.layout]) K.layout = "home";
   function previewHTML() { return K.view === "components" ? COMPONENTS : `<div class="k-page k-pg-${K.layout}">${LAYOUTS[K.layout][1]}</div>`; }
   if (K.view !== "components") K.view = "pages";
-  // Home card: the hero landing, drawn at desktop width and scaled to fit the card.
-  const homeRO = new ResizeObserver((en) => { for (const e of en) { const k = e.target.firstElementChild; if (k) k.style.setProperty("--s", (e.contentRect.width / 1240).toFixed(4)); } });
+  // Home card: the landing page in a browser window, tilted back in space, with the same page on a phone
+  // standing in front of it. Both are drawn at their real widths and scaled to the card.
+  const homeRO = new ResizeObserver((en) => { for (const e of en) sizeHome(e.target, e.contentRect.width, e.contentRect.height); });
+  const sizeHome = (el, w, h) => { el.style.setProperty("--cw", Math.round(w || 600)); el.style.setProperty("--ch", Math.round(h || 380)); };
   function preview(el) {
     if (!el) return;
-    if (!el.firstElementChild?.classList.contains("k-home")) { el.innerHTML = `<div class="kit k-home k-landing"><div class="k-page">${LAYOUTS.home[1]}</div></div>`; homeRO.observe(el); }
-    vars(el.firstElementChild);
-    el.firstElementChild.classList.toggle("k-has-art", !!artURL); el.firstElementChild.style.setProperty("--k-art", artURL ? `url("${artURL}")` : "none");
-    el.firstElementChild.style.setProperty("--s", ((el.clientWidth || 600) / 1240).toFixed(4));
+    if (!el.querySelector(".cps")) {
+      const page = `<div class="k-page">${LAYOUTS.home[1]}</div>`;
+      el.innerHTML = `<div class="cps" aria-hidden="true"><div class="cps-win"><div class="cps-bar"><i></i><i></i><i></i><span></span></div><div class="kit k-landing">${page}</div></div><div class="cps-phone"><div class="kit k-landing">${page}</div></div></div>`;
+      homeRO.observe(el);
+    }
+    for (const k of el.querySelectorAll(".kit")) { vars(k); k.classList.toggle("k-has-art", !!artURL); k.style.setProperty("--k-art", artURL ? `url("${artURL}")` : "none"); }
+    vars(el.querySelector(".cps"));
+    sizeHome(el, el.clientWidth, el.clientHeight);
   }
   // The kit wears the app's colors until you change them, so it follows the app's theme and accent.
   root.addEventListener("theme-change", () => {
     if (!K.follow && K.dark != null) return;
     const kit = $("kit"); if (kit) vars(kit);
-    const home = $("homeComponents"); if (home?.firstElementChild) vars(home.firstElementChild);
+    const home = $("homeComponents"); if (home?.querySelector(".cps")) preview(home);
     if (!build.hidden) { renderSlots(); renderStageSegs(); if (K.slot === "color") renderOpts(); }
   });
 
@@ -460,29 +466,39 @@
     motion: `<span class="tt-move"><i></i></span>`,
     rules: `<span class="tt-rules"><i></i><i></i><i></i><i></i></span>`,
   };
-  // Hover plays three beats on a token tile: as set, less, more, then home. Leaving lets the beat in
-  // progress finish, so the tile always comes to rest on the token's own value.
+  // Hovering a token tile shows what the token does, the same way on every tile: the specimen steps down
+  // to a smaller value, up to a larger one, and settles back on yours, with even holds between the beats.
+  // It plays once per hover and always finishes, so the tile rests on the token's own value. Motion is the
+  // exception that proves the rule: its dot runs with your own duration and easing, there and back.
+  const BEAT = { duration: 1500, easing: "cubic-bezier(.65,0,.35,1)" };
+  const beats = (home, low, high) => [[home, 0], [low, 0.26], [low, 0.4], [high, 0.66], [high, 0.8], [home, 1]].map(([k, offset]) => ({ ...k, offset, easing: BEAT.easing }));
   const TOK_ANIM = {
-    type: [".tt-ag span", () => [{ scale: 1 }, { scale: 0.74 }, { scale: 1.28 }, { scale: 1 }]],
-    color: [".tt-pill", () => [{ filter: "saturate(1)", width: "24px" }, { filter: "saturate(.3)", width: "16px" }, { filter: "saturate(1.7)", width: "34px" }, { filter: "saturate(1)", width: "24px" }]],
-    artwork: [".tt-art", () => [{ backgroundPosition: "50% 50%" }, { backgroundPosition: "20% 20%" }, { backgroundPosition: "85% 85%" }, { backgroundPosition: "50% 50%" }]],
-    spacing: [".tt-space b", () => [{ width: "8px" }, { width: "3px" }, { width: "17px" }, { width: "8px" }]],
-    radius: [".tt-corner", (el) => { const r = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0; return [{ borderRadius: r + "px" }, { borderRadius: Math.max(0, r - 7) + "px" }, { borderRadius: Math.min(15, r + 9) + "px" }, { borderRadius: r + "px" }]; }],
-    elevation: [".tt-card", () => { const k = (y, b, a) => ({ translate: `0 ${y}px`, boxShadow: `inset 0 1px 0 rgba(255,255,255,.14), 0 ${b}px ${b * 2}px -${b / 2}px rgba(0,0,0,${a})` }); return [k(0, 3, 0.35), k(1, 1, 0.25), k(-5, 10, 0.55), k(0, 3, 0.35)]; }],
-    motion: [".tt-move i", () => [{ left: "0%" }, { left: "calc(40% - 4px)" }, { left: "calc(100% - 10px)" }, { left: "0%" }]],
-    rules: [".tt-rules i", () => [{ scale: "1 1" }, { scale: ".55 1" }, { scale: "1.25 1" }, { scale: "1 1" }]],
+    type: [".tt-ag span", () => beats({ scale: 1 }, { scale: 0.72 }, { scale: 1.3 })],
+    // Color: the little interface flips between light and dark, as the scheme would.
+    color: [".tt-ui", () => { const dark = "invert(1) hue-rotate(180deg)"; return [{ filter: "none", offset: 0 }, { filter: dark, offset: 0.26 }, { filter: dark, offset: 0.62 }, { filter: "none", offset: 0.88 }, { filter: "none", offset: 1 }].map((k) => ({ ...k, easing: BEAT.easing })); }],
+    artwork: [".tt-art", () => beats({ backgroundPosition: "50% 50%" }, { backgroundPosition: "15% 15%" }, { backgroundPosition: "85% 85%" })],
+    spacing: [".tt-space b", () => beats({ width: "8px" }, { width: "3px" }, { width: "16px" })],
+    radius: [".tt-corner", (el) => { const r = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0; return beats({ borderRadius: r + "px" }, { borderRadius: "0px" }, { borderRadius: "15px" }); }],
+    elevation: [".tt-card", () => { const k = (y, b, a) => ({ translate: `0 ${y}px`, boxShadow: `inset 0 1px 0 rgba(255,255,255,.14), 0 ${b}px ${b * 2}px -${b / 2}px rgba(0,0,0,${a})` }); return beats(k(0, 3, 0.35), k(1, 0, 0), k(-4, 10, 0.5)); }],
+    motion: [".tt-move i", (el) => {
+      const cs = getComputedStyle(el), dur = parseFloat(cs.getPropertyValue("--k-dur")) || 200, ease = cs.getPropertyValue("--k-ease").trim() || "ease";
+      const hold = 260, total = 2 * dur + 2 * hold, f = (ms) => ms / total;
+      return { frames: [{ left: "0%", offset: 0, easing: ease }, { left: "calc(100% - 10px)", offset: f(dur) }, { left: "calc(100% - 10px)", offset: f(dur + hold), easing: ease }, { left: "0%", offset: f(2 * dur + hold) }, { left: "0%", offset: 1 }], duration: total };
+    }],
+    // Rules: each line writes itself in, one after another, like a checklist.
+    rules: [".tt-rules i", () => [{ scale: "1 1", offset: 0 }, { scale: "0 1", offset: 0.2, easing: BEAT.easing }, { scale: "0 1", offset: 0.3, easing: BEAT.easing }, { scale: "1 1", offset: 0.75 }, { scale: "1 1", offset: 1 }]],
   };
   function tokHover(tile) {
     const th = tile.querySelector("[data-tt]"), spec = TOK_ANIM[th?.dataset.tt];
-    if (!spec || root.UI?.reduce.matches) return;
+    if (!spec) return;
     let anims = [];
     tile.addEventListener("pointerenter", () => {
-      if (anims.length && anims.every((a) => a.playState === "running")) { anims.forEach((a) => a.effect.updateTiming({ iterations: Infinity })); return; }
-      anims.forEach((a) => a.cancel());
-      anims = [...th.querySelectorAll(spec[0])].map((el, i) => { if (spec[0].includes("rules")) el.style.transformOrigin = "0 50%"; return el.animate(spec[1](el).map((k) => ({ ...k, easing: "cubic-bezier(.45,0,.25,1)" })), { duration: 2400, iterations: Infinity, delay: i * 60 }); });
-    });
-    tile.addEventListener("pointerleave", () => {
-      for (const a of anims) { const t = a.effect.getComputedTiming(); a.effect.updateTiming({ iterations: Math.floor((t.currentIteration ?? 0)) + 1 }); }
+      if (root.UI?.reduce.matches || anims.some((a) => a.playState === "running")) return;
+      anims = [...th.querySelectorAll(spec[0])].map((el, i) => {
+        if (spec[0].includes("rules")) el.style.transformOrigin = "0 50%";
+        const k = spec[1](el), frames = Array.isArray(k) ? k : k.frames;
+        try { return el.animate(frames, { duration: Array.isArray(k) ? BEAT.duration : k.duration, delay: i * 70 }); } catch (e) { return null; }
+      }).filter(Boolean);
     });
   }
   $("cpSlots").innerHTML = SLOTS.map(([id, label]) => `<div class="slot"><div class="slot-label">${label}</div><button class="tile" data-s="${id}"><span class="tile-th tok-th" data-tt="${id}">${TOK_TH[id]}</span><span class="tile-text"><b></b><small></small></span>${ic("next")}</button></div>`).join("");
@@ -940,12 +956,12 @@
     <button class="opt" data-x="design"><span>${ic("copy")}Design brief</span></button>
     <button class="opt" data-x="dev"><span>${ic("copy")}Build brief with tokens</span></button></div>`;
   document.querySelector(".top-right").insertBefore(exWrap, document.querySelector(".top-right").lastElementChild);
-  $("cpExportBtn").onclick = (e) => { e.stopPropagation(); $("cpExportMenu").hidden = !$("cpExportMenu").hidden; };
-  document.addEventListener("pointerdown", (e) => { if (!e.target.closest("#cpExportMenu, #cpExportBtn")) $("cpExportMenu").hidden = true; });
+  $("cpExportBtn").onclick = (e) => { e.stopPropagation(); $("cpExportMenu").hidden = !$("cpExportMenu").hidden; root.syncScrim?.(); };
+  document.addEventListener("pointerdown", (e) => { if (!e.target.closest("#cpExportMenu, #cpExportBtn")) { $("cpExportMenu").hidden = true; root.syncScrim?.(); } });
   $("cpExportMenu").onclick = async (e) => {
     const b = e.target.closest("[data-x]"); if (!b) return;
     const text = { css: cssVars, tw: tailwind, json: jsonTokens, design: () => brief("design"), dev: () => brief("dev") }[b.dataset.x]();
-    $("cpExportMenu").hidden = true;
+    $("cpExportMenu").hidden = true; root.syncScrim?.();
     try { await navigator.clipboard.writeText(text); root.toastMsg?.("Copied"); } catch (err) { root.toastMsg?.("Clipboard is blocked here"); }
   };
 

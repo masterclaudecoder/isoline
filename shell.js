@@ -60,7 +60,8 @@
       // Studio and Palettes share their colors: the circles in Studio turn into the palette's columns.
       html.classList.toggle("vt-pal", [from, r].sort().join() === "palettes,studio");
       // A busy main thread can hold the snapshot back; past a moment the page just switches.
-      const late = setTimeout(() => vt.skipTransition?.(), 450);
+      // Phones take longer to capture the page, so they get more time before giving up on the morph.
+      const late = setTimeout(() => vt.skipTransition?.(), matchMedia("(pointer: coarse)").matches ? 1100 : 450);
       const vt = document.startViewTransition(() => { clearTimeout(late); if (want === r) show(r, true); });
       vt.updateCallbackDone.catch(() => {}).finally(() => { if (want === r && route !== r) show(r); });
       vt.finished.finally(() => { html.classList.remove("vt", "vt-pal"); if (want === r) want = null; });
@@ -97,6 +98,18 @@
   show(parse(location.hash));
   // First load: the page stays out of sight until its fonts are in (or a moment has passed), then the
   // top bar settles and the page's panels rise in one after another, so nothing flashes or shifts.
-  const html = document.documentElement, reveal = () => { html.classList.remove("loading"); if (reduce.matches) return; html.classList.add("intro"); setTimeout(() => html.classList.remove("intro"), 1500); };
+  // The entrance ends when its animations do, not on a timer, so a busy first second can't cut it short.
+  // Heavy start-up work (compiling every shader, drawing thumbnails) waits on introDone to keep the
+  // main thread free while it plays.
+  const done = () => root.__introDone?.();
+  const html = document.documentElement, reveal = () => {
+    html.classList.remove("loading");
+    if (reduce.matches) return done();
+    html.classList.add("intro");
+    requestAnimationFrame(() => {
+      const anims = document.getAnimations().filter((a) => /^intro/.test(a.animationName || ""));
+      Promise.race([Promise.all(anims.map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 4000))]).then(() => { html.classList.remove("intro"); done(); });
+    });
+  };
   Promise.race([document.fonts?.ready || Promise.resolve(), new Promise((r) => setTimeout(r, 700))]).then(() => requestAnimationFrame(() => requestAnimationFrame(reveal)));
 })(window);
