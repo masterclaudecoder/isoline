@@ -23,6 +23,20 @@ float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 vec2 dp() { return vUv * uRes / uK; }
 vec2 toUv(vec2 d) { return d * uK / uRes; }
 vec4 tex(vec2 uv) { return texture(uTex, clamp(uv, vec2(0.0), vec2(1.0))); }
+// A disc blur of radius r (output pixels) over a mipmapped copy of the input. 48 taps on a golden spiral,
+// turned per pixel; each reads the mip level that matches the spacing between taps, so the disc is filled
+// evenly however large it gets. bokeh > 0 weights bright taps up, so highlights open into discs.
+vec4 discBlur(sampler2D m, vec2 uv, float r, float bokeh) {
+  if (r < 0.5) return texture(m, uv);
+  float lod = log2(max(1.0, r * 0.3)), j = hash(gl_FragCoord.xy) * 6.2831853; vec4 acc = vec4(0.0); float ws = 0.0;
+  for (int i = 0; i < 48; i++) {
+    float fi = float(i), a = fi * 2.39996 + j, rr = sqrt((fi + 0.5) / 48.0) * r;
+    vec4 c = textureLod(m, clamp(uv + vec2(cos(a), sin(a)) * rr / uRes, vec2(0.0), vec2(1.0)), lod);
+    float w = 1.0 + bokeh * 12.0 * pow(max(c.r, max(c.g, c.b)), 6.0);
+    acc += c * w; ws += w;
+  }
+  return acc / ws;
+}
 // Halftone dot shapes. r is the radius of a circle with the same area, so every shape lays down the same
 // ink for the same tone, and each shape is centred on its cell. Callers test the neighboring cells too,
 // so a large dot spills into the next cell instead of being cut off at its edge.
@@ -1163,15 +1177,27 @@ void main() {
   o = vec4(mix(outside, inside, smoothstep(aa, -aa, sd)), base.a);
 }`,
 
-    blur: `uniform float uAmt; uniform float uDir; uniform float uStart;
+    blur: `uniform float uAmt; uniform float uDir; uniform float uStart; uniform sampler2D uTex2;
+// Progressive blur: a disc of taps whose radius grows across the picture. The taps read a mip level
+// sized to the gap between them, so a wide blur averages smooth areas instead of stacking sharp copies of
+// the lines (which is what split them at high values).
 void main() {
   vec2 q = vec2(vUv.x, 1.0 - vUv.y); float t;
   if (uDir < 0.5) t = 1.0 - q.y; else if (uDir < 1.5) t = q.y; else if (uDir < 2.5) t = 1.0 - q.x; else if (uDir < 3.5) t = q.x;
   else if (uDir < 4.5) t = length((q - 0.5) * vec2(uRes.x / uRes.y, 1.0)) * 1.3; else t = 1.0;
   float m = uDir > 4.5 ? 1.0 : smoothstep(uStart, 1.0, t);
-  float r = uAmt * m * uK; vec4 acc = vec4(0.0);
-  for (int i = 0; i < 48; i++) { float fi = float(i), a = fi * 2.39996, rr = sqrt((fi + 0.5) / 48.0) * r; acc += tex(vUv + vec2(cos(a), sin(a)) * rr / uRes); }
-  o = acc / 48.0;
+  o = discBlur(uTex2, vUv, uAmt * m * uK, 0.0);
+}`,
+
+    // Depth of field: the picture stays sharp around a focal point (or along a focal band through it, as
+    // a tilt-shift lens does) and softens with distance from it. Bright spots open into soft discs, the
+    // way out-of-focus highlights do through a real lens.
+    dof: `uniform float uAmt; uniform vec2 uF; uniform float uFocus; uniform float uFall; uniform float uBand; uniform float uAngle; uniform float uBokeh; uniform sampler2D uTex2;
+void main() {
+  vec2 q = vec2(vUv.x, 1.0 - vUv.y), asp = vec2(uRes.x / uRes.y, 1.0), d = (q - uF) * asp;
+  float dist = uBand > 0.5 ? abs(dot(d, vec2(-sin(uAngle), cos(uAngle)))) : length(d);
+  float m = smoothstep(uFocus, uFocus + max(0.01, uFall), dist);
+  o = discBlur(uTex2, vUv, uAmt * m * uK, uBokeh);
 }`,
 
     bloom: `uniform float uThr; uniform float uRad; uniform float uInt;
@@ -1279,7 +1305,7 @@ void main() {
   };
 
   // Default pipeline order when effects are added; the app can reorder freely.
-  const ORDER = ["liquify", "wave", "swirl", "bulge", "ripple", "touch", "trail", "sea", "water", "kaleido", "glass", "mesh", "lens", "rays", "chrome", "heatmap", "paper", "cmyk", "blur", "bloom", "emboss", "gradmap", "posterize", "pixel", "voronoi", "halftone", "linescreen", "riso", "ascii", "glyphs", "dither", "scan", "chroma", "vignette", "grain"];
+  const ORDER = ["liquify", "wave", "swirl", "bulge", "ripple", "touch", "trail", "sea", "water", "kaleido", "glass", "mesh", "lens", "rays", "chrome", "heatmap", "paper", "cmyk", "blur", "dof", "bloom", "emboss", "gradmap", "posterize", "pixel", "voronoi", "halftone", "linescreen", "riso", "ascii", "glyphs", "dither", "scan", "chroma", "vignette", "grain"];
   const CHARSETS = { ascii: " .:-=+*#%@", blocks: " ░▒▓█", dots: " ·•●", binary: " 01", lines: " ─═│╬" };
   // Glyph field sets: picked at random per cell, so order doesn't matter and there's no blank.
   const GLYPHSETS = {
@@ -1555,6 +1581,7 @@ void main() {
         case "kaleido": return { uSeg: e.segments, uRot: rad(e.rotate), uZoom: e.zoom };
         case "lens": return { uShape: ["circle", "pill", "square"].indexOf(e.shape), uSize: e.size, uRefr: e.refraction, uFrost: e.frost, uRim: e.rim, uDisp: e.disp ?? 0.5, uC: [e.x, 1 - e.y] };
         case "blur": return { uAmt: e.amount, uDir: ["top", "bottom", "left", "right", "center", "even"].indexOf(e.dir), uStart: e.start };
+        case "dof": return { uAmt: e.amount, uF: [e.x ?? 0.5, e.y ?? 0.5], uFocus: e.focus ?? 0.12, uFall: e.falloff ?? 0.35, uBand: e.shape === "band" ? 1 : 0, uAngle: rad(e.angle || 0), uBokeh: e.bokeh ?? 0.4 };
         case "bloom": return { uThr: e.threshold, uRad: e.radius, uInt: e.intensity };
         case "emboss": return { uStr: e.strength, uAngle: rad(e.angle), uDepth: e.depth };
         case "vignette": return { uAmt: e.amount, uSoft: e.softness };
@@ -1704,6 +1731,7 @@ void main() {
           if (!job.pointer || !floatOK) continue;
           un.uTex2 = fluidStep(job, e, w, h).t;
         }
+        if (id === "blur" || id === "dof") un.uTex2 = mipOf(input, w, h, k);
         if (id === "chrome" && floatOK) {
           const a = floatTarget("chA", w, h, "half"), b = floatTarget("chB", w, h, "half"), sg = Math.max(0.8, (e.soft || 8) * k * 0.7);
           draw("hblur", input, a.f, { uDir2: [1, 0], uSigma: sg, uFirst: 1 }, w, h, k, 0);
@@ -1716,6 +1744,24 @@ void main() {
       drawObjects((job.objects || []).filter((o) => o.layer === "over"));
       draw("copy", input, null, {}, w, h, k, job.seed);
       return { w, h };
+    }
+
+    // A copy of the picture so far with a full mip chain, for blurs wide enough to need prefiltering.
+    let mipT = null;
+    function mipOf(src, w, h, k) {
+      if (!mipT || mipT.w !== w || mipT.h !== h) {
+        if (mipT) { gl.deleteTexture(mipT.t); gl.deleteFramebuffer(mipT.f); }
+        const t = newTex();
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        const f = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+        mipT = { t, f, w, h };
+      }
+      draw("copy", src, mipT.f, {}, w, h, k, 0);
+      gl.bindTexture(gl.TEXTURE_2D, mipT.t); gl.generateMipmap(gl.TEXTURE_2D);
+      return mipT.t;
     }
 
     // Resolves once the GPU has finished the work sent so far, so callers can time real frame cost.

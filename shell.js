@@ -103,6 +103,9 @@
   // main thread free while it plays.
   const done = () => root.__introDone?.();
   const html = document.documentElement, reveal = () => {
+    // The loading screen, if it got as far as showing, fades from where it is rather than cutting out.
+    const sp = $("splash"), shown = sp && +getComputedStyle(sp).opacity > 0.05;
+    if (shown) { sp.style.setProperty("--from", getComputedStyle(sp).opacity); sp.classList.add("out"); setTimeout(() => sp.remove(), 600); } else sp?.remove();
     html.classList.remove("loading");
     if (reduce.matches) return done();
     html.classList.add("intro");
@@ -111,5 +114,8 @@
       Promise.race([Promise.all(anims.map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 4000))]).then(() => { html.classList.remove("intro"); done(); });
     });
   };
-  Promise.race([document.fonts?.ready || Promise.resolve(), new Promise((r) => setTimeout(r, 700))]).then(() => requestAnimationFrame(() => requestAnimationFrame(reveal)));
+  // The studio also waits for its first drawing (and for a shared design, when the link holds one), so the
+  // page doesn't appear empty and then pop; the loading screen covers the wait if it runs long.
+  const firstLook = route === "studio" ? root.firstPaint : null;
+  Promise.race([Promise.all([document.fonts?.ready || Promise.resolve(), firstLook]), new Promise((r) => setTimeout(r, firstLook ? 4000 : 700))]).then(() => requestAnimationFrame(() => requestAnimationFrame(reveal)));
 })(window);

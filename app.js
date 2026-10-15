@@ -25,6 +25,7 @@
     ["glass", "Fluted glass", "Glass", { width: 44, angle: 90, strength: 0.9, frost: 0.2, light: 0.4 }, [{ k: "width", label: "Rib width", min: 4, max: 300, step: 1, log: true, fmt: px, rand: [24, 90] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }, { k: "strength", label: "Refraction", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.4] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.5] }, { k: "light", label: "Highlight", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.3, 0.7] }]],
     ["mesh", "Glass blocks", "Glass", { cell: 120, radius: 0, strength: 0.7, frost: 0.25, grout: 1, rim: 0.6, disp: 0.5 }, [{ k: "cell", label: "Block size", min: 12, max: 400, step: 1, log: true, fmt: px, rand: [70, 180] }, { k: "radius", label: "Corner radius", min: 0, max: 0.5, step: 0.01, fmt: pct, pct: true, rand: [0.12, 0.35] }, { k: "strength", label: "Refraction", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.1, 0.5] }, { k: "grout", label: "Gap", min: 0, max: 4, step: 0.05, fmt: f2, rand: [0.5, 1.5] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
     ["lens", "Liquid glass", "Glass", { shape: "pill", size: 0.42, x: 0.5, y: 0.5, refraction: 0.9, frost: 0.2, rim: 0.6, disp: 0.5 }, [{ seg: "shape", options: [["circle", "Circle"], ["pill", "Pill"], ["square", "Square"]] }, { k: "size", label: "Size", min: 0.1, max: 1.2, step: 0.01, fmt: f2, rand: [0.3, 0.6] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.65] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.65] }, { k: "refraction", label: "Refraction", min: 0, max: 2.5, step: 0.01, fmt: f2, rand: [0.6, 1.3] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.4] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
+    ["dof", "Depth of field", "Light", { amount: 28, x: 0.5, y: 0.5, focus: 0.12, falloff: 0.35, shape: "point", angle: 0, bokeh: 0.4 }, [{ seg: "shape", options: [["point", "Point"], ["band", "Band"]] }, { k: "amount", label: "Blur", min: 0, max: 160, step: 0.5, fmt: px, rand: [14, 48] }, { k: "x", label: "Focus left to right", min: 0, max: 1, step: 0.005, pct: true, fmt: pct, rand: [0.3, 0.7] }, { k: "y", label: "Focus top to bottom", min: 0, max: 1, step: 0.005, pct: true, fmt: pct, rand: [0.3, 0.7] }, { k: "focus", label: "In focus", min: 0, max: 0.8, step: 0.005, fmt: pct, pct: true, rand: [0.05, 0.25] }, { k: "falloff", label: "Falloff", min: 0.02, max: 1.2, step: 0.01, fmt: f2, rand: [0.2, 0.6] }, { k: "angle", label: "Band angle", min: -90, max: 90, step: 1, fmt: deg, when: (e) => e.shape === "band" }, { k: "bokeh", label: "Bokeh", min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Off"), rand: [0.2, 0.7] }]],
     ["blur", "Progressive blur", "Light", { amount: 32, dir: "bottom", start: 0.35 }, [{ seg: "dir", options: [["top", "Top"], ["bottom", "Bottom"], ["left", "Left"], ["right", "Right"], ["center", "Edges"], ["even", "Even"]] }, { k: "amount", label: "Blur", min: 0, max: 200, step: 0.5, fmt: px, rand: [16, 60] }, { k: "start", label: "Starts at", min: 0, max: 0.95, step: 0.01, fmt: pct, pct: true, rand: [0.25, 0.6] }]],
     ["bloom", "Glow", "Light", { threshold: 0.55, radius: 30, intensity: 0.9 }, [{ k: "threshold", label: "Threshold", min: 0, max: 0.95, step: 0.01, fmt: f2, rand: [0.35, 0.75] }, { k: "radius", label: "Radius", min: 2, max: 200, step: 1, log: true, fmt: px, rand: [16, 50] }, { k: "intensity", label: "Intensity", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.2] }]],
     ["emboss", "Relief", "Light", { strength: 1.2, angle: 135, depth: 2 }, [{ k: "strength", label: "Strength", min: 0, max: 5, step: 0.01, fmt: f2, rand: [0.8, 2.2] }, { k: "angle", label: "Light angle", min: 0, max: 360, step: 1, fmt: deg }, { k: "depth", label: "Depth", min: 0.5, max: 16, step: 0.5, fmt: px, rand: [1.5, 4] }]],
@@ -655,19 +656,31 @@
     const sum = document.createElement("span"); sum.className = "stack-sum"; sum.setAttribute("aria-hidden", "true");
     slot.querySelector(".fx-tiles").insertBefore(sum, slot.querySelector(".tile.add"));
     const b = document.createElement("button"); b.className = "stack-fold"; b.textContent = "Fold"; b.hidden = true;
-    b.onclick = () => { stackOpen[k] = false; slotKey = ""; renderSlots(); };
+    b.onclick = () => { stackOpen[k] = false; slotKey = ""; renderSlots(); spread(slot); };
     slot.querySelector(".slot-label").appendChild(b);
+    // Clicking a card in the deck spreads the deck and opens that card's settings; the names open it too.
     slot.addEventListener("click", (e) => {
-      if (!slot.classList.contains("folded") || !e.target.closest(".tile.fx, .stack-sum")) return;
-      e.stopPropagation(); stackOpen[k] = true; slotKey = ""; renderSlots();
+      if (!slot.classList.contains("folded")) return;
+      const card = e.target.closest(".tile.fx");
+      if (!card && !e.target.closest(".stack-sum")) return;
+      e.stopPropagation(); stackOpen[k] = true; slotKey = "";
+      if (card) setSlot(card.dataset.fx ? "fx:" + card.dataset.fx : "obj:" + card.dataset.obj); else renderSlots();
+      spread(slot);
     }, true);
+  }
+  // Folding and spreading: the cards ease into their new places one after another instead of snapping.
+  function spread(slot) {
+    if (!animOK()) return;
+    const open = !slot.classList.contains("folded");
+    [...slot.querySelectorAll(".tile.fx:not(.leaving), .stack-sum, .tile.add")].forEach((t, i) => t.animate(open ? [{ opacity: 0, transform: "translateY(-10px) scale(.97)" }, { opacity: 1, transform: "none" }] : [{ opacity: 0, transform: "translateX(-12px)" }, { opacity: getComputedStyle(t).opacity }], { duration: 300, delay: i * 40, easing: EASE, fill: "backwards", composite: "replace" }));
   }
   function syncStacks() {
     for (const [k, slot, n] of [["fx", fxSlot, S.fxOrder.length], ["obj", objSlot, S.objects.length]]) {
       const deck = n >= 2;
       if (!deck) stackOpen[k] = false;
       const names = k === "fx" ? S.fxOrder.map((id) => FXI[id].name) : S.objects.map(objName);
-      slot.querySelector(".stack-sum").innerHTML = `<b>${names.length} ${k === "fx" ? "effects" : "objects"}</b><small>${names.join(", ")}</small>`;
+      slot.querySelector(".stack-sum").innerHTML = `<b>${names.join(", ")}</b><small>${names.length} ${k === "fx" ? "effects" : "objects"}</small>`;
+      slot.style.setProperty("--n", n);
       slot.classList.toggle("fx-stack", deck); slot.classList.toggle("folded", deck && !stackOpen[k]);
       slot.querySelector(".stack-fold").hidden = !(deck && stackOpen[k]);
       [...slot.querySelectorAll(".tile.fx:not(.leaving)")].forEach((t, i) => t.style.setProperty("--i", i));
@@ -1983,7 +1996,7 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.12", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "1.13", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
@@ -2045,9 +2058,9 @@
   }
   let pending = null;
   // Opens src after showing what will change, if anything. Undo returns to the design before.
-  function openState(src, meta, then) {
+  function openState(src, meta, then, boot = false) {
     const notes = compat(src, meta);
-    const go = () => { S = withDefaults(src); sel = null; update({ fade: true }); then?.(); };
+    const go = () => { S = withDefaults(src); sel = null; if (boot && !notes.length) { bootShared = false; update({ instant: true }); } else update({ fade: true }); then?.(); };
     if (!notes.length) return go();
     pending = go;
     $("compatList").innerHTML = notes.map((n) => `<li>${esc(n)}</li>`).join("");
@@ -2178,12 +2191,16 @@
   };
   async function openShared() {
     const m = location.hash.match(/[?&]d=([\w-]+)/);
-    if (!m) return;
+    if (!m) { if (bootShared) firstPainted(); return; }
     history.replaceState(null, "", location.pathname + location.search + "#/studio");
     try {
       const { state, meta } = await readCode(m[1]);
-      openState(state, meta, () => { P.designId = null; savePrefs(); toast("Shared design opened"); });
-    } catch (e) { toast("That link is broken"); }
+      // Opening the page from a link: the shared design is drawn straight away, behind the loading screen,
+      // rather than cross-faded over whatever this browser had open last.
+      const boot = bootShared;
+      openState(state, meta, () => { P.designId = null; savePrefs(); toast("Shared design opened"); }, boot);
+      if (boot && bootShared) firstPainted();
+    } catch (e) { firstPainted(); toast("That link is broken"); }
   }
   addEventListener("hashchange", openShared);
   setTimeout(openShared, 0);
@@ -2618,11 +2635,16 @@
     drawOverlay(st);
     return { svg, raster };
   }
+  // The first finished drawing lets the shell reveal the page. A shared link waits for its own design.
+  let bootShared = /[?&]d=/.test(location.hash), firstDone = null;
+  window.firstPaint = new Promise((r) => (firstDone = r));
+  const firstPainted = () => { bootShared = false; firstDone?.(); firstDone = null; };
   function render(draft = false) {
     cancelAnimationFrame(raf); cancelAnimationFrame(anim); anim = 0;
     return new Promise((resolve) => {
       raf = requestAnimationFrame(async () => {
         const r = await paint(S, draft);
+        if (r && !draft && !bootShared) firstPainted();
         if (r && !draft) { current = r; updateMini(); schedulePreviews(); }
         resolve(r);
       });

@@ -332,8 +332,19 @@
     if (!el) return;
     if (!el.querySelector(".cps")) {
       const page = `<div class="k-page">${LAYOUTS.home[1]}</div>`;
-      el.innerHTML = `<div class="cps" aria-hidden="true"><div class="cps-win"><div class="cps-bar"><i></i><i></i><i></i><span></span></div><div class="kit k-landing">${page}</div></div><div class="cps-phone"><div class="kit k-landing">${page}</div></div></div>`;
+      el.innerHTML = `<div class="cps" aria-hidden="true"><div class="cps-win"><div class="cps-bar"><i></i><i></i><i></i><span></span></div><div class="kit k-landing">${page}</div></div><div class="cps-shade"></div><div class="cps-phone"><div class="kit k-landing">${page}</div></div></div>`;
       homeRO.observe(el);
+      // The scene tilts toward the pointer while it's over the card, and eases back when it leaves.
+      const card = el.closest(".tool") || el, sc = el.querySelector(".cps");
+      if (!root.UI?.reduce.matches && matchMedia("(hover: hover)").matches) {
+        card.addEventListener("pointermove", (e) => {
+          const r = el.getBoundingClientRect();
+          sc.classList.add("track");
+          sc.style.setProperty("--tx", Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1)).toFixed(3));
+          sc.style.setProperty("--ty", Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1)).toFixed(3));
+        });
+        card.addEventListener("pointerleave", () => { sc.classList.remove("track"); sc.style.setProperty("--tx", 0); sc.style.setProperty("--ty", 0); });
+      }
     }
     for (const k of el.querySelectorAll(".kit")) { vars(k); k.classList.toggle("k-has-art", !!artURL); k.style.setProperty("--k-art", artURL ? `url("${artURL}")` : "none"); }
     vars(el.querySelector(".cps"));
@@ -453,40 +464,34 @@
     rules: () => { const on = K.rules.filter((r) => r.on && r.t.trim()).length, off = K.rules.length - on; return [on ? `${on} ${on === 1 ? "rule" : "rules"}` : "No rules", off ? `${off} switched off` : K.rules.length ? "All on" : "Add your own"]; },
   };
   // Built once and patched, so selection and text changes transition like the studio's build column.
-  // Each tile shows its token at work, drawn with the kit's own variables and cropped close: a heading,
-  // a scrap of interface, a corner, a lifted card, a moving dot. They change as the tokens do, at the
-  // token duration and easing.
-  const TOK_TH = {
-    type: `<span class="tt-ag"><span>Ag Bb</span></span>`,
-    color: `<span class="tt-ui"><i class="tt-l1"></i><i class="tt-l2"></i><i class="tt-pill"></i></span>`,
-    artwork: `<span class="tt-art" id="cpArtTile"></span>`,
-    spacing: `<span class="tt-space"><i></i><b></b><i></i><b></b><i></i></span>`,
-    radius: `<span class="tt-corner"></span>`,
-    elevation: `<span class="tt-card"></span>`,
-    motion: `<span class="tt-move"><i></i></span>`,
-    rules: `<span class="tt-rules"><i></i><i></i><i></i><i></i></span>`,
-  };
-  // Hovering a token tile shows what the token does, the same way on every tile: the specimen steps down
-  // to a smaller value, up to a larger one, and settles back on yours, with even holds between the beats.
-  // It plays once per hover and always finishes, so the tile rests on the token's own value. Motion is the
-  // exception that proves the rule: its dot runs with your own duration and easing, there and back.
+  // Every tile shows the same thing: one small card from your kit (a heading, two lines of text and a
+  // button on a surface), drawn with the kit's own variables. What differs is the one property each
+  // token controls, and that is all its hover animates: the heading's size, the colors, the background
+  // the card sits on, the room inside it, its corners, its lift, how it moves, and the rules it follows.
+  const CARD = `<span class="tt-c"><b class="tt-h">Ag</b><span class="tt-tx"><i></i><i></i></span><s class="tt-btn"></s></span>`;
+  const TOK_TH = Object.fromEntries(SLOTS.map(([id]) => [id, `<span class="tt-scene${id === "artwork" ? " tt-art" : ""}"${id === "artwork" ? ' id="cpArtTile"' : ""}>${CARD}</span>`]));
+  // Hovering plays one short demonstration with the same rhythm on every tile: the property steps down to
+  // a smaller value, up to a larger one, and settles back on yours, with even holds between the beats.
+  // It plays once per hover and always finishes, so the tile rests on the token's own value. Motion runs
+  // with your own duration and easing, since that is the token.
   const BEAT = { duration: 1500, easing: "cubic-bezier(.65,0,.35,1)" };
   const beats = (home, low, high) => [[home, 0], [low, 0.26], [low, 0.4], [high, 0.66], [high, 0.8], [home, 1]].map(([k, offset]) => ({ ...k, offset, easing: BEAT.easing }));
+  const cs = (el, p) => getComputedStyle(el)[p];
   const TOK_ANIM = {
-    type: [".tt-ag span", () => beats({ scale: 1 }, { scale: 0.72 }, { scale: 1.3 })],
-    // Color: the little interface flips between light and dark, as the scheme would.
-    color: [".tt-ui", () => { const dark = "invert(1) hue-rotate(180deg)"; return [{ filter: "none", offset: 0 }, { filter: dark, offset: 0.26 }, { filter: dark, offset: 0.62 }, { filter: "none", offset: 0.88 }, { filter: "none", offset: 1 }].map((k) => ({ ...k, easing: BEAT.easing })); }],
-    artwork: [".tt-art", () => beats({ backgroundPosition: "50% 50%" }, { backgroundPosition: "15% 15%" }, { backgroundPosition: "85% 85%" })],
-    spacing: [".tt-space b", () => beats({ width: "8px" }, { width: "3px" }, { width: "16px" })],
-    radius: [".tt-corner", (el) => { const r = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0; return beats({ borderRadius: r + "px" }, { borderRadius: "0px" }, { borderRadius: "15px" }); }],
-    elevation: [".tt-card", () => { const k = (y, b, a) => ({ translate: `0 ${y}px`, boxShadow: `inset 0 1px 0 rgba(255,255,255,.14), 0 ${b}px ${b * 2}px -${b / 2}px rgba(0,0,0,${a})` }); return beats(k(0, 3, 0.35), k(1, 0, 0), k(-4, 10, 0.5)); }],
-    motion: [".tt-move i", (el) => {
-      const cs = getComputedStyle(el), dur = parseFloat(cs.getPropertyValue("--k-dur")) || 200, ease = cs.getPropertyValue("--k-ease").trim() || "ease";
-      const hold = 260, total = 2 * dur + 2 * hold, f = (ms) => ms / total;
-      return { frames: [{ left: "0%", offset: 0, easing: ease }, { left: "calc(100% - 10px)", offset: f(dur) }, { left: "calc(100% - 10px)", offset: f(dur + hold), easing: ease }, { left: "0%", offset: f(2 * dur + hold) }, { left: "0%", offset: 1 }], duration: total };
+    type: [".tt-h", (el) => beats({ scale: 1 }, { scale: 0.7 }, { scale: 1.45 })],
+    // Color: the card swaps to the dark scheme, then to another palette, and back.
+    color: [".tt-scene", () => beats({ filter: "none" }, { filter: "invert(1) hue-rotate(180deg)" }, { filter: "hue-rotate(140deg) saturate(1.3)" })],
+    artwork: [".tt-scene", () => beats({ backgroundPosition: "50% 50%" }, { backgroundPosition: "10% 20%" }, { backgroundPosition: "90% 80%" })],
+    spacing: [".tt-c", (el) => beats({ paddingInline: cs(el, "paddingLeft"), gap: cs(el, "rowGap") }, { paddingInline: "2px", gap: "1px" }, { paddingInline: "9px", gap: "5px" })],
+    radius: [".tt-c", (el) => beats({ borderRadius: cs(el, "borderTopLeftRadius") }, { borderRadius: "0px" }, { borderRadius: "14px" })],
+    elevation: [".tt-c", (el) => beats({ translate: "0 0", boxShadow: cs(el, "boxShadow") }, { translate: "0 1px", boxShadow: "0 0 0 0 rgba(0,0,0,0)" }, { translate: "0 -3px", boxShadow: "0 8px 14px -4px rgba(0,0,0,.45)" })],
+    motion: [".tt-c", (el) => {
+      const dur = parseFloat(getComputedStyle(el).getPropertyValue("--k-dur")) || 200, ease = getComputedStyle(el).getPropertyValue("--k-ease").trim() || "ease";
+      const hold = 300, total = 2 * dur + 2 * hold, f = (ms) => ms / total;
+      return { frames: [{ opacity: 1, translate: "0 0", offset: 0, easing: ease }, { opacity: 0, translate: "14px 0", offset: f(dur) }, { opacity: 0, translate: "-14px 0", offset: f(dur + hold), easing: ease }, { opacity: 1, translate: "0 0", offset: f(2 * dur + hold) }, { opacity: 1, translate: "0 0", offset: 1 }], duration: total };
     }],
-    // Rules: each line writes itself in, one after another, like a checklist.
-    rules: [".tt-rules i", () => [{ scale: "1 1", offset: 0 }, { scale: "0 1", offset: 0.2, easing: BEAT.easing }, { scale: "0 1", offset: 0.3, easing: BEAT.easing }, { scale: "1 1", offset: 0.75 }, { scale: "1 1", offset: 1 }]],
+    // Rules: each part of the card writes itself in, one after another, like a checklist being followed.
+    rules: [".tt-h, .tt-tx i, .tt-btn", () => [{ scale: "1 1", offset: 0 }, { scale: "0 1", offset: 0.2, easing: BEAT.easing }, { scale: "0 1", offset: 0.3, easing: BEAT.easing }, { scale: "1 1", offset: 0.75 }, { scale: "1 1", offset: 1 }]],
   };
   function tokHover(tile) {
     const th = tile.querySelector("[data-tt]"), spec = TOK_ANIM[th?.dataset.tt];
@@ -495,7 +500,7 @@
     tile.addEventListener("pointerenter", () => {
       if (root.UI?.reduce.matches || anims.some((a) => a.playState === "running")) return;
       anims = [...th.querySelectorAll(spec[0])].map((el, i) => {
-        if (spec[0].includes("rules")) el.style.transformOrigin = "0 50%";
+        el.style.transformOrigin = "0 50%";
         const k = spec[1](el), frames = Array.isArray(k) ? k : k.frames;
         try { return el.animate(frames, { duration: Array.isArray(k) ? BEAT.duration : k.duration, delay: i * 70 }); } catch (e) { return null; }
       }).filter(Boolean);

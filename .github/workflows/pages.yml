@@ -50,6 +50,8 @@ jobs:
           SHA=${GITHUB_SHA::7}; DATE=$(date -u +"%-d %b %Y")
           sed -i "s/__BUILD__/$SHA/; s/__DATE__/$DATE/" _site/app.js
           sed -i -E "s/(src=\"[a-z0-9-]+\.js)\"/\1?v=$SHA\"/g; s/href=\"style\.css\"/href=\"style.css?v=$SHA\"/" _site/index.html
+          # A new image URL each deploy, so link previews that cached an old (or missing) card fetch it again.
+          sed -i "s#/isoline/og.jpg\"#/isoline/og.jpg?v=$SHA\"#g" _site/index.html
           echo "{\"build\":\"$SHA\"}" > _site/version.json
           cp og.jpg favicon.svg _site/
       - uses: actions/configure-pages@v5
