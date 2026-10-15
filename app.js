@@ -18,7 +18,7 @@
     ["wave", "Waves", "Distort", { amp: 14, length: 220, angle: 0 }, [{ k: "amp", label: "Amplitude", min: 0, max: 160, step: 0.5, fmt: px, rand: [6, 30] }, { k: "length", label: "Wavelength", min: 10, max: 1200, step: 5, log: true, fmt: px, rand: [120, 400] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }]],
     ["swirl", "Twirl", "Distort", { amount: 3, radius: 0.55, x: 0.5, y: 0.5 }, [{ k: "amount", label: "Turn", min: -12, max: 12, step: 0.05, fmt: f2, rand: [-5, 5] }, { k: "radius", label: "Radius", min: 0.05, max: 1.5, step: 0.01, fmt: f2, rand: [0.35, 0.9] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }]],
     ["bulge", "Bulge", "Distort", { amount: 0.6, radius: 0.45, x: 0.5, y: 0.5 }, [{ k: "amount", label: "Amount", min: -1, max: 0.95, step: 0.01, fmt: f2, rand: [-0.5, 0.8] }, { k: "radius", label: "Radius", min: 0.05, max: 1.5, step: 0.01, fmt: f2, rand: [0.3, 0.7] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }]],
-    ["ripple", "Ripples", "Distort", { amp: 10, length: 60, decay: 0.6, shade: 1, x: 0.5, y: 0.5 }, [{ k: "amp", label: "Amplitude", min: 0, max: 60, step: 0.5, fmt: px, rand: [4, 16] }, { k: "length", label: "Wavelength", min: 8, max: 400, step: 1, log: true, fmt: px, rand: [30, 120] }, { k: "decay", label: "Reach", min: 0.05, max: 3, step: 0.01, fmt: f2, rand: [0.3, 1.2] }, { k: "shade", label: "Light", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.5] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }]],
+    ["ripple", "Ripples", "Distort", { amp: 10, length: 60, decay: 0.6, shade: 1, x: 0.5, y: 0.5, anim: false, speed: 3 }, [{ k: "amp", label: "Amplitude", min: 0, max: 60, step: 0.5, fmt: px, rand: [4, 16] }, { k: "length", label: "Wavelength", min: 8, max: 400, step: 1, log: true, fmt: px, rand: [30, 120] }, { k: "decay", label: "Reach", min: 0.05, max: 3, step: 0.01, fmt: f2, rand: [0.3, 1.2] }, { k: "shade", label: "Light", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.5] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { sw: "anim", label: "Animate" }, { k: "speed", label: "Speed", min: 1, max: 12, step: 1, fmt: (v) => v + " rings per loop", hard: [1, 60], when: (e) => e.anim }]],
     ["sea", "Water", "Distort", { amount: 1, scale: 360, caustic: 0.7, chop: 0.5, depth: 0.25, speed: 1 }, [{ k: "amount", label: "Refraction", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 1.6] }, { k: "scale", label: "Wave size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [200, 600] }, { k: "caustic", label: "Light", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "chop", label: "Chop", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.9] }, { k: "depth", label: "Depth tint", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.5] }, { k: "speed", label: "Speed", min: 0, max: 4, step: 1, fmt: (v) => v + "× per loop", hard: [0, 12] }]],
     ["water", "Caustic web", "Distort", { amount: 1, scale: 320, caustic: 0.6 }, [{ k: "amount", label: "Refraction", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 1.6] }, { k: "scale", label: "Size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [180, 520] }, { k: "caustic", label: "Caustics", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 1] }]],
     ["kaleido", "Kaleidoscope", "Distort", { segments: 6, rotate: 0, zoom: 1 }, [{ k: "segments", label: "Segments", min: 2, max: 16, step: 1, hard: [2, 64], rand: [4, 10] }, { k: "rotate", label: "Rotate", min: 0, max: 360, step: 1, fmt: deg }, { k: "zoom", label: "Zoom", min: 0.3, max: 3, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.7, 1.6] }]],
@@ -42,11 +42,13 @@
     ["pixel", "Pixels", "Stylize", { size: 16, bevel: 0.5 }, [{ k: "size", label: "Size", min: 2, max: 160, step: 1, log: true, fmt: px, rand: [10, 36] }, { k: "bevel", label: "Bevel", min: 0, max: 1, step: 0.01, fmt: f2 }]],
     ["voronoi", "Crystallize", "Stylize", { cell: 42, edge: 0.06 }, [{ k: "cell", label: "Cell", min: 6, max: 300, step: 1, log: true, fmt: px, rand: [24, 80] }, { k: "edge", label: "Edges", min: 0, max: 0.5, step: 0.01, fmt: f2 }]],
     ["ascii", "ASCII", "Stylize", { cell: 14, set: "ascii", custom: "", font: "geist", mono: true, invert: false }, [{ seg: "set", options: [["ascii", "ASCII"], ["blocks", "Blocks"], ["dots", "Dots"], ["binary", "01"], ["custom", "Custom"]] }, FONT_SEG, { text: "custom", label: "Characters", when: (e) => e.set === "custom" }, { k: "cell", label: "Cell", min: 4, max: 80, step: 1, log: true, fmt: px, rand: [10, 20] }, { sw: "mono", label: "Ink only" }, { sw: "invert", label: "Invert" }]],
+    ["touch", "Click ripples", "Interactive", { amp: 14, length: 46, speed: 420, life: 2.2, shade: 1 }, [{ k: "amp", label: "Strength", min: 0, max: 60, step: 0.5, fmt: px, rand: [6, 24] }, { k: "length", label: "Wavelength", min: 8, max: 300, step: 1, log: true, fmt: px, rand: [24, 90] }, { k: "speed", label: "Speed", min: 40, max: 2000, step: 10, log: true, fmt: (v) => v + " px/s", rand: [200, 800] }, { k: "life", label: "Lasts", min: 0.3, max: 8, step: 0.1, fmt: (v) => f2(v) + "s", rand: [1.2, 3.5] }, { k: "shade", label: "Light", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.5] }]],
+    ["trail", "Drag trails", "Interactive", { mode: "smear", size: 90, strength: 1, life: 1.6, swirl: 0.6, color: "#ffffff" }, [{ seg: "mode", options: [["smear", "Fluid"], ["smoke", "Smoke"]] }, { color: "color", label: "Smoke color" }, { k: "size", label: "Brush", min: 10, max: 400, step: 1, log: true, fmt: px, rand: [50, 160] }, { k: "strength", label: "Push", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.6, 1.6] }, { k: "swirl", label: "Swirl", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.2, 1.2] }, { k: "life", label: "Lasts", min: 0.2, max: 6, step: 0.1, fmt: (v) => f2(v) + "s", rand: [0.8, 2.5] }]],
     ["glyphs", "Glyph field", "Stylize", { cell: 12, set: "alnum", custom: "", font: "geist", contrast: 1.2, change: 2, back: 0, mono: false }, [{ seg: "set", options: [["alnum", "Letters"], ["hex", "Hex"], ["binary", "01"], ["symbols", "Symbols"], ["kana", "Kana"], ["custom", "Custom"]] }, { text: "custom", label: "Characters", when: (e) => e.set === "custom" }, FONT_SEG, { k: "cell", label: "Cell", min: 4, max: 80, step: 1, log: true, fmt: px, rand: [8, 18] }, { k: "contrast", label: "Contrast", min: 0.3, max: 4, step: 0.01, log: true, fmt: f2, rand: [0.8, 2] }, { k: "change", label: "Shuffle", min: 0, max: 12, step: 1, fmt: (v) => (v ? v + "× per loop" : "Off"), hard: [0, 60] }, { k: "back", label: "Backdrop", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.3] }, { sw: "mono", label: "Ink only" }]],
     ["scan", "Scanlines", "Stylize", { spacing: 4, strength: 0.25 }, [{ k: "spacing", label: "Spacing", min: 2, max: 40, step: 0.5, fmt: px, rand: [3, 7] }, { k: "strength", label: "Strength", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.15, 0.4] }]],
     ["chroma", "Chromatic", "Stylize", { amount: 6 }, [{ k: "amount", label: "Shift", min: 0, max: 60, step: 0.5, fmt: px, rand: [2, 10] }]],
     ["paper", "Paper", "Texture", { crumple: 0.3, fiber: 0.6, scale: 420 }, [{ k: "crumple", label: "Crumple", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.3, 1.2] }, { k: "fiber", label: "Fibres", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 1] }, { k: "scale", label: "Size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [160, 480] }]],
-    ["grain", "Grain", "Texture", { amount: 0.12, size: 1.2, mono: true, soft: true }, [{ k: "amount", label: "Amount", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.06, 0.2] }, { k: "size", label: "Size", min: 1, max: 8, step: 0.1, fmt: px, rand: [1, 2] }, { sw: "soft", label: "Film grain" }, { sw: "mono", label: "Monochrome" }]],
+    ["grain", "Grain", "Texture", { amount: 0.12, size: 1.2, mono: true, soft: true, anim: false }, [{ k: "amount", label: "Amount", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.06, 0.2] }, { k: "size", label: "Size", min: 1, max: 8, step: 0.1, fmt: px, rand: [1, 2] }, { sw: "soft", label: "Film grain" }, { sw: "mono", label: "Monochrome" }, { sw: "anim", label: "Animate" }]],
   ];
   const FXI = Object.fromEntries(FXC.map(([id, name, cat, d, p]) => [id, { id, name, cat, d, p }]));
   const FX_IDS = FXC.map((f) => f[0]);
@@ -195,7 +197,7 @@
     }
     delete g.solid; delete g.ripple;
     // Aura was a noise type before it became a generator of its own.
-    if (g.type === "noise" && g.noise === "aura") { g.type = "aura"; g.noise = "clouds"; g.scale = 1; g.warp = 0.6; g.detail = 4; g.stretch = 1; g.soft = 1.6; }
+    if (g.type === "noise" && g.noise === "aura") { g.type = "aura"; g.noise = "clouds"; g.scale = 1; g.warp = 0.6; g.detail = 3; g.stretch = 1; g.soft = 1.6; g.contrast = 0.1; }
     out.objects = (Array.isArray(out.objects) ? out.objects : []).map((o) => (o?.kind === "pill" ? { ...o, kind: "capsule" } : o)).filter((o) => o && OBJ_LABEL[o.kind]).slice(0, 8).map((o) => ({ ...OBJ_DEFAULT, ...o, id: typeof o.id === "string" ? o.id : objId() }));
     if (!GENS.some((x) => x[0] === g.type && x[0] !== "contours")) g.type = "mesh";
     if (!Array.isArray(g.colors) || g.colors.length < 2) g.colors = DEFAULTS.grad.colors.slice();
@@ -222,7 +224,7 @@
     return { ...st, source: "contours", mode: "bands", band: clamp(st.band, 0.35, 0.6), line: many ? inks[0] : line, line2: many ? inks[inks.length - 1] : line2, mids: many ? inks.slice(1, -1) : [], bg, gradient: false, transparent: false, opacity: 1 }; };
   // Going the other way, a gradient takes the contour inks, unless its colors already hold the same set.
   // Aura starts from its own settings, so the canvas matches the thumbnail that was clicked.
-  const AURA_BASE = { scale: 1.25, detail: 4, stretch: 1, soft: 1.6, warp: 0.7, contrast: 1 };
+  const AURA_BASE = { scale: 1.25, detail: 3, stretch: 1, soft: 1.6, warp: 0.7, contrast: 0.1 };
   const asGradient = (st, type) => { const g = { ...st, source: "gradient", grad: { ...st.grad, type } };
     // Aura glows out of its first color, so it starts from the darkest one, at settings made for it.
     if (type === "aura" && st.grad?.type !== "aura") Object.assign(g.grad, AURA_BASE, { colors: [...st.grad.colors].sort((x, y) => lum(x) - lum(y)) });
@@ -302,9 +304,9 @@
     ["Noise", "Clouds", { ...G("noise", "Glacier", { noise: "clouds", scale: 1, detail: 5, warp: 0.3, stretch: 1.4, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Noise", "Neuro", { ...G("noise", "Iris", { noise: "neuro", scale: 1, detail: 3, warp: 0.2, stretch: 1, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Noise", "Halo", { ...G("noise", "Dusk", { noise: "ring", scale: 0.8, detail: 3, warp: 0.6, stretch: 1, contrast: 1, angle: 0 }), fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
-    ["Noise", "Aura", { ...G("aura", ["#050407", "#7a0f5c", "#e0336f", "#f2a81d", "#f4e04d"], { scale: 1, detail: 3, warp: 0.7, stretch: 1, soft: 1.6, contrast: 1, angle: 20 }), fx: { grain: { amount: 0.05, size: 1.2, soft: true } } }],
+    ["Noise", "Aura", { ...G("aura", ["#050407", "#7a0f5c", "#e0336f", "#f2a81d", "#f4e04d"], { scale: 1.2, detail: 3, warp: 0.55, stretch: 1.2, soft: 1.3, contrast: 0, angle: 20 }), fx: { grain: { amount: 0.05, size: 1.2, soft: true } }, motion: { type: "breathe", dur: 14, amt: 0.6 } }],
     ["Noise", "Smoke", { ...G("noise", ["#060608", "#1d1d22", "#5b5b66", "#c9c9d1", "#ffffff"], { noise: "smoke", scale: 1.4, detail: 4, warp: 0.3, stretch: 1.2, contrast: 1.1, angle: 25 }), fx: { glyphs: { cell: 11, set: "alnum", font: "geist", contrast: 1.3, change: 2, back: 0, mono: false } }, motion: { type: "breathe", dur: 10, amt: 0.5 } }],
-    ["Noise", "Lagoon", { ...G("aura", ["#02161c", "#05607a", "#0fb5d0", "#3fe3ef", "#b8fbff"], { scale: 2.6, detail: 3, warp: 0.5, stretch: 1.4, soft: 2.4, contrast: 1.2, angle: -30 }), motion: { type: "breathe", dur: 12, amt: 0.6 } }],
+    ["Noise", "Lagoon", { ...G("aura", ["#02161c", "#05607a", "#0fb5d0", "#3fe3ef", "#b8fbff"], { scale: 2.2, detail: 3, warp: 0.6, stretch: 0.8, soft: 2.4, contrast: 0.25, angle: -30 }), motion: { type: "breathe", dur: 12, amt: 0.6 } }],
     ["Gradients", "Orb", { ...G("radial", "Dusk", { warp: 0.2, soft: 1.6 }), objects: [{ kind: "blob", x: 0.5, y: 0.5, size: 0.62, tilt: 29, spin: 25, mat: "shaded", shine: 0.6, ripple: 0.3, shadow: 0.35 }], fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Gradients", "Ring", { ...G("radial", "Glacier", { warp: 0, soft: 2 }), objects: [{ kind: "torus", x: 0.5, y: 0.5, size: 0.66, tilt: 29, spin: -30, mat: "shaded", shine: 0.8, shadow: 0.3 }], fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Gradients", "Glass orbs", { ...G("flow", "Prism", { warp: 0.6, scale: 0.45 }), objects: [{ kind: "sphere", x: 0.34, y: 0.42, size: 0.44, mat: "glass", shine: 0.9, shadow: 0.25 }, { kind: "capsule", x: 0.7, y: 0.58, size: 0.4, rot: -30, tilt: 10, spin: 60, mat: "glass", shine: 0.9, shadow: 0.25 }] }],
@@ -881,13 +883,13 @@
   const isG = (...t) => () => t.includes(gen());
   [
     { label: "Scale", ...bindKey(gr, "scale"), min: 0.1, max: 6, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.35, 1.2], when: isG("flow", "noise") },
-    // Aura has its own set: the body's size, wobble and edge, and the light lines inside it.
+    // Aura has its own set: the blobs' size, wobble, edge and number, their rays and a faint outline.
     { label: "Size", ...bindKey(gr, "scale"), min: 0.3, max: 4, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.8, 2.2], when: isG("aura") },
     { label: "Wobble", ...bindKey(gr, "warp"), min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 1.1], when: isG("aura") },
     { label: "Edge", ...bindKey(gr, "soft"), min: 0.5, max: 4, step: 0.05, fmt: f2, rand: [1, 2.6], when: isG("aura") },
-    { label: "Lines", ...bindKey(gr, "detail"), min: 1, max: 8, step: 1, rand: [2, 6], when: isG("aura") },
-    { label: "Line width", ...bindKey(gr, "stretch"), min: 0.3, max: 5, step: 0.05, log: true, fmt: (v) => f2(v) + "×", rand: [0.6, 2], when: isG("aura") },
-    { label: "Line light", ...bindKey(gr, "contrast"), min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.6, 1.6], when: isG("aura") },
+    { label: "Layers", ...bindKey(gr, "detail"), min: 1, max: 4, step: 1, rand: [2, 4], when: isG("aura") },
+    { label: "Rays", ...bindKey(gr, "stretch"), min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.4, 1.6], when: isG("aura") },
+    { label: "Outline", ...bindKey(gr, "contrast"), min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.3], when: isG("aura") },
     { label: "Color turn", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("aura") },
     { label: "Detail", ...bindKey(gr, "detail"), min: 1, max: 8, step: 1, rand: [2, 4], when: isG("flow", "noise"), na: () => (gen() === "noise" && ["cells", "veins", "neuro", "ring"].includes(S.grad.noise) ? `${NOISE_LABEL[S.grad.noise]} has no detail setting` : "") },
     { label: "Softness", ...bindKey(gr, "soft"), min: 0.5, max: 4, step: 0.05, fmt: f2, rand: [1.3, 2.2], when: isG("mesh") },
@@ -1190,7 +1192,7 @@
         inp.addEventListener("change", () => { e()[p.text] = inp.value; update(); });
         syncers.push(() => { row.hidden = !p.when(e()); if (document.activeElement !== inp) inp.value = e()[p.text] || ""; });
         body.appendChild(row);
-      } else fxSliders[id].push(makeSlider(body, { group: "fx-" + id, label: p.label, min: p.min, max: p.max, step: p.step, log: p.log, fmt: p.fmt, pct: p.pct, rand: p.rand, hard: p.hard, get: () => e()[p.k], set: (v) => (e()[p.k] = v) }));
+      } else fxSliders[id].push(makeSlider(body, { group: "fx-" + id, label: p.label, min: p.min, max: p.max, step: p.step, log: p.log, fmt: p.fmt, pct: p.pct, rand: p.rand, hard: p.hard, when: p.when ? () => p.when(e()) : undefined, get: () => e()[p.k], set: (v) => (e()[p.k] = v) }));
     }
     if (SEEDED.has(id)) fxSliders[id].push(makeSlider(body, { group: "fx-" + id, label: "Seed", min: 0, max: 9999, step: 1, fmt: (v) => (v ? String(v) : "Design"), rand: [1, 9999], get: () => e().seed || 0, set: (v) => (e().seed = v) }));
     fxBodies[id] = body;
@@ -1432,7 +1434,7 @@
   $("gifWebpL").hidden = $("gifWebpS").hidden = !canWebp;
   $("gifWebp").onchange = (e) => { S.gif.webp = e.target.checked; save(); refreshExport(); };
   syncers.push(() => ($("gifWebp").checked = !!S.gif.webp));
-  let playing = false, playRaf = 0, playT0 = 0, playBusy = false, playSlow = false;
+  let playing = false, playRaf = 0, playT0 = 0, playBusy = false, playSlow = false, playFade = false;
   function playFrame(now) {
     if (!playing || held) return;
     playRaf = requestAnimationFrame(playFrame);
@@ -1440,7 +1442,10 @@
     playBusy = true;
     const raw = (((now - playT0) / 1000) % S.motion.dur) / S.motion.dur;
     const t0 = performance.now();
-    paint(motionState(S, motionT(raw)), false, true).then((r) => { playBusy = false; if (r) (r.raster && FXR?.sync ? FXR.sync() : Promise.resolve()).then(() => { const c = performance.now() - t0; $("ms").textContent = `${Math.round(c)} ms`; watchPerf(c); }); });
+    // A cross-fade asked for by an edit (or by starting) snapshots the frame on screen before drawing over it.
+    let fadeDone = null;
+    if (playFade) { playFade = false; crossfade(new Promise((r) => (fadeDone = r))); }
+    paint(motionState(S, motionT(raw)), false, true).then((r) => { playBusy = false; fadeDone?.(); if (r) (r.raster && FXR?.sync ? FXR.sync() : Promise.resolve()).then(() => { const c = performance.now() - t0; $("ms").textContent = `${Math.round(c)} ms`; watchPerf(c); }); });
   }
   // Playback draws contours from a grid sized to the preview on screen rather than the full design, which
   // is several times less work on a phone. The grid is chosen once per play and only coarsens once if
@@ -1448,7 +1453,8 @@
   let playRes = 0;
   const pickPlayRes = (coarse = 1) => { const shown = Math.max(1, art.clientWidth) / S.w; playRes = Math.max(S.res, (2.4 / shown) * coarse); };
   function startPlay() { perfTimes = []; lowRes = 0; perfSkip = 8; pickPlayRes(); startPlay0(); }
-  function startPlay0() { if (S.motion.type === "still") { S.motion.type = "drift"; update(); } playing = true; held = false; playT0 = performance.now(); cancelAnimationFrame(playRaf); playRaf = requestAnimationFrame(playFrame); syncPlay(); }
+  // The loop's first frame isn't the still design, so starting cross-fades into it rather than cutting.
+  function startPlay0() { if (S.motion.type === "still") { S.motion.type = "drift"; update(); } playing = true; held = false; playFade = true; playT0 = performance.now(); cancelAnimationFrame(playRaf); playRaf = requestAnimationFrame(playFrame); syncPlay(); }
   // Editing while it plays: the loop pauses so the edit isn't fighting the motion, the edit lands with
   // its usual transition, and once you let go the loop crossfades back in from its first frame.
   let held = false, holdT = 0, ptrDown = false;
@@ -1471,8 +1477,8 @@
     playRaf = requestAnimationFrame(playFrame);
   }
   // Slow playback: frames are timed by how long each one takes to draw, not by the gaps between them,
-  // so a background tab, a pause or a busy moment elsewhere never counts. Detail steps down twice
-  // before anything is suggested, and the note shows at most once per visit.
+  // so a background tab, a pause or a busy moment elsewhere never counts. Very slow frames bring up a
+  // note at most once per visit.
   let perfTimes = [], perfWarned = false, perfSkip = 0;
   try { perfWarned = !!sessionStorage.getItem("isoline.perfNote"); } catch (e) {}
   document.addEventListener("visibilitychange", () => (perfTimes = []));
@@ -1483,10 +1489,8 @@
     perfTimes.push(cost); if (perfTimes.length > 45) perfTimes.shift();
     if (perfTimes.length < 45) return;
     const mid = perfTimes.slice().sort((a, b) => a - b)[22];
-    if (mid > 40 && lowRes < 2) { lowRes++; pickPlayRes(lowRes === 1 ? 1.5 : 2.2); perfTimes = []; perfSkip = 4; return; }
-    // Fast again (a lighter design, or the machine woke up): detail steps back up, with a wide margin
-    // so it never flips back and forth.
-    if (mid < 14 && lowRes > 0) { lowRes--; pickPlayRes(lowRes === 1 ? 1.5 : 1); perfTimes = []; perfSkip = 4; return; }
+    // Detail never steps down mid-play: a visible drop in sharpness reads worse than a lower frame rate,
+    // which slow frames give on their own since a frame is skipped while the last one is still drawing.
     if (mid > 60 && !perfWarned) {
       perfWarned = true; try { sessionStorage.setItem("isoline.perfNote", "1"); } catch (e) {}
       $("perfNote").hidden = false; $("perfFx").hidden = !S.fxOrder.length;
@@ -1495,7 +1499,7 @@
   $("perfFx").onclick = () => { S.fxOrder = []; $("perfNote").hidden = true; update(); toast("Effects removed", { action: "Undo", onAction: () => travel(-1) }); };
   $("perfStop").onclick = () => { stopPlay(); S.motion.type = "still"; $("perfNote").hidden = true; update(); };
   $("perfX").onclick = () => { $("perfNote").hidden = true; };
-  function stopPlay() { if (!playing) return; playing = false; held = false; clearTimeout(holdT); cancelAnimationFrame(playRaf); syncPlay(); render(); }
+  function stopPlay() { if (!playing) return; playing = false; held = false; clearTimeout(holdT); cancelAnimationFrame(playRaf); syncPlay(); crossfade(render()); }
   function syncPlay() {
     for (const b of [$("playBtn"), $("barPlay")]) b.querySelector("use").setAttribute("href", playing ? "#i-pause" : "#i-play");
     $("playBtn").querySelector("span").textContent = playing ? "Pause" : "Play";
@@ -2078,7 +2082,7 @@
   }
   const autoName = () => `isoline-${gen() === "contours" ? S.pattern : gen()}-${S.w}x${S.h}-${S.seed}`;
   const fmtBytes = (n) => (n < 1048576 ? Math.max(1, Math.round(n / 1024)) + " KB" : (n / 1048576).toFixed(1) + " MB");
-  const exportFmt = () => (S.fmt === "video" || S.fmt === "gif" ? S.fmt : isRaster(S) ? "png" : S.fmt);
+  const exportFmt = () => (S.fmt === "video" || S.fmt === "gif" || S.fmt === "html" ? S.fmt : isRaster(S) ? "png" : S.fmt);
   const animFmt = (f) => f === "video" || f === "gif";
   // Progress: every export reports what it is doing and how far along it is.
   function setProg(label, f) {
@@ -2117,15 +2121,15 @@
     const raster = isRaster(S), fmt = exportFmt();
     exportTok++;
     for (const b of $("fmt").children) { b.classList.toggle("on", b.dataset.v === fmt); b.disabled = raster && b.dataset.v === "svg"; }
-    $("rasterNote").hidden = !raster || animFmt(fmt);
+    $("rasterNote").hidden = !raster || animFmt(fmt) || fmt === "html";
     for (const b of $("pngScale").children) b.classList.toggle("on", +b.dataset.v === S.pngScale);
     $("pngScale").hidden = fmt !== "png";
     $("vidOpts").hidden = fmt !== "video";
     $("gifOpts").hidden = fmt !== "gif";
     $("vidNote").hidden = !animFmt(fmt) || S.motion.type !== "still";
-    $("copy").hidden = animFmt(fmt);
+    $("copy").hidden = animFmt(fmt) || fmt === "html";
     $("copyLbl").textContent = raster ? "Copy PNG" : "Copy SVG";
-    $("dlLbl").textContent = fmt === "video" ? (canMp4() ? "Export MP4" : "Export WebM") : fmt === "gif" ? (useWebp() ? "Export WebP" : "Export GIF") : "Download";
+    $("dlLbl").textContent = fmt === "html" ? "Export HTML" : fmt === "video" ? (canMp4() ? "Export MP4" : "Export WebM") : fmt === "gif" ? (useWebp() ? "Export WebP" : "Export GIF") : "Download";
     if (!$("fname").dataset.edited) $("fname").value = autoName();
     let dims = fmt === "png" ? `${S.w * S.pngScale} × ${S.h * S.pngScale}` : `${S.w} × ${S.h}`;
     const facts = (rows) => ($("facts").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join(""));
@@ -2140,6 +2144,11 @@
       return;
     }
     if (fmt === "svg") { facts([["Dimensions", dims], ["File size", fmtBytes(new Blob([current.svg]).size)]]); return; }
+    if (fmt === "html") {
+      const plays = [S.motion.type !== "still" && `${MOTION_NAME[S.motion.type]} loop`, ["touch", "trail"].some((id) => S.fxOrder.includes(id) && S.fx[id].on) && "Interactive"].filter(Boolean).join(", ");
+      facts([["Fills", "The whole window"], ["Plays", plays || "A still frame"]]);
+      return;
+    }
     const tok = ++exportTok, key = JSON.stringify(S);
     if (pngCache?.key === key && pngCache.scale === S.pngScale) { facts([["Dimensions", dims], ["File size", fmtBytes(pngCache.blob.size)]]); return; }
     facts([["Dimensions", dims], ["File size", "Measuring"]]);
@@ -2152,11 +2161,16 @@
   $("fmt").onclick = (e) => { const b = e.target.closest("button"); if (b && !b.disabled) { S.fmt = b.dataset.v; save(); refreshExport(); } };
   $("pngScale").onclick = (e) => { const v = e.target.closest("button")?.dataset.v; if (v) { S.pngScale = +v; save(); refreshExport(); } };
   for (const id of ["vidSize", "vidFps", "vidLoops", "gifSize", "gifFps", "gifLoops"]) $(id).addEventListener("click", () => setTimeout(refreshExport));
-  const fileName = () => ($("fname").value.trim() || autoName()).replace(/\.(svg|png|mp4|webm|gif|webp)$/i, "");
+  const fileName = () => ($("fname").value.trim() || autoName()).replace(/\.(svg|png|mp4|webm|gif|webp|html)$/i, "");
   $("download").onclick = async () => {
     const fmt = exportFmt();
     if (fmt === "video") return exportVideo();
     if (fmt === "gif") return exportGif();
+    if (fmt === "html") {
+      setProg("Packing the page", 0.5);
+      try { await download(await htmlExport(), fileName() + ".html", "HTML saved"); } catch (e) { toast("HTML export failed"); }
+      setTimeout(hideProg, 600); return;
+    }
     if (fmt === "svg") { setProg("Saving", 1); await download(new Blob([current.svg], { type: "image/svg+xml" }), fileName() + ".svg", "SVG saved"); setTimeout(hideProg, 600); return; }
     $("download").disabled = true;
     try {
@@ -2193,7 +2207,7 @@
   groupOf([...rowsOf($("shape"), ["Scale", "Detail", "Angle", "Features", "Bulge", "Bulge size"]), document.querySelector(".seed-row")], "Scale and detail", { tip: "The size of the shapes, how much fine detail they carry, and the seed that lays them out", hint: () => facts(px(S.scale), `seed ${S.seed}`) });
   groupOf(rowsOf($("shape"), ["Warp", "Liquify", "Liquify size"]), "Distortion", { tip: "Bends and swirls the pattern after it is made", hint: () => facts(`warp ${f2(S.warp)}`, S.liquify ? `liquify ${f2(S.liquify)}` : "") });
   groupOf([document.querySelector(".pts-head"), document.querySelector(".pt-actions"), $("ptHint"), $("pointCtrls")], "Points", { tip: "Your own hills and dips, placed by hand. Turn them on to shape the lines around them", open: false, hint: () => (S.usePoints ? `${S.points.length} in use` : "Off") });
-  groupOf([$("gradCtrls"), $("gradHint")], "Fine-tune", { tip: "Settings for this generator", hint: () => (gen() === "aura" ? facts(`size ${f2(S.grad.scale)}×`, `${S.grad.detail} lines`) : facts(`warp ${f2(S.grad.warp)}`)) });
+  groupOf([$("gradCtrls"), $("gradHint")], "Fine-tune", { tip: "Settings for this generator", hint: () => (gen() === "aura" ? facts(`size ${f2(S.grad.scale)}×`, `${S.grad.detail} layers`) : facts(`warp ${f2(S.grad.warp)}`)) });
   groupOf(rowsOf($("lines"), ["Count", "Gap", "Bias", "Thickness"]), "Spacing", { tip: "How many lines there are and how they are spread over the shape", hint: () => (linear() ? px(S.gap) + " gap" : S.levels + " levels") });
   groupOf(rowsOf($("lines"), ["Weight", "Swell", "Swell size", "Taper"]), "Stroke", { tip: "How each line is drawn", hint: () => facts(f2(S.weight) + "px", S.swell ? "swell" : "", S.taper ? "taper" : "") });
   groupOf(rowsOf($("lines"), ["Accent every", "Accent weight"]), "Accent lines", { tip: "Every few lines drawn heavier, like index contours on a map", open: false, hint: () => (S.indexEvery ? `every ${S.indexEvery}` : "Off") });
@@ -2335,6 +2349,7 @@
   try { FXR = window.TopoFX.createFX(fxCanvas); } catch (e) { FXR = null; }
   try { TFX = window.TopoFX.createFX(thumbCanvas); } catch (e) { TFX = null; }
   setTimeout(() => { FXR?.warm?.(); TFX?.warm?.(); }, 0);
+  let showT = 0;
   let current = { svg: "", raster: false }, raf = 0, anim = 0, painted = null, paintTok = 0, fxWarned = false;
   const rasterCanvas = document.createElement("canvas"), thumbRaster = document.createElement("canvas"), baseCanvas = document.createElement("canvas");
   function rasterize(target, svg, w, h) {
@@ -2418,7 +2433,7 @@
     return job(st, w, h, await rasterize(canvas, T.buildSVG(st, { w, h, ...(res ? { res } : {}) }).svg, w, h));
   }
   // While a resize handle is held the scale stays put, so the edge tracks the pointer.
-  let rzScale = 0, lowRes = 0, fitWH = "";
+  let rzScale = 0, lowRes = 0, fitWH = "", glideUntil = 0;
   const room = () => { const cs = getComputedStyle(wrap); return [wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)]; };
   window.UI?.resizable(art, {
     get: () => [S.w, S.h], scale: () => art.clientWidth / S.w, room, min: 64, max: () => (P.unlock ? 16000 : 8000),
@@ -2430,18 +2445,23 @@
     const cs = getComputedStyle(wrap);
     const aw = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), ah = wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
     const sc = rzScale || Math.min(aw / S.w, ah / S.h), key = S.w + "x" + S.h;
-    // A new size glides into place; dragging a handle or resizing the window tracks directly.
-    art.style.transition = !rzScale && fitWH && key !== fitWH ? "width .42s var(--ease), height .42s var(--ease)" : "none";
+    // A new size glides into place; dragging a handle or resizing the window tracks directly. Paints call
+    // this every frame, so a glide in progress is left alone until it lands: clearing the transition
+    // part-way would cut it short and snap the frame to its new size.
+    const now = performance.now();
+    if (!rzScale && fitWH && key !== fitWH) { art.style.transition = "width .48s var(--ease), height .48s var(--ease)"; glideUntil = now + 520; }
+    else if (rzScale || now > glideUntil) art.style.transition = "none";
     fitWH = key;
-    art.style.width = Math.max(40, S.w * sc) + "px";
-    art.style.height = Math.max(40, S.h * sc) + "px";
+    const W = Math.max(40, S.w * sc) + "px", H = Math.max(40, S.h * sc) + "px";
+    if (art.style.width !== W) art.style.width = W;
+    if (art.style.height !== H) art.style.height = H;
   }
   // Playback and slider drags preview effects at less detail, stepping down further when frames run slow.
   function previewDims(st, draft) {
-    const dpr = Math.min(playing ? [1.5, 1, 0.75][lowRes] : draft ? 1.25 : 2, window.devicePixelRatio || 1);
+    const dpr = Math.min(playing ? 1.5 : draft ? 1.25 : 2, window.devicePixelRatio || 1);
     // The frame's final width, not its width mid-glide, so a new size renders once at the right detail.
     let w = Math.max(64, Math.round((parseFloat(art.style.width) || art.clientWidth) * dpr)), h = Math.round((w * st.h) / st.w);
-    const cap = playing ? [1600, 1000, 720][lowRes] : draft ? 1400 : 2200, m = Math.max(w, h);
+    const cap = playing ? 1600 : draft ? 1400 : 2200, m = Math.max(w, h);
     if (m > cap) { w = Math.round((w * cap) / m); h = Math.round((h * cap) / m); }
     return { w, h };
   }
@@ -2460,7 +2480,7 @@
       const { w, h } = previewDims(st, draft);
       let image = null;
       if (svg) { image = await rasterize(rasterCanvas, svg, w, h); if (tok !== paintTok) return null; }
-      FXR.render({ ...job(st, w, h, image), contours: gpu });
+      FXR.render({ ...job(st, w, h, image), contours: gpu, pointer: livePointer(st) });
     } else { artSvg.innerHTML = svg; artSvg.firstElementChild?.setAttribute("preserveAspectRatio", "xMidYMid slice"); }
     fxCanvas.hidden = !raster; artSvg.hidden = raster;
     art.classList.toggle("clear", st.source === "contours" && st.transparent);
@@ -2549,7 +2569,7 @@
       x.drawImage(thumbCanvas, 0, 0, W, H);
     } else await rasterize(baseCanvas, T.buildSVG({ ...S, h: Math.round(S.w * 0.625) }, { w: W, h: H, res: 2.5 }).svg, W, H);
   }
-  const fxThumb = (id, W, H) => { TFX.render({ w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: { [id]: { ...S.fx[id], on: true } }, order: [id], ink: S.ink, paper: S.paper }); return thumbCanvas; };
+  const fxThumb = (id, W, H) => { TFX.render({ w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: { [id]: { ...S.fx[id], on: true } }, order: [id], ink: S.ink, paper: S.paper, pointer: demoPointer() }); return thumbCanvas; };
   const fxUpTo = (id, W, H) => { TFX.render({ w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: S.fx, order: S.fxOrder.slice(0, S.fxOrder.indexOf(id) + 1), ink: S.ink, paper: S.paper }); return thumbCanvas; };
   // The generator tile shows the bare generator: default shape settings, the design's colors, no effects.
   function baseOf(st) {
@@ -2762,13 +2782,147 @@
   }
   document.fonts?.ready.then(() => { syncUI(); if (isRaster(S)) render(); });
 
+  // What a render would leave behind for exports, the mini preview and thumbnails, without touching the
+  // canvas the loop is drawing on.
+  let stillT = 0;
+  function syncStill() { current = { svg: S.source === "contours" && !isRaster(S) ? T.buildSVG(S).svg : "", raster: isRaster(S) }; updateMini(); schedulePreviews(); }
   function update({ draft = false, commit: doCommit = true, instant = false, fade = false } = {}) {
     if (sel != null && !(S.source === "gradient" ? S.grad.points[sel] : S.points[sel])) sel = null;
     syncUI(); save(); savePrefs();
-    holdPlay();
+    // While it plays, the loop keeps running and draws the edit on its next frame: drags track live,
+    // and anything else cross-fades from the frame on screen, so nothing jumps back to the still design.
+    if (playing && !held) {
+      if (!draft && !instant) playFade = true;
+      if (!draft) { clearTimeout(stillT); stillT = setTimeout(syncStill, 400); }
+      if (doCommit && !draft) commit();
+      return;
+    }
     if (draft || instant || !painted) render(draft); else animateFrom(painted, fade);
     if (doCommit && !draft) commit();
   }
+
+  // ---------- interactive effects ----------
+  // Click ripples and drag trails read the pointer over the canvas. Events keep their time, and each
+  // frame passes their positions (design pixels, y up) and ages to the effects. While any are still
+  // fading and the loop isn't playing, the canvas keeps redrawing until they're gone.
+  const IX = { touch: [], trail: [] };
+  const ixOn = (id, st = S) => st.fxOrder.includes(id) && st.fx[id]?.on;
+  function livePointer(st) {
+    if (!ixOn("touch", st) && !ixOn("trail", st)) return null;
+    const now = performance.now() / 1000, out = {};
+    for (const id of ["touch", "trail"]) {
+      const life = st.fx[id]?.life || 2;
+      IX[id] = IX[id].filter((e) => now - e[2] < life);
+      out[id] = IX[id].map((e) => [e[0], e[1], now - e[2], e[3] || 0, e[4] || 0]);
+    }
+    return out;
+  }
+  // Effect tiles show a click and a drag frozen part-way, since nobody is pointing at them.
+  function demoPointer() {
+    const w = S.w, h = S.h;
+    return { touch: [[w * 0.42, h * 0.5, 0.5], [w * 0.7, h * 0.35, 0.25]], trail: Array.from({ length: 18 }, (_, i) => { const t = i / 17; return [w * (0.12 + 0.76 * t), h * (0.5 + 0.18 * Math.sin(t * 6)), (1 - t) * 0.9, w * 0.8, h * 0.18 * 6 * Math.cos(t * 6)]; }) };
+  }
+  const designPt = (e) => { const r = art.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * S.w, (1 - (e.clientY - r.top) / r.height) * S.h]; };
+  let ixRaf = 0, ixLast = null;
+  function ixKick() {
+    if (playing || ixRaf) return;
+    const step = async () => {
+      ixRaf = 0;
+      if (playing) return;
+      await paint(S, false);
+      if (IX.touch.length || IX.trail.length) ixRaf = requestAnimationFrame(step); else render();
+    };
+    ixRaf = requestAnimationFrame(step);
+  }
+  art.addEventListener("pointerdown", (e) => {
+    if (!ixOn("touch") && !ixOn("trail")) return;
+    const [x, y] = designPt(e), t = performance.now() / 1000;
+    if (ixOn("touch")) { IX.touch.push([x, y, t]); if (IX.touch.length > 8) IX.touch.shift(); }
+    ixLast = [x, y, t];
+    ixKick();
+  });
+  art.addEventListener("pointermove", (e) => {
+    if (!ixOn("trail") || !(e.buttons & 1) || !ixLast) return;
+    const [x, y] = designPt(e), t = performance.now() / 1000, dt = Math.max(1 / 240, t - ixLast[2]);
+    if (Math.hypot(x - ixLast[0], y - ixLast[1]) < S.w / 300) return;
+    IX.trail.push([x, y, t, (x - ixLast[0]) / dt, (y - ixLast[1]) / dt]); if (IX.trail.length > 32) IX.trail.shift();
+    ixLast = [x, y, t];
+    ixKick();
+  });
+  addEventListener("pointerup", () => (ixLast = null));
+
+  // ---------- HTML export ----------
+  // A standalone page that plays the design live: the same WebGL pipeline (and the contour engine for
+  // contour designs) inlined beside the design, its pictures as data, and the motion loop's timing. It
+  // fills the window, keeps playing, and answers clicks and drags when interactive effects are on.
+  async function htmlExport() {
+    const srcs = await Promise.all(["fx.js", "engine.js"].map((f) => fetch(f).then((r) => r.text())));
+    const toData = (el, max = 2048) => { const iw = el.naturalWidth || el.width, ih = el.naturalHeight || el.height, sc = Math.min(1, max / Math.max(iw, ih)); const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(iw * sc)); c.height = Math.max(1, Math.round(ih * sc)); c.getContext("2d").drawImage(el, 0, 0, c.width, c.height); return c.toDataURL("image/png"); };
+    const st = clone(S);
+    const objects = objectsFor(st).map((o) => ({ ...o, tex: null, texData: o.tex ? toData(o.tex) : null }));
+    const data = { st, palette: paletteOf(st), objects, image: isImg(st) ? toData(imageCanvas(st, Math.min(2048, st.w), Math.min(2048, st.w) * st.h / st.w)) : null, svg: st.source === "contours" ? T.buildSVG(st).svg : "" };
+    const lib = `const EASES = ${JSON.stringify(EASES)};\nconst seedFrac = ${seedFrac.toString()};\n${bezier.toString()}\n${motionT.toString()}\n${motionState.toString()}`;
+    const run = `(${htmlRuntime.toString()})(${JSON.stringify(data).replace(/</g, "\\u003c")});`;
+    const title = fileName().replace(/[<&]/g, "");
+    return new Blob([`<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title>
+<style>html,body{margin:0;height:100%;background:${/^#[0-9a-f]{6}$/i.test(st.bg || "") ? st.bg : "#000"};overflow:hidden}canvas,svg{position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;display:block;touch-action:none}</style></head>
+<body><canvas id="c"></canvas>
+<script>${srcs[1]}<\/script>
+<script>${srcs[0]}<\/script>
+<script>${lib}\n${run}<\/script>
+<!-- Made with Isoline -->
+</body></html>`], { type: "text/html" });
+  }
+  // Runs inside the exported page, so it may only use what that page defines.
+  function htmlRuntime(D) {
+    const st = D.st, cv = document.getElementById("c"), FX = window.TopoFX && TopoFX.createFX(cv);
+    const contours = st.source === "contours";
+    if (!FX || (contours && !FX.floatOK)) { cv.remove(); if (D.svg) { document.body.insertAdjacentHTML("beforeend", D.svg); const s = document.querySelector("svg"); s && s.setAttribute("preserveAspectRatio", "xMidYMid slice"); } return; }
+    const load = (url) => new Promise((r) => { if (!url) return r(null); const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = url; });
+    const fxOn = (id) => st.fxOrder.includes(id) && st.fx[id] && st.fx[id].on;
+    const moving = st.motion && st.motion.type !== "still", inter = fxOn("touch") || fxOn("trail");
+    const animFx = (fxOn("ripple") && st.fx.ripple.anim) || (fxOn("grain") && st.fx.grain.anim) || fxOn("glyphs") && st.fx.glyphs.change > 0 || fxOn("sea");
+    const IX = { touch: [], trail: [] };
+    let image = null, objects = [], last = null, W = 0, H = 0, sc = 1, ox = 0, oy = 0, t0 = performance.now();
+    function size() {
+      const dpr = Math.min(2, devicePixelRatio || 1); sc = Math.max(innerWidth / st.w, innerHeight / st.h);
+      const k = Math.min(dpr * sc, 2400 / Math.max(st.w, st.h)); W = Math.round(st.w * k); H = Math.round(st.h * k);
+      ox = (innerWidth - st.w * sc) / 2; oy = (innerHeight - st.h * sc) / 2;
+    }
+    function pointer(now) {
+      if (!inter) return null;
+      const out = {};
+      for (const id of ["touch", "trail"]) { const life = (st.fx[id] && st.fx[id].life) || 2; IX[id] = IX[id].filter((e) => now - e[2] < life); out[id] = IX[id].map((e) => [e[0], e[1], now - e[2], e[3] || 0, e[4] || 0]); }
+      return out;
+    }
+    function frame(nowMs) {
+      const now = nowMs / 1000, raw = moving ? (((nowMs - t0) / 1000) % st.motion.dur) / st.motion.dur : 0;
+      const sf = moving ? motionState(st, motionT(raw, st.motion)) : st;
+      const spec = contours ? Topo.gpuSpec(sf, Math.max(sf.res || 1, 1.6 / Math.max(0.05, (W / st.w)))) : null;
+      FX.render({ w: W, h: H, k: W / st.w, seed: st.seed, image, grad: st.source === "gradient" && !image ? sf.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper,
+        time: sf._t || (animFx && !moving ? (now / 8) % 1 : 0), motion: sf._t != null ? st.motion.type : "still", motionAmt: st.motion && st.motion.amt, objects, palette: D.palette, contours: spec, pointer: pointer(now) });
+    }
+    let raf = 0;
+    const live = () => moving || animFx || IX.touch.length || IX.trail.length;
+    function loop(ms) { raf = 0; frame(ms); if (live()) raf = requestAnimationFrame(loop); }
+    const kick = () => { if (!raf) raf = requestAnimationFrame(loop); };
+    const pt = (e) => [(e.clientX - ox) / sc, st.h - (e.clientY - oy) / sc];
+    addEventListener("pointerdown", (e) => { if (!inter) return; const [x, y] = pt(e), t = performance.now() / 1000; if (fxOn("touch")) { IX.touch.push([x, y, t]); if (IX.touch.length > 8) IX.touch.shift(); } last = [x, y, t]; kick(); });
+    addEventListener("pointermove", (e) => {
+      if (!fxOn("trail") || !last || !(e.buttons & 1 || e.pointerType === "touch")) return;
+      const [x, y] = pt(e), t = performance.now() / 1000, dt = Math.max(1 / 240, t - last[2]);
+      if (Math.hypot(x - last[0], y - last[1]) < st.w / 300) return;
+      IX.trail.push([x, y, t, (x - last[0]) / dt, (y - last[1]) / dt]); if (IX.trail.length > 32) IX.trail.shift(); last = [x, y, t]; kick();
+    });
+    addEventListener("pointerup", () => (last = null));
+    addEventListener("resize", () => { size(); kick(); });
+    Promise.all([load(D.image), ...D.objects.map((o) => load(o.texData))]).then(([img, ...texs]) => {
+      if (img) { image = document.createElement("canvas"); image.width = img.width; image.height = img.height; image.getContext("2d").drawImage(img, 0, 0); }
+      objects = D.objects.map((o, i) => ({ ...o, tex: texs[i], texKey: o.texKey }));
+      size(); kick();
+    });
+  }
+
   let lastWrap = "";
   // A hidden studio has no size: skip it, or the preview would re-render at the 64px minimum.
   new ResizeObserver(() => { if (!wrap.clientWidth || !wrap.clientHeight) return; const key = wrap.clientWidth + "x" + wrap.clientHeight; if (painted && key !== lastWrap) { lastWrap = key; render(); } }).observe(wrap);
@@ -2890,7 +3044,9 @@
     },
     // One frame of the motion loop at t (0 to 1), w x h, for scripts that record previews.
     async frameAt(t, w = 440, h = 275) { const c = document.createElement("canvas"); c.width = w; c.height = h; await loopFrame(S, t, c); return c; },
-    onShow() { lastWrap = ""; fit(); render(); },
+    // Arriving from another page, the canvas still holds its last frame, so the redraw (and the thumbnails
+    // after it) waits until the page transition has played, then cross-fades in any change.
+    onShow() { lastWrap = ""; fit(); if (playing) return; quiet(1100); clearTimeout(showT); showT = setTimeout(() => crossfade(render()), document.documentElement.classList.contains("vt") ? 680 : 0); },
     // A contour drawing from default settings plus overrides, as SVG markup. The Components kit uses it
     // for its map pictures, colored with the kit's own tokens.
     contour(over = {}, w = 800, h = 500) { const st = withDefaults({ ...clone(DEFAULTS), fxOrder: [], ...over }); return T.buildSVG({ ...st, w, h }, { w, h }).svg; },

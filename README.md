@@ -35,7 +35,7 @@ The left column is the build, made of one slot per layer: **Preset, Generator, S
 - **Mesh:** draggable color points blended in OKLab.
 - **Flow:** domain-warped simplex noise for soft, flowing color fields. Pair it with Grain.
 - **Noise:** clouds, ridges, billow, cells, veins, marble, neuro, smoke ring and smoke (curling veils, made to sit under the glyph field), with scale, detail, stretch, angle, warp and contrast. A setting a noise type ignores stays in place, dimmed, with a tooltip saying so.
-- **Aura:** after the reactive background of Yandex Music's My Wave. A soft body of color glows out of your darkest color into a haze, its outline bulging unevenly in two dimensions rather than in star-like lobes, with soft light rings nested inside it, their width a share of the spacing between them. Each ring is a smaller copy of the outline whose lobes turn a little with depth, like stacked translucent layers, and the middle settles toward a round core. Size, wobble, edge, rings, ring width, ring light and color turn. Motion moves the rings themselves. No glow is baked in, so bloom or god rays go on top as effects.
+- **Aura:** after the reactive background of Yandex Music's My Wave. Two to four soft blobs of color are stacked over your darkest color, each smaller, lighter and a little off-center from the one behind it, their outlines bulging and folding as they morph out of step with each other. Light streams out from the back blob in soft rays, and an optional faint outline traces each blob. Size, wobble, edge, layers, rays, outline and color turn.
 - **Linear, Radial, Conic** gradients.
 - **Image:** your own picture, filling the canvas, as a base for effects. It is kept in the browser outside the design state (one at a time), so undo history and saved settings stay small.
 
@@ -71,13 +71,14 @@ Contours draw on the GPU while previewing and playing, so dense bands stay smoot
 Lines (strokes), Bands (filled stripes, PewDiePie-style), Layers (stacked fills) or Gradient (bands shaded through the inks on either side of them). Count or gap, bias, weight, swell, taper, accent lines, smoothing and cleanup.
 
 ## Effects (WebGL2, run top to bottom)
-- **Distort:** liquify, waves, twirl, bulge, ripples, water (looking down through a moving, sunlit surface: swells and chop bend what's beneath, soft light ribbons slide over it, and an optional depth tint; every wave moves a whole number of turns per loop), caustic web (the bright cell-edge web that used to be water), kaleidoscope
+- **Distort:** liquify, waves, twirl, bulge, ripples (optionally animated, rings travelling outward a whole number of times per loop), water (looking down through a moving, sunlit surface: swells and chop bend what's beneath, light focused by those same waves slides over the floor, so it never repeats, and an optional depth tint; every wave moves a whole number of turns per loop), caustic web (the bright cell-edge web that used to be water), kaleidoscope
 - **Glass** (iOS-style bezel refraction, frost, hairline highlights and slight dispersion, with rounded glass blocks): fluted glass, glass blocks, liquid glass
 - **Light:** progressive blur, glow, relief, god rays, vignette
 - **Color:** gradient map, posterize, heatmap, liquid metal (lit from a smoothed height map, so edges stay clean)
 - **Print:** halftone and CMYK halftone (circle, square, triangle or star dots, each sized to lay down the same ink for the same tone and free to spill into the next cell instead of being cropped), engrave, risograph, dither
 - **Stylize:** pixels, crystallize, ASCII, glyph field (a random character in every cell, its opacity following the brightness underneath, optionally reshuffling a whole number of times per loop), scanlines, chromatic. ASCII and the glyph field draw in Geist Mono, the interface font or the system monospace
-- **Texture:** paper, film grain
+- **Texture:** paper, film grain (optionally animated, a fresh pattern every frame)
+- **Interactive:** click ripples (rings spread from where you click and die away) and drag trails (dragging pushes the picture along like a finger through paint, or leaves curling smoke). They answer the pointer on the canvas and in HTML exports, and their tiles show a click and a drag frozen part-way
 
 ## Workflow
 - The bar under the canvas holds undo, redo, **Variation** (`R`: new seed and small nudges, same look) and **Surprise** (`⇧R`). Surprise mixes recipes: a whole preset, a preset's shape in a random palette with another preset's effects, or a look built from scratch on any generator, now and then with an object or two on top. It always crossfades.
@@ -88,7 +89,7 @@ Lines (strokes), Bands (filled stripes, PewDiePie-style), Layers (stacked fills)
 - **Safe values** (in settings): keeps everything in ranges that render cleanly. **Unlock values** lets you type past slider limits, after you confirm.
 - **Designs** (top bar, `⌘S`): save designs to this browser, as many separate ones as you like (**Save as new design** starts another). Each keeps its earlier versions too, up to 30. Open, rename or delete one (with undo). Import or export one design or all of them as JSON. Every file carries the app version it was saved with, so files from an older or newer Isoline say what may look different before they open. **Copy link** puts the whole design in the URL, to bookmark or send.
 - Click any value to type it. Settings import and export as JSON. `⌘Z` / `⇧⌘Z` undo and redo.
-- **Export:** SVG for contours, PNG 1–4× for everything, MP4, GIF or animated WebP for motion, or `C` to copy for Figma.
+- **Export:** SVG for contours, PNG 1–4× for everything, MP4, GIF or animated WebP for motion, HTML (a standalone page that plays the design live, fills the window and answers clicks and drags), or `C` to copy for Figma.
 - **Theme:** Auto, light or dark, plus an accent color, in settings.
 - **Version:** the bottom of settings shows the version and build date. Each deploy stamps a build id and busts the cache, and the app checks for a newer build when you come back to the tab.
 - **Builder motion:** appear and disappear play on load or on scroll. On scroll, the CSS export runs the same keyframes on a scroll timeline.
