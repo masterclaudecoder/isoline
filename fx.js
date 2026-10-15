@@ -196,6 +196,7 @@ uniform int uMat; uniform float uShine; uniform float uRipple; uniform float uSh
 uniform vec3 uCol[8]; uniform int uN; uniform sampler2D uTex2; uniform int uHasTex; uniform sampler2D uDes;
 uniform float uTime; uniform int uMotion; uniform float uMotAmt;
 uniform float uRefr; uniform float uFrost; uniform float uDisp; uniform float uRim; uniform vec3 uTint; uniform float uTintAmt;
+uniform int uProj; uniform float uTexSc; uniform float uTexRot; uniform vec2 uTexOff; uniform float uBlend;
 float gPh = 0.0;
 mat3 rotY(float t) { float c = cos(t), s = sin(t); return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
 mat3 rotX(float t) { float c = cos(t), s = sin(t); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
@@ -246,7 +247,13 @@ vec2 toPx(vec2 l) { float c = cos(uRot), s = sin(uRot); return uC + mat2(c, s, -
 vec4 texAt(vec2 px) { return tex(vec2(px.x / uRes.x, 1.0 - px.y / uRes.y)); }
 // The surface picture: the design as it was before any objects (so one never wears another), or the
 // preset texture once it's ready.
-vec3 skin(vec2 uv) { uv = clamp(uv, 0.002, 0.998); return uMat == 1 || uHasTex == 0 ? texture(uDes, uv).rgb : texture(uTex2, vec2(uv.x, 1.0 - uv.y)).rgb; }
+// Scale, turn and shift the picture on the surface; past its edges it repeats mirrored, so tiles meet
+// without a seam.
+vec3 skin(vec2 uv) {
+  float c = cos(uTexRot), s = sin(uTexRot);
+  uv = mat2(c, s, -s, c) * (uv - 0.5) / max(0.05, uTexSc) + 0.5 + uTexOff;
+  uv = 1.0 - abs(1.0 - fract(uv * 0.5) * 2.0);
+  uv = clamp(uv, 0.002, 0.998); return uMat == 1 || uHasTex == 0 ? texture(uDes, uv).rgb : texture(uTex2, vec2(uv.x, 1.0 - uv.y)).rgb; }
 void main() {
   float tw = 6.2831853 * uTime, beat = uMotion == 4 ? pow(0.5 - 0.5 * cos(tw * 4.0), 3.0) : 0.0;
   gPh = uMotion == 3 ? tw : 0.0;
@@ -316,7 +323,12 @@ void main() {
     // The design or the preset is wrapped onto the form, the whole picture across each side, so it turns
     // with the form and never lines up with what's behind it (which would read as a see-through window).
     vec3 sp3 = Ri * pos, nl = Ri * n, alb;
-    if (uKind == 6 || uKind == 7) {
+    if (uProj == 1) alb = skin(sp3.xy * 0.5 + 0.5);
+    else if (uProj == 2) {
+      // Around a globe: longitude mirrors at the front and back, so there's no seam where it closes.
+      vec3 d = normalize(sp3);
+      alb = skin(vec2(abs(atan(d.x, d.z)) / 3.14159265, 1.0 - acos(clamp(d.y, -1.0, 1.0)) / 3.14159265));
+    } else if (uKind == 6 || uKind == 7) {
       // Faceted forms: their slanted faces sit between the three axes, where a triplanar blend would
       // stack three copies of the texture. Each face takes one projection along its own normal instead.
       vec3 up = abs(nl.y) < 0.97 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
@@ -324,7 +336,7 @@ void main() {
       alb = skin(vec2(dot(sp3, tu), dot(sp3, tv)) * 0.5 + 0.5);
     } else {
       // Triplanar with a sharp blend: each side shows one projection, mixing only across the rounded edges.
-      vec3 w = pow(abs(nl), vec3(16.0)); w /= w.x + w.y + w.z;
+      vec3 w = pow(abs(nl), vec3(mix(16.0, 1.5, uBlend))); w /= w.x + w.y + w.z;
       vec3 tp = sp3 * 0.5 + 0.5;
       alb = skin(tp.zy) * w.x + skin(tp.xz) * w.y + skin(tp.xy) * w.z;
     }
@@ -1320,7 +1332,7 @@ void main() {
   const rad = (d) => (d * Math.PI) / 180;
 
   const OBJ_KINDS = ["sphere", "torus", "cube", "capsule", "blob", "image", "pyramid", "diamond"];
-  const INTS = new Set(["uKind", "uMat", "uHasTex", "uType", "uN", "uNoise", "uMotion", "uPattern", "uOct", "uNPts", "uUser", "uNFeat", "uFirst", "uMode", "uNInk", "uHasH"]);
+  const INTS = new Set(["uKind", "uMat", "uProj", "uHasTex", "uType", "uN", "uNoise", "uMotion", "uPattern", "uOct", "uNPts", "uUser", "uNFeat", "uFirst", "uMode", "uNInk", "uHasH"]);
   function createFX(canvas) {
     const gl = canvas.getContext("webgl2", { premultipliedAlpha: false, preserveDrawingBuffer: true, antialias: false, alpha: true });
     if (!gl) return null;
@@ -1356,6 +1368,9 @@ void main() {
       return pr;
     }
     const warm = () => { if (par) for (const name of Object.keys(SHADERS)) start(name); };
+    // The programs every first frame needs start compiling in the background straight away, so the first
+    // drawing waits on them less.
+    if (par) for (const name of ["copy", "gradient", "grain"]) if (SHADERS[name]) start(name);
     const ready = () => !par || Object.values(progs).every((pr) => pr.checked || gl.getProgramParameter(pr.p, par.COMPLETION_STATUS_KHR));
 
     const newTex = () => {
@@ -1706,6 +1721,7 @@ void main() {
           draw("object", input, out.f, {
             uKind: OBJ_KINDS.indexOf(ob.kind), uC: [ob.x * w, ob.y * h], uSz: Math.max(1, ob.size * sz * 0.5), uRot: rad(ob.rot || 0), uTilt: rad(ob.tilt || 0), uSpin: rad(ob.spin || 0),
             uMat: ["shaded", "design", "preset", "glass", "palette", "photo", "vanta"].indexOf(ob.mat), uShine: ob.shine ?? 0.6, uRipple: ob.ripple || 0, uShadow: ob.shadow ?? 0.4, uAsp: ob.asp || 1, uRound: ob.round ?? 0.2,
+            uProj: Math.max(0, ["wrap", "front", "sphere"].indexOf(ob.proj)), uTexSc: ob.texScale ?? 1, uTexRot: rad(ob.texRot || 0), uTexOff: [ob.texX || 0, ob.texY || 0], uBlend: ob.blend || 0,
             uRefr: ob.refract ?? 1, uFrost: ob.frost || 0, uDisp: ob.disp ?? 0.3, uRim: ob.rim ?? 0.5, uTint: hex3(ob.tint || "#ffffff"), uTintAmt: ob.tintAmt || 0,
             uCol: cols, uN: cols.length, uTex2: tx || srcTex, uHasTex: tx ? 1 : 0, uDes: des,
             uTime: t - Math.floor(t), uMotion: ob.anim === false || !sp ? 0 : ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5,

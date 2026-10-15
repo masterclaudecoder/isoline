@@ -38,7 +38,8 @@
   function show(el) {
     const t = textOf(el); if (!t) return;
     target = el;
-    const media = el.dataset.tipMedia && window.TIP_MEDIA?.[el.dataset.tipMedia], [pn, pv] = (el.dataset.tipPreview || "").split(":"), draw = previews[pn];
+    // Clips come from previews/tips/ as files; window.TIP_MEDIA (tips.js, inlined) is for single-file copies.
+    const media = el.dataset.tipMedia && (window.TIP_MEDIA?.[el.dataset.tipMedia] || `previews/tips/${el.dataset.tipMedia}.webp`), [pn, pv] = (el.dataset.tipPreview || "").split(":"), draw = previews[pn];
     const out = !media && draw ? draw(pv, el) : null;
     if (media || out) {
       const fig = document.createElement("div"), cap = document.createElement("span");

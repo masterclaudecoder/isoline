@@ -1690,7 +1690,10 @@
     }
   }
   let exporting = null;
-  const canMp4 = () => typeof window.VideoEncoder === "function" && window.Mp4Muxer;
+  // Scripts only some visits need (the MP4 muxer, the tooltip clips) load on demand, cache-busted by build.
+  const loaded = {};
+  const loadScript = (name) => (loaded[name] ||= new Promise((res, rej) => { const el = document.createElement("script"); el.src = name + (stamped ? "?v=" + BUILD : ""); el.onload = res; el.onerror = () => { delete loaded[name]; rej(new Error(name)); }; document.head.appendChild(el); }));
+  const canMp4 = () => typeof window.VideoEncoder === "function";
   async function exportVideo() {
     if (exporting) return;
     if (S.motion.type === "still") { S.motion.type = "drift"; update(); }
@@ -1702,7 +1705,8 @@
     const drawFrame = async (i) => { await draw(i); setProg(`Frame ${i + 1} of ${frames}`, ((i + 1) / frames) * 0.96); };
     try {
       let blob;
-      if (canMp4()) {
+      if (canMp4()) await loadScript("mp4-muxer.js").catch(() => {});
+      if (canMp4() && window.Mp4Muxer) {
         // H.264 first (plays everywhere, Figma included), then VP9 in MP4 where H.264 encoding is missing.
         const base = { width: W, height: H, bitrate: Math.round(W * H * fps * 0.12), framerate: fps };
         let pick = null;
@@ -1772,10 +1776,56 @@
       + `<circle class="obs" cx="${rx}" cy="${ry}" r="${6 * u}" fill="#fff" stroke="${A}" stroke-width="1.5" ${ns}><title>Size</title></circle>`
       + `<circle cx="${x}" cy="${y}" r="${4 * u}" fill="${A}" stroke="#fff" stroke-width="1.5" ${ns} pointer-events="none"/>`;
   }
+  // Effects with a center (the light of god rays, a lens, the focus of depth of field, twirls, bulges and
+  // ripples) get a handle on the canvas while their panel is open; a press anywhere else moves it there.
+  // Where the effect has a reach, a second handle sizes it, and a focus band also turns.
+  const FX_PT = new Set(["rays", "lens", "dof", "swirl", "bulge", "ripple"]);
+  const fxPt = () => { const id = fxOf(); return id && FX_PT.has(id) && S.fx[id] ? id : null; };
+  // Where each reach handle sits, from the effect's settings: [x, y] in canvas pixels.
+  function fxGeo(id, e) {
+    const x = (e.x ?? 0.5) * S.w, y = (e.y ?? 0.5) * S.h, m = Math.min(S.w, S.h), out = { x, y };
+    if (id === "swirl" || id === "bulge") { out.r = e.radius * m; out.fr = [x + out.r, y]; }
+    else if (id === "lens") {
+      const hw = e.shape === "pill" ? e.size * m * 0.95 : e.size * m * 0.5, hh = e.shape === "pill" ? e.size * m * 0.3 : hw;
+      out.box = [hw, hh, e.shape === "circle" ? hw : e.shape === "pill" ? hh : e.size * m * 0.16]; out.fr = [x + hw, y];
+    } else if (id === "dof") {
+      const f = (e.focus ?? 0.12) * S.h, g = f + (e.falloff ?? 0.35) * S.h;
+      if (e.shape === "band") {
+        const a = ((e.angle || 0) * Math.PI) / 180, n = [-Math.sin(a), Math.cos(a)], t = [Math.cos(a), Math.sin(a)];
+        Object.assign(out, { n, t, f, g, fr: [x + n[0] * f, y + n[1] * f], ff: [x + n[0] * g, y + n[1] * g], fa: [x + t[0] * Math.max(40, f + 24), y + t[1] * Math.max(40, f + 24)] });
+      } else Object.assign(out, { f, g, fr: [x + f, y], ff: [x + g, y] });
+    }
+    return out;
+  }
+  function fxOverlay(st, id) {
+    const e = st.fx[id] || S.fx[id], u = S.w / Math.max(1, art.clientWidth), ns = 'vector-effect="non-scaling-stroke"', A = accentNow(), G = fxGeo(id, e), { x, y } = G;
+    const line = (d, dash) => `<path d="${d}" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="3" ${ns} pointer-events="none"/><path d="${d}" fill="none" stroke="#fff" stroke-width="1.5" ${dash ? 'stroke-dasharray="4 5"' : ""} ${ns} pointer-events="none"/>`;
+    const circ = (r, dash) => line(`M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`, dash);
+    const knob = (cls, [hx, hy], tip) => `<circle class="${cls}" cx="${hx}" cy="${hy}" r="${6 * u}" fill="#fff" stroke="${A}" stroke-width="1.5" ${ns}><title>${tip}</title></circle>`;
+    let out = `<rect class="fbg" x="0" y="0" width="${S.w}" height="${S.h}" fill="transparent"/>`;
+    if (G.r) out += circ(G.r, true) + knob("fr", G.fr, "Radius");
+    if (G.box) { const [hw, hh, rr] = G.box; out += line(`M${x - hw + rr} ${y - hh}h${2 * (hw - rr)}a${rr} ${rr} 0 0 1 ${rr} ${rr}v${2 * (hh - rr)}a${rr} ${rr} 0 0 1 ${-rr} ${rr}h${-2 * (hw - rr)}a${rr} ${rr} 0 0 1 ${-rr} ${-rr}v${-2 * (hh - rr)}a${rr} ${rr} 0 0 1 ${rr} ${-rr}z`, true) + knob("fr", G.fr, "Size"); }
+    if (id === "dof") {
+      if (G.n) {
+        const L = Math.hypot(S.w, S.h), [nx, ny] = G.n, [tx, ty] = G.t;
+        for (const [d, dash] of [[G.f, false], [-G.f, false], [G.g, true], [-G.g, true]]) out += line(`M${x + nx * d - tx * L} ${y + ny * d - ty * L}L${x + nx * d + tx * L} ${y + ny * d + ty * L}`, dash);
+        out += line(`M${x} ${y}L${G.fa[0]} ${G.fa[1]}`) + knob("fa", G.fa, "Angle");
+      } else out += circ(Math.max(1, G.f), false) + circ(G.g, true);
+      out += knob("fr", G.fr, "In focus") + knob("ff", G.ff, "Falloff");
+    }
+    // The center: a sun for god rays, a cross-hair for a focus, a dot for the rest.
+    const c = drag?.fx === "c";
+    if (id === "rays") out += [0, 45, 90, 135, 180, 225, 270, 315].map((a) => { const r = (a * Math.PI) / 180, c0 = Math.cos(r), s0 = Math.sin(r); return line(`M${x + c0 * 12 * u} ${y + s0 * 12 * u}L${x + c0 * 18 * u} ${y + s0 * 18 * u}`); }).join("");
+    if (id === "dof") out += line(`M${x - 14 * u} ${y}h${8 * u}M${x + 6 * u} ${y}h${8 * u}M${x} ${y - 14 * u}v${8 * u}M${x} ${y + 6 * u}v${8 * u}`);
+    out += `<circle cx="${x}" cy="${y}" r="${(c ? 10 : 8) * u}" fill="#fff" stroke="rgba(0,0,0,.2)" stroke-width="1" ${ns} pointer-events="none"/><circle cx="${x}" cy="${y}" r="${4.5 * u}" fill="${A}" ${ns} pointer-events="none"/>`;
+    return out + `<circle class="fc" cx="${x}" cy="${y}" r="${14 * u}" fill="transparent"><title>Drag to move</title></circle>`;
+  }
   function drawOverlay(st = S) {
     ov.setAttribute("viewBox", `0 0 ${S.w} ${S.h}`);
     const o = objOf(), so = o && (st.objects || []).find((x) => x.id === o.id);
     if (so) { ov.classList.remove("off"); ov.innerHTML = objOverlay(st, so); return; }
+    const fid = fxPt();
+    if (fid) { ov.classList.remove("off"); ov.innerHTML = fxOverlay(st, fid); return; }
     const grad = st.source === "gradient", list = handleList(st);
     ov.classList.toggle("off", !list);
     if (!list) { ov.innerHTML = ""; return; }
@@ -1809,6 +1859,16 @@
       return;
     }
     if (o) return;
+    const fid = fxPt();
+    if (fid) {
+      const fe = S.fx[fid], [x, y] = toArt(e), k = ["fr", "ff", "fa"].find((c) => t.classList?.contains(c)) || "c";
+      // A press off the handles moves the center to it and keeps dragging from there.
+      if (k === "c" && !t.classList?.contains("fc")) { fe.x = +clamp(x / S.w, 0, 1).toFixed(4); fe.y = +clamp(y / S.h, 0, 1).toFixed(4); }
+      drag = { fx: k, dx: (fe.x ?? 0.5) * S.w - x, dy: (fe.y ?? 0.5) * S.h - y };
+      ov.setPointerCapture(e.pointerId); ov.classList.add("dragging");
+      drawOverlay(); syncUI(); liveDraw(); e.preventDefault();
+      return;
+    }
     const i = t.dataset?.i, list = handleList();
     if (i == null || !list) { if (sel != null) { sel = null; syncUI(); drawOverlay(); } return; }
     sel = +i;
@@ -1818,6 +1878,22 @@
     syncUI(); drawOverlay(); e.preventDefault();
   });
   ov.addEventListener("pointermove", (e) => {
+    if (drag?.fx) {
+      const fid = fxPt(); if (!fid) return;
+      const fe = S.fx[fid], [x, y] = toArt(e), cx = (fe.x ?? 0.5) * S.w, cy = (fe.y ?? 0.5) * S.h, m = Math.min(S.w, S.h);
+      if (drag.fx === "c") { fe.x = +clamp((x + drag.dx) / S.w, 0, 1).toFixed(4); fe.y = +clamp((y + drag.dy) / S.h, 0, 1).toFixed(4); }
+      else if (drag.fx === "fa") { let a = Math.round((Math.atan2(y - cy, x - cx) * 180) / Math.PI); if (e.shiftKey) a = Math.round(a / 15) * 15; fe.angle = ((a + 450) % 180) - 90; }
+      else {
+        // Reach handles measure from the center; a focus band measures across the band.
+        const G = fxGeo(fid, fe), d = G.n ? Math.abs((x - cx) * G.n[0] + (y - cy) * G.n[1]) : Math.hypot(x - cx, y - cy);
+        if (fid === "swirl" || fid === "bulge") fe.radius = +clamp(d / m, 0.05, 1.5).toFixed(3);
+        else if (fid === "lens") fe.size = +clamp(d / (m * (fe.shape === "pill" ? 0.95 : 0.5)), 0.1, 1.2).toFixed(3);
+        else if (drag.fx === "fr") fe.focus = +clamp(d / S.h, 0, 0.8).toFixed(3);
+        else fe.falloff = +clamp(d / S.h - (fe.focus ?? 0.12), 0.02, 1.2).toFixed(3);
+      }
+      drawOverlay(); syncUI(); liveDraw();
+      return;
+    }
     if (drag?.obj) {
       const o = objOf(); if (!o) return;
       const [x, y] = toArt(e);
@@ -1846,6 +1922,7 @@
   ov.addEventListener("pointerup", endDrag);
   ov.addEventListener("pointercancel", endDrag);
   ov.addEventListener("dblclick", (e) => {
+    if (fxPt()) return;
     const i = e.target.dataset?.i, [x, y] = toArt(e);
     if (S.source === "gradient") { if (i == null && S.grad.type === "mesh") addStop(x / S.w, y / S.h); return; }
     if (i != null) { const p = S.points[+i]; p.s = -p.s; sel = +i; update(); return; }
@@ -1996,7 +2073,7 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.13", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "1.14", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
@@ -2383,7 +2460,9 @@
   $("objPicReplace").onclick = () => pickPicture((pid) => { const o = objOf(); if (o) { o.image = pid; update(); } });
   $("objDup").onclick = () => { const o = objOf(); if (!o || S.objects.length >= 8) return toast("Up to 8 objects"); const c = { ...clone(o), id: objId(), x: clamp(o.x + 0.06, 0, 1), y: clamp(o.y + 0.06, 0, 1) }; S.objects.push(c); P.slot = "obj:" + c.id; update(); };
   $("objRemove").onclick = () => { const o = objOf(); if (!o) return; S.objects = S.objects.filter((x) => x !== o); P.slot = S.objects.length ? "obj:" + S.objects[S.objects.length - 1].id : "addobj"; update(); };
-  const ob = (key) => ({ get: () => objOf()?.[key] ?? OBJ_DEFAULT[key], set: (v) => { const o = objOf(); if (o) o[key] = v; } });
+  // How a design or preset sits on a form. Kept out of OBJ_DEFAULT so objects that never change it stay short in links.
+  const TEX_DEFAULT = { proj: "wrap", texScale: 1, texRot: 0, texX: 0, texY: 0, blend: 0 };
+  const ob = (key) => ({ get: () => objOf()?.[key] ?? OBJ_DEFAULT[key] ?? TEX_DEFAULT[key], set: (v) => { const o = objOf(); if (o) o[key] = v; } });
   const isPic = () => objOf()?.kind === "image";
   {
     const host = $("objGroups"), groups = {}, G = (title, open = true) => { const g = UI.group(title, { key: "obj-" + title, open }); host.appendChild(g); groups[title] = g; return g.body; };
@@ -2401,8 +2480,21 @@
     makeSeg(pseg, () => (objOf()?.mat === "vanta" ? "Vantablack" : objOf()?.preset), (v) => { const o = objOf(); if (!o) return; if (v === "Vantablack") o.mat = "vanta"; else { o.mat = "preset"; o.preset = v; } });
     UI.dropdown(pseg, { label: "Preset" });
     syncers.push(() => (pr.hidden = isPic() || !["preset", "vanta"].includes(objOf()?.mat)));
-    const place = G("Placement");
     const pct = (v) => Math.round(v * 100) + "%";
+    // Texture: how the design or preset is laid on the form. Wrap gives each side its own copy, Front
+    // projects it straight through, Globe wraps it around like a map. Past its edges it repeats mirrored.
+    const tex = G("Texture");
+    const tseg = document.createElement("div"); tseg.className = "seg sm"; tseg.id = "objProj";
+    tseg.innerHTML = `<button data-v="wrap" data-tip="One copy on each side">Wrap</button><button data-v="front" data-tip="Projected straight through from the front">Front</button><button data-v="sphere" data-tip="Wrapped around like a map on a globe">Globe</button>`;
+    tex.appendChild(tseg);
+    makeSeg(tseg, () => objOf()?.proj || "wrap", (v) => { const o = objOf(); if (o) o.proj = v; });
+    makeSlider(tex, { label: "Scale", ...ob("texScale"), min: 0.1, max: 6, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.5, 2] });
+    makeSlider(tex, { label: "Rotate", ...ob("texRot"), min: -180, max: 180, step: 1, fmt: deg, rand: [-45, 45] });
+    makeSlider(tex, { label: "Shift left to right", ...ob("texX"), min: -1, max: 1, step: 0.005, pct: true, fmt: pct, rand: [-0.5, 0.5] });
+    makeSlider(tex, { label: "Shift top to bottom", ...ob("texY"), min: -1, max: 1, step: 0.005, pct: true, fmt: pct, rand: [-0.5, 0.5] });
+    makeSlider(tex, { label: "Edge blend", ...ob("blend"), min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Sharp"), rand: [0, 0.6], when: () => (objOf()?.proj || "wrap") === "wrap" && !["pyramid", "diamond"].includes(objOf()?.kind) });
+    syncers.push(() => (groups.Texture.hidden = isPic() || !["design", "preset"].includes(objOf()?.mat)));
+    const place = G("Placement");
     makeSlider(place, { label: "Left to right", ...ob("x"), min: 0, max: 1, step: 0.001, pct: true, fmt: pct, rand: [0.2, 0.8] });
     makeSlider(place, { label: "Top to bottom", ...ob("y"), min: 0, max: 1, step: 0.001, pct: true, fmt: pct, rand: [0.2, 0.8] });
     makeSlider(place, { label: "Size", ...ob("size"), min: 0.05, max: 1.5, step: 0.005, pct: true, fmt: pct, rand: [0.25, 0.7] });

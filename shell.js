@@ -80,9 +80,25 @@
     root.Components?.preview($("homeComponents"));
     const host = $("homeStudio");
     const r = host.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
-    const c = await root.Studio?.snapshot(Math.round((r.width || 560) * dpr), Math.round((r.height || 350) * dpr));
-    if (c) { host.innerHTML = ""; host.appendChild(c); }
+    const cw = Math.round((r.width || 560) * dpr), ch = Math.round((r.height || 350) * dpr);
+    // Drawing the card is a full render of the design, the slowest thing on the home page. The last one is
+    // kept in the browser with a fingerprint of the design and size, so an unchanged design shows at once;
+    // a changed one is drawn after the entrance has played, keeping the first second smooth.
+    const key = hashStr(JSON.stringify(root.Studio?.state?.() || "") + cw + "x" + ch), seq = ++homeSeq;
+    let kept = null;
+    try { kept = JSON.parse(localStorage.getItem(SNAP) || "null"); } catch (e) {}
+    if (kept?.url && !host.firstElementChild) { const img = new Image(); img.src = kept.url; img.alt = ""; host.appendChild(img); }
+    if (kept?.k === key) return;
+    await root.introDone;
+    if (seq !== homeSeq) return;
+    const c = await root.Studio?.snapshot(cw, ch);
+    if (!c || seq !== homeSeq) return;
+    host.innerHTML = ""; host.appendChild(c);
+    try { localStorage.setItem(SNAP, JSON.stringify({ k: key, url: c.toDataURL("image/jpeg", 0.85) })); } catch (e) {}
   }
+  const SNAP = "isoline.homeSnap";
+  let homeSeq = 0;
+  const hashStr = (s) => { let a = 0x811c9dc5; for (let i = 0; i < s.length; i++) a = Math.imul(a ^ s.charCodeAt(i), 16777619); return (a >>> 0).toString(36) + s.length; };
 
   document.addEventListener("click", (e) => {
     const a = e.target.closest("a[href^='#/']");
@@ -103,9 +119,9 @@
   // main thread free while it plays.
   const done = () => root.__introDone?.();
   const html = document.documentElement, reveal = () => {
-    // The loading screen, if it got as far as showing, fades from where it is rather than cutting out.
+    // The loading screen, if it got as far as showing, opens from its middle rather than cutting out.
     const sp = $("splash"), shown = sp && +getComputedStyle(sp).opacity > 0.05;
-    if (shown) { sp.style.setProperty("--from", getComputedStyle(sp).opacity); sp.classList.add("out"); setTimeout(() => sp.remove(), 600); } else sp?.remove();
+    if (shown) { sp.style.setProperty("--from", getComputedStyle(sp).opacity); sp.classList.add("out"); setTimeout(() => sp.remove(), 850); } else sp?.remove();
     html.classList.remove("loading");
     if (reduce.matches) return done();
     html.classList.add("intro");

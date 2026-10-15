@@ -581,7 +581,7 @@ a.brand { color: inherit; text-decoration: none; border-radius: 10px; }
 .bento .big { grid-row: 1 / span 2; }
 .tool { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 14px; padding: 10px; border-radius: 20px; background: var(--panel); box-shadow: var(--raised); color: inherit; text-decoration: none; position: relative; min-height: 0; transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s; }
 .tool-prev { display: flex; min-height: 0; border-radius: 13px; overflow: hidden; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); }
-.tool-prev canvas { width: 100%; height: 100%; display: block; object-fit: cover; }
+.tool-prev canvas, .tool-prev img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .tool-prev > i { flex: 1; transition: flex-grow .5s cubic-bezier(.22,1,.36,1); }
 .tool-text { display: grid; gap: 4px; padding: 0 56px 10px 10px; }
 .tool-text b { font-size: clamp(30px, 3.4vw, 52px); font-weight: 600; font-stretch: 86%; letter-spacing: -0.035em; line-height: 1; }
@@ -1903,9 +1903,18 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 @keyframes splash-show { from { opacity: 0; } }
 @keyframes splash-gone { to { opacity: 0; visibility: hidden; } }
 .splash-in { display: grid; justify-items: center; gap: 18px; animation: splash-rise .6s .25s cubic-bezier(.22,1,.36,1) both; }
-.splash.out { visibility: visible; animation: splash-hide .45s ease forwards; }
+/* Leaving, the logo rushes toward the viewer and blurs away while a hole opens from its middle and widens
+   past the corners, so the page is uncovered from the center out. */
+@property --hole { syntax: "<length>"; inherits: false; initial-value: 0px; }
+.splash.out { visibility: visible; opacity: var(--from, 1); --at: 50% calc(50% - 28px);
+  -webkit-mask: radial-gradient(circle at var(--at), transparent var(--hole), #000 calc(var(--hole) + 48px));
+  mask: radial-gradient(circle at var(--at), transparent var(--hole), #000 calc(var(--hole) + 48px));
+  animation: splash-iris .75s cubic-bezier(.7,0,.2,1) forwards; }
+@keyframes splash-iris { 0% { --hole: 0px; } 100% { --hole: 110vmax; } }
+.splash.out .splash-in { animation: splash-zoom .55s cubic-bezier(.55,0,.8,.2) forwards; }
+.splash.out .splash-bar, .splash.out .splash-msg { transition: opacity .15s ease; opacity: 0; }
+@keyframes splash-zoom { to { transform: scale(3.4); opacity: 0; filter: blur(8px); } }
 @keyframes splash-hide { from { opacity: var(--from, 1); } to { opacity: 0; } }
-.splash.out .splash-in { transform: scale(.96); transition: transform .45s ease; }
 @keyframes splash-rise { from { opacity: 0; transform: translateY(8px) scale(.94); } }
 .splash svg { width: 64px; height: 64px; animation: splash-breathe 2.4s ease-in-out infinite; }
 .splash svg path { stroke: var(--ink); }
@@ -1914,4 +1923,9 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .splash-bar i { display: block; width: 40%; height: 100%; border-radius: 3px; background: var(--accent, #e8572a); animation: splash-run 1.1s cubic-bezier(.45,0,.25,1) infinite; }
 @keyframes splash-run { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 .splash-msg { margin: 0; font-size: 13px; color: var(--muted); }
-@media (prefers-reduced-motion: reduce) { .splash svg, .splash-bar i, .splash-in { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .splash svg, .splash-bar i, .splash-in, .splash.out .splash-in { animation: none; } .splash.out { -webkit-mask: none; mask: none; animation: splash-hide .3s ease forwards; } }
+.overlay .fbg { cursor: crosshair; }
+.overlay .fc { cursor: grab; }
+.overlay .fr, .overlay .ff { cursor: ew-resize; }
+.overlay .fa { cursor: alias; }
+.overlay.dragging .fc, .overlay.dragging .fbg { cursor: grabbing; }

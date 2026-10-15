@@ -5,7 +5,7 @@ Topographic patterns, palettes and design tokens. Static site: open `index.html`
 Live at **https://masterclaudecoder.github.io/isoline/**. Every push to the main branch deploys it through GitHub Actions (`.github/workflows/pages.yml`). The workflow also captures previews for new libraries and commits them to `previews/`. Pages has to be switched on once in the repository settings (Settings, Pages, Source: GitHub Actions).
 
 ## Pages
-A plain loading screen covers slow starts (it only appears if loading takes more than a beat). The studio waits for its first drawing before showing, and a shared design link is drawn straight away behind it instead of cross-fading over whatever was open last.
+A loading screen covers slow starts (it only appears if loading takes more than a beat). When the page is ready, the logo rushes toward you and blurs away while a hole opens from its middle and widens until the page is uncovered. The home page keeps its last drawing of your design, so the Studio card shows at once and is redrawn only when the design has changed, after the entrance has played. The video encoder library loads only when you first export an MP4. The studio waits for its first drawing before showing, and a shared design link is drawn straight away behind it instead of cross-fading over whatever was open last.
 
 The home page (`#/`) shows three tools as large cards. Moving between pages is one continuous transition: the top bar stays put, pages crossfade, a tool's preview morphs into the tool (each stripe of the home palette travels and stretches into its own column), and floating bars pull up from the bottom once their page lands.
 - **Studio** (`#/studio`): the pattern, gradient, effects and motion editor described below. An orange button pinned to the foot of each panel moves on to the next step.
@@ -46,6 +46,7 @@ The left column is the build, made of one slot per layer: **Preset, Generator, S
 Objects sit on top of any generator. Add up to eight: a sphere, torus, cube, capsule, blob, pyramid or diamond, raymarched and lit from the upper left, or a picture card. Each sits under the effects (they apply to it) or over them, and drag their grips to change which draws on top. Each has its own material:
 - **Shaded:** lit through your colors.
 - **Design:** wraps your current design round the shape, the whole picture across each side, so it turns with the form instead of lining up with what's behind it. It reads the design from before any objects, so one object never wears another.
+- **Texture:** for Design and Preset surfaces, Wrap puts one copy on each side, Front projects it straight through, and Globe wraps it around like a map, mirrored front and back so it never shows a seam. Scale, rotate and shift the picture (past its edges it repeats mirrored), and soften the edges between sides with Edge blend.
 - **Preset:** wraps a preset round it, projected from three sides so there's no seam (faceted forms take one projection per face, so nothing doubles up). **Vantablack** is the first preset in the list: flat black that swallows the light, with a hairline of sheen on the rim, like the black shapes in Alfa-Bank's ads.
 - **Glass:** bends what's behind it most at the edges, like a liquid glass pill, with refraction, frost, dispersion, rim light and a tint.
 - Pictures show as a photo, recolored through your palette, or as plain Vantablack cards.
@@ -81,6 +82,7 @@ Lines (strokes), Bands (filled stripes, PewDiePie-style), Layers (stacked fills)
 - **Glass** (iOS-style bezel refraction, frost, hairline highlights and slight dispersion, with rounded glass blocks): fluted glass, glass blocks, liquid glass
 - **Light:** progressive blur, glow, relief, god rays, vignette
 - **Color:** gradient map, posterize, heatmap, liquid metal (lit from a smoothed height map, so edges stay clean)
+- **On-canvas handles:** effects with a center (god rays' light, liquid glass, the depth of field focus, twirl, bulge, ripples) show a handle on the canvas while their panel is open. Drag it, or press anywhere to move it there. Second handles set the radius or size, the in-focus area and falloff, and a focus band's angle (Shift snaps to 15°).
 - **Depth of field:** the picture stays sharp around a focal point you place (or along a band through it, like a tilt-shift lens) and softens with distance, with bokeh that opens highlights into discs. Progressive blur and depth of field read a mipmapped copy of the picture, so even 200px blurs stay smooth instead of splitting lines.
 - **Print:** halftone and CMYK halftone, engrave, risograph, dither. Halftone dots grow from nothing at white, meet their neighbours at mid grey and close into solid ink at black: circles touch at 50% and merge, squares stand on their corners so 50% is an exact checkerboard, and triangles alternate up and down so they tile the plane outright. Dots sit on a square or hexagonal grid, and squares, triangles and stars can each take a random turn.
 - **Stylize:** pixels, crystallize, ASCII, glyph field (a random character in every cell, its opacity following the brightness underneath, optionally reshuffling a whole number of times per loop), scanlines, chromatic. ASCII and the glyph field draw in Geist Mono, the interface font or the system monospace
@@ -115,7 +117,7 @@ Files:
 - `libs.js`: the library list.
 - `tools/previews.mjs`: captures library preview images (run by the Pages workflow).
 - `tools/record.mjs`: records tooltip clips. It drives the real UI with a scripted pointer, draws a cursor that follows on a damped spring with click ripples, and writes animated WebP to `previews/tips/` and `tips.js`.
-- `tips.js`: the recorded tooltip clips as data URLs.
+- `tips.js`: the recorded tooltip clips as data URLs, for single-file copies. The site itself loads each clip from `previews/tips/` when its tooltip first opens, so the 700 KB of clips never hold up the page.
 - `agent.js`: the agent API and briefs.
 - `glass.js`: liquid glass bars.
 - `brand.js`: the logo.
