@@ -132,25 +132,55 @@
     // The safety click tips the logo to the right; the rolls after it tip it left.
     if (!reduce.matches) mark?.animate([{ transform: "rotate(0) scale(1)" }, { transform: `rotate(${brandClicks ? -14 : 14}deg) scale(.9)`, offset: 0.35 }, { transform: "rotate(0) scale(1)" }], { duration: 420, easing: "cubic-bezier(.3,1.4,.5,1)" });
     if (++brandClicks < 2 || remixing) return;
-    // As in the Studio when a look is applied: each card keeps a still copy of its old picture on top
-    // while the new one is made underneath, and once all three are ready the copies fade out together,
-    // so nothing flashes and the cards change as one. A small note by the logo shows it's working.
+    // Every roll is kept, so undo brings back a look rolled past by accident and redo returns to it.
+    if (homeAt < 0) { homeHist = [homeLook()]; homeAt = 0; }
+    await homeChange(async () => {
+      const pal = root.Palettes?.generate();
+      if (!pal) return;
+      // Surprise skips any look that would be slow to draw, so the new design is ready before the cards repaint.
+      await root.Studio?.surprise?.(); root.Studio?.usePalette?.(pal);
+      await root.Components?.remix?.(pal);
+    });
+    homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(homeLook()); if (homeHist.length > 30) homeHist.shift();
+    homeAt = homeHist.length - 1; syncHomeHist();
+  }
+  // ---------- home undo and redo ----------
+  let homeHist = [], homeAt = -1;
+  const homeLook = () => ({ pal: root.Palettes?.colors(), studio: root.Studio?.state(), kit: root.Components?.look?.() });
+  async function homeStep(d) {
+    const n = homeAt + d;
+    if (remixing || n < 0 || n >= homeHist.length) return;
+    homeAt = n; syncHomeHist();
+    const l = homeHist[n];
+    await homeChange(async () => { if (l.pal) root.Palettes?.load(l.pal); if (l.studio) root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); });
+  }
+  function syncHomeHist() {
+    const b = $("brand"); $("homeHist").style.left = b.offsetLeft + b.offsetWidth + 8 + "px";
+    $("homeUndo").disabled = homeAt <= 0; $("homeRedo").disabled = homeAt < 0 || homeAt >= homeHist.length - 1;
+    $("homeHist").classList.toggle("on", homeHist.length > 1);
+  }
+  $("homeUndo").onclick = () => homeStep(-1);
+  $("homeRedo").onclick = () => homeStep(1);
+  addEventListener("keydown", (e) => {
+    if (route !== "home" || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z" || e.target.closest?.("input, textarea, [contenteditable]")) return;
+    e.preventDefault(); homeStep(e.shiftKey ? 1 : -1);
+  });
+  // As in the Studio when a look is applied: each card keeps a still copy of its old picture on top
+  // while the new one is made underneath, and once all three are ready the copies fade out together,
+  // so nothing flashes and the cards change as one. A small note by the logo shows it's working.
+  async function homeChange(work) {
     remixing = true;
     const ghosts = ["homeStudio", "homePalette", "homeComponents"].map((id) => ghostOver($(id)));
-    const busy = $("remixBusy"), b = $("brand");
-    busy.style.left = b.offsetLeft + b.offsetWidth + 10 + "px";
+    const busy = $("remixBusy"), h = $("homeHist");
+    const b = $("brand"), on = h.classList.contains("on");
+    busy.style.left = (on ? h.offsetLeft + h.offsetWidth : b.offsetLeft + b.offsetWidth) + 8 + "px";
     const busyT = setTimeout(() => (busy.hidden = false), 150);
     try {
-      const pal = root.Palettes?.generate();
-      if (pal) {
-        // Surprise skips any look that would be slow to draw, so the new design is ready before the cards repaint.
-        await root.Studio?.surprise?.(); root.Studio?.usePalette?.(pal);
-        await root.Components?.remix?.(pal);
-        await paintHome(false);
-        await document.fonts?.ready;
-        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      }
-    } catch (err) { console.error("remix failed", err); } finally {
+      await work();
+      await paintHome(false);
+      await document.fonts?.ready;
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    } catch (err) { console.error("home change failed", err); } finally {
       remixing = false;
       clearTimeout(busyT); busy.hidden = true;
       for (const g of ghosts) if (g) { g.style.opacity = "0"; setTimeout(() => g.remove(), 700); }

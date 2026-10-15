@@ -199,7 +199,7 @@
     layers: '<path d="m10 3.8 6.5 3.4L10 10.6 3.5 7.2Z"/><path d="m3.5 10.4 6.5 3.4 6.5-3.4"/><path d="m3.5 13.4 6.5 3.4 6.5-3.4"/>', plus: '<path d="M10 4.5v11M4.5 10h11"/>',
     home: '<path d="M4 9 10 4l6 5v6.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z"/><path d="M8 16.5v-4h4v4"/>', folder: '<path d="M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h3l1.5 1.8H15a1.5 1.5 0 0 1 1.5 1.5v6.2a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5Z"/>',
     gear: '<circle cx="10" cy="10" r="2.4"/><path d="M10 3.5v2M10 14.5v2M3.5 10h2M14.5 10h2M5.4 5.4l1.4 1.4M13.2 13.2l1.4 1.4M5.4 14.6l1.4-1.4M13.2 6.8l1.4-1.4"/>', more: '<circle cx="5" cy="10" r=".9"/><circle cx="10" cy="10" r=".9"/><circle cx="15" cy="10" r=".9"/>',
-    chev: '<path d="m6 8 4 4 4-4"/>', menu: '<path d="M4 6.5h12M4 10h12M4 13.5h12"/>', quote: '<path d="M8 6.5C5.5 7.3 4.5 9 4.5 11.5v2h4v-4H6.3c.2-1.2.9-2 2.2-2.5ZM15 6.5c-2.5.8-3.5 2.5-3.5 5v2h4v-4h-2.2c.2-1.2.9-2 2.2-2.5Z"/>',
+    chev: '<path d="m6 8 4 4 4-4"/>', x: '<path d="m5.5 5.5 9 9M14.5 5.5l-9 9"/>', at: '<circle cx="10" cy="10" r="2.6"/><path d="M12.6 10v1.2a2.2 2.2 0 0 0 4.4 0V10a7 7 0 1 0-2.7 5.5"/>', menu: '<path d="M4 6.5h12M4 10h12M4 13.5h12"/>', quote: '<path d="M8 6.5C5.5 7.3 4.5 9 4.5 11.5v2h4v-4H6.3c.2-1.2.9-2 2.2-2.5ZM15 6.5c-2.5.8-3.5 2.5-3.5 5v2h4v-4h-2.2c.2-1.2.9-2 2.2-2.5Z"/>',
   };
   const ki = (n, cls = "") => `<svg class="k-ic ${cls}" viewBox="0 0 20 20" aria-hidden="true">${KI[n]}</svg>`;
   // A bar chart drawn in the accent, so it follows the palette.
@@ -207,17 +207,25 @@
   const av = (t, i) => `<span class="k-av" style="--i:${i}">${t}</span>`;
   // The demo product is a document review tool, so the pages can show real content (drafts, comments,
   // sign-offs) instead of placeholder metrics. Each page is built for one task with one focal point.
-  const LOGO = `<span class="k-brand"><svg class="k-mark" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24"/><path d="M8 5.5v13M12 8h5M12 12h5M12 16h5"/><circle cx="8" cy="12" r="2.4"/></svg>Margin</span>`;
-  const NAV = (cta = "Start a document") => `<nav class="k-nav">${LOGO}<span class="k-nl">Product</span><span class="k-nl">Pricing</span><span class="k-nl">Changelog</span><span class="k-grow"></span><span class="k-link k-nl">Sign in</span><button class="k-btn k-sm">${cta}</button><button class="k-btn k-sm k-ghost k-icon k-burger" title="Menu">${ki("menu")}</button></nav>`;
+  // Margin's mark: three lines of a draft with a comment pinned in the margin beside the first, on an
+  // accent tile. The wordmark is set tight in the heading font.
+  // The mark: a lowercase m drawn as two arches; its last leg stops short and ends in a note in the accent,
+  // which sits on the same baseline as the other legs.
+  const LOGO = `<span class="k-brand"><svg class="k-mark" viewBox="0 0 24 24" aria-hidden="true"><path class="k-mk-m" d="M2.5 20.5V6a3.5 3.5 0 0 1 7 0v14.5M9.5 20.5V6a3.5 3.5 0 0 1 7 0v6.8"/><circle class="k-mk-n" cx="16.5" cy="19.6" r="2.6"/></svg><span class="k-word">Margin</span></span>`;
+  // On a phone the links fold into a menu behind a full-size burger; it drops down over the page.
+  const NAV = (cta = "Try it free") => `<nav class="k-nav">${LOGO}<span class="k-nl">Product</span><span class="k-nl">Pricing</span><span class="k-nl">Changelog</span><span class="k-grow"></span><span class="k-link k-nl">Sign in</span><button class="k-btn k-sm">${cta}</button><button class="k-btn k-ghost k-icon k-burger" title="Menu" aria-label="Menu">${ki("menu", "k-i-open")}${ki("x", "k-i-close")}</button>
+      <div class="k-mnav">${["Product", "Pricing", "Changelog", "Sign in"].map((t) => `<span>${t}</span>`).join("")}<button class="k-btn k-lg">${cta}</button></div></nav>`;
   const FOOT = `<footer class="k-foot"><div class="k-foot-top"><div class="k-foot-brand">${LOGO}<p class="k-small">Write, review and sign off without the email chain.</p></div><div class="k-foot-cols">${[["Product", ["Review", "Sign-off", "Publishing", "Changelog"]], ["Company", ["About", "Careers", "Contact"]], ["Help", ["Guides", "Templates", "Status"]]].map(([h, l]) => `<div><b>${h}</b>${l.map((x) => `<span>${x}</span>`).join("")}</div>`).join("")}</div></div><div class="k-foot-base"><span>© 2026 Margin</span><span class="k-grow"></span><span>Privacy</span><span>Terms</span></div></footer>`;
   const thread = (open = true) => `<div class="k-thread">
       <div class="k-cmt">${av("LW", 1)}<div><b>Lin Wei</b><span class="k-small">10:42</span><p>Can we say what changes for existing customers here? The pricing page links to this line.</p></div></div>
       <div class="k-cmt">${av("AL", 0)}<div><b>Ada Lovelace</b><span class="k-small">10:51</span><p>Good catch. Added a sentence on renewals.</p></div></div>
-      ${open ? `<div class="k-reply"><span>Reply</span><button class="k-btn k-sm">Resolve</button></div>` : ""}
+      ${open ? `<div class="k-reply"><span>Reply</span><button class="k-btn k-sm" data-k="resolve">Resolve</button></div><div class="k-resolved">${ki("check")}<span>Resolved by you</span><span class="k-link" data-k="reopen">Reopen</span></div>` : ""}
     </div>`;
-  const SUGGEST = `<div class="k-card k-pic k-suggest"><div class="k-cmt">${av("SK", 2)}<div><b>Sam Kerr</b><span class="k-small">suggested a change</span></div></div><p>From 1 April, the Team plan includes <del>ten</del> <ins>unlimited</ins> documents and five sign-off requests a month.</p><div class="k-row k-end"><button class="k-btn k-sm k-ghost">Reject</button><button class="k-btn k-sm">Accept</button></div></div>`;
+  // The suggestion is set as a page: one sentence in large type with the change in place, and Sam's note
+  // beside it in the margin.
+  const SUGGEST = `<section class="k-said k-suggest"><p class="k-said-line">From 1 April, the Team plan includes <del>ten</del> <ins>unlimited</ins> documents and five sign-off requests a month.</p><div class="k-said-note"><div class="k-cmt">${av("SK", 2)}<div><b>Sam Kerr</b><span class="k-small">suggested a change</span></div></div><div class="k-row k-sg-acts"><button class="k-btn k-sm k-ghost" data-k="reject">Reject</button><button class="k-btn k-sm" data-k="accept">Accept</button></div><div class="k-row k-sg-done"><span class="k-small"></span><span class="k-link" data-k="sg-undo">Undo</span></div></div><div class="k-said-foot"><h2 class="k-h2">Suggest the change, don't describe it</h2><p class="k-p">Type over the text and it becomes a suggestion. The author takes it or leaves it with one key, and the draft remembers who changed what.</p></div></section>`;
   // The product picture: a draft open in the editor, with its comment thread beside the line it's about.
-  const EDITOR = `<div class="k-shot"><div class="k-shot-bar"><span>Spring pricing update</span><span class="k-small">Draft 4, edited by Ada</span><span class="k-grow"></span><span class="k-faces">${["AL", "LW", "SK"].map(av).join("")}</span><button class="k-btn k-sm">Request sign-off</button></div>
+  const EDITOR = `<div class="k-shot"><div class="k-shot-bar"><span>Spring pricing update</span><span class="k-small">Draft 4, edited by Ada</span><span class="k-grow"></span><span class="k-faces">${["AL", "LW", "SK"].map(av).join("")}</span><button class="k-btn k-sm" data-k="signoff">Request sign-off</button></div>
       <div class="k-shot-body">
         <div class="k-doc"><h3 class="k-h3">What's changing in April</h3><p>From 1 April, the Team plan includes unlimited documents and five sign-off requests a month.</p><p><mark>Existing customers keep their current price until their next renewal</mark>, and can switch plans at any time from Settings.</p><p>Business adds single sign-on, audit history and a named contact.</p><p class="k-ghostline"></p><p class="k-ghostline k-short"></p></div>
         <div class="k-margin">${thread()}</div>
@@ -277,12 +285,12 @@
     </div>`;
   const LAYOUTS = {
     home: ["Home", `${NAV()}
-      <section class="k-hero"><h1 class="k-h1">Review drafts where they're written</h1><div class="k-hero-side"><p class="k-lead">Comments sit in the margin beside the line they're about. Resolve them in place, then publish when everyone has signed off.</p><div class="k-row"><button class="k-btn k-lg">Start a document</button><span class="k-link k-under">See how review works</span></div><span class="k-small">Free for up to three editors</span></div></section>
+      <section class="k-hero"><h1 class="k-h1">Review drafts right where they're written</h1><div class="k-hero-side"><p class="k-lead">Every comment sits in the margin, next to the line it's about. Settle it in place, then publish the moment everyone signs off.</p><div class="k-row"><button class="k-btn k-lg">Start a draft</button><span class="k-link k-under" data-k="how">See how review works${ki("arrow")}</span></div><span class="k-small">Free for three editors. No card needed.</span></div></section>
       <div class="k-showcase">${EDITOR}</div>
-      <section class="k-split"><div><h2 class="k-h2">Suggest a change instead of describing it</h2><p class="k-p">Type over the text and it becomes a suggestion. The author accepts or rejects it with one key, and the draft remembers who changed what.</p></div>${SUGGEST}</section>
-      <section class="k-rows">${[["Mentions", "Type @ and a name to bring someone into a thread. They can reply from their email."], ["Sign-off", "Name the people who approve a draft. It publishes when the last one says yes."], ["Version history", "Compare any two drafts side by side, down to the word."], ["Publishing", "Send the final draft to your site, a help center or a PDF."]].map(([t, d]) => `<div><b>${t}</b><p class="k-p">${d}</p></div>`).join("")}</section>
-      <section class="k-close"><h2 class="k-h2">Start with a draft you already have</h2><p class="k-p">Paste it in or import a Google Doc. Your team can comment in a minute.</p><div class="k-row"><button class="k-btn">Start a document</button><button class="k-btn k-ghost">Talk to us</button></div></section>
-      ${FOOT}`],
+      ${SUGGEST}
+      <section class="k-rows">${[["Mentions", "Type @ and a name to pull someone into a thread. They can reply straight from their email."], ["Sign-off", "Name who approves a draft. It publishes when the last of them says yes."], ["Version history", "Compare any two drafts side by side, down to the word."], ["Publishing", "Send the final draft to your site, a help center or a PDF."]].map(([t, d]) => `<div><b>${t}</b><p class="k-p">${d}</p></div>`).join("")}</section>
+      <section class="k-close"><h2 class="k-h2">Bring the draft you already have</h2><p class="k-p">Paste it in or import a Google Doc. Your team can start commenting in a minute.</p><div class="k-row"><button class="k-btn">Start a draft</button><button class="k-btn k-ghost">Talk to us</button></div></section>
+      ${FOOT}<div class="k-sticky"><button class="k-btn k-lg">Start a draft</button></div>`],
     article: ["Article", `${NAV()}
       <div class="k-article">
         <article>
@@ -315,10 +323,10 @@
     pricing: ["Pricing", `${NAV()}
       <section class="k-price-head"><div><h1 class="k-h1">Pricing</h1><p class="k-lead">Pay per workspace, not per reader. Everyone you invite to comment is free.</p></div><div class="k-tabs"><span>Monthly</span><span class="on">Yearly, 2 months free</span></div></section>
       <div class="k-compare"><div class="k-compare-in">
-        <div class="k-cmp-row k-cmp-head"><span></span>${[["Free", "$0", "For trying it on one draft"], ["Team", "$24", "For a team that reviews every week", 1], ["Business", "$64", "For teams that need controls"]].map(([n, p, w, on]) => `<div class="${on ? "k-pick" : ""}"><b class="k-h3">${n}</b><span class="k-amount">${p}<small>a month</small></span><span class="k-small">${w}</span><button class="k-btn${on ? "" : " k-sec"}">${on ? "Start a 14-day trial" : n === "Free" ? "Start free" : "Contact sales"}</button></div>`).join("")}</div>
+        <div class="k-cmp-row k-cmp-head"><span></span>${[["Free", "$0", "For trying it on one draft"], ["Team", "$24", "For a team that reviews every week", 1], ["Business", "$64", "For teams that need controls"]].map(([n, p, w, on]) => `<div class="${on ? "k-pick" : ""}"><b class="k-h3">${n}</b><span class="k-amount" data-y="${p}" data-m="${{ $0: "$0", $24: "$29", $64: "$77" }[p]}">${p}<small>a month</small></span><span class="k-small">${w}</span><button class="k-btn${on ? "" : " k-sec"}">${on ? "Start a 14-day trial" : n === "Free" ? "Start free" : "Contact sales"}</button></div>`).join("")}</div>
         ${[["Editors", "3", "Unlimited", "Unlimited"], ["Documents", "10", "Unlimited", "Unlimited"], ["Sign-off requests", "", "5 a month", "Unlimited"], ["Version history", "7 days", "1 year", "Forever"], ["Single sign-on", "", "", "yes"], ["Audit history", "", "", "yes"]].map(([f, ...v]) => `<div class="k-cmp-row"><span>${f}</span>${v.map((x, n) => `<span class="${n === 1 ? "k-pick" : ""}">${x === "yes" ? ki("check") : x || `<i class="k-none"></i>`}</span>`).join("")}</div>`).join("")}
       </div></div>
-      <section class="k-faq">${[["Do commenters need a seat?", "No. Anyone you invite to comment or sign off is free on every plan."], ["What happens when a trial ends?", "You move to Free and keep everything. Drafts over the limit become read-only."], ["Can I pay by invoice?", "Yes, on yearly Business plans."]].map(([q, a], i) => `<div class="k-qa${i === 0 ? " open" : ""}"><b>${q}${ki("chev")}</b>${i === 0 ? `<p class="k-p">${a}</p>` : ""}</div>`).join("")}</section>
+      <section class="k-faq">${[["Do commenters need a seat?", "No. Anyone you invite to comment or sign off is free on every plan."], ["What happens when a trial ends?", "You move to Free and keep everything. Drafts over the limit become read-only."], ["Can I pay by invoice?", "Yes, on yearly Business plans."]].map(([q, a], i) => `<div class="k-qa${i === 0 ? " open" : ""}"><b>${q}${ki("chev")}</b><p class="k-p">${a}</p></div>`).join("")}</section>
       ${FOOT}`],
   };
   if (!LAYOUTS[K.layout]) K.layout = "home";
@@ -785,6 +793,7 @@
   // The preview is a page of a real size: the window's own room ("Fit"), or a preset or dragged size,
   // scaled down to fit when it is bigger than the room. Layouts respond to the page width.
   const canvas = $("cpCanvas"), frame = $("kitFrame");
+  $("kit").addEventListener("click", interact);
   const roomOf = () => { const cs = getComputedStyle(canvas); return [Math.floor(canvas.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)), Math.floor(canvas.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom))]; };
   const pageSize = () => (K.fit ? roomOf() : [K.pw, K.ph]);
   let zoom = 1, rzZoom = 0, fitKey = "";
@@ -823,6 +832,49 @@
     renderStageSegs();
     focusSpec(false);
     applyArt();
+  }
+  // ---------- the preview responds ----------
+  // Pages and the sheet behave like the real thing: the phone menu opens, threads resolve, suggestions
+  // are taken or left, sign-off goes round, and tabs, switches, boxes, radios and questions all answer.
+  function interact(e) {
+    const t = e.target, at = (sel) => t.closest(sel), k = at("[data-k]")?.dataset.k;
+    const pulse = (el) => !root.UI?.reduce?.matches && el?.animate([{ transform: "scale(.97)" }, { transform: "none" }], { duration: 260, easing: "cubic-bezier(.3,1.4,.5,1)" });
+    let el;
+    if ((el = at(".k-burger"))) { el.closest(".k-nav").classList.toggle("open"); return; }
+    if (at(".k-mnav span")) { at(".k-nav").classList.remove("open"); return; }
+    if (k === "resolve" || k === "reopen") {
+      const th = at(".k-thread"), box = th.closest(".k-shot, .k-review, .k-card") || th.parentElement;
+      th.classList.toggle("done", k === "resolve");
+      box.querySelectorAll("mark").forEach((m) => m.classList.toggle("done", k === "resolve"));
+      pulse(th); return;
+    }
+    if (k === "accept" || k === "reject" || k === "sg-undo") {
+      const c = at(".k-suggest");
+      c.classList.remove("accepted", "rejected");
+      if (k !== "sg-undo") { c.classList.add(k + "ed"); c.querySelector(".k-sg-done .k-small").textContent = k === "accept" ? "Accepted. Sam's change is in the draft." : "Left as it was."; }
+      pulse(c); return;
+    }
+    if (k === "signoff") {
+      el = at("[data-k]"); clearTimeout(el._t);
+      if (el.classList.contains("k-done") || el.classList.contains("k-wait")) { el.classList.remove("k-done", "k-wait"); el.textContent = "Request sign-off"; return; }
+      el.classList.add("k-wait"); el.textContent = "Waiting on Ada and Lin";
+      el._t = setTimeout(() => { el.classList.replace("k-wait", "k-done"); el.innerHTML = ki("check") + "Signed off"; pulse(el); }, 1600);
+      return;
+    }
+    if (k === "how") { at(".k-page")?.querySelector(".k-showcase")?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+        if ((el = at(".k-tabs > span"))) {
+      for (const s of el.parentElement.children) s.classList.toggle("on", s === el);
+      const head = el.closest(".k-price-head");
+      if (head) { const m = /^Monthly/.test(el.textContent); head.parentElement.querySelectorAll(".k-amount").forEach((a) => { a.firstChild.textContent = m ? a.dataset.m : a.dataset.y; pulse(a); }); }
+      return;
+    }
+    if ((el = at(".k-qa"))) { el.classList.toggle("open"); return; }
+    if ((el = at(".k-switch"))) { el.classList.toggle("on"); return; }
+    if ((el = at(".k-check"))) { el.querySelector(".k-box")?.classList.toggle("on"); return; }
+    if ((el = at(".k-radio"))) { for (const r of el.parentElement.querySelectorAll(".k-dot")) r.classList.toggle("on", r.parentElement === el); return; }
+    if ((el = at(".k-chip i"))) { el.parentElement.remove(); return; }
+    if ((el = at(".k-item"))) { for (const r of el.parentElement.querySelectorAll(".k-item")) r.classList.toggle("on", r === el); return; }
+    if ((el = at(".k-btn"))) pulse(el);
   }
   // ---------- entrances and exits ----------
   // Page sections and sheet cards arrive in order with the chosen appear motion, and leave with the
@@ -996,5 +1048,9 @@
     // A kit that wears the Studio design picks up the new one too.
     if (K.art === "studio") return refreshArt();
   }
-  root.Components = { onShow: () => setMode(K.mode), usePalette, remix, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
+  // The kit's look on its own (the part remix rolls), so the home page can step back through remixes.
+  const LOOK = ["pair", "head", "body", "scale", "radius", "pill", "density", "elevation", "tint", "ease", "follow", "src", "srcKey", "rc"];
+  const look = () => JSON.parse(JSON.stringify(Object.fromEntries(LOOK.map((k) => [k, K[k]]))));
+  function setLook(l) { Object.assign(K, JSON.parse(JSON.stringify(l))); save(); const kit = $("kit"); if (kit) vars(kit); if (K.art === "studio") return refreshArt(); }
+  root.Components = { onShow: () => setMode(K.mode), usePalette, remix, look, setLook, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
 })(window);

@@ -23,18 +23,18 @@
   // the distance. The dot chases that moving goal on a slightly loose spring, so it lags a touch, leans
   // into the curve and overshoots a hair before settling.
   function pointer(el) {
-    let x = 0, y = 0, vx = 0, vy = 0, gx = 0, gy = 0, raf = 0, last = 0, path = null, alive = true, done = null;
+    let x = 0, y = 0, vx = 0, vy = 0, gx = 0, gy = 0, raf = 0, last = 0, path = null, alive = true, done = null, calm = false;
     const paint = () => (el.style.translate = `${x}px ${y}px`);
-    const ease = SPRING ? springEase : (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const cubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2), ease = SPRING ? springEase : cubic;
     const tick = (now) => {
       raf = 0; if (!alive) return;
       const steps = Math.min(4, Math.max(1, Math.round((now - (last || now - 16.7)) / 16.7))); last = now;
       if (path) {
-        const t = Math.min(1, (now - path.t0) / path.dur), e = ease(t), u = 1 - e;
+        const t = Math.min(1, (now - path.t0) / path.dur), e = (calm ? cubic : ease)(t), u = 1 - e;
         gx = u * u * path.x0 + 2 * u * e * path.cx + e * e * path.x1; gy = u * u * path.y0 + 2 * u * e * path.cy + e * e * path.y1;
         if (t >= 1) path = null;
       }
-      for (let i = 0; i < steps; i++) { const k = 0.32, d = 2 * Math.sqrt(k) * 0.78; vx += (gx - x) * k - vx * d; vy += (gy - y) * k - vy * d; x += vx; y += vy; }
+      for (let i = 0; i < steps; i++) { const k = 0.32, d = 2 * Math.sqrt(k) * (calm ? 1 : 0.78); vx += (gx - x) * k - vx * d; vy += (gy - y) * k - vy * d; x += vx; y += vy; }
       paint();
       if (!path && Math.hypot(gx - x, gy - y) < 0.4 && Math.hypot(vx, vy) < 0.2) { x = gx; y = gy; paint(); last = 0; const r = done; done = null; r?.(); return; }
       raf = requestAnimationFrame(tick);
@@ -43,17 +43,19 @@
     return {
       el,
       place(px, py) { x = gx = px; y = gy = py; vx = vy = 0; path = null; paint(); },
-      to(px, py, speed = 1) {
+      // A calm move eases in and out and lands without overshoot, for a target that is small or close.
+      to(px, py, speed = 1, quiet = false) {
         if (reduce.matches) { this.place(px, py); return Promise.resolve(); }
+        calm = quiet;
         const dx = px - gx, dy = py - gy, dist = Math.hypot(dx, dy), bow = (Math.random() < 0.5 ? -1 : 1) * (0.12 + Math.random() * 0.12);
-        path = { x0: gx, y0: gy, x1: px, y1: py, cx: (gx + px) / 2 - dy * bow, cy: (gy + py) / 2 + dx * bow, t0: performance.now(), dur: Math.min(1200, 240 + 9 * Math.pow(dist, 0.8)) * (SPRING ? 1.25 : 1) / speed };
+        path = { x0: gx, y0: gy, x1: px, y1: py, cx: (gx + px) / 2 - dy * bow, cy: (gy + py) / 2 + dx * bow, t0: performance.now(), dur: Math.min(1200, 240 + 9 * Math.pow(dist, 0.8)) * (SPRING && !quiet ? 1.25 : 1) / speed };
         done?.();
         return new Promise((r) => { done = r; kick(); setTimeout(() => { if (done === r) { done = null; r(); } }, path.dur + 900); });
       },
       // Free paths for flourishes: f(t) for t from 0 to 1 gives the goal.
       async along(f, dur) {
         if (reduce.matches) return;
-        const t0 = performance.now(); path = null;
+        const t0 = performance.now(); path = null; calm = false;
         while (alive) { const t = Math.min(1, (performance.now() - t0) / dur); [gx, gy] = f(t); kick(); if (t >= 1) break; await frame(); }
         await new Promise((r) => { done = r; kick(); setTimeout(r, 600); });
       },
@@ -240,17 +242,26 @@
   function closePane() { if (!pane) return; pane.el.hidden = true; run++; }
 
   // ---------- the guided tours ----------
+  // The Libraries steps of the Components tour switch back to Libraries first, if the Builder is open
+  // (from an earlier visit, or going Back from the Builder step).
+  async function libraries() {
+    const b = document.querySelector('#cpMode [data-v="libraries"]');
+    if (b && !b.classList.contains("on")) { b.click(); await wait(420); }
+  }
   // A spotlight moves from part to part of the real page while the dot goes there first; steps that
   // open something click it for real, so you watch the page do it. Each page has its own short tour,
   // offered the first time you visit it. The home tour ends by walking you into the Studio, where the
   // tutorial pane takes over; the others end with the dot swirling into the settings button, where the
   // tutorials live, in a puff of sparks.
+  // The Studio's tutorial pane (the floating window with demos) is switched off for now: the Studio gets a
+  // guided tour like every other page. Set PANE to true to bring the pane back for the Studio.
+  const PANE = false;
   const TOURS = {
     home: [
       { el: '.home [data-go="studio"]', t: "Studio", p: "Make patterns, gradients and effects, put them in motion, and export them anywhere." },
       { el: '.home [data-go="palettes"]', t: "Palettes", p: "Roll color palettes and check their names and contrast. Your colors travel to the other tools." },
       { el: '.home [data-go="components"]', t: "Components", p: "Browse UI libraries, or build a kit of tokens and pages in your colors." },
-      { el: "#brand", inner: true, t: "Feeling lucky?", p: "Click the logo twice for a new palette, design and kit all at once." },
+      { el: "#brand", inner: true, calm: true, t: "Feeling lucky?", p: "Click the logo twice for a new palette, design and kit all at once." },
       { el: '.home [data-go="studio"]', t: "Let's begin", p: "Everything starts in the Studio. A short tutorial waits for you there.", done: "Open the Studio" },
     ],
     studio: [
@@ -271,9 +282,9 @@
       { el: "#ptUse", t: "Use them", p: "Send the colors to the Studio, or to the Builder in Components." },
     ],
     components: [
-      { el: "#cpMode", t: "Two modes", p: "Libraries collects UI kits to browse. Builder makes a kit of your own, in your colors." },
-      { el: ".cp-filters", t: "Find a library", p: "Search, or narrow the list by framework and category." },
-      { el: ".cp-grid .lib", t: "A library", p: "Each card opens onto the library's own site, with a link to its docs." },
+      { pre: libraries, el: "#cpMode", t: "Two modes", p: "Libraries collects UI kits to browse. Builder makes a kit of your own, in your colors." },
+      { pre: libraries, el: ".cp-filters", t: "Find a library", p: "Search, or narrow the list by framework and category." },
+      { pre: libraries, el: ".cp-grid .lib", t: "A library", p: "Each card opens onto the library's own site, with a link to its docs." },
       { act: '#cpMode [data-v="builder"]', el: "#cpBuild", t: "Builder", p: "Pick fonts, scale, radius and depth, and see them on real pages. Export the tokens as CSS or a brief." },
     ],
   };
@@ -314,28 +325,50 @@
       if (y < m) { y = Math.min(innerHeight - th - m, Math.max(m, r.top + r.height / 2 - th / 2)); x = r.right + 14 + tw < innerWidth - m ? r.right + 14 : r.left - tw - 14; }
       tip.style.translate = `${Math.max(m, Math.min(innerWidth - tw - m, x))}px ${Math.max(m, Math.min(innerHeight - th - m, y))}px`;
     };
+    // A step whose part isn't on the page (hidden at this width, or not there in this state) is skipped
+    // in the direction of travel.
+    // Waits for a smooth scroll to finish (the part stops moving), so the spotlight and the dot aim at
+    // where it ends up rather than where it was.
+    const settle = async (s) => {
+      let y = NaN, still = 0;
+      for (const t0 = performance.now(); performance.now() - t0 < 1200 && still < 4; ) { await frame(); const r = boxOf(s); still = r && Math.abs(r.top - y) < 0.5 ? still + 1 : 0; y = r?.top; }
+    };
+    const shown = (s) => { const r = boxOf(s); return r && r.width > 0 && r.height > 0; };
     const go = async (n) => {
-      if (busy || n < 0) return;
+      if (busy || n < 0 || !tour) return;
       if (n >= STEPS.length) return finish();
-      busy = true; i = n;
-      const s = STEPS[i], last = i === STEPS.length - 1;
+      busy = true;
+      const dir = n < i ? -1 : 1;
       tip.classList.add("moving");
-      if (s.act) {
-        const b = document.querySelector(s.act);
-        if (b) { b.scrollIntoView({ block: "nearest", behavior: "smooth" }); const r = b.getBoundingClientRect(); await cur.to(r.left + Math.min(40, r.width / 2), r.top + r.height / 2); await cur.click(); b.click(); await wait(380); }
+      let s;
+      for (; n >= 0 && n < STEPS.length; n += dir) {
+        s = STEPS[n];
+        if (s.pre) await s.pre();
+        if (s.act) {
+          const b = document.querySelector(s.act);
+          if (b && b.getBoundingClientRect().width) { b.scrollIntoView({ block: "nearest", behavior: "smooth" }); const r = b.getBoundingClientRect(); await cur.to(r.left + Math.min(40, r.width / 2), r.top + r.height / 2); await cur.click(); b.click(); await wait(380); }
+        }
+        if (!tour) return;
+        // A part that something just opened may still be on its way in.
+        for (let k = 0; k < 20 && (s.act || s.pre) && !shown(s); k++) await wait(30);
+        if (shown(s)) break;
       }
-      const el = document.querySelector(s.el);
-      el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-      await wait(60);
+      // Nothing left to show that way: past the end finishes, before the start stays put.
+      if (n < 0 || n >= STEPS.length) { busy = false; tip.classList.remove("moving"); if (n >= STEPS.length) finish(); else if (i < 0) end(); return; }
+      i = n;
+      const last = i === STEPS.length - 1;
+      document.querySelector(s.el).scrollIntoView({ block: "nearest", behavior: "smooth" });
+      await settle(s);
+      if (!tour) return;
       tip.innerHTML = `<span class="tour-kicker">${i + 1} of ${STEPS.length}</span><b>${s.t}</b><p>${s.p}</p><div class="tour-acts"><button class="btn sm ghost" data-a="end">End tour</button><span class="grow"></span>${i ? `<button class="btn sm" data-a="back">Back</button>` : ""}<button class="btn sm primary" data-a="next">${last ? s.done || "Done" : "Next"}</button></div>`;
       place();
-      if (el) { const r = boxOf(s); cur.to(r.left + r.width * 0.5, r.top + Math.min(r.height * 0.5, 40)); }
+      const r = boxOf(s); cur.to(r.left + r.width * 0.5, r.top + Math.min(r.height * 0.5, 40), 1, !!s.calm);
       tip.classList.remove("moving");
       tip.querySelector('[data-a="next"]').focus({ preventScroll: true });
       busy = false;
     };
     const cleanup = () => {
-      removeEventListener("resize", place); removeEventListener("keydown", key, true);
+      removeEventListener("resize", place); removeEventListener("scroll", follow, true); removeEventListener("keydown", key, true);
       tour = null;
       for (const n of [spotEl, tip]) { n.classList.add("gone"); setTimeout(() => n.remove(), 320); }
     };
@@ -355,8 +388,10 @@
     };
     const key = (e) => { if (e.key === "Escape") { e.stopPropagation(); end(); } else if (e.key === "ArrowRight") go(i + 1); else if (e.key === "ArrowLeft") go(i - 1); };
     tip.onclick = (e) => { const a = e.target.closest("[data-a]")?.dataset.a; if (a === "next") go(i + 1); else if (a === "back") go(i - 1); else if (a === "end") end(); };
-    addEventListener("resize", place); addEventListener("keydown", key, true);
-    tour = { end };
+    // The spotlight and tip stay on their part when the page scrolls under them.
+    const follow = () => { if (i >= 0 && !busy) place(); };
+    addEventListener("resize", place); addEventListener("scroll", follow, { capture: true, passive: true }); addEventListener("keydown", key, true);
+    tour = { end, name };
     setTimeout(() => go(0), moving ? 760 : 120);
   }
   // Done: the dot spirals toward the settings button, the curl widening and then tightening as it
@@ -378,19 +413,21 @@
   }
 
   // Settings, Show the tutorial: the Studio's pane in the Studio, the page's tour anywhere else.
-  function showFor(r) { if (r === "studio" || !TOURS[r]) openPane(); else startTour(r); }
+  function showFor(r) { if (PANE && (r === "studio" || !TOURS[r])) openPane(); else startTour(TOURS[r] ? r : "studio"); }
 
   // The first visit to each page (not from a shared link, and not under automation) offers its tutorial
   // once the entrance has played: the pane in the Studio, a tour on the other pages.
   const offered = new Set();
   function onRoute(r) {
+    // Leaving the page a tour is about ends it.
+    if (tour && tour.name !== r) tour.end();
     if (offered.has(r) || navigator.webdriver || /[?&]d=/.test(location.hash) || !TOURS[r]) return;
-    const k = r === "studio" ? SEEN : KEY(r);
-    if (seen(k)) return;
+    // Someone who already saw the Studio's pane counts as having seen its tour too.
+    if (seen(KEY(r)) || (r === "studio" && seen(SEEN))) return;
     offered.add(r);
     (root.introDone || Promise.resolve()).then(() => setTimeout(() => {
       if (root.Shell?.route !== r || tour || (pane && !pane.el.hidden) || document.querySelector(".modal:not([hidden])")) return;
-      if (r === "studio") openPane(); else startTour(r);
+      if (r === "studio" && PANE) openPane(); else startTour(r);
     }, r === "home" ? 700 : 900));
   }
   root.Tour = { open: openPane, start: startTour, show: showFor, onRoute };

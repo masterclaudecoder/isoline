@@ -1737,7 +1737,7 @@
   // Closing the note quiets it for this look; with "Don't remind me" ticked it stays off.
   function closePerf() {
     $("perfNote").hidden = true; perfQuiet.add(perfShownFor);
-    if ($("perfOff").checked) { P.perfFps = 0; savePrefs(); syncPerfSet(); toast("Slow playback notes are off. Turn them back on in Settings"); }
+    if ($("perfOff").checked) { P.perfFps = 0; savePrefs(); syncPerfSet(); toast("Lag warnings are off. Turn them back on in Settings"); }
   }
   $("perfFx").onclick = () => { closePerf(); S.fxOrder = []; update(); toast("Effects removed", { action: "Undo", onAction: () => travel(-1) }); };
   $("perfStop").onclick = () => { closePerf(); stopPlay(); S.motion.type = "still"; update(); };
@@ -2236,7 +2236,7 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.16", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "1.17", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
@@ -3378,7 +3378,7 @@
   window.studioBoot = new Promise((r) => (bootDone = r));
   const boot = () => { update({ commit: false }); bootDone(); };
   if (crashed && heavy(S)) { safeOpen("The last design stalled this device, so it opened without effects"); boot(); }
-  else if (heavy(S) && TFX && !/[?&]d=/.test(location.hash)) drawCost(S).then((ms) => { if (ms > SLOW_MS * 2) safeOpen("This design is too heavy for this device, so it opened without effects"); boot(); });
+  else if (heavy(S) && TFX && !/[?&]d=/.test(location.hash)) drawCost(S).then((ms) => { if (ms > SLOW_MS * 4) safeOpen("This design is too heavy for this device, so it opened without effects"); boot(); });
   else boot();
   setTimeout(() => document.body.classList.remove("boot"), 900);
 

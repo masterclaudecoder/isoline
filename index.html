@@ -90,6 +90,7 @@
   <div class="scrim" id="scrim" aria-hidden="true"></div>
   <header class="top">
     <a class="brand" id="brand" href="#/" aria-label="Isoline home"></a>
+    <span class="home-hist" id="homeHist" data-for="home"><button class="ib" id="homeUndo" title="Back to the last look (⌘Z)" aria-label="Back to the last look" disabled><svg class="ic"><use href="#i-undo"/></svg></button><button class="ib" id="homeRedo" title="Forward again (⇧⌘Z)" aria-label="Forward again" disabled><svg class="ic"><use href="#i-redo"/></svg></button></span>
     <span class="remix-busy" id="remixBusy" role="status" hidden><i></i>Rolling a new look</span>
     <div class="size" data-for="studio components">
       <input class="dim" id="w" type="number" min="64" max="8000" aria-label="Width">
@@ -117,7 +118,8 @@
           <div class="set-sep"></div>
           <div class="set-row static"><span><b>Theme</b></span><div class="seg sm" id="theme"><button data-v="system">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
           <div class="set-row static"><span><b>Accent</b></span><div class="accents" id="accents"></div></div>
-          <div class="set-row static"><span><b>Slow playback note</b><small>Below this frame rate</small></span><div class="seg sm" id="perfFps"><button data-v="0">Off</button><button data-v="30">30</button><button data-v="45">45</button><button data-v="60">60</button></div></div>
+          <div class="set-sep"></div>
+          <div class="set-row static"><span data-tip="Shows a note when playback runs below this many frames a second"><b>Lag warning</b></span><div class="seg sm" id="perfFps"><button data-v="0">Off</button><button data-v="30">30</button><button data-v="45">45</button><button data-v="60">60</button></div></div>
           <button class="opt" id="exportLogs"><span><svg class="ic"><use href="#i-down"/></svg>Export performance log</span><span class="mono">.json</span></button>
           <div class="set-sep"></div>
           <button class="opt" id="exportSettings"><span><svg class="ic"><use href="#i-down"/></svg>Download settings</span><span class="mono">.json</span></button>

@@ -2061,3 +2061,81 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .remix-busy i { width: 11px; height: 11px; border-radius: 50%; border: 2px solid color-mix(in oklab, var(--accent) 25%, transparent); border-top-color: var(--accent); animation: remix-spin .7s linear infinite; }
 @keyframes remix-spin { to { rotate: 1turn; } }
 @media (max-width: 520px) { .remix-busy { font-size: 0; gap: 0; padding: 0 7px; } }
+
+/* ---------- 1.17: Margin's landing page ---------- */
+/* The mark: two arches in the text color make a lowercase m; its last leg ends in a note in the accent.
+   No tile behind it, so it reads on any background. */
+.k-mark { width: 1.15em; height: 1.15em; }
+.k-mark .k-mk-m { fill: none; stroke: currentColor; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
+.k-mark .k-mk-n { fill: var(--k-accent); stroke: none; }
+.k-brand .k-word { letter-spacing: -0.035em; }
+/* Hero: the headline is capped so a large type scale can't push the product picture out of view. */
+.k-under .k-ic { width: 15px; height: 15px; flex: none; }
+.k-under { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.k-landing .k-pg-home .k-hero .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 5.2cqi); max-width: 12em; }
+.cps-win .k-landing .k-pg-home .k-hero .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 4.4cqi); }
+/* Suggestions: one sentence set large like a page, the change in place, Sam's note in the margin beside
+   it on a hairline in the accent, and the heading and copy small underneath. */
+.k-said { display: grid; grid-template-columns: minmax(0, 1fr) minmax(12em, 16em); column-gap: var(--k-s12); row-gap: var(--k-s8); padding-top: var(--k-s12); margin-bottom: var(--k-s16); border-top: 1px solid var(--k-border); }
+.k-said-line { margin: 0; font-family: var(--k-head), system-ui; font-weight: 500; font-size: clamp(var(--k-xl), 3.3cqi, var(--k-3xl)); line-height: 1.32; letter-spacing: var(--k-track); color: var(--k-text); text-wrap: pretty; }
+.k-said-note { align-self: start; display: grid; gap: var(--k-s3); padding: var(--k-s1) 0 var(--k-s1) var(--k-s4); border-left: 2px solid var(--k-accent); }
+.k-said-note .k-sg-done { flex-wrap: wrap; }
+.k-said-foot { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--k-s8); align-items: baseline; }
+.k-said-foot .k-h2 { font-size: var(--k-lg); margin: 0; }
+.k-said-foot .k-p { margin: 0; color: var(--k-muted); }
+.k-suggest.accepted ins { border-bottom-color: transparent; }
+/* Threads resolve into a quiet line; the highlight they were about clears with them. */
+.k-resolved { display: none; align-items: center; gap: var(--k-s2); padding: var(--k-s2) var(--k-s3); border-radius: var(--k-r); background: color-mix(in srgb, var(--k-accent) 10%, transparent); font-size: var(--k-sm); }
+.k-resolved .k-ic { width: 16px; height: 16px; color: var(--k-accent); flex: none; }
+.k-resolved span:first-of-type { flex: 1; }
+.k-thread.done > .k-cmt, .k-thread.done > .k-reply { display: none; }
+.k-thread.done > .k-resolved { display: flex; }
+.kit mark { transition: background-color var(--k-dur) var(--k-ease), border-color var(--k-dur) var(--k-ease); }
+.kit mark.done { background: transparent; border-bottom-color: transparent; }
+.kit [data-k], .k-qa b, .k-tabs > span, .k-switch, .k-check, .k-radio, .k-item, .k-chip i { cursor: pointer; }
+/* Suggestions are taken or left, with an undo. */
+.k-sg-done { display: none; align-items: center; gap: var(--k-s3); }
+.k-suggest:is(.accepted, .rejected) .k-sg-acts { display: none; }
+.k-suggest:is(.accepted, .rejected) .k-sg-done { display: flex; }
+.k-suggest.accepted del, .k-suggest.rejected ins { display: none; }
+.k-suggest.accepted ins { text-decoration: none; background: transparent; animation: k-flash 1.4s var(--k-ease); }
+.k-suggest.rejected del { text-decoration: none; }
+@keyframes k-flash { from { background: color-mix(in srgb, var(--k-accent) 32%, transparent); } }
+/* Sign-off goes round, then comes back. */
+.k-btn.k-wait { background: color-mix(in srgb, var(--k-accent) 16%, var(--k-surface)); color: var(--k-text); }
+.k-btn.k-wait::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: k-spin .8s linear infinite; }
+.k-btn.k-done .k-ic { width: 14px; height: 14px; }
+@keyframes k-spin { to { rotate: 1turn; } }
+.k-qa:not(.open) .k-p { display: none; }
+/* Phones: a real menu behind a full-size burger, a full-width call to action that stays in reach, and
+   the comment thread as a sheet over the draft. */
+.k-mnav, .k-sticky, .k-i-close { display: none; }
+.k-nav { position: relative; }
+@container (max-width: 640px) {
+  .k-burger { width: 44px; height: 44px; border-radius: var(--k-rb); border: 1px solid var(--k-border); background: var(--k-surface); color: var(--k-text); }
+  .k-burger .k-ic { width: 22px; height: 22px; }
+  .k-nav.open .k-i-open { display: none; }
+  .k-nav.open .k-i-close { display: block; }
+  .k-mnav { display: grid; position: absolute; top: calc(100% - 4px); left: 0; right: 0; z-index: 5; padding: var(--k-s2) var(--k-s4) var(--k-s4); border: 1px solid var(--k-border); border-radius: calc(var(--k-r) + 6px); background: var(--k-surface); box-shadow: 0 24px 48px -20px rgba(0,0,0,.35); opacity: 0; translate: 0 -6px; pointer-events: none; transition: opacity var(--k-dur) var(--k-ease), translate var(--k-dur) var(--k-ease); }
+  .k-nav.open .k-mnav { opacity: 1; translate: none; pointer-events: auto; }
+  .k-mnav span { display: flex; justify-content: space-between; align-items: center; padding: var(--k-s4) var(--k-s1); font-size: var(--k-lg); font-weight: 600; color: var(--k-text); border-bottom: 1px solid var(--k-border); cursor: pointer; }
+  .k-nav .k-mnav .k-btn { display: inline-flex; margin-top: var(--k-s4); width: 100%; }
+  .k-landing .k-pg-home .k-hero .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 11.5cqi); }
+  .k-hero-side .k-row { align-items: stretch; }
+  .k-hero-side .k-row .k-btn { width: 100%; }
+  .k-said { grid-template-columns: 1fr; row-gap: var(--k-s6); padding-top: var(--k-s8); margin-bottom: var(--k-s12); }
+  .k-said-foot { grid-template-columns: 1fr; gap: var(--k-s2); }
+  .k-sticky { display: block; position: sticky; bottom: 12px; z-index: 4; margin-top: var(--k-s4); }
+  .k-sticky .k-btn { width: 100%; box-shadow: 0 14px 30px -10px rgba(0,0,0,.4); }
+  .k-margin { margin: -14px 10px 10px; padding: 14px 16px 16px; border: 1px solid var(--k-border); border-radius: calc(var(--k-r) + 8px); background: var(--k-surface); box-shadow: 0 -12px 30px -18px rgba(0,0,0,.35); position: relative; }
+  .k-margin::before { content: ""; display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--k-border); margin: 0 auto 12px; }
+}
+/* The closing section is plain and left-aligned like the hero. */
+@container (max-width: 640px) {
+  .k-pg-home .k-close .k-row { flex-direction: column; justify-self: stretch; }
+  .k-pg-home .k-close .k-btn { width: 100%; }
+}
+/* Home: undo and redo for logo remixes sit by the logo, showing once there's something to step through. */
+.home-hist { position: absolute; top: 50%; left: 150px; translate: 0 -50%; display: inline-flex; gap: 2px; opacity: 0; pointer-events: none; transition: opacity .25s ease; }
+.home-hist.on { opacity: 1; pointer-events: auto; }
+.home-hist .ib:disabled { opacity: .35; }
