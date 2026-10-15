@@ -43,14 +43,15 @@ The left column is the build, made of one slot per layer: **Preset, Generator, S
 Objects sit on top of any generator. Add up to eight: a sphere, torus, cube, capsule, blob, pyramid or diamond, raymarched and lit from the upper left, or a picture card. Each sits under the effects (they apply to it) or over them, and drag their grips to change which draws on top. Each has its own material:
 - **Shaded:** lit through your colors.
 - **Design:** wraps your current design round the shape, so it inherits the generator, lines and colors.
-- **Preset:** wraps a preset round it, projected from three sides so there's no seam.
+- **Preset:** wraps a preset round it, projected from three sides so there's no seam (faceted forms take one projection per face, so nothing doubles up).
 - **Glass:** bends what's behind it most at the edges, like a liquid glass pill, with refraction, frost, dispersion, rim light and a tint.
+- **Vantablack:** flat black that swallows the light, with a hairline of sheen on the rim, like the black shapes in Alfa-Bank's ads. Picture cards take it too, as plain black cards.
 - Pictures show as a photo or recolored through your palette.
 
 Drag an object on the canvas to move it, its corner to resize and its top handle to rotate (hold Shift to snap). Placement, orientation (tilt and spin) and surface (shine, ripple, rounding, shadow) are in its panel, along with duplicate and remove. Drift turns objects, Flow bobs them and Pulse beats them. Each object can stay still, or follow the loop at its own pace, from 5 times slower in reverse to 5 times faster (whole steps, so it still loops). Designs made with the old 3D shape generator open as a gradient with the same shape as an object.
 
 ## Colors
-**Your colors** come first: a background plus up to six inks for contours, or up to eight stops for gradients. With more than two inks, plain contours cycle through them level by level, and blended or layered contours run a smooth ramp through them. Below that are palette tabs: Suggested (harmonies from your strongest color, plus the closest library palette), Curated, Brands, and Saved (from the palette tool). Pages of nine cards turn from the pager underneath. Every palette card is resampled to your number of colors and applies at that count.
+**Your colors** come first: a background plus up to six inks for contours, or up to eight stops for gradients. With more than two inks, plain contours cycle through them level by level, and blended or layered contours run a smooth ramp through them. Below that are palette tabs: Suggested (harmonies from your strongest color, plus the closest library palette), Curated, Brands (including Russian ones: Yandex Neo, the My Wave glow; Yandex; Yandex Intel, the Alice AI violet; Alfa, Sber, VTB, T-Bank, Ozon, Wildberries, MTS, VK, Avito, MegaFon, Kaspersky), and Saved (from the palette tool). Colors that match a library palette show its name. Pages of nine cards turn from the pager underneath. Every palette card is resampled to your number of colors and applies at that count.
 
 The color picker has two modes: a color field, or sliders for the chosen format (HEX, RGB, HSL, HSB, OKLCH). Move toward its top-right corner to switch modes. It shows the nearest color name, from the "best of" list of [color-name-list](https://github.com/meodai/color-name-list) (MIT). You can paste any of those formats into its fields. Print inks only appear when an ink-only print effect is in the stack.
 
@@ -71,14 +72,14 @@ Contours draw on the GPU while previewing and playing, so dense bands stay smoot
 Lines (strokes), Bands (filled stripes, PewDiePie-style), Layers (stacked fills) or Gradient (bands shaded through the inks on either side of them). Count or gap, bias, weight, swell, taper, accent lines, smoothing and cleanup.
 
 ## Effects (WebGL2, run top to bottom)
-- **Distort:** liquify, waves, twirl, bulge, ripples (optionally animated, rings travelling outward a whole number of times per loop), water (looking down through a moving, sunlit surface: swells and chop bend what's beneath, light focused by those same waves slides over the floor, so it never repeats, and an optional depth tint; every wave moves a whole number of turns per loop), caustic web (the bright cell-edge web that used to be water), kaleidoscope
+- **Distort:** liquify, waves, twirl, bulge, ripples (optionally animated, rings travelling outward a whole number of times per loop), water (looking down through a moving, sunlit surface: swells and chop bend what's beneath, light focused by those same waves slides over the floor, so it never repeats, and an optional depth tint; every wave moves a whole number of turns per loop), caustic web (the bright cell-edge web that used to be water, optionally animated), kaleidoscope
 - **Glass** (iOS-style bezel refraction, frost, hairline highlights and slight dispersion, with rounded glass blocks): fluted glass, glass blocks, liquid glass
 - **Light:** progressive blur, glow, relief, god rays, vignette
 - **Color:** gradient map, posterize, heatmap, liquid metal (lit from a smoothed height map, so edges stay clean)
 - **Print:** halftone and CMYK halftone (circle, square, triangle or star dots, each sized to lay down the same ink for the same tone and free to spill into the next cell instead of being cropped), engrave, risograph, dither
 - **Stylize:** pixels, crystallize, ASCII, glyph field (a random character in every cell, its opacity following the brightness underneath, optionally reshuffling a whole number of times per loop), scanlines, chromatic. ASCII and the glyph field draw in Geist Mono, the interface font or the system monospace
 - **Texture:** paper, film grain (optionally animated, a fresh pattern every frame)
-- **Interactive:** click ripples (rings spread from where you click and die away) and drag trails (dragging pushes the picture along like a finger through paint, or leaves curling smoke). They answer the pointer on the canvas and in HTML exports, and their tiles show a click and a drag frozen part-way
+- **Interactive:** click ripples (rings spread from where you click and die away) and drag trails, run on a real fluid simulation (stable fluids with vorticity): Fluid carries the picture along with the flow like paint and lets it settle back, Smoke leaves curling smoke without touching the picture. Trails have no length limit and fade by their life. They answer the pointer on the canvas and in HTML exports, and their tiles show a click and a drag frozen part-way
 
 ## Workflow
 - The bar under the canvas holds undo, redo, **Variation** (`R`: new seed and small nudges, same look) and **Surprise** (`⇧R`). Surprise mixes recipes: a whole preset, a preset's shape in a random palette with another preset's effects, or a look built from scratch on any generator, now and then with an object or two on top. It always crossfades.

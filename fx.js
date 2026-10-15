@@ -210,7 +210,9 @@ float sd(vec3 p) {
   else if (uKind == 1) d = length(vec2(length(p.xz) - 0.72, p.y)) - 0.3;
   else if (uKind == 2) { vec3 q = abs(p) - vec3(0.6); d = length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0) - 0.16; }
   else if (uKind == 3) { vec3 q = p; q.y -= clamp(q.y, -0.55, 0.55); d = length(q) - 0.44; }
-  else if (uKind == 6) d = sdPyramid((p + vec3(0.0, 0.62, 0.0)) / 1.55, 1.0) * 1.55 - 0.03;
+  // The pyramid's distance only knows its slanted faces; capping it with the base plane keeps rays from
+  // slipping through the bottom when it's seen from below.
+  else if (uKind == 6) d = max(sdPyramid((p + vec3(0.0, 0.62, 0.0)) / 1.55, 1.0) * 1.55, -(p.y + 0.62)) - 0.03;
   else if (uKind == 7) d = sdOcta(p * vec3(1.0, 0.82, 1.0), 1.0) - 0.03;
   else d = length(p) - 0.95 + 0.14 * sin(2.6 * p.x + gPh) * sin(2.6 * p.y + gPh * 2.0) * sin(2.6 * p.z - gPh);
   d += uRipple * 0.045 * sin(7.0 * p.x + gPh) * sin(7.0 * p.y - gPh) * sin(7.0 * p.z);
@@ -245,6 +247,7 @@ void main() {
     vec2 uv = lp.xy / hb * 0.5 + 0.5; if (n.z < 0.0) uv.x = 1.0 - uv.x;
     vec3 col = uHasTex == 1 ? texture(uTex2, vec2(uv.x, 1.0 - uv.y)).rgb : vec3(0.85);
     if (uMat == 4) col = srgb(fromLab(ramp(luma(col))));
+    if (uMat == 6) { o = vec4(mix(base.rgb, vec3(0.008), cov), base.a); return; }
     float lit = 0.88 + 0.12 * dot(n * sign(n.z), L), sp = pow(max(0.0, dot(reflect(rd, n * sign(n.z)), L)), 40.0);
     col = col * lit + uShine * 0.5 * sp;
     o = vec4(mix(base.rgb, clamp(col, 0.0, 1.0), cov), base.a); return;
@@ -258,9 +261,15 @@ void main() {
   float wrap = dot(n, L) * 0.5 + 0.5, fr = pow(1.0 - clamp(dot(n, -rd), 0.0, 1.0), 3.0), sp = pow(clamp(dot(reflect(rd, n), L), 0.0, 1.0), 32.0);
   vec3 col;
   if (uMat == 0) {
-    vec3 lab = ramp(clamp(0.12 + 0.8 * wrap * wrap + 0.22 * fr, 0.0, 1.0));
-    lab.x += 0.3 * sp * uShine;
+    // A soft top-down falloff and a broad sheen as well as the sharp highlight, so flat faces shade with
+    // the same gradient curved forms get instead of reading as single flat colors.
+    vec3 lab = ramp(clamp(0.1 + 0.75 * wrap * wrap + 0.18 * fr + 0.1 * pos.y, 0.0, 1.0));
+    lab.x += 0.3 * sp * uShine + 0.08 * uShine * pow(clamp(dot(reflect(rd, n), L), 0.0, 1.0), 4.0);
     col = srgb(fromLab(lab));
+  } else if (uMat == 6) {
+    // Vantablack: flat black that swallows the light, with only a hairline of sheen on the rim so the
+    // silhouette holds against dark grounds.
+    col = vec3(0.008) + vec3(0.06) * uShine * pow(fr, 3.0);
   } else if (uMat == 3) {
     // Glass: what's behind bends through the form, most at the edges where the surface turns away, as
     // in a liquid glass pill. Frost blurs it, dispersion splits red from blue along the bend, the rim
@@ -481,7 +490,8 @@ void main() {
   // morphs forward the whole time and lands back on its first frame without reversing.
   bool br = uMotion == 3;
   // Pulse: four soft beats per loop push the field out from the center, while it morphs a little.
-  float beat = uMotion == 4 ? pow(0.5 - 0.5 * cos(tw * 4.0), 3.0) : 0.0, lm = br ? 1.0 : uMotion == 4 ? 0.4 : 0.0;
+  // Flow's read points move slowly: at full amplitude the field still only morphs gently.
+  float beat = uMotion == 4 ? pow(0.5 - 0.5 * cos(tw * 4.0), 3.0) : 0.0, lm = br ? 0.3 : uMotion == 4 ? 0.4 : 0.0;
   vec2 L1 = lm * 1.5 * uMotAmt * vec2(cos(tw), sin(tw));
   // Both read points travel at a constant speed, so the morph never hurries through part of the loop.
   vec2 L2 = lm * 1.5 * uMotAmt * vec2(sin(tw + 1.3), -cos(tw + 1.3));
@@ -726,28 +736,65 @@ void main() {
   o = vec4(c.rgb * (1.0 + uShade * 0.15 * lit), c.a);
 }`,
 
-    trail: `uniform float uSize; uniform float uStr; uniform float uLife; uniform float uSmoke; uniform vec3 uCol; uniform float uSwirl; uniform vec4 uP[32]; uniform vec4 uV[32]; uniform float uNP; uniform float uTime;
-// Drag trails: the pointer's path, as points with a velocity and an age, pushes the picture along with
-// it like a finger through paint. Each push swirls a little as it fades, and Smoke mode leaves a soft,
-// curling plume of color behind as well.
+    // Drag trails composite, over a real fluid simulation (below): Fluid mode draws the picture through
+    // the sim's offset field, so it is carried by the flow like paint and relaxes back; Smoke mode leaves
+    // the picture alone and lays the sim's smoke density over it.
+    trail: `uniform sampler2D uTex2; uniform float uSmoke; uniform vec3 uCol;
 void main() {
-  vec2 d0 = dp(), off = vec2(0.0); float dens = 0.0;
-  for (int i = 0; i < 32; i++) {
-    if (float(i) >= uNP) break;
-    vec4 P = uP[i]; vec2 v = uV[i].xy; float age = P.z, life = clamp(1.0 - age / max(uLife, 0.05), 0.0, 1.0);
-    float rad = uSize * (1.0 + 1.5 * (1.0 - life));
-    vec2 d = d0 - P.xy; float g = exp(-dot(d, d) / (rad * rad)) * life * life;
-    vec2 sw = vec2(-d.y, d.x) / rad * uSwirl * (1.0 - life);
-    off += (v * 0.12 + sw * length(v) * 0.08) * g; dens += g;
-  }
-  vec2 n = vec2(vnoise(d0 / uSize * 1.3 + uTime * 3.0), vnoise(d0 / uSize * 1.3 + 7.7 - uTime * 3.0)) - 0.5;
-  off = off * uStr + n * uSize * 0.4 * min(dens, 1.0) * uStr;
-  vec4 c = tex(vUv - toUv(off));
-  float sm = uSmoke * clamp(dens, 0.0, 1.0) * (0.55 + 0.45 * vnoise(d0 / uSize * 2.2 - off * 0.05));
-  o = vec4(mix(c.rgb, uCol, sm * 0.7), c.a);
+  vec4 d = texture(uTex2, vUv);
+  if (uSmoke < 0.5) { o = tex(vUv + d.xy); return; }
+  vec4 c = tex(vUv); float a = clamp(d.a, 0.0, 1.0);
+  o = vec4(mix(c.rgb, uCol, a * a * (3.0 - 2.0 * a) * 0.92), c.a);
 }`,
 
-    water: `uniform float uAmt; uniform float uScale; uniform float uCaustic;
+    // ---- fluid simulation (stable fluids, after Jos Stam and Pavel Dobryakov's WebGL version) ----
+    // Velocity is in sim cells per second; cells are square in design space.
+    f_splat: `uniform vec2 uPt; uniform float uRad; uniform vec4 uVal; uniform float uAsp;
+void main() { vec2 d = vUv - uPt; d.x *= uAsp; o = texture(uTex, vUv) + uVal * exp(-dot(d, d) / uRad); }`,
+    f_curl: `
+void main() {
+  vec2 t = 1.0 / uRes;
+  float L = texture(uTex, vUv - vec2(t.x, 0.0)).y, R = texture(uTex, vUv + vec2(t.x, 0.0)).y, T = texture(uTex, vUv + vec2(0.0, t.y)).x, B = texture(uTex, vUv - vec2(0.0, t.y)).x;
+  o = vec4(0.5 * (R - L - T + B), 0.0, 0.0, 1.0);
+}`,
+    f_vort: `uniform sampler2D uTex2; uniform float uCurl; uniform float uDt;
+void main() {
+  vec2 t = 1.0 / uRes;
+  float L = texture(uTex2, vUv - vec2(t.x, 0.0)).x, R = texture(uTex2, vUv + vec2(t.x, 0.0)).x, T = texture(uTex2, vUv + vec2(0.0, t.y)).x, B = texture(uTex2, vUv - vec2(0.0, t.y)).x, C = texture(uTex2, vUv).x;
+  vec2 f = 0.5 * vec2(abs(T) - abs(B), abs(R) - abs(L)); f /= length(f) + 1e-4; f *= uCurl * C; f.y = -f.y;
+  o = vec4(clamp(texture(uTex, vUv).xy + f * uDt, -2000.0, 2000.0), 0.0, 1.0);
+}`,
+    f_div: `
+void main() {
+  vec2 t = 1.0 / uRes, C = texture(uTex, vUv).xy;
+  float L = texture(uTex, vUv - vec2(t.x, 0.0)).x, R = texture(uTex, vUv + vec2(t.x, 0.0)).x, T = texture(uTex, vUv + vec2(0.0, t.y)).y, B = texture(uTex, vUv - vec2(0.0, t.y)).y;
+  if (vUv.x - t.x < 0.0) L = -C.x; if (vUv.x + t.x > 1.0) R = -C.x; if (vUv.y + t.y > 1.0) T = -C.y; if (vUv.y - t.y < 0.0) B = -C.y;
+  o = vec4(0.5 * (R - L + T - B), 0.0, 0.0, 1.0);
+}`,
+    f_press: `uniform sampler2D uTex2;
+void main() {
+  vec2 t = 1.0 / uRes;
+  float L = texture(uTex, vUv - vec2(t.x, 0.0)).x, R = texture(uTex, vUv + vec2(t.x, 0.0)).x, T = texture(uTex, vUv + vec2(0.0, t.y)).x, B = texture(uTex, vUv - vec2(0.0, t.y)).x;
+  o = vec4((L + R + B + T - texture(uTex2, vUv).x) * 0.25, 0.0, 0.0, 1.0);
+}`,
+    f_grad: `uniform sampler2D uTex2;
+void main() {
+  vec2 t = 1.0 / uRes;
+  float L = texture(uTex2, vUv - vec2(t.x, 0.0)).x, R = texture(uTex2, vUv + vec2(t.x, 0.0)).x, T = texture(uTex2, vUv + vec2(0.0, t.y)).x, B = texture(uTex2, vUv - vec2(0.0, t.y)).x;
+  o = vec4(texture(uTex, vUv).xy - vec2(R - L, T - B), 0.0, 1.0);
+}`,
+    // Advection reads back along the velocity. The offset field (Fluid mode) also gains the distance it was
+    // carried, so each cell remembers where its paint came from; dissipation lets it all fade away.
+    f_adv: `uniform sampler2D uTex2; uniform float uDt; uniform float uDiss; uniform vec2 uVelTexel; uniform float uOff;
+void main() {
+  vec2 coord = vUv - uDt * texture(uTex, vUv).xy * uVelTexel;
+  vec4 r = texture(uTex2, coord);
+  if (uOff > 0.5) r.xy += coord - vUv;
+  o = r / (1.0 + uDiss * uDt);
+}`,
+
+
+    water: `uniform float uAmt; uniform float uScale; uniform float uCaustic; uniform float uAnim; uniform float uTime;
 // Pool water: a rolling surface (long swells plus finer chop) bends the floor seen through it, and the
 // light it focuses lands on the floor as the bright, web-like caustic network of a sunny pool.
 float H(vec2 q) { return 0.6 * sin(q.x * 1.3 + 1.7 * sin(q.y * 0.7)) * 0.25 + fbm(q) + 0.5 * fbm(q * 2.1 + vec2(4.7, 1.9)); }
@@ -757,12 +804,12 @@ vec2 h2(vec2 p) { return vec2(hash(p), hash(p + 17.31)); }
 float cellEdge(vec2 p) {
   vec2 n = floor(p), f = fract(p), mr = vec2(0.0), mg = vec2(0.0); float md = 8.0;
   for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
-    vec2 g = vec2(float(i), float(j)), r = g + 0.5 + 0.38 * sin(6.2831 * h2(n + g) + uSeed * 0.37) - f;
+    vec2 g = vec2(float(i), float(j)), r = g + 0.5 + 0.38 * sin(6.2831 * h2(n + g) + uSeed * 0.37 + 6.2831853 * uTime * uAnim) - f;
     float d = dot(r, r); if (d < md) { md = d; mr = r; mg = g; }
   }
   md = 8.0;
   for (int j = -2; j <= 2; j++) for (int i = -2; i <= 2; i++) {
-    vec2 g = mg + vec2(float(i), float(j)), r = g + 0.5 + 0.38 * sin(6.2831 * h2(n + g) + uSeed * 0.37) - f;
+    vec2 g = mg + vec2(float(i), float(j)), r = g + 0.5 + 0.38 * sin(6.2831 * h2(n + g) + uSeed * 0.37 + 6.2831853 * uTime * uAnim) - f;
     if (dot(mr - r, mr - r) > 1e-5) md = min(md, dot(0.5 * (mr + r), normalize(r - mr)));
   }
   return md;
@@ -1259,6 +1306,7 @@ void main() {
         else if (typeof v === "number") gl.uniform1f(l, v);
         else if (v.length === 3 && typeof v[0] === "number") gl.uniform3fv(l, v);
         else if (v.length === 2 && typeof v[0] === "number") gl.uniform2fv(l, v);
+        else if (v.length === 4 && typeof v[0] === "number") gl.uniform4fv(l, v);
         else if (u === "uCol" && v.length) gl.uniform3fv(l, v.flat());
         else if (u === "uPt" && v.length) gl.uniform2fv(l, v.flat());
       }
@@ -1280,9 +1328,10 @@ void main() {
       if (have) { gl.deleteTexture(have.t); gl.deleteFramebuffer(have.f); }
       const t = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, t);
-      const filt = fmt === "half" ? gl.LINEAR : gl.NEAREST;
+      const filt = fmt === "half" || fmt === "rgba" ? gl.LINEAR : gl.NEAREST;
       for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, filt], [gl.TEXTURE_MAG_FILTER, filt], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
-      if (fmt === "half") { if (floatLinear) gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, w, h, 0, gl.RED, gl.FLOAT, null); else gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, w, h, 0, gl.RED, gl.HALF_FLOAT, null); }
+      if (fmt === "rgba") gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+      else if (fmt === "half") { if (floatLinear) gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, w, h, 0, gl.RED, gl.FLOAT, null); else gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, w, h, 0, gl.RED, gl.HALF_FLOAT, null); }
       else gl.texImage2D(gl.TEXTURE_2D, 0, fmt === "rg" ? gl.RG32F : gl.R32F, w, h, 0, fmt === "rg" ? gl.RG : gl.RED, gl.FLOAT, null);
       const f = gl.createFramebuffer();
       gl.bindFramebuffer(gl.FRAMEBUFFER, f);
@@ -1388,7 +1437,7 @@ void main() {
         case "scan": return { uSpace: e.spacing, uStr: e.strength };
         case "bulge": return { uAmt: e.amount, uRad: e.radius, uC: [e.x, 1 - e.y] };
         case "ripple": return { uAmp: e.amp, uLen: e.length, uDecay: e.decay, uShade: e.shade, uC: [e.x, 1 - e.y], uAnim: e.anim ? Math.round(e.speed || 3) : 0 };
-        case "water": return { uAmt: e.amount, uScale: e.scale, uCaustic: e.caustic };
+        case "water": return { uAmt: e.amount, uScale: e.scale, uCaustic: e.caustic, uAnim: e.anim ? 1 : 0 };
         case "sea": return { uAmt: e.amount, uScale: e.scale, uCaustic: e.caustic, uChop: e.chop ?? 0.5, uDepth: e.depth ?? 0.3, uSpeed: Math.round(e.speed ?? 1) };
         case "cmyk": return { uSize: e.size, uAngle: rad(e.angle), uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)) };
         case "paper": return { uCrumple: e.crumple, uFiber: e.fiber, uScale: e.scale };
@@ -1397,12 +1446,69 @@ void main() {
         case "rays": return { uLen: e.length, uThr: e.threshold, uInt: e.intensity, uC: [e.x, 1 - e.y] };
         case "grain": return { uAmt: e.amount, uSize: e.size, uMono: e.mono ? 1 : 0, uSoft: e.soft ? 1 : 0, uAnim: e.anim ? 1 : 0 };
         case "touch": return { uAmp: e.amp, uLen: e.length, uSpeed: e.speed, uLife: e.life, uShade: e.shade };
-        case "trail": return { uSize: e.size, uStr: e.strength, uLife: e.life, uSmoke: e.mode === "smoke" ? 1 : 0, uCol: hex3(e.color || "#ffffff"), uSwirl: e.swirl ?? 0.6 };
+        case "trail": return { uSmoke: e.mode === "smoke" ? 1 : 0, uCol: hex3(e.color || "#ffffff") };
       }
       return {};
     }
 
     // job: { w, h, k, seed, image?: canvas, grad?: {...}, fx: {...}, ink, paper }
+    // ---------- fluid ----------
+    // One simulation per pipeline, stepped once per frame by the time since the last, fed by pointer
+    // events it hasn't seen yet. Velocity lives on a coarse grid of square cells; the smoke (or, in Fluid
+    // mode, the offset field) on a finer one.
+    let fluid = null;
+    function fluidStep(job, e, w, h) {
+      const dsW = job.w / job.k, dsH = job.h / job.k, asp = dsW / dsH, N = 112;
+      const sw = Math.round(asp >= 1 ? N * asp : N), sh = Math.round(asp >= 1 ? N : N / asp);
+      const dm = Math.min(640, Math.max(w, h)), dw = Math.round(asp >= 1 ? dm : dm * asp), dh = Math.round(asp >= 1 ? dm / asp : dm);
+      const mode = e.mode === "smoke" ? 1 : 0, key = `${sw}x${sh}|${dw}x${dh}|${mode}`;
+      const T = (r, ww, hh, f = "rgba") => floatTarget("fl" + r, ww, hh, f);
+      const clear = (t) => { gl.bindFramebuffer(gl.FRAMEBUFFER, t.f); gl.viewport(0, 0, t.w, t.h); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); };
+      const demo = !!job.pointer.demo;
+      if (!fluid || fluid.key !== key || demo) {
+        fluid = { key, v: [T("v0", sw, sh), T("v1", sw, sh)], d: [T("d0", dw, dh), T("d1", dw, dh)], p: [T("p0", sw, sh), T("p1", sw, sh)], dv: T("dv", sw, sh), cu: T("cu", sw, sh), lastT: -1, lastNow: -1, prev: null };
+        [...fluid.v, ...fluid.d, ...fluid.p].forEach(clear);
+      }
+      const F = fluid, life = Math.max(0.2, e.life || 1.6), size = Math.max(4, e.size || 90), str = e.strength ?? 1;
+      const swap = (k) => F[k].reverse();
+      const run = (name, src, dst, un) => draw(name, src.t, dst.f, un, dst.w, dst.h, 1, 0);
+      const splat = (x, y, vx, vy) => {
+        const pt = [x / dsW, y / dsH], rad = Math.pow(size / dsH, 2) * 0.35;
+        run("f_splat", F.v[0], F.v[1], { uPt: pt, uRad: rad, uVal: [vx * sw / dsW * str, vy * sh / dsH * str, 0, 0], uAsp: asp }); swap("v");
+        if (mode) { run("f_splat", F.d[0], F.d[1], { uPt: pt, uRad: rad, uVal: [0, 0, 0, 0.45], uAsp: asp }); swap("d"); }
+      };
+      const feed = (ev) => {
+        for (const p of ev) {
+          if (p[2] <= F.lastT) continue;
+          // Fast strokes are filled in between samples, so the trail is a line, not a string of beads.
+          const q = F.prev && p[2] - F.prev[2] < 0.12 ? F.prev : null, n = q ? Math.min(8, Math.ceil(Math.hypot(p[0] - q[0], p[1] - q[1]) / (size * 0.4))) : 1;
+          for (let i = 1; i <= n; i++) { const f = i / n; splat(q ? q[0] + (p[0] - q[0]) * f : p[0], q ? q[1] + (p[1] - q[1]) * f : p[1], p[3] || 0, p[4] || 0); }
+          F.prev = p; F.lastT = p[2];
+        }
+      };
+      const step = (dt) => {
+        run("f_curl", F.v[0], F.cu, {});
+        run("f_vort", F.v[0], F.v[1], { uTex2: F.cu.t, uCurl: (e.swirl ?? 0.6) * 28, uDt: dt }); swap("v");
+        run("f_div", F.v[0], F.dv, {});
+        clear(F.p[0]);
+        for (let i = 0; i < 16; i++) { run("f_press", F.p[0], F.p[1], { uTex2: F.dv.t }); swap("p"); }
+        run("f_grad", F.v[0], F.v[1], { uTex2: F.p[0].t }); swap("v");
+        run("f_adv", F.v[0], F.v[1], { uTex2: F.v[0].t, uDt: dt, uDiss: 1.4 / life, uVelTexel: [1 / sw, 1 / sh], uOff: 0 }); swap("v");
+        run("f_adv", F.v[0], F.d[1], { uTex2: F.d[0].t, uDt: dt, uDiss: (mode ? 1.1 : 1.6) / life, uVelTexel: [1 / sw, 1 / sh], uOff: mode ? 0 : 1 }); swap("d");
+      };
+      if (demo) {
+        // Thumbnails: a stroke drawn across the frame, simulated for a moment, then frozen.
+        const ev = job.pointer.trail || [];
+        for (let f = 0; f < 36; f++) { feed(ev.filter((p) => p[2] <= f / 60)); step(1 / 60); }
+      } else {
+        const now = job.pointer.now || 0, dt = F.lastNow < 0 || now - F.lastNow > 0.5 ? 1 / 60 : Math.min(1 / 30, Math.max(0, now - F.lastNow));
+        F.lastNow = now;
+        feed(job.pointer.trail || []);
+        if (dt > 0) step(dt);
+      }
+      return F.d[0];
+    }
+
     function render(job) {
       const w = Math.min(maxSize, Math.max(1, Math.round(job.w))), h = Math.min(maxSize, Math.max(1, Math.round(job.h)));
       if (canvas.width !== w) canvas.width = w;
@@ -1438,7 +1544,7 @@ void main() {
           const out = targets.list[ping], tx = ob.tex ? objTex(ob.texKey, ob.tex) : null, sp = ob.speed ?? 1, t = (job.time || 0) * sp;
           draw("object", input, out.f, {
             uKind: OBJ_KINDS.indexOf(ob.kind), uC: [ob.x * w, ob.y * h], uSz: Math.max(1, ob.size * sz * 0.5), uRot: rad(ob.rot || 0), uTilt: rad(ob.tilt || 0), uSpin: rad(ob.spin || 0),
-            uMat: ["shaded", "design", "preset", "glass", "palette", "photo"].indexOf(ob.mat), uShine: ob.shine ?? 0.6, uRipple: ob.ripple || 0, uShadow: ob.shadow ?? 0.4, uAsp: ob.asp || 1, uRound: ob.round ?? 0.2,
+            uMat: ["shaded", "design", "preset", "glass", "palette", "photo", "vanta"].indexOf(ob.mat), uShine: ob.shine ?? 0.6, uRipple: ob.ripple || 0, uShadow: ob.shadow ?? 0.4, uAsp: ob.asp || 1, uRound: ob.round ?? 0.2,
             uRefr: ob.refract ?? 1, uFrost: ob.frost || 0, uDisp: ob.disp ?? 0.3, uRim: ob.rim ?? 0.5, uTint: hex3(ob.tint || "#ffffff"), uTintAmt: ob.tintAmt || 0,
             uCol: cols, uN: cols.length, uTex2: tx || srcTex, uHasTex: tx ? 1 : 0,
             uTime: t - Math.floor(t), uMotion: ob.anim === false || !sp ? 0 : ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5,
@@ -1454,11 +1560,15 @@ void main() {
         const out = targets.list[ping];
         const un = effectUniforms(id, e, ink, paper);
         un.uTime = job.time || 0;
-        if (id === "touch" || id === "trail") {
-          // Pointer events for the interactive effects: positions in design pixels, y up, with their age.
-          const ev = (job.pointer?.[id] || []).slice(-(id === "touch" ? 8 : 32));
+        if (id === "touch") {
+          // Click events: positions in design pixels, y up, with their age.
+          const ev = (job.pointer?.touch || []).slice(-8);
           un.uNP = ev.length; un.uP = ev.map((p) => [p[0], p[1], p[2], 0]);
-          if (id === "trail") un.uV = ev.map((p) => [p[3] || 0, p[4] || 0, 0, 0]);
+        }
+        if (id === "trail") {
+          // Without a pointer (exports, thumbnails of other effects) or float targets, trails draw nothing.
+          if (!job.pointer || !floatOK) continue;
+          un.uTex2 = fluidStep(job, e, w, h).t;
         }
         if (id === "chrome" && floatOK) {
           const a = floatTarget("chA", w, h, "half"), b = floatTarget("chB", w, h, "half"), sg = Math.max(0.8, (e.soft || 8) * k * 0.7);

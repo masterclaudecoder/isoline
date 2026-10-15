@@ -20,7 +20,7 @@
     ["bulge", "Bulge", "Distort", { amount: 0.6, radius: 0.45, x: 0.5, y: 0.5 }, [{ k: "amount", label: "Amount", min: -1, max: 0.95, step: 0.01, fmt: f2, rand: [-0.5, 0.8] }, { k: "radius", label: "Radius", min: 0.05, max: 1.5, step: 0.01, fmt: f2, rand: [0.3, 0.7] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }]],
     ["ripple", "Ripples", "Distort", { amp: 10, length: 60, decay: 0.6, shade: 1, x: 0.5, y: 0.5, anim: false, speed: 3 }, [{ k: "amp", label: "Amplitude", min: 0, max: 60, step: 0.5, fmt: px, rand: [4, 16] }, { k: "length", label: "Wavelength", min: 8, max: 400, step: 1, log: true, fmt: px, rand: [30, 120] }, { k: "decay", label: "Reach", min: 0.05, max: 3, step: 0.01, fmt: f2, rand: [0.3, 1.2] }, { k: "shade", label: "Light", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.5] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { sw: "anim", label: "Animate" }, { k: "speed", label: "Speed", min: 1, max: 12, step: 1, fmt: (v) => v + " rings per loop", hard: [1, 60], when: (e) => e.anim }]],
     ["sea", "Water", "Distort", { amount: 1, scale: 360, caustic: 0.7, chop: 0.5, depth: 0.25, speed: 1 }, [{ k: "amount", label: "Refraction", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 1.6] }, { k: "scale", label: "Wave size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [200, 600] }, { k: "caustic", label: "Light", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "chop", label: "Chop", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.9] }, { k: "depth", label: "Depth tint", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.5] }, { k: "speed", label: "Speed", min: 0, max: 4, step: 1, fmt: (v) => v + "× per loop", hard: [0, 12] }]],
-    ["water", "Caustic web", "Distort", { amount: 1, scale: 320, caustic: 0.6 }, [{ k: "amount", label: "Refraction", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 1.6] }, { k: "scale", label: "Size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [180, 520] }, { k: "caustic", label: "Caustics", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 1] }]],
+    ["water", "Caustic web", "Distort", { amount: 1, scale: 320, caustic: 0.33, anim: false }, [{ k: "amount", label: "Refraction", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 1.6] }, { k: "scale", label: "Size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [180, 520] }, { k: "caustic", label: "Caustics", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 1] }, { sw: "anim", label: "Animate" }]],
     ["kaleido", "Kaleidoscope", "Distort", { segments: 6, rotate: 0, zoom: 1 }, [{ k: "segments", label: "Segments", min: 2, max: 16, step: 1, hard: [2, 64], rand: [4, 10] }, { k: "rotate", label: "Rotate", min: 0, max: 360, step: 1, fmt: deg }, { k: "zoom", label: "Zoom", min: 0.3, max: 3, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.7, 1.6] }]],
     ["glass", "Fluted glass", "Glass", { width: 44, angle: 90, strength: 0.9, frost: 0.2, light: 0.4 }, [{ k: "width", label: "Rib width", min: 4, max: 300, step: 1, log: true, fmt: px, rand: [24, 90] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }, { k: "strength", label: "Refraction", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.4] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.5] }, { k: "light", label: "Highlight", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.3, 0.7] }]],
     ["mesh", "Glass blocks", "Glass", { cell: 120, radius: 0, strength: 0.7, frost: 0.25, grout: 1, rim: 0.6, disp: 0.5 }, [{ k: "cell", label: "Block size", min: 12, max: 400, step: 1, log: true, fmt: px, rand: [70, 180] }, { k: "radius", label: "Corner radius", min: 0, max: 0.5, step: 0.01, fmt: pct, pct: true, rand: [0.12, 0.35] }, { k: "strength", label: "Refraction", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.1, 0.5] }, { k: "grout", label: "Gap", min: 0, max: 4, step: 0.05, fmt: f2, rand: [0.5, 1.5] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
@@ -75,7 +75,7 @@
   // the palette, wrapped in the design underneath, wrapped in a preset, or glass.
   const OBJ_KINDS = [["sphere", "Sphere"], ["torus", "Torus"], ["cube", "Cube"], ["capsule", "Capsule"], ["blob", "Blob"], ["pyramid", "Pyramid"], ["diamond", "Diamond"], ["image", "Picture"]];
   const OBJ_LABEL = Object.fromEntries(OBJ_KINDS);
-  const OBJ_MATS = [["shaded", "Shaded", "Lit in your palette"], ["design", "Design", "Wrapped in the design underneath"], ["preset", "Preset", "Wrapped in a preset of your choice"], ["glass", "Glass", "Bends what's behind it"]];
+  const OBJ_MATS = [["shaded", "Shaded", "Lit in your palette"], ["design", "Design", "Wrapped in the design underneath"], ["preset", "Preset", "Wrapped in a preset of your choice"], ["glass", "Glass", "Bends what's behind it"], ["vanta", "Vantablack", "Flat black that swallows the light"]];
   const PIC_MATS = [["photo", "Photo", "The picture as it is"], ["palette", "Palette", "The picture in your colors"]];
   const MAT_LABEL = Object.fromEntries([...OBJ_MATS, ...PIC_MATS].map(([k, l]) => [k, l]));
   const OBJ_DEFAULT = { kind: "sphere", x: 0.5, y: 0.5, size: 0.5, rot: 0, tilt: 20, spin: 30, mat: "shaded", preset: "Prism", shine: 0.6, ripple: 0, round: 0.15, shadow: 0.4, image: "", layer: "under", anim: true, speed: 1, refract: 1, frost: 0, disp: 0.3, rim: 0.5, tint: "#ffffff", tintAmt: 0 };
@@ -141,6 +141,22 @@
     ["Twitch", ["#0e0e10", "#9146ff", "#efeff1"]],
     ["Shopify", ["#002e25", "#008060", "#95bf47", "#f6f6f1"]],
     ["Google", ["#4285f4", "#ea4335", "#fbbc05", "#34a853", "#ffffff"]],
+    // Russian brands. Yandex Neo is Yandex Music's My Wave glow; Yandex Intel is the violet-to-cyan of
+    // the Alice AI products. Values follow the brand books where they're public, else the logos.
+    ["Yandex Neo", ["#050407", "#7a0f5c", "#e0336f", "#f2a81d", "#f4e04d"], ["#e0336f", "#f4e04d", "#050407"]],
+    ["Yandex", ["#000000", "#fc3f1d", "#ffcc00", "#ffffff"], ["#fc3f1d", "#000000", "#ffffff"]],
+    ["Yandex Intel", ["#0b0820", "#4b2bd6", "#8a5cff", "#38b6ff", "#c8f0ff"], ["#8a5cff", "#38b6ff", "#0b0820"]],
+    ["Alfa", ["#000000", "#ef3124", "#ffffff"], ["#000000", "#ffffff", "#ef3124"]],
+    ["Sber", ["#f2e913", "#a3cd39", "#21a038", "#0fa8e0", "#ffffff"], ["#21a038", "#0fa8e0", "#ffffff"]],
+    ["VTB", ["#002882", "#0a2896", "#009fdf", "#ffffff"], ["#002882", "#009fdf", "#ffffff"]],
+    ["T-Bank", ["#333333", "#ffdd2d", "#ffffff"], ["#333333", "#ffffff", "#ffdd2d"]],
+    ["Ozon", ["#001a34", "#005bff", "#f91155", "#ffffff"], ["#005bff", "#f91155", "#ffffff"]],
+    ["Wildberries", ["#2b0a3d", "#481173", "#cb11ab", "#f5f0fa"], ["#481173", "#cb11ab", "#f5f0fa"]],
+    ["MTS", ["#000000", "#e30611", "#ffffff"], ["#e30611", "#000000", "#ffffff"]],
+    ["VK", ["#19191a", "#0077ff", "#ffffff"], ["#0077ff", "#19191a", "#ffffff"]],
+    ["Avito", ["#00aaff", "#04e061", "#ff4053", "#965eeb", "#ffffff"], ["#965eeb", "#00aaff", "#ffffff"]],
+    ["MegaFon", ["#1f1f1f", "#731982", "#00b956", "#ffffff"], ["#731982", "#00b956", "#ffffff"]],
+    ["Kaspersky", ["#1d1d1b", "#00a88e", "#ffffff"], ["#00a88e", "#1d1d1b", "#ffffff"]],
   ];
   const lum = (h) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
   // Lines take the darkest color, the blend a middle one and the background the lightest.
@@ -228,6 +244,8 @@
   const asGradient = (st, type) => { const g = { ...st, source: "gradient", grad: { ...st.grad, type } };
     // Aura glows out of its first color, so it starts from the darkest one, at settings made for it.
     if (type === "aura" && st.grad?.type !== "aura") Object.assign(g.grad, AURA_BASE, { colors: [...st.grad.colors].sort((x, y) => lum(x) - lum(y)) });
+    // Leaving it, the other generators get their own defaults back: aura's settings mean other things there.
+    if (type !== "aura" && st.grad?.type === "aura") for (const k of Object.keys(AURA_BASE)) g.grad[k] = DEFAULTS.grad[k];
     if (st.source !== "contours") return g;
     const inks = [...new Set([st.bg, st.line, ...(st.mids || []), st.line2].filter(Boolean))].slice(0, 8), same = inks.length === st.grad.colors.length && inks.every((c) => st.grad.colors.includes(c));
     if (same) return g; g.grad.colors = inks; g.grad.points = inks.map((_, i) => clone(st.grad.points[i] || DEFAULTS.grad.points[i % 5])); return g; };
@@ -304,9 +322,11 @@
     ["Noise", "Clouds", { ...G("noise", "Glacier", { noise: "clouds", scale: 1, detail: 5, warp: 0.3, stretch: 1.4, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Noise", "Neuro", { ...G("noise", "Iris", { noise: "neuro", scale: 1, detail: 3, warp: 0.2, stretch: 1, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Noise", "Halo", { ...G("noise", "Dusk", { noise: "ring", scale: 0.8, detail: 3, warp: 0.6, stretch: 1, contrast: 1, angle: 0 }), fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
-    ["Noise", "Aura", { ...G("aura", ["#050407", "#7a0f5c", "#e0336f", "#f2a81d", "#f4e04d"], { scale: 1.2, detail: 3, warp: 0.55, stretch: 1.2, soft: 1.3, contrast: 0, angle: 20 }), fx: { grain: { amount: 0.05, size: 1.2, soft: true } }, motion: { type: "breathe", dur: 14, amt: 0.6 } }],
+    ["Noise", "Aura", { ...G("aura", "Yandex Neo", { scale: 1.2, detail: 3, warp: 0.55, stretch: 1.2, soft: 1.3, contrast: 0, angle: 20 }), fx: { grain: { amount: 0.05, size: 1.2, soft: true } }, motion: { type: "breathe", dur: 14, amt: 0.6 } }],
     ["Noise", "Smoke", { ...G("noise", ["#060608", "#1d1d22", "#5b5b66", "#c9c9d1", "#ffffff"], { noise: "smoke", scale: 1.4, detail: 4, warp: 0.3, stretch: 1.2, contrast: 1.1, angle: 25 }), fx: { glyphs: { cell: 11, set: "alnum", font: "geist", contrast: 1.3, change: 2, back: 0, mono: false } }, motion: { type: "breathe", dur: 10, amt: 0.5 } }],
     ["Noise", "Lagoon", { ...G("aura", ["#02161c", "#05607a", "#0fb5d0", "#3fe3ef", "#b8fbff"], { scale: 2.2, detail: 3, warp: 0.6, stretch: 0.8, soft: 2.4, contrast: 0.25, angle: -30 }), motion: { type: "breathe", dur: 12, amt: 0.6 } }],
+    // Alfa-Bank's advertising: flat black shapes floating on their red.
+    ["Gradients", "Alfa", { ...G("linear", ["#d8231a", "#ef3124", "#f6493d"], { angle: 115, warp: 0.15, soft: 1 }), objects: [{ kind: "image", x: 0.6, y: 0.6, size: 0.52, rot: -6, tilt: 16, spin: -14, mat: "vanta", shine: 0.4, ripple: 0, round: 0.2, shadow: 0.35, image: "" }, { kind: "capsule", x: 0.18, y: 0.3, size: 0.34, rot: 38, tilt: 10, spin: 20, mat: "vanta", shine: 0.4, ripple: 0, round: 0.15, shadow: 0.3, image: "" }, { kind: "sphere", x: 0.86, y: 0.2, size: 0.18, rot: 0, tilt: 0, spin: 0, mat: "vanta", shine: 0.4, ripple: 0, round: 0.15, shadow: 0.25, image: "" }] }],
     ["Gradients", "Orb", { ...G("radial", "Dusk", { warp: 0.2, soft: 1.6 }), objects: [{ kind: "blob", x: 0.5, y: 0.5, size: 0.62, tilt: 29, spin: 25, mat: "shaded", shine: 0.6, ripple: 0.3, shadow: 0.35 }], fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Gradients", "Ring", { ...G("radial", "Glacier", { warp: 0, soft: 2 }), objects: [{ kind: "torus", x: 0.5, y: 0.5, size: 0.66, tilt: 29, spin: -30, mat: "shaded", shine: 0.8, shadow: 0.3 }], fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Gradients", "Glass orbs", { ...G("flow", "Prism", { warp: 0.6, scale: 0.45 }), objects: [{ kind: "sphere", x: 0.34, y: 0.42, size: 0.44, mat: "glass", shine: 0.9, shadow: 0.25 }, { kind: "capsule", x: 0.7, y: 0.58, size: 0.4, rot: -30, tilt: 10, spin: 60, mat: "glass", shine: 0.9, shadow: 0.25 }] }],
@@ -369,18 +389,20 @@
 
   // ---------- history ----------
   let hist = [JSON.stringify(S)], hi = 0, histT = 0;
-  function commit() {
+  // Edits settle for a moment before they land in history, so a drag is one step. Big jumps (presets,
+  // Surprise, variations) land at once: if the app is busy, a debounced step could be overtaken by the
+  // next jump and lost from undo.
+  let histPend = null;
+  function commit(now = false) {
     clearTimeout(histT);
-    histT = setTimeout(() => {
-      const j = JSON.stringify(S);
-      if (j === hist[hi]) return;
-      hist = hist.slice(0, hi + 1); hist.push(j);
-      if (hist.length > 120) hist.shift();
-      hi = hist.length - 1; syncHistory();
-    }, 350);
+    const push = (j) => { if (j === hist[hi]) return; hist = hist.slice(0, hi + 1); hist.push(j); if (hist.length > 120) hist.shift(); hi = hist.length - 1; };
+    // A jump first lands any edit still waiting, as its own step, then itself.
+    if (now) { if (histPend) push(histPend); histPend = null; push(JSON.stringify(S)); syncHistory(); return; }
+    histPend = JSON.stringify(S);
+    histT = setTimeout(() => { if (histPend) push(histPend); histPend = null; syncHistory(); }, 350);
   }
   function travel(dir) {
-    clearTimeout(histT);
+    clearTimeout(histT); histPend = null;
     const j = JSON.stringify(S);
     if (j !== hist[hi]) { hist = hist.slice(0, hi + 1); hist.push(j); hi = hist.length - 1; }
     const n = hi + dir;
@@ -546,7 +568,7 @@
     if (id === "shape") {
       if (g === "contours") return [patLabel(S.pattern), activePoints() ? `${S.points.length} points, seed ${S.seed}` : `Scale ${S.scale}px, seed ${S.seed}`];
       if (g === "noise") return [NOISE_LABEL[gr.noise], `Scale ${sc(gr.scale)}, seed ${S.seed}`];
-      if (g === "aura") return ["Aura", `Size ${sc(gr.scale)}, ${gr.detail} lines`];
+      if (g === "aura") return ["Aura", `Size ${sc(gr.scale)}, ${gr.detail} layers`];
       if (g === "image") return IMG ? ["Image", `${IMG.el.naturalWidth}×${IMG.el.naturalHeight}px`] : ["Image", "No picture yet"];
       if (g === "flow") return ["Flow field", `Scale ${sc(gr.scale)}, seed ${S.seed}`];
       if (g === "mesh") return ["Mesh", `${gr.colors.length} points, softness ${f2(gr.soft)}`];
@@ -578,6 +600,8 @@
   objSlot.className = "slot slot-fx slot-obj";
   objSlot.innerHTML = `<div class="slot-label">Objects<span class="count" hidden></span></div><div class="fx-tiles" id="objTiles"><button class="tile add" data-slot="addobj"><span class="tile-plus">${ic("plus")}</span><span class="tile-text"><b>Add object</b><small>Optional</small></span></button></div>`;
   slotList.appendChild(objSlot);
+  // Counters stop at two digits; past 99 they read as endless.
+  const countText = (n) => (n > 99 ? "∞" : String(n));
   const objTiles = objSlot.querySelector(".fx-tiles"), objAdd = objSlot.querySelector(".tile.add"), objCount = objSlot.querySelector(".count");
   const objOf = () => (P.slot.startsWith("obj:") ? S.objects.find((o) => o.id === P.slot.slice(4)) : null);
   const objName = (o) => { const same = S.objects.filter((x) => x.kind === o.kind); return OBJ_LABEL[o.kind] + (same.length > 1 ? " " + (same.indexOf(o) + 1) : ""); };
@@ -599,7 +623,7 @@
     }
     for (const t of have.values()) { if (!animOK()) { t.remove(); continue; } t.animate([{ opacity: 1 }, { opacity: 0, transform: "scale(.95)" }], { duration: 180, easing: EASE }).onfinish = () => t.remove(); }
     objAdd.classList.toggle("on", P.slot === "addobj");
-    objCount.hidden = !S.objects.length; objCount.textContent = S.objects.length;
+    objCount.hidden = !S.objects.length; objCount.textContent = countText(S.objects.length);
   }
   const fxSlot = document.createElement("div");
   fxSlot.className = "slot slot-fx";
@@ -678,7 +702,7 @@
     { const t = motionSlot.querySelector(".tile"), m = S.motion; t.classList.toggle("on", P.slot === "motion"); setText(t.querySelector("b"), MOTION_NAME[m.type]); t.classList.toggle("still", m.type === "still"); setText(t.querySelector("small"), m.type === "still" ? "No motion yet" : `${m.dur}s, ${{ loop: "looping", pingpong: "ping-pong", once: "once" }[m.mode]}`); }
     setText(addTile.querySelector("small"), "Optional");
     for (const t of fxTiles.querySelectorAll("[data-fx]")) setText(t.querySelector("small"), fxFact(t.dataset.fx));
-    const n = String(S.fxOrder.length);
+    const n = countText(S.fxOrder.length);
     countEl.hidden = !S.fxOrder.length;
     if (countEl.textContent !== n) { countEl.textContent = n; if (animOK()) countEl.animate([{ transform: "scale(.4)" }, { transform: "scale(1.15)" }, { transform: "none" }], { duration: 320, easing: EASE }); }
     // FLIP: tiles that moved glide to their new place; new ones grow in.
@@ -1388,7 +1412,7 @@
       // whole time and only meets its first frame again at the end, with a slow swell on top.
       else if (m.type === "pulse") { const beat = Math.pow(0.5 - 0.5 * Math.cos(tw * 4), 3); o.loopX = 0.5 * a * Math.cos(tw + a0); o.loopY = 0.5 * a * Math.sin(tw + a0); o.scale = st.scale * (1 + 0.08 * a * beat); }
       // The read point moves at a constant speed and nothing else swells, so the morph keeps an even pace.
-      else { o.loopX = 1.4 * a * Math.cos(tw + a0); o.loopY = 1.4 * a * Math.sin(tw + a0); o.warp = Math.max(st.warp, 0.6 * a); }
+      else { o.loopX = 0.45 * a * Math.cos(tw + a0); o.loopY = 0.45 * a * Math.sin(tw + a0); o.warp = Math.max(st.warp, 0.4 * a); }
     }
     return o;
   }
@@ -2248,7 +2272,7 @@
     seg.innerHTML = [...OBJ_MATS, ...PIC_MATS].map(([v, l, tip]) => `<button data-v="${v}" data-tip="${tip}">${l}</button>`).join("");
     mat.appendChild(seg);
     makeSeg(seg, () => objOf()?.mat, (v) => { const o = objOf(); if (o) o.mat = v; });
-    syncers.push(() => { const pic = isPic(); for (const b of seg.children) if (b.dataset.v) b.hidden = pic !== PIC_MATS.some(([k]) => k === b.dataset.v); });
+    syncers.push(() => { const pic = isPic(); for (const b of seg.children) if (b.dataset.v) b.hidden = b.dataset.v !== "vanta" && pic !== PIC_MATS.some(([k]) => k === b.dataset.v); });
     const pr = document.createElement("div"); pr.className = "label-row obj-preset";
     pr.innerHTML = `<span class="label">Preset</span>`;
     const pseg = document.createElement("div"); pseg.className = "seg"; pseg.innerHTML = PRESETS.map(([, n]) => `<button data-v="${n}">${n}</button>`).join("");
@@ -2576,7 +2600,6 @@
     const b = clone(noFx(st));
     for (const key of LAYERS.shape) if (key !== "source" && key !== "grad.type" && key !== "pattern" && key !== "grad.image") setPath(b, key, clone(getPath(DEFAULTS, key)));
     b.seed = st.seed; b.usePoints = false;
-    if (b.source === "gradient" && b.grad.type === "aura") Object.assign(b.grad, AURA_BASE);
     return b;
   }
   function buildPreviews() {
@@ -2587,7 +2610,8 @@
     // The build column reads as layers: the bare generator, then the tuned shape, then line style,
     // then each effect stacked on what came before; the preset tile shows the finished result.
     tileJob("preset", S);
-    tileJob("generator", lightLines(strokes(baseOf(S))));
+    const gb = baseOf(S); if (gen() === "aura") Object.assign(gb.grad, AURA_BASE);
+    tileJob("generator", lightLines(strokes(gb)));
     tileJob("shape", lightLines(strokes(noFx(S))));
     if (gen() === "contours") tileJob("lines", lightLines(noFx(S)));
     jobs.push(motionThumb);
@@ -2597,7 +2621,7 @@
     });
     const p = panelOf(P.slot);
     if (p === "preset") for (const pc of presetCards) { if (!pc.done && !pc.el.hidden) jobs.push(async () => { await thumb(slotOf(pc.el), resolveLook(pc.look), 220); pc.done = true; }); }
-    if (p === "generator") for (const [id] of GENS) jobs.push(() => { const b = baseOf(S), st = id === "contours" ? asContours(b) : asGradient(b, id); return thumb(slotOf(genCards[id]), lightLines(st), 200); });
+    if (p === "generator") for (const [id] of GENS) jobs.push(() => { const b = baseOf(S), st = id === "contours" ? asContours(b) : asGradient(b, id); if (id === "aura") Object.assign(st.grad, AURA_BASE); return thumb(slotOf(genCards[id]), lightLines(st), 200); });
     if (p === "shape") {
       if (gen() === "contours") for (const pt of T.PATTERNS) jobs.push(() => thumb(slotOf(patCards[pt.id]), lightLines(strokes({ ...noFx(S), pattern: pt.id })), 130));
       if (gen() === "noise") for (const [id] of NOISE_TYPES) jobs.push(() => thumb(slotOf(noiseCards[id]), { ...noFx(S), grad: { ...S.grad, noise: id } }, 130));
@@ -2794,11 +2818,11 @@
     if (playing && !held) {
       if (!draft && !instant) playFade = true;
       if (!draft) { clearTimeout(stillT); stillT = setTimeout(syncStill, 400); }
-      if (doCommit && !draft) commit();
+      if (doCommit && !draft) commit(fade);
       return;
     }
     if (draft || instant || !painted) render(draft); else animateFrom(painted, fade);
-    if (doCommit && !draft) commit();
+    if (doCommit && !draft) commit(fade);
   }
 
   // ---------- interactive effects ----------
@@ -2809,28 +2833,29 @@
   const ixOn = (id, st = S) => st.fxOrder.includes(id) && st.fx[id]?.on;
   function livePointer(st) {
     if (!ixOn("touch", st) && !ixOn("trail", st)) return null;
-    const now = performance.now() / 1000, out = {};
-    for (const id of ["touch", "trail"]) {
-      const life = st.fx[id]?.life || 2;
-      IX[id] = IX[id].filter((e) => now - e[2] < life);
-      out[id] = IX[id].map((e) => [e[0], e[1], now - e[2], e[3] || 0, e[4] || 0]);
-    }
-    return out;
+    const now = performance.now() / 1000, life = st.fx.touch?.life || 2;
+    // Clicks carry their age; drag samples go to the fluid sim as they are, with their own time, and it
+    // takes each one once. They're kept for a second so a slow frame doesn't miss any.
+    IX.touch = IX.touch.filter((e) => now - e[2] < life);
+    IX.trail = IX.trail.filter((e) => now - e[2] < 1);
+    return { now, touch: IX.touch.map((e) => [e[0], e[1], now - e[2]]), trail: IX.trail.slice() };
   }
+  // Keep drawing while a ripple is spreading or the fluid is still moving (for its life after the last drag).
+  const ixLive = () => { const now = performance.now() / 1000; return IX.touch.length > 0 || (ixOn("trail") && now - ixLastT < (S.fx.trail?.life || 1.6) + 0.6); };
   // Effect tiles show a click and a drag frozen part-way, since nobody is pointing at them.
   function demoPointer() {
     const w = S.w, h = S.h;
-    return { touch: [[w * 0.42, h * 0.5, 0.5], [w * 0.7, h * 0.35, 0.25]], trail: Array.from({ length: 18 }, (_, i) => { const t = i / 17; return [w * (0.12 + 0.76 * t), h * (0.5 + 0.18 * Math.sin(t * 6)), (1 - t) * 0.9, w * 0.8, h * 0.18 * 6 * Math.cos(t * 6)]; }) };
+    return { demo: true, now: 0, touch: [[w * 0.42, h * 0.5, 0.5], [w * 0.7, h * 0.35, 0.25]], trail: Array.from({ length: 18 }, (_, i) => { const t = i / 17; return [w * (0.12 + 0.76 * t), h * (0.5 + 0.18 * Math.sin(t * 6)), t * 0.3 + 0.001, w * 2.5, h * 0.18 * 6 * Math.cos(t * 6) * 3.3]; }) };
   }
   const designPt = (e) => { const r = art.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * S.w, (1 - (e.clientY - r.top) / r.height) * S.h]; };
-  let ixRaf = 0, ixLast = null;
+  let ixRaf = 0, ixLast = null, ixLastT = -9;
   function ixKick() {
     if (playing || ixRaf) return;
     const step = async () => {
       ixRaf = 0;
       if (playing) return;
       await paint(S, false);
-      if (IX.touch.length || IX.trail.length) ixRaf = requestAnimationFrame(step); else render();
+      if (ixLive()) ixRaf = requestAnimationFrame(step); else render();
     };
     ixRaf = requestAnimationFrame(step);
   }
@@ -2845,8 +2870,8 @@
     if (!ixOn("trail") || !(e.buttons & 1) || !ixLast) return;
     const [x, y] = designPt(e), t = performance.now() / 1000, dt = Math.max(1 / 240, t - ixLast[2]);
     if (Math.hypot(x - ixLast[0], y - ixLast[1]) < S.w / 300) return;
-    IX.trail.push([x, y, t, (x - ixLast[0]) / dt, (y - ixLast[1]) / dt]); if (IX.trail.length > 32) IX.trail.shift();
-    ixLast = [x, y, t];
+    IX.trail.push([x, y, t, (x - ixLast[0]) / dt, (y - ixLast[1]) / dt]);
+    ixLast = [x, y, t]; ixLastT = t;
     ixKick();
   });
   addEventListener("pointerup", () => (ixLast = null));
@@ -2889,11 +2914,12 @@
       const k = Math.min(dpr * sc, 2400 / Math.max(st.w, st.h)); W = Math.round(st.w * k); H = Math.round(st.h * k);
       ox = (innerWidth - st.w * sc) / 2; oy = (innerHeight - st.h * sc) / 2;
     }
+    let lastT = -9;
     function pointer(now) {
       if (!inter) return null;
-      const out = {};
-      for (const id of ["touch", "trail"]) { const life = (st.fx[id] && st.fx[id].life) || 2; IX[id] = IX[id].filter((e) => now - e[2] < life); out[id] = IX[id].map((e) => [e[0], e[1], now - e[2], e[3] || 0, e[4] || 0]); }
-      return out;
+      const life = (st.fx.touch && st.fx.touch.life) || 2;
+      IX.touch = IX.touch.filter((e) => now - e[2] < life); IX.trail = IX.trail.filter((e) => now - e[2] < 1);
+      return { now, touch: IX.touch.map((e) => [e[0], e[1], now - e[2]]), trail: IX.trail.slice() };
     }
     function frame(nowMs) {
       const now = nowMs / 1000, raw = moving ? (((nowMs - t0) / 1000) % st.motion.dur) / st.motion.dur : 0;
@@ -2903,7 +2929,7 @@
         time: sf._t || (animFx && !moving ? (now / 8) % 1 : 0), motion: sf._t != null ? st.motion.type : "still", motionAmt: st.motion && st.motion.amt, objects, palette: D.palette, contours: spec, pointer: pointer(now) });
     }
     let raf = 0;
-    const live = () => moving || animFx || IX.touch.length || IX.trail.length;
+    const live = () => moving || animFx || IX.touch.length || (fxOn("trail") && performance.now() / 1000 - lastT < ((st.fx.trail && st.fx.trail.life) || 1.6) + 0.6);
     function loop(ms) { raf = 0; frame(ms); if (live()) raf = requestAnimationFrame(loop); }
     const kick = () => { if (!raf) raf = requestAnimationFrame(loop); };
     const pt = (e) => [(e.clientX - ox) / sc, st.h - (e.clientY - oy) / sc];
@@ -2912,7 +2938,7 @@
       if (!fxOn("trail") || !last || !(e.buttons & 1 || e.pointerType === "touch")) return;
       const [x, y] = pt(e), t = performance.now() / 1000, dt = Math.max(1 / 240, t - last[2]);
       if (Math.hypot(x - last[0], y - last[1]) < st.w / 300) return;
-      IX.trail.push([x, y, t, (x - last[0]) / dt, (y - last[1]) / dt]); if (IX.trail.length > 32) IX.trail.shift(); last = [x, y, t]; kick();
+      IX.trail.push([x, y, t, (x - last[0]) / dt, (y - last[1]) / dt]); last = [x, y, t]; lastT = t; kick();
     });
     addEventListener("pointerup", () => (last = null));
     addEventListener("resize", () => { size(); kick(); });
