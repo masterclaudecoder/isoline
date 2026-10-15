@@ -141,23 +141,24 @@
     ["Twitch", ["#0e0e10", "#9146ff", "#efeff1"]],
     ["Shopify", ["#002e25", "#008060", "#95bf47", "#f6f6f1"]],
     ["Google", ["#4285f4", "#ea4335", "#fbbc05", "#34a853", "#ffffff"]],
-    // Russian brands. Yandex Neo is Yandex Music's My Wave glow; Yandex Intel is the blue-to-violet of
-    // the Alice AI products. Values are from brand references (logotyp.us, What the Logo, BrandPalettes)
-    // where they list them; Ozon, T-Bank, Avito and MegaFon are taken from their logos.
+    // Russian brands, read from the official logo files (Wikimedia Commons SVGs from each bank's site:
+    // Yandex, Sber, Alfa, VTB, MegaFon, Wildberries) or the brands' own websites (Alice AI for Yandex
+    // Intel, MTS, Kaspersky, Avito, VK's brand page). Yandex Neo is Yandex Music's My Wave glow. T-Bank and
+    // Ozon block automated access, so theirs come from their logos as commonly reproduced.
     ["Yandex Neo", ["#050407", "#7a0f5c", "#e0336f", "#f2a81d", "#f4e04d"], ["#e0336f", "#f4e04d", "#050407"]],
     ["Yandex", ["#000000", "#fc3f1d", "#ffffff"], ["#fc3f1d", "#000000", "#ffffff"]],
-    ["Yandex Intel", ["#0b0820", "#4a26ff", "#d228ff", "#f3eaff"], ["#4a26ff", "#d228ff", "#0b0820"]],
-    ["Alfa", ["#000000", "#ee3424", "#ffffff"], ["#000000", "#ffffff", "#ee3424"]],
-    ["Sber", ["#f2e913", "#21a038", "#47b6a1", "#0291eb", "#ffffff"], ["#21a038", "#0291eb", "#ffffff"]],
-    ["VTB", ["#243776", "#004b8d", "#ffffff"], ["#243776", "#004b8d", "#ffffff"]],
+    ["Yandex Intel", ["#120a2e", "#6335e0", "#7a55ff", "#a88cff", "#f3efff"], ["#6335e0", "#a88cff", "#120a2e"]],
+    ["Alfa", ["#000000", "#ef3124", "#ffffff"], ["#000000", "#ffffff", "#ef3124"]],
+    ["Sber", ["#f2e913", "#a3cd39", "#21a038", "#0fa8e0", "#0291eb", "#ffffff"], ["#21a038", "#0291eb", "#ffffff"]],
+    ["VTB", ["#0a2973", "#009fdf", "#ffffff"], ["#0a2973", "#009fdf", "#ffffff"]],
     ["T-Bank", ["#333333", "#ffdd2d", "#ffffff"], ["#333333", "#ffffff", "#ffdd2d"]],
     ["Ozon", ["#001a34", "#005bff", "#f91155", "#ffffff"], ["#005bff", "#f91155", "#ffffff"]],
-    ["Wildberries", ["#2b0a3d", "#be11a5", "#e08ed4", "#f8e4f4"], ["#be11a5", "#e08ed4", "#2b0a3d"]],
+    ["Wildberries", ["#2b0a3d", "#e313bf", "#f7d4f1"], ["#e313bf", "#2b0a3d", "#f7d4f1"]],
     ["MTS", ["#000000", "#e30613", "#ffffff"], ["#e30613", "#000000", "#ffffff"]],
     ["VK", ["#19191a", "#0077ff", "#ffffff"], ["#0077ff", "#19191a", "#ffffff"]],
-    ["Avito", ["#00aaff", "#04e061", "#ff4053", "#965eeb", "#ffffff"], ["#965eeb", "#00aaff", "#ffffff"]],
-    ["MegaFon", ["#1f1f1f", "#731982", "#00b956", "#ffffff"], ["#731982", "#00b956", "#ffffff"]],
-    ["Kaspersky", ["#1d1d1b", "#009982", "#ffffff"], ["#009982", "#1d1d1b", "#ffffff"]],
+    ["Avito", ["#00aaff", "#97cf26", "#ff6163", "#a169f7", "#ffffff"], ["#a169f7", "#00aaff", "#ffffff"]],
+    ["MegaFon", ["#1f1f1f", "#00b956", "#ffffff"], ["#00b956", "#1f1f1f", "#ffffff"]],
+    ["Kaspersky", ["#1d1d1b", "#00a88e", "#ffffff"], ["#00a88e", "#1d1d1b", "#ffffff"]],
   ];
   const lum = (h) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
   // Lines take the darkest color, the blend a middle one and the background the lightest.
@@ -327,7 +328,7 @@
     ["Noise", "Smoke", { ...G("noise", ["#060608", "#1d1d22", "#5b5b66", "#c9c9d1", "#ffffff"], { noise: "smoke", scale: 1.4, detail: 4, warp: 0.3, stretch: 1.2, contrast: 1.1, angle: 25 }), fx: { glyphs: { cell: 11, set: "alnum", font: "geist", contrast: 1.3, change: 2, back: 0, mono: false } }, motion: { type: "breathe", dur: 10, amt: 0.5 } }],
     ["Noise", "Lagoon", { ...G("aura", ["#02161c", "#05607a", "#0fb5d0", "#3fe3ef", "#b8fbff"], { scale: 2.2, detail: 3, warp: 0.6, stretch: 0.8, soft: 2.4, contrast: 0.25, angle: -30 }), motion: { type: "breathe", dur: 12, amt: 0.6 } }],
     // Alfa-Bank's advertising: flat black shapes floating on their red.
-    ["Gradients", "Alfa", { ...G("linear", ["#d9271a", "#ee3424", "#f44a3b"], { angle: 115, warp: 0.15, soft: 1 }), objects: [{ kind: "image", x: 0.6, y: 0.6, size: 0.52, rot: -6, tilt: 16, spin: -14, mat: "vanta", shine: 0.4, ripple: 0, round: 0.2, shadow: 0.35, image: "" }, { kind: "capsule", x: 0.18, y: 0.3, size: 0.34, rot: 38, tilt: 10, spin: 20, mat: "vanta", shine: 0.4, ripple: 0, round: 0.15, shadow: 0.3, image: "" }, { kind: "sphere", x: 0.86, y: 0.2, size: 0.18, rot: 0, tilt: 0, spin: 0, mat: "vanta", shine: 0.4, ripple: 0, round: 0.15, shadow: 0.25, image: "" }] }],
+    ["Gradients", "Alfa", { ...G("linear", ["#da2618", "#ef3124", "#f5473a"], { angle: 115, warp: 0.15, soft: 1 }), objects: [{ kind: "image", x: 0.6, y: 0.6, size: 0.52, rot: -6, tilt: 16, spin: -14, mat: "vanta", shine: 0.4, ripple: 0, round: 0.2, shadow: 0.35, image: "" }, { kind: "capsule", x: 0.18, y: 0.3, size: 0.34, rot: 38, tilt: 10, spin: 20, mat: "vanta", shine: 0.4, ripple: 0, round: 0.15, shadow: 0.3, image: "" }, { kind: "sphere", x: 0.86, y: 0.2, size: 0.18, rot: 0, tilt: 0, spin: 0, mat: "vanta", shine: 0.4, ripple: 0, round: 0.15, shadow: 0.25, image: "" }] }],
     ["Gradients", "Orb", { ...G("radial", "Dusk", { warp: 0.2, soft: 1.6 }), objects: [{ kind: "blob", x: 0.5, y: 0.5, size: 0.62, tilt: 29, spin: 25, mat: "shaded", shine: 0.6, ripple: 0.3, shadow: 0.35 }], fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Gradients", "Ring", { ...G("radial", "Glacier", { warp: 0, soft: 2 }), objects: [{ kind: "torus", x: 0.5, y: 0.5, size: 0.66, tilt: 29, spin: -30, mat: "shaded", shine: 0.8, shadow: 0.3 }], fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Gradients", "Glass orbs", { ...G("flow", "Prism", { warp: 0.6, scale: 0.45 }), objects: [{ kind: "sphere", x: 0.34, y: 0.42, size: 0.44, mat: "glass", shine: 0.9, shadow: 0.25 }, { kind: "capsule", x: 0.7, y: 0.58, size: 0.4, rot: -30, tilt: 10, spin: 60, mat: "glass", shine: 0.9, shadow: 0.25 }] }],
