@@ -1322,7 +1322,8 @@ kbd { font-family: var(--mono); }
 
 /* ---------- builder stage: a page of a real size ---------- */
 .cp-replay { margin-top: 14px; }
-.seg.wrap5 { grid-auto-flow: row; grid-template-columns: repeat(5, 1fr); }
+.seg.wrap5 { grid-auto-flow: row; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.seg.wrap5 button { padding: 0 2px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .seg.wrap5 button { padding: 0 4px; }
 .cp-pals .sug.on { background: var(--accent-soft); color: var(--accent-ink); }
 .cp-art { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px; align-items: center; margin: 14px 0 12px; }
@@ -1752,7 +1753,8 @@ a.btn { text-decoration: none; color: inherit; }
 .pal-empty { display: grid; justify-items: start; gap: 10px; padding: 16px; border-radius: 12px; background: var(--well); color: var(--muted); font-size: 13px; }
 .pal-empty p { margin: 0; }
 /* Whatever opens a panel sits right under its title, without a separator above it. */
-.panel-sec > .lead, .panel-sec > .lead > :is(h3.sub, .sub-head, .grp):first-child { border-top: 0 !important; padding-top: 0 !important; }
+/* A segmented control leading a panel keeps its own inner padding, or its pill would touch the track's top. */
+.panel-sec > .lead:not(.seg), .panel-sec > .lead > :is(h3.sub, .sub-head, .grp):first-child { border-top: 0 !important; padding-top: 0 !important; }
 /* Key letters sit on the same center line as the shift arrow: the text box is trimmed to the capitals. */
 @supports (text-box: trim-both cap alphabetic) { kbd { text-box: trim-both cap alphabetic; padding: 4.5px 5px; } kbd .kbd-ic { width: 9px; height: 9px; } }
 /* While the frame glides to a new size, the picture inside is cropped to it rather than squeezed. */
