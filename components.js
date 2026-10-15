@@ -207,11 +207,10 @@
   const av = (t, i) => `<span class="k-av" style="--i:${i}">${t}</span>`;
   // The demo product is a document review tool, so the pages can show real content (drafts, comments,
   // sign-offs) instead of placeholder metrics. Each page is built for one task with one focal point.
-  // Margin's mark: three lines of a draft with a comment pinned in the margin beside the first, on an
-  // accent tile. The wordmark is set tight in the heading font.
   // The mark: a lowercase m drawn as two arches; its last leg stops short and ends in a note in the accent,
-  // which sits on the same baseline as the other legs.
-  const LOGO = `<span class="k-brand"><svg class="k-mark" viewBox="0 0 24 24" aria-hidden="true"><path class="k-mk-m" d="M2.5 20.5V6a3.5 3.5 0 0 1 7 0v14.5M9.5 20.5V6a3.5 3.5 0 0 1 7 0v6.8"/><circle class="k-mk-n" cx="16.5" cy="19.6" r="2.6"/></svg><span class="k-word">Margin</span></span>`;
+  // which sits on the same baseline as the other legs. The view box is cropped to the drawing, so the
+  // mark can be sized to the wordmark's capitals and sit on its baseline.
+  const LOGO = `<span class="k-brand"><svg class="k-mark" viewBox="0.8 0.8 18.3 21.4" aria-hidden="true"><path class="k-mk-m" d="M2.5 20.5V6a3.5 3.5 0 0 1 7 0v14.5M9.5 20.5V6a3.5 3.5 0 0 1 7 0v6.8"/><circle class="k-mk-n" cx="16.5" cy="19.6" r="2.6"/></svg><span class="k-word">Margin</span></span>`;
   // On a phone the links fold into a menu behind a full-size burger; it drops down over the page.
   const NAV = (cta = "Try it free") => `<nav class="k-nav">${LOGO}<span class="k-nl">Product</span><span class="k-nl">Pricing</span><span class="k-nl">Changelog</span><span class="k-grow"></span><span class="k-link k-nl">Sign in</span><button class="k-btn k-sm">${cta}</button><button class="k-btn k-ghost k-icon k-burger" title="Menu" aria-label="Menu">${ki("menu", "k-i-open")}${ki("x", "k-i-close")}</button>
       <div class="k-mnav">${["Product", "Pricing", "Changelog", "Sign in"].map((t) => `<span>${t}</span>`).join("")}<button class="k-btn k-lg">${cta}</button></div></nav>`;
@@ -221,9 +220,6 @@
       <div class="k-cmt">${av("AL", 0)}<div><b>Ada Lovelace</b><span class="k-small">10:51</span><p>Good catch. Added a sentence on renewals.</p></div></div>
       ${open ? `<div class="k-reply"><span>Reply</span><button class="k-btn k-sm" data-k="resolve">Resolve</button></div><div class="k-resolved">${ki("check")}<span>Resolved by you</span><span class="k-link" data-k="reopen">Reopen</span></div>` : ""}
     </div>`;
-  // The suggestion is set as a page: one sentence in large type with the change in place, and Sam's note
-  // beside it in the margin.
-  const SUGGEST = `<section class="k-said k-suggest"><p class="k-said-line">From 1 April, the Team plan includes <del>ten</del> <ins>unlimited</ins> documents and five sign-off requests a month.</p><div class="k-said-note"><div class="k-cmt">${av("SK", 2)}<div><b>Sam Kerr</b><span class="k-small">suggested a change</span></div></div><div class="k-row k-sg-acts"><button class="k-btn k-sm k-ghost" data-k="reject">Reject</button><button class="k-btn k-sm" data-k="accept">Accept</button></div><div class="k-row k-sg-done"><span class="k-small"></span><span class="k-link" data-k="sg-undo">Undo</span></div></div><div class="k-said-foot"><h2 class="k-h2">Suggest the change, don't describe it</h2><p class="k-p">Type over the text and it becomes a suggestion. The author takes it or leaves it with one key, and the draft remembers who changed what.</p></div></section>`;
   // The product picture: a draft open in the editor, with its comment thread beside the line it's about.
   const EDITOR = `<div class="k-shot"><div class="k-shot-bar"><span>Spring pricing update</span><span class="k-small">Draft 4, edited by Ada</span><span class="k-grow"></span><span class="k-faces">${["AL", "LW", "SK"].map(av).join("")}</span><button class="k-btn k-sm" data-k="signoff">Request sign-off</button></div>
       <div class="k-shot-body">
@@ -283,14 +279,35 @@
         <div class="k-radios">${["Anyone with the link", "People in Marketing", "Only me"].map((t, n) => `<label class="k-radio"><span class="k-dot${n === 1 ? " on" : ""}"></span>${t}</label>`).join("")}</div></div>
       </section>
     </div>`;
-  const LAYOUTS = {
-    home: ["Home", `${NAV()}
-      <section class="k-hero"><h1 class="k-h1">Review drafts right where they're written</h1><div class="k-hero-side"><p class="k-lead">Every comment sits in the margin, next to the line it's about. Settle it in place, then publish the moment everyone signs off.</p><div class="k-row"><button class="k-btn k-lg">Start a draft</button><span class="k-link k-under" data-k="how">See how review works${ki("arrow")}</span></div><span class="k-small">Free for three editors. No card needed.</span></div></section>
+  // ---------- the home page's product views ----------
+  // Each view is the editor again (the same bar, draft and margin as the picture at the top), with the
+  // margin showing one part of the work: a suggestion, the sign-off, two drafts compared.
+  const BAR = () => `<div class="k-shot-bar"><span>Spring pricing update</span><span class="k-small">Draft 4</span><span class="k-grow"></span><span class="k-faces">${["AL", "LW", "SK"].map(av).join("")}</span></div>`;
+  const DOC = (body) => `<div class="k-doc"><h3 class="k-h3">What's changing in April</h3>${body}<p class="k-ghostline"></p><p class="k-ghostline k-short"></p></div>`;
+  const VIEWS = {
+    suggest: `<div class="k-shot-body k-suggest">${DOC(`<p>From 1 April, the Team plan includes <del>ten</del> <ins>unlimited</ins> documents and five sign-off requests a month.</p><p>Existing customers keep their current price until their next renewal.</p>`)}<div class="k-margin k-mg-top"><div class="k-cmt">${av("SK", 2)}<div><b>Sam Kerr</b><span class="k-small">suggested a change</span><p>Unlimited is what we announced. <b class="k-at">@Ada</b> can you check?</p></div></div><div class="k-row k-end k-sg-acts"><button class="k-btn k-sm k-ghost" data-k="reject">Reject</button><button class="k-btn k-sm" data-k="accept">Accept</button></div><div class="k-row k-sg-done"><span class="k-small"></span><span class="k-link" data-k="sg-undo">Undo</span></div></div></div>`,
+    signoff: `<div class="k-shot-body">${DOC(`<p>From 1 April, the Team plan includes unlimited documents and five sign-off requests a month.</p><p>Existing customers keep their current price until their next renewal.</p>`)}<div class="k-margin k-mg-top"><b class="k-mg-h">Sign-off</b><p class="k-small">Two of three have signed off. It publishes when Sam does.</p>${[["AL", "Ada Lovelace", "Signed Tuesday", 0, 1], ["LW", "Lin Wei", "Signed today", 1, 1], ["SK", "Sam Kerr", "Asked yesterday", 2, 0]].map(([a, n, w, i, ok]) => `<div class="k-mg-row">${av(a, i)}<div><b>${n}</b><span class="k-small">${w}</span></div>${ok ? `<span class="k-mg-ok">${ki("check")}</span>` : `<span class="k-link" data-k="nudge">Remind</span>`}</div>`).join("")}</div></div>`,
+    history: `<div class="k-shot-body">${DOC(`<p>From 1 April, the Team plan includes <del>ten</del> <ins>unlimited</ins> documents and <del>three</del> <ins>five</ins> sign-off requests a month.</p><p><ins>Existing customers keep their current price until their next renewal.</ins></p>`)}<div class="k-margin k-mg-top"><b class="k-mg-h">Comparing two drafts</b>${[["Draft 4", "Today, Ada", 1], ["Draft 3", "Monday, Sam", 1], ["Draft 2", "2 April, Ada", 0], ["Draft 1", "28 March, Lin", 0]].map(([d, w, on]) => `<div class="k-mg-row k-ver${on ? " on" : ""}"><span class="k-check"><span class="k-box${on ? " on" : ""}"></span></span><div><b>${d}</b><span class="k-small">${w}</span></div></div>`).join("")}</div></div>`,
+  };
+  // Closing: bring a draft in. The field is a real-looking import that runs when you press it.
+  const IMPORT = `<div class="k-import"><div class="k-import-row"><span class="k-input">docs.google.com/document/d/1Xf9…/edit</span><button class="k-btn" data-k="import">Import</button></div><div class="k-import-busy"><div class="k-progress"><i></i></div><span class="k-small">Bringing in the text and 14 comments</span></div><div class="k-import-done"><b>Spring pricing update</b><span class="k-small">Imported with its 14 comments and 3 suggestions.</span><span class="k-row"><button class="k-btn k-sm">Open draft</button><span class="k-link" data-k="import-again">Import another</span></span></div><p class="k-small">Or drop a .docx or Markdown file here.</p></div>`;
+  const CLOSE = `<section class="k-close k-close-imp"><div><h2 class="k-h2">Bring the draft you already have</h2><p class="k-p">Paste a Google Doc link or drop a file. Its comments and suggestions come with it.</p><div class="k-row"><button class="k-btn">Start a draft</button><button class="k-btn k-ghost">Talk to us</button></div></div>${IMPORT}</section>`;
+  const LEAD = `<p class="k-lead">Every comment sits in the margin, next to the line it's about. Settle it in place, then publish the moment everyone signs off.</p><div class="k-row"><button class="k-btn k-lg">Start a draft</button><span class="k-link k-under" data-k="how">See how review works${ki("arrow")}</span></div><span class="k-small">Free for three editors. No card needed.</span>`;
+  // The headline, copy and buttons stacked on the left, the editor, then three spreads, each a part of
+  // the product on its own backdrop (the artwork, or a tint of the accent) beside what it does.
+  const SPREADS = [
+    ["suggest", "Suggest the change, don't describe it", "Type over the text and it becomes a suggestion. The author takes it or leaves it with one key, and the draft remembers who changed what.", ["Mention anyone with @. They can reply from their email.", "Every change keeps its author and time."]],
+    ["signoff", "It publishes when the last person signs off", "Name who approves a draft. Margin asks them, reminds them once, and publishes to your site, help center or a PDF the moment the last one says yes.", ["Anyone can see who's still to approve.", "Sign-off can follow the order you set."]],
+    ["history", "Compare any two drafts, down to the word", "Pick two versions and see exactly what moved between them, who moved it and when.", ["Restore any earlier draft.", "Send the comparison as a PDF."]],
+  ];
+  const HOME = `${NAV()}
+      <section class="k-hero k-hero-stack"><h1 class="k-h1">Review drafts right where they're written</h1>${LEAD}</section>
       <div class="k-showcase">${EDITOR}</div>
-      ${SUGGEST}
-      <section class="k-rows">${[["Mentions", "Type @ and a name to pull someone into a thread. They can reply straight from their email."], ["Sign-off", "Name who approves a draft. It publishes when the last of them says yes."], ["Version history", "Compare any two drafts side by side, down to the word."], ["Publishing", "Send the final draft to your site, a help center or a PDF."]].map(([t, d]) => `<div><b>${t}</b><p class="k-p">${d}</p></div>`).join("")}</section>
-      <section class="k-close"><h2 class="k-h2">Bring the draft you already have</h2><p class="k-p">Paste it in or import a Google Doc. Your team can start commenting in a minute.</p><div class="k-row"><button class="k-btn">Start a draft</button><button class="k-btn k-ghost">Talk to us</button></div></section>
-      ${FOOT}<div class="k-sticky"><button class="k-btn k-lg">Start a draft</button></div>`],
+      ${SPREADS.map(([v, h, p, li], n) => `<section class="k-spread${n % 2 ? " k-flip" : ""}"><div class="k-spread-text"><h2 class="k-h2">${h}</h2><p class="k-p">${p}</p><ul>${li.map((x) => `<li>${x}</li>`).join("")}</ul></div><div class="k-frame"><div class="k-shot k-win">${BAR()}${VIEWS[v]}</div></div></section>`).join("")}
+      ${CLOSE}
+      ${FOOT}<div class="k-sticky"><button class="k-btn k-lg">Start a draft</button></div>`;
+  const LAYOUTS = {
+    home: ["Home", HOME],
     article: ["Article", `${NAV()}
       <div class="k-article">
         <article>
@@ -861,7 +878,14 @@
       el._t = setTimeout(() => { el.classList.replace("k-wait", "k-done"); el.innerHTML = ki("check") + "Signed off"; pulse(el); }, 1600);
       return;
     }
-    if (k === "how") { at(".k-page")?.querySelector(".k-showcase")?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    if (k === "nudge") { el = at("[data-k]"); el.textContent = "Reminded"; el.removeAttribute("data-k"); pulse(el); return; }
+    if ((el = at(".k-ver"))) { const on = el.classList.toggle("on"); el.querySelector(".k-box")?.classList.toggle("on", on); return; }
+    if (k === "import" || k === "import-again") {
+      const box = at(".k-import"); clearTimeout(box._t); box.classList.remove("busy", "done");
+      if (k === "import") { box.classList.add("busy"); box._t = setTimeout(() => { box.classList.replace("busy", "done"); pulse(box.querySelector(".k-import-done")); }, 1500); }
+      return;
+    }
+    if (k === "how") { at(".k-page")?.querySelector(".k-spread")?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
         if ((el = at(".k-tabs > span"))) {
       for (const s of el.parentElement.children) s.classList.toggle("on", s === el);
       const head = el.closest(".k-price-head");
@@ -1042,7 +1066,7 @@
   // random, leaving where you are in the tool alone. The home page's logo uses it.
   function remix(hexes) {
     const pick = (a) => a[Math.floor(Math.random() * a.length)];
-    Object.assign(K, { pair: Math.floor(Math.random() * PAIRS.length), head: "", body: "", scale: pick([1.2, 1.25, 1.333]), radius: pick([0, 4, 6, 8, 12, 16]), pill: Math.random() < 0.25, density: pick([0.9, 1, 1.1]), elevation: pick(Object.keys(SHADOWS)), tint: pick(["neutral", "tinted", "tinted", "bold"]), ease: pick(["out", "inout", "spring"]) });
+    Object.assign(K, { pair: Math.floor(Math.random() * PAIRS.length), head: "", body: "", scale: pick([1.2, 1.25]), radius: pick([0, 4, 6, 8, 12, 16]), pill: Math.random() < 0.25, density: pick([0.9, 1, 1.1]), elevation: pick(Object.keys(SHADOWS)), tint: pick(["neutral", "tinted", "tinted", "bold"]), ease: pick(["out", "inout", "spring"]) });
     if (hexes?.length) { K.follow = false; K.src = hexes.slice(); K.srcKey = "tool"; K.rc = fromSource(); }
     save();
     // A kit that wears the Studio design picks up the new one too.

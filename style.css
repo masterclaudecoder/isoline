@@ -2064,8 +2064,11 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 
 /* ---------- 1.17: Margin's landing page ---------- */
 /* The mark: two arches in the text color make a lowercase m; its last leg ends in a note in the accent.
-   No tile behind it, so it reads on any background. */
-.k-mark { width: 1.15em; height: 1.15em; }
+   It stands on the wordmark's baseline, a little taller than its capitals, and the wordmark is trimmed
+   to its capitals, so the logo centers on the same line as a button beside it. */
+.k-brand { align-items: baseline; line-height: 1; }
+.k-brand .k-word { text-box: trim-both cap alphabetic; }
+.k-mark { height: 0.94em; height: 1.3cap; width: auto; aspect-ratio: 18.3 / 21.4; flex: none; overflow: visible; }
 .k-mark .k-mk-m { fill: none; stroke: currentColor; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
 .k-mark .k-mk-n { fill: var(--k-accent); stroke: none; }
 .k-brand .k-word { letter-spacing: -0.035em; }
@@ -2074,16 +2077,54 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .k-under { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .k-landing .k-pg-home .k-hero .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 5.2cqi); max-width: 12em; }
 .cps-win .k-landing .k-pg-home .k-hero .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 4.4cqi); }
-/* Suggestions: one sentence set large like a page, the change in place, Sam's note in the margin beside
-   it on a hairline in the accent, and the heading and copy small underneath. */
-.k-said { display: grid; grid-template-columns: minmax(0, 1fr) minmax(12em, 16em); column-gap: var(--k-s12); row-gap: var(--k-s8); padding-top: var(--k-s12); margin-bottom: var(--k-s16); border-top: 1px solid var(--k-border); }
-.k-said-line { margin: 0; font-family: var(--k-head), system-ui; font-weight: 500; font-size: clamp(var(--k-xl), 3.3cqi, var(--k-3xl)); line-height: 1.32; letter-spacing: var(--k-track); color: var(--k-text); text-wrap: pretty; }
-.k-said-note { align-self: start; display: grid; gap: var(--k-s3); padding: var(--k-s1) 0 var(--k-s1) var(--k-s4); border-left: 2px solid var(--k-accent); }
-.k-said-note .k-sg-done { flex-wrap: wrap; }
-.k-said-foot { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--k-s8); align-items: baseline; }
-.k-said-foot .k-h2 { font-size: var(--k-lg); margin: 0; }
-.k-said-foot .k-p { margin: 0; color: var(--k-muted); }
-.k-suggest.accepted ins { border-bottom-color: transparent; }
+/* Home: the hero stacked on the left, so the product picture follows straight under it. */
+.k-hero-stack { grid-template-columns: minmax(0, 1fr); justify-items: start; gap: var(--k-s4); padding-bottom: var(--k-s12); }
+.k-hero-stack .k-h1 { max-width: 13em; margin-bottom: var(--k-s2); }
+.k-hero-stack .k-lead { max-width: 34em; margin: 0; }
+.k-hero-stack .k-row { gap: var(--k-s6); margin-top: var(--k-s2); }
+/* Product views: the editor's margin shows one part of the work. */
+.k-mg-top { padding-top: 28px; display: grid; gap: 12px; align-content: start; }
+.k-mg-h { font-size: 15px; }
+.k-mg-top > .k-small { margin: -6px 0 2px; }
+.k-mg-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--k-border); }
+.k-mg-row > div { display: grid; flex: 1; min-width: 0; }
+.k-mg-row b { font-size: 14px; }
+.k-mg-ok { color: var(--k-accent); display: inline-flex; }
+.k-mg-ok .k-ic { width: 18px; height: 18px; }
+.k-ver { cursor: pointer; }
+.k-at { color: var(--k-accent); font-weight: 600; }
+.k-margin .k-cmt p { margin: 4px 0 0; }
+/* Spreads: the view sits on the artwork (or a tint of the accent) and runs off the edge, like
+   a crop of the real app. */
+.k-spread { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--k-s12); align-items: center; margin-bottom: var(--k-s16); }
+.k-flip { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+.k-flip > .k-spread-text { order: 2; }
+.k-spread-text { display: grid; gap: var(--k-s4); }
+.k-spread-text .k-h2, .k-spread-text .k-p { margin: 0; }
+.k-spread-text .k-p { color: var(--k-muted); }
+.k-spread-text ul { list-style: none; margin: var(--k-s2) 0 0; padding: 0; }
+.k-spread-text li { padding: var(--k-s3) 0; border-top: 1px solid var(--k-border); font-size: var(--k-sm); }
+.k-frame { border-radius: calc(var(--k-r) + 10px); overflow: hidden; padding: clamp(20px, 4cqi, 48px) clamp(20px, 4cqi, 48px) 0; background: color-mix(in srgb, var(--k-accent) 10%, var(--k-bg)); }
+.k-has-art .k-frame { background: var(--k-art) center / cover; }
+.k-win { max-height: 25em; margin-bottom: 0; border-bottom: 0; border-radius: calc(var(--k-r) + 6px) calc(var(--k-r) + 6px) 0 0; }
+.k-win .k-shot-body { grid-template-columns: minmax(0, 1fr) minmax(0, 250px); }
+.k-win .k-doc { padding: 28px 32px 32px; font-size: 15px; }
+.k-win .k-doc .k-h3 { font-size: 22px; }
+/* Closing: the words on the left, a working import on the right. */
+.k-close-imp { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--k-s12); align-items: center; justify-items: stretch; }
+.k-close-imp > div:first-child { display: grid; gap: var(--k-s3); justify-items: start; }
+.k-close-imp .k-h2, .k-close-imp .k-p { margin: 0; }
+.k-import { display: grid; gap: var(--k-s3); padding: var(--k-s6); border: 1.5px dashed var(--k-border); border-radius: calc(var(--k-r) + 6px); }
+.k-import-row { display: flex; gap: var(--k-s2); }
+.k-import-row .k-input { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--k-muted); }
+.k-import > p { margin: 0; }
+.k-import-busy, .k-import-done { display: none; }
+.k-import.busy .k-import-row, .k-import.done .k-import-row, .k-import.busy > p, .k-import.done > p { display: none; }
+.k-import.busy .k-import-busy { display: grid; gap: var(--k-s2); }
+.k-import.busy .k-progress i { animation: k-fill 1.5s var(--k-ease) both; }
+@keyframes k-fill { from { width: 4%; } to { width: 100%; } }
+.k-import.done .k-import-done { display: grid; gap: var(--k-s1); justify-items: start; }
+.k-import-done .k-row { margin-top: var(--k-s2); gap: var(--k-s4); }
 /* Threads resolve into a quiet line; the highlight they were about clears with them. */
 .k-resolved { display: none; align-items: center; gap: var(--k-s2); padding: var(--k-s2) var(--k-s3); border-radius: var(--k-r); background: color-mix(in srgb, var(--k-accent) 10%, transparent); font-size: var(--k-sm); }
 .k-resolved .k-ic { width: 16px; height: 16px; color: var(--k-accent); flex: none; }
@@ -2123,8 +2164,17 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
   .k-landing .k-pg-home .k-hero .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 11.5cqi); }
   .k-hero-side .k-row { align-items: stretch; }
   .k-hero-side .k-row .k-btn { width: 100%; }
-  .k-said { grid-template-columns: 1fr; row-gap: var(--k-s6); padding-top: var(--k-s8); margin-bottom: var(--k-s12); }
-  .k-said-foot { grid-template-columns: 1fr; gap: var(--k-s2); }
+  .k-hero-stack .k-row { justify-self: stretch; align-items: stretch; }
+  .k-hero-stack .k-row .k-btn { width: 100%; }
+  .k-spread, .k-close-imp { grid-template-columns: minmax(0, 1fr); gap: var(--k-s6); margin-bottom: var(--k-s12); }
+  .k-flip > .k-spread-text { order: 0; }
+  .k-frame { padding: 16px 16px 0; }
+  .k-win { max-height: none; }
+  .k-win .k-doc { padding: 20px; }
+  .k-win .k-shot-body { grid-template-columns: minmax(0, 1fr); }
+  .k-win .k-doc .k-ghostline, .k-win .k-doc .k-h3 { display: none; }
+  .k-win .k-doc { padding: 20px 20px 28px; font-size: 15px; }
+  .k-import-row { flex-direction: column; }
   .k-sticky { display: block; position: sticky; bottom: 12px; z-index: 4; margin-top: var(--k-s4); }
   .k-sticky .k-btn { width: 100%; box-shadow: 0 14px 30px -10px rgba(0,0,0,.4); }
   .k-margin { margin: -14px 10px 10px; padding: 14px 16px 16px; border: 1px solid var(--k-border); border-radius: calc(var(--k-r) + 8px); background: var(--k-surface); box-shadow: 0 -12px 30px -18px rgba(0,0,0,.35); position: relative; }
