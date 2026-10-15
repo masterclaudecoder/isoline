@@ -1436,8 +1436,11 @@
   }
   // Endless Flow never loops: time runs on unbounded and unshaped, so the morph never comes back round.
   const endless = (m = S.motion) => !!m?.endless && m.type === "breathe";
+  const unbound = (m = S.motion) => endless(m) && !!m.unbound;
   function motionT(raw, m = S.motion) {
-    if (endless(m)) return m.dir < 0 ? -raw : raw;
+    // Endless keeps the easing curve, once per loop length: each stretch eases from one whole number to
+    // the next, so speed changes the way the curve says and never jumps where stretches meet.
+    if (endless(m)) { const n = Math.floor(raw), u = n + bezier(raw - n, m.ease === "custom" ? m.bez : EASES[m.ease] || EASES.linear); return m.dir < 0 ? -u : u; }
     let u = m.mode === "pingpong" ? 1 - Math.abs(1 - 2 * raw) : raw;
     u = bezier(u, m.ease === "custom" ? m.bez : EASES[m.ease] || EASES.linear);
     return m.dir < 0 ? 1 - u : u;
@@ -1457,7 +1460,15 @@
       // The read point moves at a constant speed and nothing else swells, so the morph keeps an even pace.
       // Endless: two more turns at irrational rates ride on the circle, so the path never closes and no
       // stretch of the morph ever repeats.
-      else if (endless(m)) { o.loopX = 0.45 * a * (Math.cos(tw + a0) + 0.6 * Math.cos(tw * 1.618 + 1.3)); o.loopY = 0.45 * a * (Math.sin(tw + a0) + 0.6 * Math.sin(tw * 1.414 + 0.7)); o.warp = Math.max(st.warp, 0.4 * a); }
+      // The extra turns are slower than the main one (0.618 and 0.414 of it), so their pulls can never
+      // cancel it out: the morph keeps a steady pace instead of stalling now and then. Unbound also travels
+      // steadily through the noise, faster than it circles, so it never comes back to any shape at all.
+      else if (endless(m)) {
+        const R = 0.45 * a, dr = unbound(m) ? 1.3 * R * tw : 0;
+        o.loopX = R * (Math.cos(tw + a0) + 0.5 * Math.cos(tw * 0.618 + 1.3) + 0.3 * Math.cos(tw * 0.414 + 2.1)) + dr * 0.8;
+        o.loopY = R * (Math.sin(tw + a0) + 0.5 * Math.sin(tw * 0.618 + 0.7) + 0.3 * Math.sin(tw * 0.414 + 0.4)) + dr * 0.6;
+        o.warp = Math.max(st.warp, 0.4 * a);
+      }
       else { o.loopX = 0.45 * a * Math.cos(tw + a0); o.loopY = 0.45 * a * Math.sin(tw + a0); o.warp = Math.max(st.warp, 0.4 * a); }
     }
     return o;
@@ -1475,11 +1486,15 @@
     const host = document.createElement("div"); $("motionCtrls").appendChild(host);
     makeSwitch(host, "Endless (no loop)", () => S.motion.endless, (v) => { S.motion.endless = v; if (v) S.motion.mode = "once"; });
     host.lastElementChild.dataset.tip = "Flow keeps morphing and never repeats. Exports run the whole length without coming back round";
+    // Unbound: only meaningful once Endless is on, so it stays dimmed until then.
+    makeSwitch(host, "Unbound", () => S.motion.unbound, (v) => (S.motion.unbound = v));
+    const ub = host.lastElementChild; ub.dataset.tip = "Travels on through the pattern for good, so the morph never even revisits similar shapes";
+    syncers.push(() => { const on = endless(); ub.classList.toggle("off", !on); ub.querySelector("input").disabled = !on; });
     syncers.push(() => {
       host.hidden = S.motion.type !== "breathe";
       const on = endless();
       for (const b of $("motionMode").children) if (b.dataset.v) b.disabled = on && b.dataset.v !== "once";
-      $("motionEase").closest(".dd, .seg")?.toggleAttribute("inert", on);
+
     });
   }
   makeSeg($("motionDir"), () => S.motion.dir, (v) => (S.motion.dir = v));
@@ -2443,7 +2458,7 @@
     });
   }
   const isImg = (st) => st.source === "gradient" && st.grad.type === "image";
-  const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image: isImg(st) ? imageCanvas(st, w, h) : image, grad: st.source === "gradient" && !isImg(st) ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper, time: st._t || 0, motion: st._t != null ? st.motion.type : "still", motionAmt: st.motion?.amt, endless: st._t != null && endless(st.motion), objects: objectsFor(st), palette: paletteOf(st) });
+  const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image: isImg(st) ? imageCanvas(st, w, h) : image, grad: st.source === "gradient" && !isImg(st) ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper, time: st._t || 0, motion: st._t != null ? st.motion.type : "still", motionAmt: st.motion?.amt, endless: st._t != null ? (unbound(st.motion) ? 2 : endless(st.motion) ? 1 : 0) : 0, objects: objectsFor(st), palette: paletteOf(st) });
   // Objects read the design's colors darkest first, so shading runs from shadow to highlight.
   const paletteOf = (st) => (st.source === "gradient" ? st.grad.colors : [st.bg, st.line, ...(st.mids || []), st.line2]).slice().sort((a, b) => lum(a) - lum(b));
   function objectsFor(st) {
@@ -2944,7 +2959,7 @@
     const st = clone(S);
     const objects = objectsFor(st).map((o) => ({ ...o, tex: null, texData: o.tex ? toData(o.tex) : null }));
     const data = { st, palette: paletteOf(st), objects, image: isImg(st) ? toData(imageCanvas(st, Math.min(2048, st.w), Math.min(2048, st.w) * st.h / st.w)) : null, svg: st.source === "contours" ? T.buildSVG(st).svg : "" };
-    const lib = `const EASES = ${JSON.stringify(EASES)};\nconst seedFrac = ${seedFrac.toString()};\nconst endless = ${endless.toString()};\n${bezier.toString()}\n${motionT.toString()}\n${motionState.toString()}`;
+    const lib = `const EASES = ${JSON.stringify(EASES)};\nconst seedFrac = ${seedFrac.toString()};\nconst endless = ${endless.toString()};\nconst unbound = ${unbound.toString()};\n${bezier.toString()}\n${motionT.toString()}\n${motionState.toString()}`;
     const run = `(${htmlRuntime.toString()})(${JSON.stringify(data).replace(/</g, "\\u003c")});`;
     const title = fileName().replace(/[<&]/g, "");
     return new Blob([`<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title>
@@ -2984,7 +2999,7 @@
       const sf = moving ? motionState(st, motionT(raw, st.motion)) : st;
       const spec = contours ? Topo.gpuSpec(sf, Math.max(sf.res || 1, 1.6 / Math.max(0.05, (W / st.w)))) : null;
       FX.render({ w: W, h: H, k: W / st.w, seed: st.seed, image, grad: st.source === "gradient" && !image ? sf.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper,
-        time: sf._t || (animFx && !moving ? (now / 8) % 1 : 0), motion: sf._t != null ? st.motion.type : "still", motionAmt: st.motion && st.motion.amt, endless: sf._t != null && endless(st.motion), objects, palette: D.palette, contours: spec, pointer: pointer(now) });
+        time: sf._t || (animFx && !moving ? (now / 8) % 1 : 0), motion: sf._t != null ? st.motion.type : "still", motionAmt: st.motion && st.motion.amt, endless: sf._t != null ? (unbound(st.motion) ? 2 : endless(st.motion) ? 1 : 0) : 0, objects, palette: D.palette, contours: spec, pointer: pointer(now) });
     }
     let raf = 0;
     const live = () => moving || animFx || IX.touch.length || (fxOn("trail") && performance.now() / 1000 - lastT < ((st.fx.trail && st.fx.trail.life) || 1.6) + 0.6);

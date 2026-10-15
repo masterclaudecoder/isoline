@@ -114,7 +114,9 @@ textarea::-webkit-scrollbar-thumb { border-width: 3px; }
 .slot { padding: 10px 0 12px; border-top: 1px solid var(--hair); }
 .slot:first-of-type { border-top: 0; padding-top: 0; }
 .slot-label { display: flex; align-items: center; gap: 6px; padding: 0 6px 7px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
-.count { font-family: var(--mono); font-size: 10.5px; font-weight: 600; min-width: 18px; height: 18px; line-height: 16px; text-align: center; padding: 0 4px; border-radius: 5px; background: var(--accent); color: var(--on-accent, #fff); border: 1px solid color-mix(in oklab, var(--accent) 55%, #000); box-sizing: border-box; font-variant-numeric: tabular-nums; }
+/* The border leans toward the theme's ink, so it reads on light and dark alike; figures have no descenders,
+   so they sit a pixel low to look centered. */
+.count { font-family: var(--mono); font-size: 10.5px; font-weight: 600; min-width: 18px; height: 18px; line-height: 15px; padding: 1px 4px 0; text-align: center; border-radius: 5px; background: var(--accent); color: var(--on-accent, #fff); border: 1px solid color-mix(in oklab, var(--accent) 62%, var(--ink)); box-sizing: border-box; font-variant-numeric: tabular-nums; }
 .tile {
   position: relative; display: flex; align-items: center; gap: 10px; width: 100%; border: 0; padding: 6px 8px 6px 6px; border-radius: 12px;
   background: var(--panel); box-shadow: var(--raised); text-align: left; transition: box-shadow .15s, background .15s;
@@ -188,7 +190,7 @@ h3.sub.inline { margin: 0; }
 #presetGrid.filtered .card-sub { display: none; }
 .card.var { padding: 3px; }
 .card.var .card-label { display: none; }
-.fx-card .added { position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 5px; display: none; place-items: center; background: var(--accent); color: #fff; border: 1px solid color-mix(in oklab, var(--accent) 55%, #000); box-sizing: border-box; box-shadow: 0 0 0 2px var(--panel); }
+.fx-card .added { position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 5px; display: none; place-items: center; background: var(--accent); color: #fff; border: 1px solid color-mix(in oklab, var(--accent) 62%, var(--ink)); box-sizing: border-box; box-shadow: 0 0 0 2px var(--panel); }
 .fx-card .added .ic { width: 12px; height: 12px; stroke-width: 2.4; }
 .fx-card.added .added { display: grid; }
 .fx-actions { display: flex; gap: 6px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--hair); }
@@ -1815,3 +1817,6 @@ html.vt-pal #mine .sw[data-pc="12"] { view-transition-name: pc-12; view-transiti
 .stage.full { position: fixed; inset: 0; z-index: 90; height: auto; min-height: 0; background: var(--bg); border-radius: 0; margin: 0; }
 .stage.full .stage-meta { display: none; }
 .stage.full .st-wide { display: none; }
+
+.switch-row.off { opacity: .45; }
+.switch-row.off .switch { pointer-events: none; }

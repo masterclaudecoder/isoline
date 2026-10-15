@@ -64,8 +64,11 @@
     const R = m.type === "breathe" ? 0.45 * a : m.type === "pulse" ? 0.5 * a : 0;
     // Endless Flow wanders up to 1.6 times as far, inside and outside the loop, so it samples both rings.
     const ring = (r, ph) => Array.from({ length: 6 }, (_, i) => [r * Math.cos(a0 + ph + (i * Math.PI) / 3), r * Math.sin(a0 + ph + (i * Math.PI) / 3)]);
-    const loops = R > 0 ? (m.endless && m.type === "breathe" ? [...ring(1.6 * R, 0), ...ring(0.6 * R, Math.PI / 6)] : ring(R, 0)) : [[0, 0]];
-    return { M, mx, my, cx: W / (mx - 1), cy: H / (my - 1), loops };
+    // Unbound travels on forever; the noise looks alike everywhere, so points further along its way stand
+    // in for the rest.
+    const along = m.unbound ? [3, 7, 12].map((d) => [0.8 * d * R + R, 0.6 * d * R]) : [];
+    const loops = R > 0 ? (m.endless && m.type === "breathe" ? [...ring(1.8 * R, 0), ...ring(0.6 * R, Math.PI / 6), ...along] : ring(R, 0)) : [[0, 0]];
+    return { M, mx, my, cx: W / (mx - 1), cy: H / (my - 1), loops, pad: m.unbound && m.endless && m.type === "breathe" ? 0.06 : 0.03 };
   }
   function buildField(s, w, h, res) {
     const cols = Math.max(2, Math.round(w / res)), rows = Math.max(2, Math.round(h / res));
@@ -172,7 +175,7 @@
         lx = ax; ly = ay;
         for (let j = 0; j < R.my; j++) for (let i = 0; i < R.mx; i++) { const v = valAt(-R.M + i * R.cx, -R.M + j * R.cy); if (v < lo) lo = v; if (v > hi) hi = v; }
       }
-      const pad = (hi - lo) * 0.03;
+      const pad = (hi - lo) * R.pad;
       mm = [lo - pad, hi + pad];
       if (rangeCache.size > 24) rangeCache.clear();
       rangeCache.set(key, mm);

@@ -330,11 +330,11 @@ void main() {
 
     // The union of the level ranges sampled round the loop, padded a little on both sides.
     frange: `
-uniform ivec2 uIn;
+uniform ivec2 uIn; uniform float uPad;
 void main() {
   float lo = 1e30, hi = -1e30;
   for (int i = 0; i < 16; i++) { if (i >= uIn.x) break; vec4 t = texelFetch(uTex, ivec2(i, 0), 0); lo = min(lo, t.r); hi = max(hi, t.g); }
-  float pad = (hi - lo) * 0.03;
+  float pad = (hi - lo) * uPad;
   o = vec4(lo - pad, hi + pad, 0.0, 1.0);
 }`,
 
@@ -518,9 +518,12 @@ void main() {
   // Flow's read points move slowly: at full amplitude the field still only morphs gently.
   float beat = uMotion == 4 ? pow(0.5 - 0.5 * cos(tw * 4.0), 3.0) : 0.0, lm = br ? 0.3 : uMotion == 4 ? 0.4 : 0.0;
   // Endless Flow adds turns at irrational rates, so the read points never close their path.
-  vec2 L1 = lm * 1.5 * uMotAmt * (vec2(cos(tw), sin(tw)) + uEndless * 0.6 * vec2(cos(tw * 1.618 + 1.3), sin(tw * 1.414 + 0.7)));
+  // Its extra turns are slower than the main one so they never cancel it (no stalls); Unbound (2) also
+  // travels steadily on through the noise, faster than it circles.
+  float en = min(uEndless, 1.0), ub = uEndless > 1.5 ? 1.3 * tw : 0.0;
+  vec2 L1 = lm * 1.5 * uMotAmt * (vec2(cos(tw), sin(tw)) + en * (0.5 * vec2(cos(tw * 0.618 + 1.3), sin(tw * 0.618 + 0.7)) + 0.3 * vec2(cos(tw * 0.414 + 2.1), sin(tw * 0.414 + 0.4))) + ub * vec2(0.8, 0.6));
   // Both read points travel at a constant speed, so the morph never hurries through part of the loop.
-  vec2 L2 = lm * 1.5 * uMotAmt * (vec2(sin(tw + 1.3), -cos(tw + 1.3)) + uEndless * 0.6 * vec2(sin(tw * 2.236 + 0.4), -cos(tw * 1.732 + 2.1)));
+  vec2 L2 = lm * 1.5 * uMotAmt * (vec2(sin(tw + 1.3), -cos(tw + 1.3)) + en * (0.5 * vec2(sin(tw * 0.618 + 0.4), -cos(tw * 0.618 + 2.1)) + 0.3 * vec2(sin(tw * 0.414 + 1.1), -cos(tw * 0.414 + 0.3))) + ub * vec2(-0.6, 0.8));
   p = 0.5 + (p - 0.5) * (1.0 - 0.07 * uMotAmt * beat);
   if (uType == 7) {
     // Wave, after Framer's Wave Gradient shader (the background of caddis.app): four colors in two soft
@@ -1461,7 +1464,7 @@ void main() {
           gl.blitFramebuffer(0, 0, 1, 1, i, 0, i + 1, 1, gl.COLOR_BUFFER_BIT, gl.NEAREST);
         });
         gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-        draw("frange", parts.t, keep.f, { uIn: [R.loops.length, 1] }, 1, 1, 1, 0);
+        draw("frange", parts.t, keep.f, { uIn: [R.loops.length, 1], uPad: R.pad }, 1, 1, 1, 0);
       }
       const mm = keep;
       let fieldTex = fld.t;
@@ -1600,7 +1603,7 @@ void main() {
           uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring", "aura", "smoke"].indexOf(g.noise || "clouds"),
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
           uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle),
-          uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5, uEndless: job.endless ? 1 : 0,
+          uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5, uEndless: +job.endless || 0,
         }, w, h, k, job.seed);
         input = targets.list[0].t; ping = 1;
       } else if (job.contours) {
