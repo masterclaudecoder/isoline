@@ -111,7 +111,7 @@
   // new kit, both in that palette. The first click only nudges the logo, so a stray click changes nothing;
   // from the second on, every click rolls again.
   let brandClicks = 0, remixing = false;
-  function remixAll() {
+  async function remixAll() {
     const mark = $("brand").querySelector("svg");
     if (!reduce.matches) mark?.animate([{ transform: "rotate(0) scale(1)" }, { transform: "rotate(-14deg) scale(.9)", offset: 0.35 }, { transform: "rotate(0) scale(1)" }], { duration: 420, easing: "cubic-bezier(.3,1.4,.5,1)" });
     if (++brandClicks < 2) return;
@@ -119,7 +119,8 @@
     const pal = root.Palettes?.generate();
     remixing = false;
     if (!pal) return;
-    root.Studio?.surprise?.(); root.Studio?.usePalette?.(pal);
+    // Surprise skips any look that would be slow to draw, so the new design is ready before the cards repaint.
+    await root.Studio?.surprise?.(); root.Studio?.usePalette?.(pal);
     root.Components?.remix?.(pal);
     paintHome(true);
   }

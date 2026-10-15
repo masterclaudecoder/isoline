@@ -1406,7 +1406,43 @@
   const NO_FX = {};
   // Surprise mixes several recipes: a preset as it is, a preset's shape in new colors, a look built from
   // scratch on any generator, and now and then an object or two on top.
-  function surprise() {
+  // A look that would take too long to draw is never shown: each roll is first drawn small and off
+  // screen, timed, and scaled up to the full frame. Past about a second and a half it's dropped and
+  // another is rolled; after a few tries the quickest one wins. Rolls happen on a copy, so the design
+  // on screen stays put while they're tested.
+  const SLOW_MS = 1500;
+  let surpriseTok = 0;
+  async function surprise() {
+    const tok = ++surpriseTok, was = S, t0 = performance.now();
+    let best = null;
+    // The tests themselves get a second in all, so a slow device isn't kept waiting on them either.
+    for (let i = 0; i < 5 && performance.now() - t0 < 1000; i++) {
+      S = clone(was); roll(); const cand = S; S = was;
+      const ms = await drawCost(cand);
+      if (tok !== surpriseTok || S !== was) return;
+      if (!best || ms < best.ms) best = { st: cand, ms };
+      if (ms <= SLOW_MS) break;
+    }
+    S = best.st;
+    update({ fade: true });
+  }
+  const probeCanvas = document.createElement("canvas");
+  async function drawCost(st) {
+    const raster = isRaster(st) && TFX, k = 4;
+    const { w, h } = previewDims(st, false);
+    const once = async () => {
+      const t0 = performance.now();
+      if (raster) { TFX.render(await fxJob(TFX, st, Math.max(32, Math.round(w / k)), Math.max(20, Math.round(h / k)), probeCanvas)); await TFX.sync(); }
+      else T.buildSVG(st, { res: st.res * 2 });
+      return (performance.now() - t0) * (raster ? k * k : 4);
+    };
+    try {
+      const ms = await once();
+      // A slow first draw can just be a shader building; the second one shows the real cost.
+      return ms > SLOW_MS ? await once() : ms;
+    } catch (e) { return Infinity; }
+  }
+  function roll() {
     const others = PRESETS.filter((p) => !lookMatches(p[2]));
     const a = pick(others)[2], roll = Math.random();
     if (roll < 0.3) { applyLook(a); if (Math.random() < 0.25) randomPalette(); }
@@ -1435,7 +1471,6 @@
     }
     if (P.safe) safeFix();
     variation();
-    update({ fade: true });
   }
   $("variation").onclick = () => { variation(); update({ fade: true }); };
   // Wide: hide the build and options columns, as in the builder. Full screen: the stage alone.
@@ -1462,9 +1497,10 @@
   });
   // Surprise throws a few sparks as it rolls a new look.
   $("surprise").onclick = () => { burst($("surprise")); surprise(); };
-  function burst(btn) {
+  function burst(btn) { const r = btn.getBoundingClientRect(); sparks(r.left + 22, r.top + r.height / 2); }
+  // The same sparks anywhere on the page; the tutorial's pointer leaves in a puff of them.
+  function sparks(cx, cy) {
     if (reduceMotion.matches) return;
-    const r = btn.getBoundingClientRect(), cx = r.left + 22, cy = r.top + r.height / 2;
     for (let i = 0; i < 9; i++) {
       const s = document.createElement("i"), a = (i / 9) * Math.PI * 2 + Math.random() * 0.5, d = 26 + Math.random() * 26, z = 5 + Math.random() * 6;
       s.className = "spark-bit"; s.style.cssText = `left:${cx}px;top:${cy}px;width:${z}px;height:${z}px`;
@@ -1472,6 +1508,7 @@
       s.animate([{ transform: "translate(-50%,-50%) scale(.2) rotate(0deg)", opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(a) * d}px), calc(-50% + ${Math.sin(a) * d}px)) scale(1) rotate(90deg)`, opacity: 1, offset: 0.55 }, { transform: `translate(calc(-50% + ${Math.cos(a) * d * 1.3}px), calc(-50% + ${Math.sin(a) * d * 1.3}px)) scale(0) rotate(160deg)`, opacity: 0 }], { duration: 640 + Math.random() * 200, easing: "cubic-bezier(.2,.8,.3,1)" }).onfinish = () => s.remove();
     }
   }
+  window.sparks = sparks;
   $("undo").onclick = () => travel(-1);
   $("redo").onclick = () => travel(1);
 
@@ -3345,13 +3382,16 @@
     },
     // The current design cropped to fill w x h, like object-fit: cover.
     // Rendered fresh at the requested size, so it stays sharp whatever the studio canvas last drew.
-    async snapshot(w, h) {
+    // With a preset name it draws that preset instead, leaving your design alone (the tutorial uses it).
+    async snapshot(w, h, preset) {
+      const look = preset && PRESETS.find((p) => p[1].toLowerCase() === String(preset).toLowerCase());
+      const st = look ? { ...resolveLook(look[2]), w: S.w, h: S.h } : S;
       const c = document.createElement("canvas"); c.width = w; c.height = h;
-      const x = c.getContext("2d"), sc = Math.max(w / S.w, h / S.h), dw = Math.round(S.w * sc), dh = Math.round(S.h * sc);
+      const x = c.getContext("2d"), sc = Math.max(w / st.w, h / st.h), dw = Math.round(st.w * sc), dh = Math.round(st.h * sc);
       let src;
-      if (isRaster(S) && TFX) {
-        TFX.render(await fxJob(TFX, S, dw, dh, document.createElement("canvas"))); src = thumbCanvas;
-      } else src = await rasterize(document.createElement("canvas"), current.svg || T.buildSVG(S).svg, dw, dh);
+      if (isRaster(st) && TFX) {
+        TFX.render(await fxJob(TFX, st, dw, dh, document.createElement("canvas"))); src = thumbCanvas;
+      } else src = await rasterize(document.createElement("canvas"), (!look && current.svg) || T.buildSVG(st).svg, dw, dh);
       x.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
       return c;
     },

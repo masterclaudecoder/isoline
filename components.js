@@ -882,7 +882,7 @@
     applyArt();
   }
   function applyArt() {
-    for (const el of [$("kit"), $("homeComponents")?.firstElementChild]) if (el) { el.classList.toggle("k-has-art", !!artURL); el.style.setProperty("--k-art", artURL ? `url("${artURL}")` : "none"); }
+    for (const el of [$("kit"), ...($("homeComponents")?.querySelectorAll(".kit") || [])]) if (el) { el.classList.toggle("k-has-art", !!artURL); el.style.setProperty("--k-art", artURL ? `url("${artURL}")` : "none"); }
     paintArtThumb();
   }
   if (K.art === "studio") setTimeout(refreshArt, 1500);
@@ -993,6 +993,8 @@
     Object.assign(K, { pair: Math.floor(Math.random() * PAIRS.length), head: "", body: "", scale: pick([1.2, 1.25, 1.333]), radius: pick([0, 4, 6, 8, 12, 16]), pill: Math.random() < 0.25, density: pick([0.9, 1, 1.1]), elevation: pick(Object.keys(SHADOWS)), tint: pick(["neutral", "tinted", "tinted", "bold"]), ease: pick(["out", "inout", "spring"]) });
     if (hexes?.length) { K.follow = false; K.src = hexes.slice(); K.srcKey = "tool"; K.rc = fromSource(); }
     save();
+    // A kit that wears the Studio design picks up the new one too.
+    if (K.art === "studio") refreshArt();
   }
   root.Components = { onShow: () => setMode(K.mode), usePalette, remix, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
 })(window);
