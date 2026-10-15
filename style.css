@@ -116,7 +116,7 @@ textarea::-webkit-scrollbar-thumb { border-width: 3px; }
 .slot-label { display: flex; align-items: center; gap: 6px; padding: 0 6px 7px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
 /* The border leans toward the theme's ink, so it reads on light and dark alike; figures have no descenders,
    so they sit a pixel low to look centered. */
-.count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--accent); color: var(--on-accent, #fff); font: 650 11px/1 var(--sans, inherit); font-variant-numeric: tabular-nums; letter-spacing: -.01em; box-shadow: 0 1px 2px color-mix(in oklab, var(--accent) 35%, transparent), inset 0 0 0 .5px color-mix(in oklab, var(--accent) 60%, var(--ink)); }
+.count { display: inline-grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; box-sizing: border-box; border-radius: 5px; background: color-mix(in oklab, var(--accent) 14%, transparent); color: color-mix(in oklab, var(--accent) 82%, var(--ink)); font: 650 11px/1 var(--sans, inherit); font-variant-numeric: tabular-nums; }
 .tile {
   position: relative; display: flex; align-items: center; gap: 10px; width: 100%; border: 0; padding: 6px 8px 6px 6px; border-radius: 12px;
   background: var(--panel); box-shadow: var(--raised); text-align: left; transition: box-shadow .15s, background .15s;
