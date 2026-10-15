@@ -460,6 +460,8 @@ float snoise(vec2 v) {
   vec3 g; g.x = a0.x * x0.x + h.x * x0.y; g.yz = a0.yz * x12.xz + h.yz * x12.yw;
   return 130.0 * dot(m, g);
 }
+// A short simplex fbm for warping, about -1..1.
+float wfbm(vec2 p) { return snoise(p) * 0.57 + snoise(p * 2.03 + vec2(17.3, 9.1)) * 0.29 + snoise(p * 4.1 + vec2(3.7, 41.2)) * 0.14; }
 float sfbm(vec2 p) { float a = 0.5, r = 0.0; for (int i = 0; i < 8; i++) { if (float(i) >= uDetail) break; r += a * snoise(p); p = p * 2.02 + vec2(17.3, 9.1); a *= 0.5; } return r; }
 // Neuro: rotated layers of summed sines that knot into glowing, web-like filaments.
 float neuro(vec2 uv) {
@@ -551,7 +553,9 @@ void main() {
   if (uType >= 1 && uType <= 3) p += drift * 0.03;
   // Morphing reads each warp field twice, offset in opposite directions along the loop, so the field
   // churns in place instead of sliding across like a camera pan.
-  if (warp > 0.0) { vec2 q = p * a * uWarpScale + drift * 0.6; p += warp * 0.3 * 0.7071 * (vec2(fbm(q + vec2(1.7, 9.2) + L1) + fbm(q + vec2(4.4, 3.1) - L1), fbm(q + vec2(8.3, 2.8) + L2) + fbm(q + vec2(2.9, 6.6) - L2)) - 1.0); }
+  // Simplex, not the value noise the effects use: value noise sits on a square grid, and a strong warp
+  // under high contrast drew that grid out as faint rectangles.
+  if (warp > 0.0) { vec2 q = p * a * uWarpScale + drift * 0.6; p += warp * 0.3 * 0.5 * 0.7071 * vec2(wfbm(q + vec2(1.7, 9.2) + L1) + wfbm(q + vec2(4.4, 3.1) - L1), wfbm(q + vec2(8.3, 2.8) + L2) + wfbm(q + vec2(2.9, 6.6) - L2)); }
   vec3 lab;
   if (uType == 4 || uType == 5) {
     // Flow and noise generators: a rotated, stretched simplex field mapped through the color ramp.
@@ -676,43 +680,49 @@ void main() {
 // beneath, and the light the surface focuses slides over it in soft, shifting ribbons. Every wave and
 // ribbon moves a whole number of turns per loop, so animations meet their first frame.
 float T;
-float waves(vec2 q) {
-  float h = 0.5 * sin(dot(q, vec2(0.83, 0.55)) + T + 1.3 * vnoise(q * 0.35));
-  h += 0.32 * sin(dot(q, vec2(-0.42, 0.91)) * 1.7 - 2.0 * T + 0.7);
-  h += 0.22 * sin(dot(q, vec2(0.97, -0.24)) * 2.6 + 2.0 * T + 2.1);
-  h += uChop * (0.2 * sin(dot(q, vec2(0.2, -0.98)) * 4.3 - 3.0 * T + 4.0 + 2.0 * vnoise(q * 0.8)) + 0.12 * sin(dot(q, vec2(-0.77, -0.64)) * 6.1 + 4.0 * T + 1.0) + 0.08 * sin(dot(q, vec2(0.6, 0.8)) * 8.7 - 5.0 * T + 2.0 * vnoise(q * 1.3 + 4.0)));
-  // A few more crossing ripples at odd angles, their phase stirred by noise, so no one direction rules.
-  h += uChop * (0.1 * sin(dot(q, vec2(0.31, 0.95)) * 5.3 + 3.0 * T + 3.0 * vnoise(q * 0.9 + 2.0)) + 0.09 * sin(dot(q, vec2(-0.95, 0.31)) * 4.7 - 2.0 * T + 3.0 * vnoise(q * 0.8 + 6.0)) + 0.08 * sin(dot(q, vec2(0.71, 0.71)) * 7.1 + 3.0 * T + 3.0 * vnoise(q * 1.1 + 9.0)));
-  return h;
+// The surface is a sum of travelling waves, so its slope and curvature come out exactly from each
+// wave's sine and cosine: one of each per wave, instead of sampling the whole sum many times over.
+void wave(vec2 q, vec2 d, float f, float amp, float tm, float ph, inout vec2 g, inout vec3 H) {
+  vec2 k = d * f; float x = dot(q, k) + tm * T + ph, s = sin(x), c = cos(x);
+  // Curvature grows with the square of frequency, so the finest ripples would rule the light and break
+  // it into streaks; dividing by frequency lets the mid-size waves shape it instead.
+  g += amp * c * k; H -= amp * s * vec3(k.x * k.x, k.x * k.y, k.y * k.y) / f;
 }
-vec2 slope(vec2 q) { float e = 0.04; return vec2(waves(q + vec2(e, 0.0)) - waves(q - vec2(e, 0.0)), waves(q + vec2(0.0, e)) - waves(q - vec2(0.0, e))) / (2.0 * e); }
-// Caustics from the surface itself: light through a bumpy surface bends by its slope, and where the
-// bent rays bunch together the floor brightens. That bunching is the inverse of how much the bend
-// stretches a patch (the determinant of its Jacobian), so the bright web follows these very waves and
-// never repeats.
-float caustic(vec2 q, float D) {
-  float e = 0.05;
-  vec2 g0 = slope(q), gx = slope(q + vec2(e, 0.0)), gy = slope(q + vec2(0.0, e));
-  float a = 1.0 + D * (gx.x - g0.x) / e, b = D * (gy.x - g0.x) / e, c = D * (gx.y - g0.y) / e, d = 1.0 + D * (gy.y - g0.y) / e;
-  return clamp(1.0 / max(abs(a * d - b * c), 0.08) - 0.75, 0.0, 3.0);
+void surf(vec2 q, out vec2 g, out vec3 H) {
+  g = vec2(0.0); H = vec3(0.0); float ch = uChop;
+  wave(q, vec2(0.83, 0.55), 1.0, 0.5, 1.0, 1.3, g, H);
+  wave(q, vec2(-0.42, 0.91), 1.7, 0.32, -2.0, 0.7, g, H);
+  wave(q, vec2(0.97, -0.24), 2.6, 0.22, 2.0, 2.1, g, H);
+  wave(q, vec2(0.2, -0.98), 4.3, 0.2 * ch, -3.0, 4.0, g, H);
+  wave(q, vec2(-0.77, -0.64), 6.1, 0.12 * ch, 4.0, 1.0, g, H);
+  wave(q, vec2(0.6, 0.8), 8.7, 0.08 * ch, -5.0, 2.0, g, H);
+  wave(q, vec2(0.31, 0.95), 5.3, 0.1 * ch, 3.0, 3.0, g, H);
+  wave(q, vec2(-0.95, 0.31), 4.7, 0.09 * ch, -2.0, 5.0, g, H);
+  wave(q, vec2(0.71, -0.71), 7.1, 0.08 * ch, 3.0, 0.5, g, H);
+}
+// Caustics from the surface itself: light through it bends by its slope, and where the bent rays
+// bunch together the floor brightens. The bunching is the inverse of how much the bend stretches a
+// patch (the determinant of its Jacobian, I + D·curvature), so the light follows these very waves.
+float caustic(vec3 H, float D) {
+  float det = (1.0 + D * H.x) * (1.0 + D * H.z) - D * D * H.y * H.y;
+  return clamp(1.0 / max(abs(det), 0.1) - 0.8, 0.0, 3.0);
 }
 void main() {
   T = 6.2831853 * uTime * uSpeed;
   vec2 q = dp() / uScale * 6.0;
-  // A slow, still warp so the swells never line up into stripes.
-  q += 2.2 * vec2(fbm(q * 0.13 + 3.1), fbm(q * 0.13 + 7.7)) + 0.7 * vec2(fbm(q * 0.4 + 5.5), fbm(q * 0.4 + 1.9));
-  float e = 0.04;
-  vec2 g = vec2(waves(q + vec2(e, 0.0)) - waves(q - vec2(e, 0.0)), waves(q + vec2(0.0, e)) - waves(q - vec2(0.0, e))) / (2.0 * e);
+  // One slow, still warp so the swells never line up into stripes or repeat.
+  q += 1.8 * vec2(fbm(q * 0.13 + 3.1), fbm(q * 0.13 + 7.7)) + 1.1 * vec2(fbm(q * 0.41 + 5.3), fbm(q * 0.41 + 1.9));
+  vec2 g; vec3 H; surf(q, g, H);
   vec2 off = g * uAmt * uScale * 0.03, bend = toUv(off);
   // Red bends a touch less than blue, as through real water.
   vec3 col = vec3(tex(vUv + bend * 0.96).r, tex(vUv + bend).g, tex(vUv + bend * 1.05).b);
   col = mix(col, col * vec3(0.5, 0.82, 0.92) + vec3(0.0, 0.07, 0.1), clamp(uDepth, 0.0, 1.0));
-  // Light lands on the floor, so it is read where the floor is seen: through the same bend.
-  // A finer, separately warped copy of the surface lights the floor, so the light web is smaller than
-  // the swells that bend it; it fades out before its cells get too small to draw cleanly.
-  vec2 qc = q * 1.35 + vec2(17.3, 5.9) + uSeed * vec2(0.37, 0.91);
-  float px = uScale / 6.0 / 1.35 * uK, l = caustic(qc, 0.11 + 0.05 * min(uAmt, 2.0)) * smoothstep(8.0, 20.0, px * 6.2831853);
-  l *= 0.55 + 0.45 * smoothstep(0.25, 0.75, fbm(q * 0.18 + 11.0) + 0.1);
+  // A finer copy of the surface lights the floor, so the light web is smaller than the swells that
+  // bend it, read where the floor is seen; it fades out before its cells get too small to draw cleanly.
+  vec2 qc = (q + off / uScale * 6.0 * 0.6) * 1.35 + vec2(17.3, 5.9) + uSeed * vec2(0.37, 0.91);
+  vec2 g2; vec3 H2; surf(qc, g2, H2);
+  float px = uScale / 6.0 / 1.35 * uK, l = caustic(H2, 0.6) * smoothstep(8.0, 20.0, px * 6.2831853);
+  l *= 0.55 + 0.45 * smoothstep(0.25, 0.75, vnoise(q * 0.2 + 11.0) + 0.1);
   float face = clamp(-dot(g, vec2(0.6, -0.8)) * 0.05 * min(uAmt, 2.0), -0.1, 0.1);
   col *= 1.0 + face;
   vec3 light = vec3(0.92, 1.0, 0.97) * smoothstep(0.0, 2.2, l) * uCaustic * 0.6;

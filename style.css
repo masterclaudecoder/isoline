@@ -457,6 +457,8 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
   .stage { order: -1; height: 46vh; min-height: 240px; }
   .canvas-wrap { padding: 16px 16px 64px; }
   .slots, .options { overflow: visible; }
+  /* No scrollbar here, so the room kept for one on the right would only push everything off center. */
+  .slots, .options { scrollbar-gutter: auto; } .slots { padding: 18px 14px; } .options { padding: 18px 20px 24px; }
   #slotList { display: grid; }
   .pop.export, .pop.settings { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; }
 }
@@ -739,6 +741,7 @@ body:not([data-route="studio"]) .mini { display: none; }
   .cp-lib, .cp-build { grid-template-columns: 1fr; }
   .cp-filters { overflow: visible; }
   .cp-results, .cp-build .slots, .cp-build .options { overflow: visible; }
+  .cp-filters { scrollbar-gutter: auto; padding-right: 16px; }
   .kit-frame { height: 70vh; }
 }
 .cp-mine { display: grid; gap: 6px; }
@@ -1797,3 +1800,14 @@ html.vt-pal #mine .sw[data-pc="12"] { view-transition-name: pc-12; view-transiti
 @media (max-width: 900px) { #cpSlots .slot { border-top: 0; padding-top: 4px; } }
 /* In the studio the canvas bar sits along the bottom; notifications clear it where they could meet. */
 @media (min-width: 601px) and (max-width: 1600px) { body[data-route="studio"] .toasts, body[data-route="palettes"] .toasts { bottom: 84px; } }
+
+/* Studio wide mode: the build and options columns fold away so the canvas gets the page. */
+.app { transition: grid-template-columns .5s var(--ease), column-gap .5s var(--ease); }
+.app.wide { grid-template-columns: 0px 0px minmax(0, 1fr); column-gap: 0; }
+.app.wide > .slots, .app.wide > .options { opacity: 0; translate: -30px 0; padding-left: 0; padding-right: 0; overflow: hidden; pointer-events: none; }
+.st-wide.on, #stFull.on { color: var(--accent); }
+@media (max-width: 900px) { .st-wide { display: none; } .app.wide { grid-template-columns: 1fr; } .app.wide > .slots, .app.wide > .options { opacity: 1; translate: none; pointer-events: auto; } }
+/* Full screen: the stage alone, edge to edge, over everything (also where the Fullscreen API isn't offered). */
+.stage.full { position: fixed; inset: 0; z-index: 90; height: auto; min-height: 0; background: var(--bg); border-radius: 0; margin: 0; }
+.stage.full .stage-meta { display: none; }
+.stage.full .st-wide { display: none; }

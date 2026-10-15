@@ -70,6 +70,7 @@
     <symbol id="i-timing" viewBox="0 0 20 20"><path d="M3.5 3.5v13h13"/><path d="M6 14c4.5 0 5-8.5 9.5-8.5"/></symbol>
     <symbol id="i-rules" viewBox="0 0 20 20"><path d="m3.5 6.2 1.6 1.6 2.6-2.6M3.5 12.7l1.6 1.6 2.6-2.6M10.5 6.5h6M10.5 13h6"/></symbol>
     <symbol id="i-search" viewBox="0 0 20 20"><circle cx="9" cy="9" r="5"/><path d="m16 16-3.4-3.4"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 20 20"><path d="M4 8V4h4M16 8V4h-4M4 12v4h4M16 12v4h-4"/></symbol>
     <symbol id="i-panel" viewBox="0 0 20 20"><rect x="3.5" y="4" width="13" height="12" rx="2.5"/><path d="M8.5 4v12M5.6 7.5h.9M5.6 10h.9"/></symbol>
     <symbol id="i-chat" viewBox="0 0 20 20"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5v6.5a1.5 1.5 0 0 1-1.5 1.5H9l-3.5 3v-3h0A1.5 1.5 0 0 1 4 12Z"/></symbol>
     <symbol id="i-folder" viewBox="0 0 20 20"><path d="M3.5 6A1.5 1.5 0 0 1 5 4.5h3l1.6 1.8H15A1.5 1.5 0 0 1 16.5 7.8v6.7A1.5 1.5 0 0 1 15 16H5a1.5 1.5 0 0 1-1.5-1.5Z"/></symbol>
@@ -320,12 +321,15 @@
         <div class="stage-meta mono"><span class="kind" id="kind">SVG</span><span id="ms"></span></div>
         <div class="perf-note" id="perfNote" role="status" hidden><span><b>Playback is slow here</b><small>Exports stay smooth. To lighten the preview:</small></span><button class="btn sm" id="perfFx">Remove effects</button><button class="btn sm" id="perfStop">Stop motion</button><button class="ib xs" id="perfX" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></div>
         <div class="stage-bar glass" role="toolbar" aria-label="Canvas">
+          <button class="ib st-wide" id="stWide" data-tip="Hide the sidebars" aria-label="Hide the sidebars"><svg class="ic"><use href="#i-panel"/></svg></button>
           <button class="ib" id="undo" title="Undo (⌘Z)" aria-label="Undo"><svg class="ic"><use href="#i-undo"/></svg></button>
           <button class="ib" id="redo" title="Redo (⇧⌘Z)" aria-label="Redo"><svg class="ic"><use href="#i-redo"/></svg></button>
           <button class="ib" id="barPlay" title="Play motion" aria-label="Play motion" hidden><svg class="ic"><use href="#i-play"/></svg></button>
           <span class="bar-sep"></span>
           <button class="bar-btn" id="variation" title="Same look, new variation">Variation<kbd>R</kbd></button>
           <button class="bar-btn surprise" id="surprise" title="A new look from the presets"><span class="spark" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 1.5c.6 4.6 3.9 7.9 8.5 8.5-4.6.6-7.9 3.9-8.5 8.5-.6-4.6-3.9-7.9-8.5-8.5 4.6-.6 7.9-3.9 8.5-8.5Z"/></svg><svg viewBox="0 0 20 20"><path d="M10 1.5c.6 4.6 3.9 7.9 8.5 8.5-4.6.6-7.9 3.9-8.5 8.5-.6-4.6-3.9-7.9-8.5-8.5 4.6-.6 7.9-3.9 8.5-8.5Z"/></svg><svg viewBox="0 0 20 20"><path d="M10 1.5c.6 4.6 3.9 7.9 8.5 8.5-4.6.6-7.9 3.9-8.5 8.5-.6-4.6-3.9-7.9-8.5-8.5 4.6-.6 7.9-3.9 8.5-8.5Z"/></svg></span><span>Surprise</span><kbd><svg class="ic kbd-ic"><use href="#i-shift"/></svg>R</kbd></button>
+          <span class="bar-sep"></span>
+          <button class="ib" id="stFull" data-tip="Full screen (F)" aria-label="Full screen"><svg class="ic"><use href="#i-expand"/></svg></button>
         </div>
       </div>
     </section>

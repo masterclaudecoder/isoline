@@ -19,7 +19,7 @@
     ["swirl", "Twirl", "Distort", { amount: 3, radius: 0.55, x: 0.5, y: 0.5 }, [{ k: "amount", label: "Turn", min: -12, max: 12, step: 0.05, fmt: f2, rand: [-5, 5] }, { k: "radius", label: "Radius", min: 0.05, max: 1.5, step: 0.01, fmt: f2, rand: [0.35, 0.9] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }]],
     ["bulge", "Bulge", "Distort", { amount: 0.6, radius: 0.45, x: 0.5, y: 0.5 }, [{ k: "amount", label: "Amount", min: -1, max: 0.95, step: 0.01, fmt: f2, rand: [-0.5, 0.8] }, { k: "radius", label: "Radius", min: 0.05, max: 1.5, step: 0.01, fmt: f2, rand: [0.3, 0.7] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }]],
     ["ripple", "Ripples", "Distort", { amp: 10, length: 60, decay: 0.6, shade: 1, x: 0.5, y: 0.5, anim: false, speed: 3 }, [{ k: "amp", label: "Amplitude", min: 0, max: 60, step: 0.5, fmt: px, rand: [4, 16] }, { k: "length", label: "Wavelength", min: 8, max: 400, step: 1, log: true, fmt: px, rand: [30, 120] }, { k: "decay", label: "Reach", min: 0.05, max: 3, step: 0.01, fmt: f2, rand: [0.3, 1.2] }, { k: "shade", label: "Light", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.5] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { sw: "anim", label: "Animate" }, { k: "speed", label: "Speed", min: 1, max: 12, step: 1, fmt: (v) => v + " rings per loop", hard: [1, 60], when: (e) => e.anim }]],
-    ["sea", "Water", "Distort", { amount: 1, scale: 360, caustic: 0.7, chop: 0.5, depth: 0.25, speed: 1 }, [{ k: "amount", label: "Refraction", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 1.6] }, { k: "scale", label: "Wave size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [200, 600] }, { k: "caustic", label: "Light", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "chop", label: "Chop", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.9] }, { k: "depth", label: "Depth tint", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.5] }, { k: "speed", label: "Speed", min: 0, max: 4, step: 1, fmt: (v) => v + "× per loop", hard: [0, 12] }]],
+    ["sea", "Water", "Distort", { amount: 0.9, scale: 360, caustic: 0.6, chop: 0.5, depth: 0.15, speed: 1 }, [{ k: "amount", label: "Refraction", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 1.6] }, { k: "scale", label: "Wave size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [200, 600] }, { k: "caustic", label: "Light", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "chop", label: "Chop", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.9] }, { k: "depth", label: "Depth tint", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.5] }, { k: "speed", label: "Speed", min: 0, max: 4, step: 1, fmt: (v) => v + "× per loop", hard: [0, 12] }]],
     ["water", "Caustic web", "Distort", { amount: 1, scale: 320, caustic: 0.33, anim: false }, [{ k: "amount", label: "Refraction", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 1.6] }, { k: "scale", label: "Size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [180, 520] }, { k: "caustic", label: "Caustics", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 1] }, { sw: "anim", label: "Animate" }]],
     ["kaleido", "Kaleidoscope", "Distort", { segments: 6, rotate: 0, zoom: 1 }, [{ k: "segments", label: "Segments", min: 2, max: 16, step: 1, hard: [2, 64], rand: [4, 10] }, { k: "rotate", label: "Rotate", min: 0, max: 360, step: 1, fmt: deg }, { k: "zoom", label: "Zoom", min: 0.3, max: 3, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.7, 1.6] }]],
     ["glass", "Fluted glass", "Glass", { width: 44, angle: 90, strength: 0.9, frost: 0.2, light: 0.4 }, [{ k: "width", label: "Rib width", min: 4, max: 300, step: 1, log: true, fmt: px, rand: [24, 90] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }, { k: "strength", label: "Refraction", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.4] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.5] }, { k: "light", label: "Highlight", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.3, 0.7] }]],
@@ -1335,6 +1335,28 @@
     update({ fade: true });
   }
   $("variation").onclick = () => { variation(); update({ fade: true }); };
+  // Wide: hide the build and options columns, as in the builder. Full screen: the stage alone.
+  function setStudioWide(on) {
+    P.wide = on; savePrefs();
+    document.querySelector(".app").classList.toggle("wide", on);
+    const b = $("stWide"); b.classList.toggle("on", on); b.dataset.tip = on ? "Show the sidebars" : "Hide the sidebars"; b.setAttribute("aria-label", b.dataset.tip);
+  }
+  $("stWide").onclick = () => { window.UI?.tip?.hide?.(); setStudioWide(!P.wide); };
+  setStudioWide(!!P.wide);
+  const stageEl = $("stFull").closest(".stage");
+  function setFull(on) {
+    stageEl.classList.toggle("full", on); $("stFull").classList.toggle("on", on);
+    $("stFull").dataset.tip = on ? "Exit full screen (Esc)" : "Full screen (F)";
+    if (on && !document.fullscreenElement) stageEl.requestFullscreen?.().catch(() => {});
+    if (!on && document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  }
+  $("stFull").onclick = () => { window.UI?.tip?.hide?.(); setFull(!stageEl.classList.contains("full")); };
+  document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && stageEl.classList.contains("full")) setFull(false); });
+  addEventListener("keydown", (e) => {
+    if (document.body.dataset.route !== "studio" || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.("input, textarea, select, [contenteditable]")) return;
+    if (e.key === "f" || e.key === "F") { e.preventDefault(); setFull(!stageEl.classList.contains("full")); }
+    else if (e.key === "Escape" && stageEl.classList.contains("full")) setFull(false);
+  });
   // Surprise throws a few sparks as it rolls a new look.
   $("surprise").onclick = () => { burst($("surprise")); surprise(); };
   function burst(btn) {
