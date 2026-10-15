@@ -10,13 +10,22 @@
   const frame = () => new Promise(requestAnimationFrame);
 
   // ---------- the pointer ----------
+  // Moves run on a spring curve: a quick start, a small overshoot and a settle. Set SPRING to false for
+  // the earlier eased curve (cubic in and out).
+  const SPRING = true;
+  // An underdamped spring from 0 to 1, settled by t = 1 (damping 0.68, about 5% overshoot).
+  function springEase(t) {
+    if (t >= 1) return 1;
+    const z = 0.68, w = 9.5, wd = w * Math.sqrt(1 - z * z);
+    return 1 - Math.exp(-z * w * t) * (Math.cos(wd * t) + ((z * w) / wd) * Math.sin(wd * t));
+  }
   // Each move follows a quadratic curve bowed to one side, eased in and out over a time that grows with
   // the distance. The dot chases that moving goal on a slightly loose spring, so it lags a touch, leans
   // into the curve and overshoots a hair before settling.
   function pointer(el) {
     let x = 0, y = 0, vx = 0, vy = 0, gx = 0, gy = 0, raf = 0, last = 0, path = null, alive = true, done = null;
     const paint = () => (el.style.translate = `${x}px ${y}px`);
-    const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const ease = SPRING ? springEase : (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
     const tick = (now) => {
       raf = 0; if (!alive) return;
       const steps = Math.min(4, Math.max(1, Math.round((now - (last || now - 16.7)) / 16.7))); last = now;
@@ -37,7 +46,7 @@
       to(px, py, speed = 1) {
         if (reduce.matches) { this.place(px, py); return Promise.resolve(); }
         const dx = px - gx, dy = py - gy, dist = Math.hypot(dx, dy), bow = (Math.random() < 0.5 ? -1 : 1) * (0.12 + Math.random() * 0.12);
-        path = { x0: gx, y0: gy, x1: px, y1: py, cx: (gx + px) / 2 - dy * bow, cy: (gy + py) / 2 + dx * bow, t0: performance.now(), dur: Math.min(1200, 240 + 9 * Math.pow(dist, 0.8)) / speed };
+        path = { x0: gx, y0: gy, x1: px, y1: py, cx: (gx + px) / 2 - dy * bow, cy: (gy + py) / 2 + dx * bow, t0: performance.now(), dur: Math.min(1200, 240 + 9 * Math.pow(dist, 0.8)) * (SPRING ? 1.25 : 1) / speed };
         done?.();
         return new Promise((r) => { done = r; kick(); setTimeout(() => { if (done === r) { done = null; r(); } }, path.dur + 900); });
       },
@@ -230,23 +239,65 @@
   }
   function closePane() { if (!pane) return; pane.el.hidden = true; run++; }
 
-  // ---------- the guided tour ----------
-  // A spotlight moves from part to part of the real Studio while the dot goes there first; steps that
-  // open something click it for real, so you watch the page do it. At the end the dot loops once and
-  // dives into the settings button, where the tutorial lives, in a puff of sparks.
-  const TOUR = [
-    { el: ".app > .slots", t: "Your layers", p: "Your design, built up from the top. The tile with the ring is open now." },
-    { act: '[data-slot="colors"]', el: ".app > .options", t: "Options", p: "Opening a layer shows its options here. Each card and palette previews your own design." },
-    { act: '[data-slot="addfx"]', el: "#fxQ", t: "Find an effect", p: "Search by name or by the look you want: try glass, print or light." },
-    { el: "#wrap", t: "The canvas", p: "Drag points, objects and effect handles here. Drag its edges to change the size." },
-    { el: "#surprise", t: "Surprise", p: "Rolls a whole new look. Variation (R) reshuffles the one you have." },
-    { el: "#exportBtn", t: "Export", p: "PNG, SVG, video, GIF or HTML. Share has a link and a brief for AI agents." },
-    { el: "#settingsBtn", t: "Settings", p: "Theme, accent and safe values, and this tutorial again whenever you want it." },
-  ];
+  // ---------- the guided tours ----------
+  // A spotlight moves from part to part of the real page while the dot goes there first; steps that
+  // open something click it for real, so you watch the page do it. Each page has its own short tour,
+  // offered the first time you visit it. The home tour ends by walking you into the Studio, where the
+  // tutorial pane takes over; the others end with the dot swirling into the settings button, where the
+  // tutorials live, in a puff of sparks.
+  const TOURS = {
+    home: [
+      { el: '.home [data-go="studio"]', t: "Studio", p: "Make patterns, gradients and effects, put them in motion, and export them anywhere." },
+      { el: '.home [data-go="palettes"]', t: "Palettes", p: "Roll color palettes and check their names and contrast. Your colors travel to the other tools." },
+      { el: '.home [data-go="components"]', t: "Components", p: "Browse UI libraries, or build a kit of tokens and pages in your colors." },
+      { el: "#brand", inner: true, t: "Feeling lucky?", p: "Click the logo twice for a new palette, design and kit all at once." },
+      { el: '.home [data-go="studio"]', t: "Let's begin", p: "Everything starts in the Studio. A short tutorial waits for you there.", done: "Open the Studio" },
+    ],
+    studio: [
+      { el: ".app > .slots", t: "Your layers", p: "Your design, built up from the top. The tile with the ring is open now." },
+      { act: '[data-slot="colors"]', el: ".app > .options", t: "Options", p: "Opening a layer shows its options here. Each card and palette previews your own design." },
+      { act: '[data-slot="addfx"]', el: "#fxQ", t: "Find an effect", p: "Search by name or by the look you want: try glass, print or light." },
+      { el: "#wrap", t: "The canvas", p: "Drag points, objects and effect handles here. Drag its edges to change the size." },
+      { el: "#surprise", t: "Surprise", p: "Rolls a whole new look. Variation (R) reshuffles the one you have." },
+      { el: "#exportBtn", t: "Export", p: "PNG, SVG, video, GIF or HTML. Share has a link and a brief for AI agents." },
+      { el: "#settingsBtn", t: "Settings", p: "Theme, accent and safe values, and these tutorials again whenever you want them." },
+    ],
+    palettes: [
+      { el: ".pt-col", t: "Your colors", p: "Each column is a color. Hover one for its tools: lock it, copy it, see its shades. Drag to reorder." },
+      { el: ".pt-col .pt-info", t: "Names and contrast", p: "Every color has a name, and shows how well text reads on it." },
+      { el: "#ptGen", t: "Generate", p: "Space rolls new colors for every unlocked column. Vary (V) nudges the ones you have." },
+      { el: "#ptModeBtn", t: "Harmony", p: "Choose how the colors relate: analogous, complementary, triads and more." },
+      { el: "#ptSavedBtn", t: "Saved", p: "Keep the palettes you like. They show up in the Studio as well." },
+      { el: "#ptUse", t: "Use them", p: "Send the colors to the Studio, or to the Builder in Components." },
+    ],
+    components: [
+      { el: "#cpMode", t: "Two modes", p: "Libraries collects UI kits to browse. Builder makes a kit of your own, in your colors." },
+      { el: ".cp-filters", t: "Find a library", p: "Search, or narrow the list by framework and category." },
+      { el: ".cp-grid .lib", t: "A library", p: "Each card opens onto the library's own site, with a link to its docs." },
+      { act: '#cpMode [data-v="builder"]', el: "#cpBuild", t: "Builder", p: "Pick fonts, scale, radius and depth, and see them on real pages. Export the tokens as CSS or a brief." },
+    ],
+  };
+  const KEY = (name) => (name === "studio" ? "isoline.tour.studio" : "isoline.tour." + name);
+  const seen = (k) => { try { return !!localStorage.getItem(k); } catch (e) { return true; } };
+  const mark = (k) => { try { localStorage.setItem(k, "1"); } catch (e) {} };
+
+  // A step's box: the element's, or with "inner" just the part its contents fill (the logo's link
+  // stretches across the bar).
+  function boxOf(s) {
+    const el = document.querySelector(s.el); if (!el) return null;
+    if (!s.inner || !el.children.length) return el.getBoundingClientRect();
+    const rs = [...el.children].map((c) => c.getBoundingClientRect()).filter((r) => r.width);
+    const l = Math.min(...rs.map((r) => r.left)), t = Math.min(...rs.map((r) => r.top)), r = Math.max(...rs.map((q) => q.right)), b = Math.max(...rs.map((q) => q.bottom));
+    return { left: l, top: t, right: r, bottom: b, width: r - l, height: b - t };
+  }
   let tour = null;
-  function startTour() {
+  function startTour(name = "studio") {
     if (tour) return;
-    if (root.Shell?.route !== "studio") root.Shell?.go("studio");
+    const STEPS = TOURS[name] || TOURS.studio;
+    mark(KEY(name));
+    // Started from another page, the first step waits for the page change to finish.
+    const moving = root.Shell?.route !== name;
+    if (moving) root.Shell?.go(name);
     const spotEl = document.createElement("div"), tip = document.createElement("div"), dot = document.createElement("div");
     spotEl.className = "tour-spot"; tip.className = "tour-tip"; dot.className = "tp tour-dot";
     tip.setAttribute("role", "dialog"); tip.setAttribute("aria-live", "polite");
@@ -255,8 +306,7 @@
     cur.place(innerWidth / 2, innerHeight + 30);
     let i = -1, busy = false;
     const place = () => {
-      const s = TOUR[i], el = document.querySelector(s.el); if (!el) return;
-      const r = el.getBoundingClientRect(), pad = 6;
+      const r = boxOf(STEPS[i]), pad = 6; if (!r) return;
       Object.assign(spotEl.style, { left: r.left - pad + "px", top: r.top - pad + "px", width: r.width + pad * 2 + "px", height: r.height + pad * 2 + "px" });
       const tw = tip.offsetWidth, th = tip.offsetHeight, m = 12;
       let x = r.left + r.width / 2 - tw / 2, y = r.bottom + 14;
@@ -266,9 +316,9 @@
     };
     const go = async (n) => {
       if (busy || n < 0) return;
-      if (n >= TOUR.length) return finish();
+      if (n >= STEPS.length) return finish();
       busy = true; i = n;
-      const s = TOUR[i];
+      const s = STEPS[i], last = i === STEPS.length - 1;
       tip.classList.add("moving");
       if (s.act) {
         const b = document.querySelector(s.act);
@@ -277,9 +327,9 @@
       const el = document.querySelector(s.el);
       el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
       await wait(60);
-      tip.innerHTML = `<span class="tour-kicker">${i + 1} of ${TOUR.length}</span><b>${s.t}</b><p>${s.p}</p><div class="tour-acts"><button class="btn sm ghost" data-a="end">End tour</button><span class="grow"></span>${i ? `<button class="btn sm" data-a="back">Back</button>` : ""}<button class="btn sm primary" data-a="next">${i === TOUR.length - 1 ? "Done" : "Next"}</button></div>`;
+      tip.innerHTML = `<span class="tour-kicker">${i + 1} of ${STEPS.length}</span><b>${s.t}</b><p>${s.p}</p><div class="tour-acts"><button class="btn sm ghost" data-a="end">End tour</button><span class="grow"></span>${i ? `<button class="btn sm" data-a="back">Back</button>` : ""}<button class="btn sm primary" data-a="next">${last ? s.done || "Done" : "Next"}</button></div>`;
       place();
-      if (el) { const r = el.getBoundingClientRect(); cur.to(r.left + r.width * 0.5, r.top + Math.min(r.height * 0.5, 40)); }
+      if (el) { const r = boxOf(s); cur.to(r.left + r.width * 0.5, r.top + Math.min(r.height * 0.5, 40)); }
       tip.classList.remove("moving");
       tip.querySelector('[data-a="next"]').focus({ preventScroll: true });
       busy = false;
@@ -290,40 +340,59 @@
       for (const n of [spotEl, tip]) { n.classList.add("gone"); setTimeout(() => n.remove(), 320); }
     };
     const end = () => { cleanup(); cur.stop(); dot.classList.add("gone"); setTimeout(() => dot.remove(), 320); };
-    // Done: a loop-the-loop on the way to the settings button, then into it.
     const finish = async () => {
       if (busy) return; busy = true;
       cleanup();
-      const b = $("settingsBtn").getBoundingClientRect(), tx = b.left + b.width / 2, ty = b.top + b.height / 2;
-      const [x0, y0] = cur.pos, mx = (x0 + tx) / 2 - 60, my = Math.max(90, (y0 + ty) / 2 + 70), R = 34;
-      await cur.along((t) => {
-        // In to the middle, once round a circle, then up to the button.
-        if (t < 0.3) { const e = t / 0.3; return [x0 + (mx - x0) * e, y0 + (my + R - y0) * e]; }
-        if (t < 0.7) { const a = ((t - 0.3) / 0.4) * Math.PI * 2; return [mx + Math.sin(a) * R, my + Math.cos(a) * R]; }
-        const e = (t - 0.7) / 0.3, s = e * e * (3 - 2 * e); return [mx + (tx - mx) * s, my + R + (ty - my - R) * s];
-      }, 1500);
-      dot.animate([{ scale: 1, opacity: 1 }, { scale: 0.2, opacity: 0 }], { duration: 220, easing: "ease-in", fill: "forwards" });
-      root.sparks?.(tx, ty);
-      $("settingsBtn").animate([{ scale: 1 }, { scale: 1.12 }, { scale: 1 }], { duration: 360, easing: "cubic-bezier(.3,1.5,.5,1)" });
-      setTimeout(() => { cur.stop(); dot.remove(); }, 260);
+      // Home hands over to the Studio: the dot clicks the Studio card and the Studio's tutorial follows.
+      if (name === "home") {
+        const c = document.querySelector('.home [data-go="studio"]'), r = c?.getBoundingClientRect();
+        if (r) { await cur.to(r.left + r.width / 2, r.top + r.height / 2); await cur.click(); }
+        dot.classList.add("gone"); setTimeout(() => { cur.stop(); dot.remove(); }, 320);
+        root.Shell?.go("studio");
+        return;
+      }
+      await swirlHome(cur, dot);
     };
     const key = (e) => { if (e.key === "Escape") { e.stopPropagation(); end(); } else if (e.key === "ArrowRight") go(i + 1); else if (e.key === "ArrowLeft") go(i - 1); };
     tip.onclick = (e) => { const a = e.target.closest("[data-a]")?.dataset.a; if (a === "next") go(i + 1); else if (a === "back") go(i - 1); else if (a === "end") end(); };
     addEventListener("resize", place); addEventListener("keydown", key, true);
     tour = { end };
-    setTimeout(() => go(0), 120);
+    setTimeout(() => go(0), moving ? 760 : 120);
+  }
+  // Done: the dot spirals toward the settings button, the curl widening and then tightening as it
+  // closes in, and slips inside in a puff of sparks.
+  async function swirlHome(cur, dot) {
+    const b = $("settingsBtn").getBoundingClientRect(), tx = b.left + b.width / 2, ty = b.top + b.height / 2;
+    const [x0, y0] = cur.pos, dist = Math.hypot(tx - x0, ty - y0), R = Math.min(110, Math.max(40, dist * 0.22));
+    // Turn the way that curls toward the screen's middle, so the loops stay on screen.
+    const dir = x0 < tx ? 1 : -1, turns = 1.6, a0 = Math.atan2(ty - y0, tx - x0) + (Math.PI / 2) * dir;
+    await cur.along((t) => {
+      const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      const r = R * Math.pow(Math.sin(Math.PI * Math.min(1, t * 1.08)), 1.3), a = a0 + dir * turns * Math.PI * 2 * t;
+      return [x0 + (tx - x0) * e + Math.cos(a) * r, y0 + (ty - y0) * e + Math.sin(a) * r];
+    }, 1900);
+    dot.animate([{ scale: 1, opacity: 1 }, { scale: 0.2, opacity: 0 }], { duration: 220, easing: "ease-in", fill: "forwards" });
+    root.sparks?.(tx, ty);
+    $("settingsBtn").animate([{ scale: 1 }, { scale: 1.12 }, { scale: 1 }], { duration: 360, easing: "cubic-bezier(.3,1.5,.5,1)" });
+    setTimeout(() => { cur.stop(); dot.remove(); }, 260);
   }
 
-  // The first time the Studio opens (not from a shared link, and not under automation), the pane
-  // appears once the entrance has played.
-  let offered = false;
+  // Settings, Show the tutorial: the Studio's pane in the Studio, the page's tour anywhere else.
+  function showFor(r) { if (r === "studio" || !TOURS[r]) openPane(); else startTour(r); }
+
+  // The first visit to each page (not from a shared link, and not under automation) offers its tutorial
+  // once the entrance has played: the pane in the Studio, a tour on the other pages.
+  const offered = new Set();
   function onRoute(r) {
-    if (offered || r !== "studio" || navigator.webdriver || /[?&]d=/.test(location.hash)) return;
-    let seen = false; try { seen = !!localStorage.getItem(SEEN); } catch (e) {}
-    if (seen) return;
-    offered = true;
-    (root.introDone || Promise.resolve()).then(() => setTimeout(() => { if (root.Shell?.route === "studio" && !document.querySelector(".modal:not([hidden])")) openPane(); }, 900));
+    if (offered.has(r) || navigator.webdriver || /[?&]d=/.test(location.hash) || !TOURS[r]) return;
+    const k = r === "studio" ? SEEN : KEY(r);
+    if (seen(k)) return;
+    offered.add(r);
+    (root.introDone || Promise.resolve()).then(() => setTimeout(() => {
+      if (root.Shell?.route !== r || tour || (pane && !pane.el.hidden) || document.querySelector(".modal:not([hidden])")) return;
+      if (r === "studio") openPane(); else startTour(r);
+    }, r === "home" ? 700 : 900));
   }
-  root.Tour = { open: openPane, start: startTour, onRoute };
+  root.Tour = { open: openPane, start: startTour, show: showFor, onRoute };
   if (root.Shell?.route) onRoute(root.Shell.route);
 })(window);

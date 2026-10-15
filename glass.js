@@ -31,8 +31,12 @@
       d[k] = rx; d[k + 1] = gy; d[k + 2] = 128; d[k + 3] = 255;
     }
     x.putImageData(img, 0, 0);
-    return c.toDataURL();
+    // Encoded off the main thread, so a bar appearing (the first visit to a page) doesn't stall the switch.
+    return new Promise((done) => c.toBlob((b) => done(b ? URL.createObjectURL(b) : c.toDataURL()), "image/png"));
   }
+  // Bars of the same size share their map.
+  const maps = new Map();
+  const mapFor = (w, h, r, bezel) => { const k = [w, h, r, bezel].join(); if (!maps.has(k)) maps.set(k, map(w, h, r, bezel)); return maps.get(k); };
   function attach(el, { bezel = 14, scale = 38 } = {}) {
     if (!ok) return;
     const id = "glass-" + ++n;
@@ -48,9 +52,9 @@
       const r = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 14;
       for (const a of ["x", "y"]) f.setAttribute(a, "0");
       f.setAttribute("width", w); f.setAttribute("height", h);
-      const im = f.querySelector("feImage");
+      const im = f.querySelector("feImage"), want = key;
       im.setAttribute("width", w); im.setAttribute("height", h);
-      im.setAttribute("href", map(w, h, Math.min(r, h / 2), Math.min(bezel, h / 2)));
+      mapFor(w, h, Math.min(r, h / 2), Math.min(bezel, h / 2)).then((url) => { if (key === want) im.setAttribute("href", url); });
       // Refraction with no saturation boost. A frosted bar (data-frost, in px) blurs first so the rim
       // still bends the frosted image; otherwise just enough blur to soften the bent pixels.
       const frost = parseFloat(el.dataset.frost) || 0;

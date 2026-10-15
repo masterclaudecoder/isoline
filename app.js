@@ -35,7 +35,7 @@
     ["posterize", "Posterize", "Color", { levels: 5 }, [{ k: "levels", label: "Levels", min: 2, max: 16, step: 1, hard: [2, 64], rand: [3, 7] }]],
     ["heatmap", "Heatmap", "Color", { glow: 12, mix: 1, invert: false }, [{ k: "glow", label: "Glow", min: 0, max: 80, step: 0.5, fmt: px, rand: [4, 24] }, { k: "mix", label: "Mix", min: 0, max: 1, step: 0.01, fmt: pct, pct: true }, { sw: "invert", label: "Invert" }]],
     ["chrome", "Liquid metal", "Color", { strength: 1, bands: 2.2, soft: 6, tint: "#d9dde3", mix: 1 }, [{ color: "tint", label: "Tint" }, { k: "strength", label: "Depth", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.6, 1.6] }, { k: "bands", label: "Reflections", min: 0.5, max: 6, step: 0.05, fmt: f2, rand: [1.4, 3.2] }, { k: "soft", label: "Softness", min: 1, max: 40, step: 0.5, fmt: px, rand: [3, 12] }, { k: "mix", label: "Mix", min: 0, max: 1, step: 0.01, fmt: pct, pct: true }]],
-    ["halftone", "Halftone", "Print", { shape: "circle", size: 10, angle: 45, mono: true, grid: "square", turn: false }, [{ seg: "shape", options: [["circle", "Circle"], ["square", "Square"], ["triangle", "Triangle"], ["star", "Star"]] }, { seg: "grid", label: "Grid", options: [["square", "Square"], ["hex", "Hex"]], when: (e) => e.shape !== "triangle" || e.turn }, { k: "size", label: "Dot size", min: 3, max: 80, step: 0.5, log: true, fmt: px, rand: [6, 18] }, { k: "angle", label: "Angle", min: 0, max: 90, step: 1, fmt: deg }, { sw: "turn", label: "Random turn", when: (e) => e.shape !== "circle" }, { sw: "mono", label: "Ink only" }]],
+    ["halftone", "Halftone", "Print", { shape: "circle", size: 10, angle: 45, mono: true, grid: "square", turn: false, tone: false, even: false, merge: true, classic: false }, [{ seg: "shape", options: [["circle", "Circle"], ["square", "Square"], ["triangle", "Triangle"], ["star", "Star"]] }, { seg: "grid", label: "Grid", options: [["square", "Square"], ["hex", "Hex"]], when: (e) => e.shape !== "triangle" || e.turn }, { k: "size", label: "Dot size", min: 3, max: 80, step: 0.5, log: true, fmt: px, rand: [6, 18] }, { k: "angle", label: "Angle", min: 0, max: 90, step: 1, fmt: deg }, { sw: "turn", label: "Random turn", when: (e) => e.shape !== "circle" }, { sw: "mono", label: "Ink only" }, { sw: "tone", label: "Size by tone", when: (e) => !e.mono }, { sw: "classic", label: "One-way triangles", when: (e) => e.shape === "triangle" && !e.turn }, { sw: "even", label: "Even sizes", when: (e) => e.shape !== "triangle" || e.turn }, { sw: "merge", label: "Merge when dark", when: (e) => e.shape !== "triangle" || e.turn }]],
     ["cmyk", "CMYK halftone", "Print", { shape: "circle", size: 9, angle: 0 }, [{ seg: "shape", options: [["circle", "Circle"], ["square", "Square"], ["triangle", "Triangle"], ["star", "Star"]] }, { k: "size", label: "Dot size", min: 3, max: 60, step: 0.5, log: true, fmt: px, rand: [6, 14] }, { k: "angle", label: "Angle", min: 0, max: 90, step: 1, fmt: deg }]],
     ["linescreen", "Engrave", "Print", { spacing: 7, angle: 30, mono: true }, [{ k: "spacing", label: "Line spacing", min: 3, max: 60, step: 0.5, log: true, fmt: px, rand: [5, 12] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }, { sw: "mono", label: "Ink only" }]],
     ["riso", "Risograph", "Print", { size: 7, offset: 4, grain: 0.3, inkA: "#ff48b0", inkB: "#0078bf", paper: "#f3efe6" }, [{ color: "inkA", label: "Ink 1" }, { color: "inkB", label: "Ink 2" }, { color: "paper", label: "Paper" }, { k: "size", label: "Dot size", min: 3, max: 40, step: 0.5, log: true, fmt: px, rand: [5, 10] }, { k: "offset", label: "Misregister", min: 0, max: 30, step: 0.5, fmt: px, rand: [1, 6] }, { k: "grain", label: "Grain", min: 0, max: 1, step: 0.01, fmt: f2 }]],
@@ -466,7 +466,12 @@
     Caustics: "The bright web of light a pool casts on its floor", Grain: "Fine film grain", Intensity: "How strong the effect is",
   };
   // Hints for effect settings whose names don't say enough on their own, keyed effect.setting.
+  const INFO_I = `<svg class="info-i" aria-hidden="true" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.25"/><path d="M8 7.2v3.8M8 5h.01"/></svg>`;
   const FX_TIP = {
+    "halftone.tone": "In color, dots normally stay large so the colors carry. This sizes them by lightness instead, like ink only",
+    "halftone.classic": "Ink triangles all point one way, and past mid grey paper triangles pointing the other way shrink to nothing. Turn the angle to 90° for sideways rows",
+    "halftone.even": "Every shape covers the same share of its cell for the same tone, so circles, squares and stars read alike",
+    "halftone.merge": "Dark dots grow into each other. Off, they stop when they touch and keep their shape",
     "wave.length": "Distance between wave crests", "swirl.amount": "How many turns it twists at the center. Negative twists the other way",
     "swirl.radius": "How far from the center the twist reaches", "bulge.amount": "Positive swells it outward, negative pinches it in",
     "bulge.radius": "How far from the center the bulge reaches", "ripple.length": "Distance between rings", "ripple.decay": "How far the rings travel before fading",
@@ -497,7 +502,7 @@
     if (tipText) {
       const lab = row.querySelector(".label"); lab.dataset.tip = tipText;
       // A small "i" says there's a hint; hovering the name or the icon shows it.
-      lab.insertAdjacentHTML("beforeend", `<svg class="info-i" aria-hidden="true" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.25"/><path d="M8 7.2v3.8M8 5h.01"/></svg>`);
+      lab.insertAdjacentHTML("beforeend", INFO_I);
       if (SWEEP_GROUPS.has(c.group) && !c.noSweep) { c._sweep = sweeps.length; lab.dataset.tipPreview = "sweep:" + c._sweep; sweeps.push(c); }
     }
     const L = Math.log(c.max / c.min);
@@ -563,10 +568,10 @@
     });
     syncers.push(() => { for (const b of el.children) b.classList.toggle("on", String(get()) === b.dataset.v); });
   }
-  function makeSwitch(host, label, get, set) {
+  function makeSwitch(host, label, get, set, tip) {
     const row = document.createElement("label");
     row.className = "label-row switch-row";
-    row.innerHTML = `<span class="label">${label}</span><span class="switch"><input type="checkbox"><span></span></span>`;
+    row.innerHTML = `<span class="label"${tip ? ` data-tip="${tip}"` : ""}>${label}${tip ? INFO_I : ""}</span><span class="switch"><input type="checkbox"><span></span></span>`;
     const cb = row.querySelector("input");
     cb.onchange = () => { set(cb.checked); update(); };
     syncers.push(() => (cb.checked = !!get()));
@@ -1279,7 +1284,7 @@
         makeSeg(seg, () => e()[p.seg], (v) => (e()[p.seg] = v));
         if (p.when) { const lb = p.label ? seg.previousElementSibling : null; syncers.push(() => { seg.hidden = !p.when(e()); if (lb) lb.hidden = seg.hidden; }); }
       } else if (p.sw) {
-        makeSwitch(body, p.label, () => e()[p.sw], (v) => (e()[p.sw] = v));
+        makeSwitch(body, p.label, () => e()[p.sw], (v) => (e()[p.sw] = v), FX_TIP[id + "." + p.sw]);
         if (p.when) { const row = body.lastElementChild; syncers.push(() => (row.hidden = !p.when(e()))); }
       }
       else if (p.color) makeColor(body, p.label, () => e()[p.color], (v) => (e()[p.color] = v));
@@ -1698,28 +1703,82 @@
     playRaf = requestAnimationFrame(playFrame);
   }
   // Slow playback: frames are timed by how long each one takes to draw, not by the gaps between them,
-  // so a background tab, a pause or a busy moment elsewhere never counts. Very slow frames bring up a
-  // note at most once per visit.
-  let perfTimes = [], perfWarned = false, perfSkip = 0;
-  try { perfWarned = !!sessionStorage.getItem("isoline.perfNote"); } catch (e) {}
+  // so a background tab, a pause or a busy moment elsewhere never counts. When the typical frame is
+  // slower than the threshold in Settings (60 fps unless changed), a note offers to lighten the design.
+  // Closing it quiets it for that look only: another slow look brings it back. "Don't remind me" turns
+  // it off until a threshold is picked again in Settings.
+  let resumeOnShow = false;
+  let perfTimes = [], perfSkip = 0, perfSig = "", perfShownFor = "";
+  const perfQuiet = new Set();
+  const lookSig = (st = S) => [st.source === "gradient" ? "gradient:" + st.grad.type : "contours:" + st.pattern + ":" + st.mode, st.fxOrder.filter((id) => st.fx[id]?.on).join("+") || "no effects", st.objects?.length ? st.objects.map((o) => o.kind + ":" + o.mat).join("+") : "", "motion:" + st.motion.type].filter(Boolean).join(" | ");
   document.addEventListener("visibilitychange", () => (perfTimes = []));
   function watchPerf(cost) {
     if (document.hidden || document.body.dataset.route !== "studio") return;
+    const sig = lookSig();
+    if (sig !== perfSig) { perfSig = sig; perfTimes = []; perfSkip = Math.max(perfSkip, 8); }
     // The first frames of a new design build shaders and textures, so they don't count.
     if (perfSkip > 0) { perfSkip--; return; }
     perfTimes.push(cost); if (perfTimes.length > 45) perfTimes.shift();
-    if (perfTimes.length < 45) return;
-    const mid = perfTimes.slice().sort((a, b) => a - b)[22];
+    // A verdict needs 45 frames, or on a slow device at least 12 frames spanning 2.5 seconds.
+    const n = perfTimes.length;
+    if (n < 12 || (n < 45 && perfTimes.reduce((a, b) => a + b, 0) < 2500)) return;
+    const sorted = perfTimes.slice().sort((a, b) => a - b), mid = sorted[n >> 1];
+    perfLog(sig, sorted);
+    perfTimes = perfTimes.slice(-Math.floor(n / 3));
     // Detail never steps down mid-play: a visible drop in sharpness reads worse than a lower frame rate,
     // which slow frames give on their own since a frame is skipped while the last one is still drawing.
-    if (mid > 60 && !perfWarned) {
-      perfWarned = true; try { sessionStorage.setItem("isoline.perfNote", "1"); } catch (e) {}
-      $("perfNote").hidden = false; $("perfFx").hidden = !S.fxOrder.length;
+    const fps = P.perfFps ?? 60;
+    if (fps && mid > 1000 / fps && !perfQuiet.has(sig) && $("perfNote").hidden) {
+      perfShownFor = sig;
+      $("perfRate").textContent = `About ${Math.max(1, Math.round(1000 / mid))} fps here, below ${fps}.`;
+      $("perfNote").hidden = false; $("perfFx").hidden = !S.fxOrder.some((id) => S.fx[id]?.on); $("perfOff").checked = false;
     }
   }
-  $("perfFx").onclick = () => { S.fxOrder = []; $("perfNote").hidden = true; update(); toast("Effects removed", { action: "Undo", onAction: () => travel(-1) }); };
-  $("perfStop").onclick = () => { stopPlay(); S.motion.type = "still"; $("perfNote").hidden = true; update(); };
-  $("perfX").onclick = () => { $("perfNote").hidden = true; };
+  // Closing the note quiets it for this look; with "Don't remind me" ticked it stays off.
+  function closePerf() {
+    $("perfNote").hidden = true; perfQuiet.add(perfShownFor);
+    if ($("perfOff").checked) { P.perfFps = 0; savePrefs(); syncPerfSet(); toast("Slow playback notes are off. Turn them back on in Settings"); }
+  }
+  $("perfFx").onclick = () => { closePerf(); S.fxOrder = []; update(); toast("Effects removed", { action: "Undo", onAction: () => travel(-1) }); };
+  $("perfStop").onclick = () => { closePerf(); stopPlay(); S.motion.type = "still"; update(); };
+  $("perfX").onclick = closePerf;
+  // Settings: the frame rate below which playback counts as slow, or off.
+  function syncPerfSet() { const v = String(P.perfFps ?? 60); for (const b of $("perfFps").children) if (b.dataset.v) b.classList.toggle("on", b.dataset.v === v); }
+  $("perfFps").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P.perfFps = +b.dataset.v; perfQuiet.clear(); savePrefs(); syncPerfSet(); };
+  syncPerfSet();
+
+  // Performance log: how fast each look plays and draws on this device, kept in the browser (the last
+  // 300 entries) and downloaded from Settings, so slow effects can be found and fixed.
+  const PERF_LOG = "isoline.perfLog";
+  let perfEntries = [];
+  try { perfEntries = JSON.parse(localStorage.getItem(PERF_LOG) || "[]"); } catch (e) {}
+  let perfSaveT = 0;
+  function perfLog(sig, sorted, kind = "play") {
+    const n = sorted.length, q = (f) => +sorted[Math.min(n - 1, Math.floor(f * n))].toFixed(1);
+    const { w, h } = previewDims(S, false);
+    perfEntries.push({ at: new Date().toISOString(), kind, look: sig, ...(kind === "play" ? { fps: Math.round(1000 / Math.max(0.1, q(0.5))), ms: { median: q(0.5), p90: q(0.9), max: q(1) }, frames: n } : { ms: q(0.5) }), size: `${S.w}x${S.h}`, drawn: kind === "play" && playRes ? "reduced" : `${w}x${h}`, fx: Object.fromEntries(S.fxOrder.filter((id) => S.fx[id]?.on).map((id) => [id, S.fx[id]])) });
+    if (perfEntries.length > 300) perfEntries = perfEntries.slice(-300);
+    clearTimeout(perfSaveT); perfSaveT = setTimeout(() => { try { localStorage.setItem(PERF_LOG, JSON.stringify(perfEntries)); } catch (e) {} }, 1000);
+  }
+  // Other parts of the app (page switches) log here too.
+  window.perfEvent = (kind, look, data) => {
+    perfEntries.push({ at: new Date().toISOString(), kind, look, ...data });
+    if (perfEntries.length > 300) perfEntries = perfEntries.slice(-300);
+    clearTimeout(perfSaveT); perfSaveT = setTimeout(() => { try { localStorage.setItem(PERF_LOG, JSON.stringify(perfEntries)); } catch (e) {} }, 1000);
+  };
+  function gpuName() {
+    try { const gl = document.createElement("canvas").getContext("webgl2"), x = gl?.getExtension("WEBGL_debug_renderer_info"); return x ? gl.getParameter(x.UNMASKED_RENDERER_WEBGL) : gl?.getParameter(gl.RENDERER) || "none"; } catch (e) { return "unknown"; }
+  }
+  $("exportLogs").onclick = () => {
+    closeMenus();
+    // A summary per look first (slowest at the top), then every entry.
+    const by = {};
+    for (const e of perfEntries) if (e.fps) { const k = e.kind + " | " + e.look; (by[k] ||= []).push(e.fps); }
+    const summary = Object.entries(by).map(([look, f]) => ({ look, runs: f.length, fps: { median: f.sort((a, b) => a - b)[f.length >> 1], min: f[0], max: f[f.length - 1] } })).sort((a, b) => a.fps.median - b.fps.median);
+    const out = { app: `Isoline ${VERSION} (${BUILD})`, exported: new Date().toISOString(), device: { userAgent: navigator.userAgent, gpu: gpuName(), dpr: devicePixelRatio, screen: `${screen.width}x${screen.height}`, cores: navigator.hardwareConcurrency, memory: navigator.deviceMemory }, threshold: P.perfFps ?? 60, summary, entries: perfEntries };
+    download(new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }), `isoline-performance-${new Date().toISOString().slice(0, 10)}.json`);
+    toast(perfEntries.length ? `Exported ${perfEntries.length} entries` : "No entries yet. Play some motion first");
+  };
   function stopPlay() { if (!playing) return; playing = false; held = false; clearTimeout(holdT); cancelAnimationFrame(playRaf); syncPlay(); crossfade(render()); }
   function syncPlay() {
     for (const b of [$("playBtn"), $("barPlay")]) b.querySelector("use").setAttribute("href", playing ? "#i-pause" : "#i-play");
@@ -2068,7 +2127,7 @@
   window.syncSize = syncSize;
 
   // ---------- menus + modals ----------
-  $("tourBtn").onclick = () => { closeMenus(); window.Tour?.open(); };
+  $("tourBtn").onclick = () => { closeMenus(); window.Tour?.show(window.Shell?.route); };
   const menus = { sizeBtn: sizeMenu, exportBtn: $("exportMenu"), settingsBtn: $("settingsMenu"), designsBtn: $("designsMenu"), shareBtn: $("shareMenu") };
   // The bigger menus dim and blur the page behind them, so the eye lands on the menu.
   const SCRIMMED = ["exportMenu", "designsMenu", "shareMenu", "cpExportMenu"];
@@ -2177,7 +2236,7 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.15", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "1.16", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
@@ -2839,7 +2898,8 @@
     cancelAnimationFrame(raf); cancelAnimationFrame(anim); anim = 0;
     return new Promise((resolve) => {
       raf = requestAnimationFrame(async () => {
-        const r = await paint(S, draft);
+        const t0 = performance.now(), r = await paint(S, draft);
+        if (r && !draft) logStill(t0, r);
         if (r && !draft && !bootShared) firstPainted();
         if (r && !draft) { current = r; updateMini(); schedulePreviews(); }
         resolve(r);
@@ -2847,6 +2907,14 @@
     });
   }
 
+  // Still frames go in the performance log once per look, timed until the GPU has finished.
+  const stillSeen = new Set();
+  function logStill(t0, r) {
+    const sig = lookSig();
+    if (stillSeen.has(sig)) return;
+    stillSeen.add(sig);
+    (r.raster && FXR?.sync ? FXR.sync() : Promise.resolve()).then(() => perfLog(sig, [performance.now() - t0], "still"));
+  }
   // ---------- previews ----------
   let queue = [], pumping = false, previewT = 0, quietUntil = 0;
   const quiet = (ms = 500) => (quietUntil = Math.max(quietUntil, performance.now() + ms));
@@ -3134,7 +3202,15 @@
   // canvas the loop is drawing on.
   let stillT = 0;
   function syncStill() { current = { svg: S.source === "contours" && !isRaster(S) ? T.buildSVG(S).svg : "", raster: isRaster(S) }; updateMini(); schedulePreviews(); }
+  // The Caddis preset is the background of caddis.app; putting it on brings a note pointing there.
+  let wasCaddis = false;
+  function caddisCheck() {
+    const look = PRESETS.find((p) => p[1] === "Caddis"), on = !!look && lookMatches(look[2]);
+    if (on && !wasCaddis) window.firstPaint.then(() => setTimeout(() => toast("Caddis is the gradient behind caddis.app. Check them out", { action: "Visit", onAction: () => window.open("https://caddis.app", "_blank", "noopener") }), 500));
+    wasCaddis = on;
+  }
   function update({ draft = false, commit: doCommit = true, instant = false, fade = false } = {}) {
+    if (!draft) caddisCheck();
     if (sel != null && !(S.source === "gradient" ? S.grad.points[sel] : S.points[sel])) sel = null;
     syncUI(); save(); savePrefs();
     // While it plays, the loop keeps running and draws the edit on its next frame: drags track live,
@@ -3283,7 +3359,27 @@
   let firstVisit = true;
   try { firstVisit = !localStorage.getItem(STORE); } catch (e) {}
   if (firstVisit) applyLook(PRESETS.find((p) => p[1] === "Prism")[2]);
-  update({ commit: false });
+  // Load guard: a design too heavy for this device must never lock anyone out of the app. A flag is set
+  // while the page starts and cleared a few seconds in; a page that finds it still set knows the last
+  // visit froze or crashed, so a design with effects or objects opens without them, with an offer to
+  // bring them back. Designs with effects are also test-drawn small first, as Surprise does, and one
+  // that would take more than three seconds to draw opens the same way.
+  const GUARD = "isoline.loadGuard";
+  let crashed = false;
+  try { crashed = localStorage.getItem(GUARD) === "1"; localStorage.setItem(GUARD, "1"); } catch (e) {}
+  setTimeout(() => { try { localStorage.removeItem(GUARD); } catch (e) {} }, 5000);
+  const heavy = (st) => st.fxOrder.some((id) => st.fx[id]?.on) || st.objects.length > 0;
+  function safeOpen(why) {
+    const keep = clone(S);
+    S.fxOrder = []; S.objects = [];
+    window.firstPaint.then(() => setTimeout(() => toast(why, { action: "Restore", onAction: () => { S = keep; update({ fade: true }); } }), 1400));
+  }
+  let bootDone;
+  window.studioBoot = new Promise((r) => (bootDone = r));
+  const boot = () => { update({ commit: false }); bootDone(); };
+  if (crashed && heavy(S)) { safeOpen("The last design stalled this device, so it opened without effects"); boot(); }
+  else if (heavy(S) && TFX && !/[?&]d=/.test(location.hash)) drawCost(S).then((ms) => { if (ms > SLOW_MS * 2) safeOpen("This design is too heavy for this device, so it opened without effects"); boot(); });
+  else boot();
   setTimeout(() => document.body.classList.remove("boot"), 900);
 
   // ---------- links to the shell and the palette tool ----------
@@ -3399,7 +3495,15 @@
     async frameAt(t, w = 440, h = 275) { const c = document.createElement("canvas"); c.width = w; c.height = h; await loopFrame(S, t, c); return c; },
     // Arriving from another page, the canvas still holds its last frame, so the redraw (and the thumbnails
     // after it) waits until the page transition has played, then cross-fades in any change.
-    onShow() { lastWrap = ""; fit(); if (playing) return; quiet(1100); clearTimeout(showT); showT = setTimeout(() => crossfade(render()), document.documentElement.classList.contains("vt") ? 680 : 0); },
+    onShow() {
+      lastWrap = ""; fit(); if (playing) return; quiet(1100); clearTimeout(showT);
+      const later = document.documentElement.classList.contains("vt") ? 680 : 0;
+      // Motion that was paused on the way out picks up again once the page has arrived.
+      if (resumeOnShow) { resumeOnShow = false; showT = setTimeout(() => { if (!playing) startPlay(); }, later); return; }
+      showT = setTimeout(() => crossfade(render()), later);
+    },
+    // Leaving the Studio: motion stops on the frame it's showing (no redraw), to resume on return.
+    onLeave() { if (!playing) return; resumeOnShow = true; playing = false; held = false; clearTimeout(holdT); cancelAnimationFrame(playRaf); syncPlay(); },
     // A contour drawing from default settings plus overrides, as SVG markup. The Components kit uses it
     // for its map pictures, colored with the kit's own tokens.
     contour(over = {}, w = 800, h = 500) { const st = withDefaults({ ...clone(DEFAULTS), fxOrder: [], ...over }); return T.buildSVG({ ...st, w, h }, { w, h }).svg; },

@@ -192,7 +192,7 @@ h3.sub.inline { margin: 0; }
 #presetGrid.filtered .card-sub { display: none; }
 .card.var { padding: 3px; }
 .card.var .card-label { display: none; }
-.fx-card .added { position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 5px; display: none; place-items: center; background: var(--accent); color: #fff; border: 1px solid color-mix(in oklab, var(--accent) 62%, var(--ink)); box-sizing: border-box; box-shadow: 0 0 0 2px var(--panel); }
+.fx-card .added { position: absolute; top: 8px; right: 8px; width: 18px; height: 18px; border-radius: 5px; display: none; place-items: center; background: var(--accent); color: #fff; border: 1px solid color-mix(in oklab, var(--accent) 84%, #000); box-sizing: border-box; box-shadow: 0 0 0 1.5px rgba(255,255,255,.6), 0 1px 4px rgba(0,0,0,.22); }
 .fx-card .added .ic { width: 12px; height: 12px; stroke-width: 2.4; }
 .fx-card.added .added { display: grid; }
 .fx-actions { display: flex; gap: 6px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--hair); }
@@ -2038,3 +2038,16 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .tour-dot { position: fixed; z-index: 303; }
 .tour-spot.gone, .tour-tip.gone, .tour-dot.gone { opacity: 0; transition: opacity .3s ease; }
 #objProj { margin-bottom: 12px; }
+
+/* ---------- 1.16 ---------- */
+/* Segmented controls share the Apply menu's look: a sunken well with 4px of room on every side, and
+   raised 30px keys with their labels set in from the edges. */
+.multi, .seg { padding: 4px; gap: 4px; border-radius: 12px; }
+.tog { padding: 0 10px; }
+.seg button { height: 30px; padding: 0 10px; font-size: 12.5px; color: var(--muted); }
+.seg button:not(.on):hover { color: var(--ink-2); }
+.seg button.on { color: var(--ink); }
+.seg.sm button { height: 28px; font-size: 12px; }
+.perf-note small { white-space: normal; max-width: 330px; }
+.perf-off { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.perf-off input { width: 13px; height: 13px; margin: 0; accent-color: var(--accent); }

@@ -116,6 +116,8 @@
           <div class="set-sep"></div>
           <div class="set-row static"><span><b>Theme</b></span><div class="seg sm" id="theme"><button data-v="system">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
           <div class="set-row static"><span><b>Accent</b></span><div class="accents" id="accents"></div></div>
+          <div class="set-row static"><span><b>Slow playback note</b><small>Below this frame rate</small></span><div class="seg sm" id="perfFps"><button data-v="0">Off</button><button data-v="30">30</button><button data-v="45">45</button><button data-v="60">60</button></div></div>
+          <button class="opt" id="exportLogs"><span><svg class="ic"><use href="#i-down"/></svg>Export performance log</span><span class="mono">.json</span></button>
           <div class="set-sep"></div>
           <button class="opt" id="exportSettings"><span><svg class="ic"><use href="#i-down"/></svg>Download settings</span><span class="mono">.json</span></button>
           <button class="opt" id="copySettings"><span><svg class="ic"><use href="#i-copy"/></svg>Copy settings</span></button>
@@ -337,7 +339,7 @@
           <svg class="overlay" id="ov"></svg>
         </div>
         <div class="stage-meta mono"><span class="kind" id="kind">SVG</span><span id="ms"></span></div>
-        <div class="perf-note" id="perfNote" role="status" hidden><span><b>Playback is slow here</b><small>Exports stay smooth. To lighten the preview:</small></span><button class="btn sm" id="perfFx">Remove effects</button><button class="btn sm" id="perfStop">Stop motion</button><button class="ib xs" id="perfX" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></div>
+        <div class="perf-note" id="perfNote" role="status" hidden><span><b>Playback is slow here</b><small><span id="perfRate"></span> Exports stay smooth. To lighten the preview:</small><label class="perf-off"><input type="checkbox" id="perfOff">Don't remind me</label></span><button class="btn sm" id="perfFx">Remove effects</button><button class="btn sm" id="perfStop">Stop motion</button><button class="ib xs" id="perfX" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></div>
         <div class="stage-bar glass" role="toolbar" aria-label="Canvas">
           <button class="ib st-wide" id="stWide" data-tip="Hide the sidebars" aria-label="Hide the sidebars"><svg class="ic"><use href="#i-panel"/></svg></button>
           <button class="ib" id="undo" title="Undo (⌘Z)" aria-label="Undo"><svg class="ic"><use href="#i-undo"/></svg></button>

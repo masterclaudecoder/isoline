@@ -47,11 +47,25 @@
   // starts, so a second click in that window compares against want, not the page still on screen, and
   // a transition that lands on a page nobody wants any more is corrected straight away.
   let want = null;
+  // Page switches go in the performance log: the longest gap between frames and how many frames were
+  // missed over the second and a half after the switch, noting the first visit to each page.
+  const visited = new Set();
+  function watchSwitch(from, r) {
+    if (!root.perfEvent || from == null) return;
+    const first = !visited.has(r); visited.add(r);
+    const t0 = performance.now();
+    let last = t0, worst = 0, frames = 0;
+    const tick = (now) => { worst = Math.max(worst, now - last); last = now; frames++; if (now - t0 < 1500) requestAnimationFrame(tick); else root.perfEvent("switch", `${from} to ${r}${first ? ", first visit" : ""}`, { worstFrameMs: Math.round(worst), frames, expected: Math.round((now - t0) / 16.7) }); };
+    requestAnimationFrame(tick);
+  }
   function go(r, push = true) {
     if (r === (want ?? route)) return;
     want = r;
     if (push) history.pushState(null, "", hashFor(r));
     const from = route; Shell.from = from;
+    watchSwitch(from, r);
+    // Motion pauses on its current frame before the Studio leaves, so the page change has the frames to itself.
+    if (from === "studio") root.Studio?.onLeave?.();
     const dir = ORDER[r] >= ORDER[from] ? "fwd" : "back";
     document.documentElement.dataset.dir = dir;
     if (reduce.matches || from == null) { want = null; return show(r); }
@@ -81,6 +95,8 @@
     $("homePalette").innerHTML = pal.map((c, i) => `<i style="background:${c};flex-grow:${w[i] || 1}"></i>`).join("");
     root.Components?.preview($("homeComponents"));
     if (fresh && !reduce.matches) $("homeComponents").animate([{ opacity: 0.2, filter: "blur(6px)" }, { opacity: 1, filter: "none" }], { duration: 450, easing: "ease-out" });
+    // The Studio decides first whether its saved design is safe to draw on this device.
+    await root.studioBoot;
     const host = $("homeStudio");
     const r = host.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
     const cw = Math.round((r.width || 560) * dpr), ch = Math.round((r.height || 350) * dpr);
@@ -113,7 +129,8 @@
   let brandClicks = 0, remixing = false;
   async function remixAll() {
     const mark = $("brand").querySelector("svg");
-    if (!reduce.matches) mark?.animate([{ transform: "rotate(0) scale(1)" }, { transform: "rotate(-14deg) scale(.9)", offset: 0.35 }, { transform: "rotate(0) scale(1)" }], { duration: 420, easing: "cubic-bezier(.3,1.4,.5,1)" });
+    // The safety click tips the logo to the right; the rolls after it tip it left.
+    if (!reduce.matches) mark?.animate([{ transform: "rotate(0) scale(1)" }, { transform: `rotate(${brandClicks ? -14 : 14}deg) scale(.9)`, offset: 0.35 }, { transform: "rotate(0) scale(1)" }], { duration: 420, easing: "cubic-bezier(.3,1.4,.5,1)" });
     if (++brandClicks < 2) return;
     remixing = true;
     const pal = root.Palettes?.generate();
@@ -137,6 +154,7 @@
 
   const Shell = { go, route: null };
   root.Shell = Shell;
+  visited.add(parse(location.hash));
   show(parse(location.hash));
   // First load: the page stays out of sight until its fonts are in (or a moment has passed), then the
   // top bar settles and the page's panels rise in one after another, so nothing flashes or shifts.

@@ -1038,23 +1038,32 @@ void main() {
   o = c;
 }`,
 
-    halftone: `uniform float uSize; uniform float uAngle; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper; uniform float uShape; uniform float uHex; uniform float uTurn;
+    halftone: `uniform float uSize; uniform float uAngle; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper; uniform float uShape; uniform float uHex; uniform float uTurn; uniform float uTone; uniform float uEven; uniform float uMerge; uniform float uClassic;
 // Halftone: one dot per lattice point, sized by how dark the picture is there. Every shape grows by area
 // from nothing at white, meets its neighbours at mid grey and closes into solid ink at black: circles
 // touch at 50% and merge, squares stand on their corners so 50% is an exact checkerboard, and triangles
 // alternate up and down so they tile the plane outright. The lattice is square or hexagonal.
-float dark(vec3 c) { return uMono > 0.5 ? 1.0 - luma(c) : 0.25 + 0.75 * (1.0 - luma(c) * 0.6); }
+// In color, dots normally stay large so the picture's colors carry; "size by tone" sizes them by lightness
+// as ink only does.
+float dark(vec3 c) { return uMono > 0.5 || uTone > 0.5 ? 1.0 - luma(c) : 0.25 + 0.75 * (1.0 - luma(c) * 0.6); }
 // Size from darkness: area-proportional up to touching at 50%, then the gaps shrink by area to nothing.
 float grow(float d, float touch, float full) { d = clamp(d, 0.0, 1.0); return d < 0.5 ? touch * sqrt(d * 2.0) : full - (full - touch) * sqrt(2.0 - d * 2.0); }
 vec2 turn(vec2 f, vec2 id) { if (uTurn < 0.5 || uShape < 0.5) return f; float a = hash(id + 17.3) * 6.2831853, c = cos(a), s = sin(a); return mat2(c, -s, s, c) * f; }
+// The size for darkness d. "Even sizes" makes every shape cover the same share of its cell for the same
+// tone (k is the shape's area for size 1), so circles, squares, triangles and stars all read alike.
+// With "merge" off, dots stop growing when they touch, so they keep their own shape and never squish.
+float size(float d, float touch, float full, float k) {
+  float s = uEven > 0.5 ? min(full, sqrt(clamp(d, 0.0, 1.0) * (uHex > 0.5 ? 0.8660254 : 1.0) / k)) : grow(d, touch, full);
+  return uMerge > 0.5 ? s : min(s, touch);
+}
 // Signed distance of one dot (in lattice units) for a darkness d.
 float dotAt(vec2 f, float d, vec2 id) {
   f = turn(f, id);
   bool hx = uHex > 0.5;
-  if (uShape < 0.5) return length(f) - grow(d, 0.5, hx ? 0.5774 : 0.7072);
-  if (uShape < 1.5) return (abs(f.x) + abs(f.y)) * 0.7071 - grow(d, 0.3536, hx ? 0.62 : 0.7072);
-  if (uShape < 2.5) return sdTri(f, grow(d, 0.45, hx ? 1.05 : 1.25));
-  return sdStar(f, grow(d, 0.62, 1.15), 0.45);
+  if (uShape < 0.5) return length(f) - size(d, 0.5, hx ? 0.5774 : 0.7072, 3.14159);
+  if (uShape < 1.5) return (abs(f.x) + abs(f.y)) * 0.7071 - size(d, 0.3536, hx ? 0.62 : 0.7072, 4.0);
+  if (uShape < 2.5) return sdTri(f, size(d, 0.45, hx ? 1.05 : 1.25, 1.7320508));
+  return sdStar(f, size(d, 0.62, 1.15, 1.3), 0.45);
 }
 void main() {
   float ca = cos(uAngle), sa = sin(uAngle);
@@ -1070,6 +1079,14 @@ void main() {
     float s = sqrt(clamp(dark(c.rgb), 0.0, 1.0));
     vec2 p = r - cen; if (!up) p.y = -p.y;
     float e = max(-p.y, max(dot(p, vec2(0.8660254, 0.5)), dot(p, vec2(-0.8660254, 0.5))));
+    if (uClassic > 0.5) {
+      // One-way triangles: ink grows in the upward triangles until they fill half the plane at 50%; past
+      // that the downward ones fill in too, leaving shrinking paper triangles that point the other way.
+      float dd = clamp(dark(c.rgb), 0.0, 1.0), m;
+      if (up) m = dd < 0.004 ? 0.0 : smoothstep(aa, -aa, e - 0.2887 * min(1.0, sqrt(2.0 * dd)) - aa * step(0.5, dd));
+      else m = dd <= 0.5 ? 0.0 : 1.0 - smoothstep(aa, -aa, e - 0.2887 * sqrt(max(0.0, 2.0 - 2.0 * dd)));
+      o = vec4(mix(uPaper, uMono > 0.5 ? uInk : c.rgb, m), 1.0); return;
+    }
     // Full triangles overlap by a hair, so solid ink shows no seams between them.
     float sd = e - 0.2887 * s - aa * smoothstep(0.9, 1.0, s);
     float m = s < 0.02 ? 0.0 : smoothstep(aa, -aa, sd);
@@ -1580,7 +1597,7 @@ void main() {
         case "glass": return { uWidth: e.width, uAngle: rad(e.angle), uStr: e.strength, uFrost: e.frost ?? 0.2, uLight: e.light ?? 0.5 };
         case "mesh": return { uCell: e.cell, uStr: e.strength, uFrost: e.frost ?? 0.3, uGrout: e.grout ?? 1, uRim: e.rim ?? 0.6, uDisp: e.disp ?? 0.5, uRad: e.radius ?? 0.25 };
         case "pixel": return { uSize: e.size, uBevel: e.bevel };
-        case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)), uHex: e.grid === "hex" ? 1 : 0, uTurn: e.turn ? 1 : 0 };
+        case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)), uHex: e.grid === "hex" ? 1 : 0, uTurn: e.turn ? 1 : 0, uTone: e.tone ? 1 : 0, uEven: e.even ? 1 : 0, uMerge: e.merge === false ? 0 : 1, uClassic: e.classic ? 1 : 0 };
         case "ascii": {
           const set = e.set === "custom" ? " " + (e.custom || "#") : CHARSETS[e.set] || CHARSETS.ascii;
           return { uCell: e.cell, uCount: atlas(set, e.font), uMono: e.mono ? 1 : 0, uInvert: e.invert ? 1 : 0, uInk: ink, uPaper: paper };
