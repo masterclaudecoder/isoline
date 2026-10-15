@@ -141,9 +141,8 @@ void main() {
   }
   if (uWarpA > 0.0) {
     float u0 = px / uSc, v0 = py / uSc;
-    // Read twice, moving opposite ways round the loop, so the shape churns in place (as on the CPU).
-    float dx = uWarpA * uSc * 0.25 * (fbmS(u0 + 5.2 + uLoop.x, v0 + 1.3 + uLoop.y, 2) + fbmS(u0 + 5.2 - uLoop.x, v0 + 1.3 - uLoop.y, 2));
-    float dy = uWarpA * uSc * 0.25 * (fbmS(u0 + 1.7 - uLoop.y, v0 + 9.2 + uLoop.x, 2) + fbmS(u0 + 1.7 + uLoop.y, v0 + 9.2 - uLoop.x, 2));
+    float dx = uWarpA * uSc * 0.5 * fbmS(u0 + 5.2 + uLoop.x, v0 + 1.3 + uLoop.y, 2);
+    float dy = uWarpA * uSc * 0.5 * fbmS(u0 + 1.7 - uLoop.y, v0 + 9.2 + uLoop.x, 2);
     px += dx; py += dy;
   }
   float u = px / uSc, v = py / uSc, val; vec2 p = vec2(px, py); float lin = px * uDir.x + py * uDir.y;
@@ -205,6 +204,7 @@ float sdOcta(vec3 p, float s) {
   float k = clamp(0.5 * (q.z - q.y + s), 0.0, s);
   return length(vec3(q.x, q.y - s + k, q.z - k));
 }
+float smax(float a, float b, float k) { float h = clamp(0.5 - 0.5 * (b - a) / k, 0.0, 1.0); return mix(b, a, h) + k * h * (1.0 - h); }
 float sd(vec3 p) {
   float d;
   if (uKind == 0) d = length(p) - 1.0;
@@ -213,7 +213,13 @@ float sd(vec3 p) {
   else if (uKind == 3) { vec3 q = p; q.y -= clamp(q.y, -0.55, 0.55); d = length(q) - 0.44; }
   // The pyramid's distance only knows its slanted faces; capping it with the base plane keeps rays from
   // slipping through the bottom when it's seen from below.
-  else if (uKind == 6) d = max(sdPyramid((p + vec3(0.0, 0.62, 0.0)) / 1.55, 1.0) * 1.55, -(p.y + 0.62)) - 0.03;
+  // The pyramid is four slanted faces and a base, joined with a smooth maximum so every edge rounds
+  // off and the whole form shades as one continuous solid, the base included.
+  else if (uKind == 6) {
+    vec3 q = vec3(abs(p.x), p.y, abs(p.z));
+    float a = 0.894 * q.x + 0.447 * q.y - 0.416, b = 0.894 * q.z + 0.447 * q.y - 0.416, c = -q.y - 0.62;
+    d = smax(smax(a, b, 0.06), c, 0.06) - 0.02;
+  }
   else if (uKind == 7) d = sdOcta(p * vec3(1.0, 0.82, 1.0), 1.0) - 0.03;
   else d = length(p) - 0.95 + 0.14 * sin(2.6 * p.x + gPh) * sin(2.6 * p.y + gPh * 2.0) * sin(2.6 * p.z - gPh);
   d += uRipple * 0.045 * sin(7.0 * p.x + gPh) * sin(7.0 * p.y - gPh) * sin(7.0 * p.z);
@@ -460,7 +466,7 @@ uniform int uType; uniform int uN; uniform vec3 uCol[8]; uniform vec2 uPt[8];
 uniform float uWarp; uniform float uWarpScale; uniform float uSoft; uniform float uAngle;
 uniform float uScale; uniform float uDetail; uniform float uStretch; uniform float uContrast; uniform int uNoise;
 // Motion (all loop over uTime 0..1): 1 drift, 2 color flow, 3 breathe, 4 pulse.
-uniform float uTime; uniform int uMotion; uniform float uMotAmt;
+uniform float uTime; uniform int uMotion; uniform float uMotAmt; uniform float uEndless;
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec3 permute(vec3 x) { return mod289(((x * 34.0) + 1.0) * x); }
@@ -511,9 +517,10 @@ void main() {
   // Pulse: four soft beats per loop push the field out from the center, while it morphs a little.
   // Flow's read points move slowly: at full amplitude the field still only morphs gently.
   float beat = uMotion == 4 ? pow(0.5 - 0.5 * cos(tw * 4.0), 3.0) : 0.0, lm = br ? 0.3 : uMotion == 4 ? 0.4 : 0.0;
-  vec2 L1 = lm * 1.5 * uMotAmt * vec2(cos(tw), sin(tw));
+  // Endless Flow adds turns at irrational rates, so the read points never close their path.
+  vec2 L1 = lm * 1.5 * uMotAmt * (vec2(cos(tw), sin(tw)) + uEndless * 0.6 * vec2(cos(tw * 1.618 + 1.3), sin(tw * 1.414 + 0.7)));
   // Both read points travel at a constant speed, so the morph never hurries through part of the loop.
-  vec2 L2 = lm * 1.5 * uMotAmt * vec2(sin(tw + 1.3), -cos(tw + 1.3));
+  vec2 L2 = lm * 1.5 * uMotAmt * (vec2(sin(tw + 1.3), -cos(tw + 1.3)) + uEndless * 0.6 * vec2(sin(tw * 2.236 + 0.4), -cos(tw * 1.732 + 2.1)));
   p = 0.5 + (p - 0.5) * (1.0 - 0.07 * uMotAmt * beat);
   if (uType == 7) {
     // Wave, after Framer's Wave Gradient shader (the background of caddis.app): four colors in two soft
@@ -1593,7 +1600,7 @@ void main() {
           uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring", "aura", "smoke"].indexOf(g.noise || "clouds"),
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
           uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle),
-          uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5,
+          uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5, uEndless: job.endless ? 1 : 0,
         }, w, h, k, job.seed);
         input = targets.list[0].t; ping = 1;
       } else if (job.contours) {

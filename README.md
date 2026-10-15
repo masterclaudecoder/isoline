@@ -63,6 +63,7 @@ Contour levels are spread over a range sampled from the canvas plus a wide margi
 - **Flow:** the shape keeps morphing along a closed path through the noise at an even pace, so it never visibly reverses or hurries, and flows back into where it started. Linear, radial and conic blends stream instead: their colors run along the blend without end, so radial rings keep moving outward.
 - **Breathe:** contour lines swell outward. Blends sway their colors in and out, and mesh, flow and noise fields swell gently from the middle.
 - **Pulse:** four soft beats per loop push the field out from the center while it morphs a little.
+- **Endless (Flow only):** the morph follows a path built from turns at irrational rates, so it never closes and never repeats. Time runs on unbounded in the preview and through the whole length of an export. It doesn't loop, so only Once playback is offered while it's on, and easing is set aside.
 
 Hovering a motion type plays it on your own design in the tooltip, and hovering a playback, direction or easing shows its timing as a moving dot. Editing while it plays pauses the loop, lets the edit land, then crossfades the loop back in from its start.
 

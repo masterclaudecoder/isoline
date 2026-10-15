@@ -62,7 +62,9 @@
     const mx = 96, my = Math.max(2, Math.round((mx * H) / W));
     const m = s.motion || {}, a = m.amt ?? 0.5, a0 = m.seed ? ((m.seed * 0.6180339887) % 1) * 2 * Math.PI : 0;
     const R = m.type === "breathe" ? 0.45 * a : m.type === "pulse" ? 0.5 * a : 0;
-    const loops = R > 0 ? Array.from({ length: 6 }, (_, i) => [R * Math.cos(a0 + (i * Math.PI) / 3), R * Math.sin(a0 + (i * Math.PI) / 3)]) : [[0, 0]];
+    // Endless Flow wanders up to 1.6 times as far, inside and outside the loop, so it samples both rings.
+    const ring = (r, ph) => Array.from({ length: 6 }, (_, i) => [r * Math.cos(a0 + ph + (i * Math.PI) / 3), r * Math.sin(a0 + ph + (i * Math.PI) / 3)]);
+    const loops = R > 0 ? (m.endless && m.type === "breathe" ? [...ring(1.6 * R, 0), ...ring(0.6 * R, Math.PI / 6)] : ring(R, 0)) : [[0, 0]];
     return { M, mx, my, cx: W / (mx - 1), cy: H / (my - 1), loops };
   }
   function buildField(s, w, h, res) {
@@ -119,11 +121,10 @@
         }
         if (s.warp > 0) {
           // loopX and loopY move where the warp is read from round a closed path, so the shape keeps
-          // morphing forward and arrives back where it began (the breathe motion). Each warp is read twice,
-          // moving opposite ways, so it churns in place rather than sliding across; still, both reads agree.
+          // morphing forward and arrives back where it began (the breathe motion).
           const u0 = px / sc, v0 = py / sc;
-          px += s.warp * sc * 0.25 * (fbm(u0 + 5.2 + lx, v0 + 1.3 + ly, 2) + fbm(u0 + 5.2 - lx, v0 + 1.3 - ly, 2));
-          py += s.warp * sc * 0.25 * (fbm(u0 + 1.7 - ly, v0 + 9.2 + lx, 2) + fbm(u0 + 1.7 + ly, v0 + 9.2 - lx, 2));
+          px += s.warp * sc * 0.5 * fbm(u0 + 5.2 + lx, v0 + 1.3 + ly, 2);
+          py += s.warp * sc * 0.5 * fbm(u0 + 1.7 - ly, v0 + 9.2 + lx, 2);
         }
         const u = px / sc, v = py / sc;
         let val;

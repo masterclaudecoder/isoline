@@ -1434,7 +1434,10 @@
     for (let i = 0; i < 24; i++) { t = (lo + hi) / 2; if (B(t, x1, x2) < x) lo = t; else hi = t; }
     return B(t, y1, y2);
   }
+  // Endless Flow never loops: time runs on unbounded and unshaped, so the morph never comes back round.
+  const endless = (m = S.motion) => !!m?.endless && m.type === "breathe";
   function motionT(raw, m = S.motion) {
+    if (endless(m)) return m.dir < 0 ? -raw : raw;
     let u = m.mode === "pingpong" ? 1 - Math.abs(1 - 2 * raw) : raw;
     u = bezier(u, m.ease === "custom" ? m.bez : EASES[m.ease] || EASES.linear);
     return m.dir < 0 ? 1 - u : u;
@@ -1443,7 +1446,7 @@
   function motionState(st, t) {
     const m = st.motion;
     if (!m || m.type === "still") return st;
-    const off = seedFrac(m.seed), o = { ...st, _t: (t + off) % 1 }, tw = 2 * Math.PI * t, a = m.amt, a0 = off * 2 * Math.PI;
+    const off = seedFrac(m.seed), o = { ...st, _t: endless(m) ? t + off : (t + off) % 1 }, tw = 2 * Math.PI * t, a = m.amt, a0 = off * 2 * Math.PI;
     if (st.source === "contours") {
       if (m.type === "drift") { const R = a * st.scale * 0.5; o.driftX = R * Math.cos(tw + a0); o.driftY = R * Math.sin(tw + a0); o.driftR = R; }
       // Cycling inks need a whole cycle of steps per loop, or the colors would jump at the seam.
@@ -1452,6 +1455,9 @@
       // whole time and only meets its first frame again at the end, with a slow swell on top.
       else if (m.type === "pulse") { const beat = Math.pow(0.5 - 0.5 * Math.cos(tw * 4), 3); o.loopX = 0.5 * a * Math.cos(tw + a0); o.loopY = 0.5 * a * Math.sin(tw + a0); o.scale = st.scale * (1 + 0.08 * a * beat); }
       // The read point moves at a constant speed and nothing else swells, so the morph keeps an even pace.
+      // Endless: two more turns at irrational rates ride on the circle, so the path never closes and no
+      // stretch of the morph ever repeats.
+      else if (endless(m)) { o.loopX = 0.45 * a * (Math.cos(tw + a0) + 0.6 * Math.cos(tw * 1.618 + 1.3)); o.loopY = 0.45 * a * (Math.sin(tw + a0) + 0.6 * Math.sin(tw * 1.414 + 0.7)); o.warp = Math.max(st.warp, 0.4 * a); }
       else { o.loopX = 0.45 * a * Math.cos(tw + a0); o.loopY = 0.45 * a * Math.sin(tw + a0); o.warp = Math.max(st.warp, 0.4 * a); }
     }
     return o;
@@ -1464,6 +1470,18 @@
     { label: "Seed", ...bindKey(() => S.motion, "seed"), min: 0, max: 9999, step: 1, fmt: (v) => (v ? String(v) : "Off"), rand: [1, 9999], when: moving },
   ].forEach((c) => makeSlider($("motionCtrls"), { group: "motion", ...c }));
   makeSeg($("motionMode"), () => S.motion.mode, (v) => (S.motion.mode = v));
+  // Endless Flow: never loops, so only Once makes sense; Loop and Ping-pong step aside while it's on.
+  {
+    const host = document.createElement("div"); $("motionCtrls").appendChild(host);
+    makeSwitch(host, "Endless (no loop)", () => S.motion.endless, (v) => { S.motion.endless = v; if (v) S.motion.mode = "once"; });
+    host.lastElementChild.dataset.tip = "Flow keeps morphing and never repeats. Exports run the whole length without coming back round";
+    syncers.push(() => {
+      host.hidden = S.motion.type !== "breathe";
+      const on = endless();
+      for (const b of $("motionMode").children) if (b.dataset.v) b.disabled = on && b.dataset.v !== "once";
+      $("motionEase").closest(".dd, .seg")?.toggleAttribute("inert", on);
+    });
+  }
   makeSeg($("motionDir"), () => S.motion.dir, (v) => (S.motion.dir = v));
   makeSeg($("motionEase"), () => S.motion.ease, (v) => (S.motion.ease = v));
   window.UI?.dropdown($("motionEase"), { label: "Easing" });
@@ -1504,7 +1522,7 @@
     playRaf = requestAnimationFrame(playFrame);
     if (playBusy) return;
     playBusy = true;
-    const raw = (((now - playT0) / 1000) % S.motion.dur) / S.motion.dur;
+    const secs = (now - playT0) / 1000, raw = endless() ? secs / S.motion.dur : (secs % S.motion.dur) / S.motion.dur;
     const t0 = performance.now();
     // A cross-fade asked for by an edit (or by starting) snapshots the frame on screen before drawing over it.
     let fadeDone = null;
@@ -1580,7 +1598,7 @@
     frameCanvas.width = W; frameCanvas.height = H;
     const fctx = frameCanvas.getContext("2d", { willReadFrequently: true });
     async function drawFrame(i) {
-      const st = motionState(S, motionT(S.motion.mode === "once" ? Math.min(1, i / Math.max(1, frames - 1)) : (i / fps / S.motion.dur) % 1));
+      const st = motionState(S, motionT(endless() ? i / fps / S.motion.dur : S.motion.mode === "once" ? Math.min(1, i / Math.max(1, frames - 1)) : (i / fps / S.motion.dur) % 1));
       if ((isRaster(st) || (st.source === "contours" && FXR?.floatOK && T.gpuSpec(st, st.res))) && FXR) {
         FXR.render(await fxJob(FXR, st, W, H));
         fctx.clearRect(0, 0, W, H); fctx.drawImage(fxCanvas, 0, 0, W, H);
@@ -2425,7 +2443,7 @@
     });
   }
   const isImg = (st) => st.source === "gradient" && st.grad.type === "image";
-  const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image: isImg(st) ? imageCanvas(st, w, h) : image, grad: st.source === "gradient" && !isImg(st) ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper, time: st._t || 0, motion: st._t != null ? st.motion.type : "still", motionAmt: st.motion?.amt, objects: objectsFor(st), palette: paletteOf(st) });
+  const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image: isImg(st) ? imageCanvas(st, w, h) : image, grad: st.source === "gradient" && !isImg(st) ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper, time: st._t || 0, motion: st._t != null ? st.motion.type : "still", motionAmt: st.motion?.amt, endless: st._t != null && endless(st.motion), objects: objectsFor(st), palette: paletteOf(st) });
   // Objects read the design's colors darkest first, so shading runs from shadow to highlight.
   const paletteOf = (st) => (st.source === "gradient" ? st.grad.colors : [st.bg, st.line, ...(st.mids || []), st.line2]).slice().sort((a, b) => lum(a) - lum(b));
   function objectsFor(st) {
@@ -2926,7 +2944,7 @@
     const st = clone(S);
     const objects = objectsFor(st).map((o) => ({ ...o, tex: null, texData: o.tex ? toData(o.tex) : null }));
     const data = { st, palette: paletteOf(st), objects, image: isImg(st) ? toData(imageCanvas(st, Math.min(2048, st.w), Math.min(2048, st.w) * st.h / st.w)) : null, svg: st.source === "contours" ? T.buildSVG(st).svg : "" };
-    const lib = `const EASES = ${JSON.stringify(EASES)};\nconst seedFrac = ${seedFrac.toString()};\n${bezier.toString()}\n${motionT.toString()}\n${motionState.toString()}`;
+    const lib = `const EASES = ${JSON.stringify(EASES)};\nconst seedFrac = ${seedFrac.toString()};\nconst endless = ${endless.toString()};\n${bezier.toString()}\n${motionT.toString()}\n${motionState.toString()}`;
     const run = `(${htmlRuntime.toString()})(${JSON.stringify(data).replace(/</g, "\\u003c")});`;
     const title = fileName().replace(/[<&]/g, "");
     return new Blob([`<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title>
@@ -2962,11 +2980,11 @@
       return { now, touch: IX.touch.map((e) => [e[0], e[1], now - e[2]]), trail: IX.trail.slice() };
     }
     function frame(nowMs) {
-      const now = nowMs / 1000, raw = moving ? (((nowMs - t0) / 1000) % st.motion.dur) / st.motion.dur : 0;
+      const now = nowMs / 1000, secs = (nowMs - t0) / 1000, raw = !moving ? 0 : endless(st.motion) ? secs / st.motion.dur : (secs % st.motion.dur) / st.motion.dur;
       const sf = moving ? motionState(st, motionT(raw, st.motion)) : st;
       const spec = contours ? Topo.gpuSpec(sf, Math.max(sf.res || 1, 1.6 / Math.max(0.05, (W / st.w)))) : null;
       FX.render({ w: W, h: H, k: W / st.w, seed: st.seed, image, grad: st.source === "gradient" && !image ? sf.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper,
-        time: sf._t || (animFx && !moving ? (now / 8) % 1 : 0), motion: sf._t != null ? st.motion.type : "still", motionAmt: st.motion && st.motion.amt, objects, palette: D.palette, contours: spec, pointer: pointer(now) });
+        time: sf._t || (animFx && !moving ? (now / 8) % 1 : 0), motion: sf._t != null ? st.motion.type : "still", motionAmt: st.motion && st.motion.amt, endless: sf._t != null && endless(st.motion), objects, palette: D.palette, contours: spec, pointer: pointer(now) });
     }
     let raf = 0;
     const live = () => moving || animFx || IX.touch.length || (fxOn("trail") && performance.now() / 1000 - lastT < ((st.fx.trail && st.fx.trail.life) || 1.6) + 0.6);
