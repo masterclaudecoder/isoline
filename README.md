@@ -36,6 +36,7 @@ The left column is the build, made of one slot per layer: **Preset, Generator, S
 - **Flow:** domain-warped simplex noise for soft, flowing color fields. Pair it with Grain.
 - **Noise:** clouds, ridges, billow, cells, veins, marble, neuro, smoke ring and smoke (curling veils, made to sit under the glyph field), with scale, detail, stretch, angle, warp and contrast. A setting a noise type ignores stays in place, dimmed, with a tooltip saying so.
 - **Aura:** after the reactive background of Yandex Music's My Wave. Two to four soft blobs of color are stacked over your darkest color, each smaller, lighter and a little off-center from the one behind it, their outlines bulging and folding as they morph out of step with each other. Light streams out from the back blob in soft rays, and an optional faint outline traces each blob. Size, wobble, edge, layers, rays, outline and color turn.
+- **Wave:** after Framer's Wave Gradient shader, the background of caddis.app. Four colors in two soft crossing blends are read through a field a sine wave twists, so broad ribbons of color fold through each other. Angle, frequency, ripples, twist, softness and blend; moving, the wave travels a whole number of periods per loop. The Caddis preset uses the settings and colors caddis.app does.
 - **Linear, Radial, Conic** gradients.
 - **Image:** your own picture, filling the canvas, as a base for effects. It is kept in the browser outside the design state (one at a time), so undo history and saved settings stay small.
 
@@ -57,7 +58,7 @@ The color picker has two modes: a color field, or sliders for the chosen format 
 
 ## Motion
 The Motion slot makes the design loop without a visible seam:
-- **Drift:** the field glides round a circle.
+- **Drift:** the field glides round a circle; on Mesh, each color point wanders its own loop.
 - **Flow:** the shape keeps morphing along a closed path through the noise at an even pace, so it never visibly reverses or hurries, and flows back into where it started. Linear, radial and conic blends stream instead: their colors run along the blend without end, so radial rings keep moving outward.
 - **Breathe:** contour lines swell outward. Blends sway their colors in and out, and mesh, flow and noise fields swell gently from the middle.
 - **Pulse:** four soft beats per loop push the field out from the center while it morphs a little.

@@ -67,6 +67,7 @@
     ["radial", "Radial", "Blend from the center"],
     ["conic", "Conic", "Blend around a point"],
     ["aura", "Aura", "A glowing body of light"],
+    ["wavegrad", "Wave", "Folding bands of color"],
     ["image", "Image", "Your own picture"],
   ];
   const GEN_LABEL = Object.fromEntries(GENS.map((g) => [g[0], g[1]]));
@@ -243,11 +244,16 @@
   // Going the other way, a gradient takes the contour inks, unless its colors already hold the same set.
   // Aura starts from its own settings, so the canvas matches the thumbnail that was clicked.
   const AURA_BASE = { scale: 1.25, detail: 3, stretch: 1, soft: 1.6, warp: 0.7, contrast: 0.1 };
+  // Wave starts from the settings of Framer's Wave Gradient as caddis.app uses it.
+  const WAVE_BASE = { scale: 0.9, stretch: 6, warp: 2.1, soft: 0.74, contrast: 0.54, angle: 105 };
+  const GEN_BASE = { aura: AURA_BASE, wavegrad: WAVE_BASE };
   const asGradient = (st, type) => { const g = { ...st, source: "gradient", grad: { ...st.grad, type } };
     // Aura glows out of its first color, so it starts from the darkest one, at settings made for it.
     if (type === "aura" && st.grad?.type !== "aura") Object.assign(g.grad, AURA_BASE, { colors: [...st.grad.colors].sort((x, y) => lum(x) - lum(y)) });
-    // Leaving it, the other generators get their own defaults back: aura's settings mean other things there.
-    if (type !== "aura" && st.grad?.type === "aura") for (const k of Object.keys(AURA_BASE)) g.grad[k] = DEFAULTS.grad[k];
+    if (type === "wavegrad" && st.grad?.type !== "wavegrad") Object.assign(g.grad, WAVE_BASE);
+    // Leaving one of those, the others get their own defaults back: its settings mean other things there.
+    const from = GEN_BASE[st.grad?.type];
+    if (from && type !== st.grad?.type) for (const k of Object.keys(from)) g.grad[k] = DEFAULTS.grad[k];
     if (st.source !== "contours") return g;
     const inks = [...new Set([st.bg, st.line, ...(st.mids || []), st.line2].filter(Boolean))].slice(0, 8), same = inks.length === st.grad.colors.length && inks.every((c) => st.grad.colors.includes(c));
     if (same) return g; g.grad.colors = inks; g.grad.points = inks.map((_, i) => clone(st.grad.points[i] || DEFAULTS.grad.points[i % 5])); return g; };
@@ -325,6 +331,8 @@
     ["Noise", "Neuro", { ...G("noise", "Iris", { noise: "neuro", scale: 1, detail: 3, warp: 0.2, stretch: 1, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Noise", "Halo", { ...G("noise", "Dusk", { noise: "ring", scale: 0.8, detail: 3, warp: 0.6, stretch: 1, contrast: 1, angle: 0 }), fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Noise", "Aura", { ...G("aura", "Yandex Neo", { scale: 1.2, detail: 3, warp: 0.55, stretch: 1.2, soft: 1.3, contrast: 0, angle: 20 }), fx: { grain: { amount: 0.05, size: 1.2, soft: true } }, motion: { type: "breathe", dur: 14, amt: 0.6 } }],
+    // The background of caddis.app: Framer's Wave Gradient at the settings and colors it uses there.
+    ["Gradients", "Caddis", { ...G("wavegrad", ["#ff3624", "#92c198", "#ffae00", "#598dfd"], { angle: 105, scale: 0.9, stretch: 6, warp: 2.1, soft: 0.74, contrast: 0.54 }), seed: 32, fx: { grain: { amount: 0.14, size: 1.2, soft: true } }, motion: { type: "drift", dur: 10, amt: 0.5 } }],
     ["Noise", "Smoke", { ...G("noise", ["#060608", "#1d1d22", "#5b5b66", "#c9c9d1", "#ffffff"], { noise: "smoke", scale: 1.4, detail: 4, warp: 0.3, stretch: 1.2, contrast: 1.1, angle: 25 }), fx: { glyphs: { cell: 11, set: "alnum", font: "geist", contrast: 1.3, change: 2, back: 0, mono: false } }, motion: { type: "breathe", dur: 10, amt: 0.5 } }],
     ["Noise", "Lagoon", { ...G("aura", ["#02161c", "#05607a", "#0fb5d0", "#3fe3ef", "#b8fbff"], { scale: 2.2, detail: 3, warp: 0.6, stretch: 0.8, soft: 2.4, contrast: 0.25, angle: -30 }), motion: { type: "breathe", dur: 12, amt: 0.6 } }],
     // Alfa-Bank's advertising: flat black shapes floating on their red.
@@ -571,6 +579,7 @@
       if (g === "contours") return [patLabel(S.pattern), activePoints() ? `${S.points.length} points, seed ${S.seed}` : `Scale ${S.scale}px, seed ${S.seed}`];
       if (g === "noise") return [NOISE_LABEL[gr.noise], `Scale ${sc(gr.scale)}, seed ${S.seed}`];
       if (g === "aura") return ["Aura", `Size ${sc(gr.scale)}, ${gr.detail} layers`];
+      if (g === "wavegrad") return ["Wave", `Twist ${f2(gr.warp)}, blend ${Math.round(gr.contrast * 100)}%`];
       if (g === "image") return IMG ? ["Image", `${IMG.el.naturalWidth}×${IMG.el.naturalHeight}px`] : ["Image", "No picture yet"];
       if (g === "flow") return ["Flow field", `Scale ${sc(gr.scale)}, seed ${S.seed}`];
       if (g === "mesh") return ["Mesh", `${gr.colors.length} points, softness ${f2(gr.soft)}`];
@@ -917,9 +926,16 @@
     { label: "Rays", ...bindKey(gr, "stretch"), min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.4, 1.6], when: isG("aura") },
     { label: "Outline", ...bindKey(gr, "contrast"), min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.3], when: isG("aura") },
     { label: "Color turn", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("aura") },
+    // Wave: the wave's angle and frequencies, how far it twists the field, its softness and how much shows.
+    { label: "Angle", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("wavegrad") },
+    { label: "Frequency", ...bindKey(gr, "scale"), min: 0.1, max: 6, step: 0.01, fmt: f2, rand: [0.5, 2], when: isG("wavegrad") },
+    { label: "Ripples", ...bindKey(gr, "stretch"), min: 0.1, max: 8, step: 0.05, fmt: f2, rand: [2, 7], when: isG("wavegrad") },
+    { label: "Twist", ...bindKey(gr, "warp"), min: 0, max: 4, step: 0.01, fmt: f2, rand: [1.2, 2.8], when: isG("wavegrad") },
+    { label: "Softness", ...bindKey(gr, "soft"), min: 0.01, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.2], when: isG("wavegrad") },
+    { label: "Blend", ...bindKey(gr, "contrast"), min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.8], when: isG("wavegrad") },
     { label: "Detail", ...bindKey(gr, "detail"), min: 1, max: 8, step: 1, rand: [2, 4], when: isG("flow", "noise"), na: () => (gen() === "noise" && ["cells", "veins", "neuro", "ring"].includes(S.grad.noise) ? `${NOISE_LABEL[S.grad.noise]} has no detail setting` : "") },
     { label: "Softness", ...bindKey(gr, "soft"), min: 0.5, max: 4, step: 0.05, fmt: f2, rand: [1.3, 2.2], when: isG("mesh") },
-    { label: "Warp", ...bindKey(gr, "warp"), min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 0.8], when: () => gen() !== "image" && gen() !== "aura" },
+    { label: "Warp", ...bindKey(gr, "warp"), min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 0.8], when: () => !["image", "aura", "wavegrad"].includes(gen()) },
     { label: "Warp size", ...bindKey(gr, "warpScale"), min: 0.2, max: 8, step: 0.05, log: true, fmt: (v) => f2(v) + "×", rand: [1, 2.5], when: () => isG("mesh", "linear", "radial", "conic")() && S.grad.warp > 0 },
     { label: "Stretch", ...bindKey(gr, "stretch"), min: 0.3, max: 5, step: 0.05, log: true, fmt: (v) => f2(v) + "×", rand: [1, 2.4], when: isG("flow", "noise") },
     { label: "Angle", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("linear", "conic", "flow", "noise"), na: () => (gen() === "noise" && S.grad.noise === "ring" ? "A smoke ring looks the same at any angle" : "") },
@@ -1294,7 +1310,7 @@
       if (activePoints()) S.points = S.points.map((p) => ({ ...p, x: +clamp(p.x + rnd(-0.06, 0.06), 0.05, 0.95).toFixed(3), y: +clamp(p.y + rnd(-0.06, 0.06), 0.05, 0.95).toFixed(3) }));
     } else {
       if (gen() === "mesh") S.grad.points = S.grad.points.map((p) => ({ x: +clamp(p.x + rnd(-0.08, 0.08), 0.02, 0.98).toFixed(3), y: +clamp(p.y + rnd(-0.08, 0.08), 0.02, 0.98).toFixed(3) }));
-      if (["flow", "noise", "aura", "linear", "conic"].includes(gen())) S.grad.angle = Math.round(S.grad.angle + rnd(-12, 12));
+      if (["flow", "noise", "aura", "wavegrad", "linear", "conic"].includes(gen())) S.grad.angle = Math.round(S.grad.angle + rnd(-12, 12));
     }
     if (P.safe) safeFix();
   }
@@ -2634,7 +2650,7 @@
     // The build column reads as layers: the bare generator, then the tuned shape, then line style,
     // then each effect stacked on what came before; the preset tile shows the finished result.
     tileJob("preset", S);
-    const gb = baseOf(S); if (gen() === "aura") Object.assign(gb.grad, AURA_BASE);
+    const gb = baseOf(S); if (GEN_BASE[gen()]) Object.assign(gb.grad, GEN_BASE[gen()]);
     tileJob("generator", lightLines(strokes(gb)));
     tileJob("shape", lightLines(strokes(noFx(S))));
     if (gen() === "contours") tileJob("lines", lightLines(noFx(S)));
@@ -2645,7 +2661,7 @@
     });
     const p = panelOf(P.slot);
     if (p === "preset") for (const pc of presetCards) { if (!pc.done && !pc.el.hidden) jobs.push(async () => { await thumb(slotOf(pc.el), resolveLook(pc.look), 220); pc.done = true; }); }
-    if (p === "generator") for (const [id] of GENS) jobs.push(() => { const b = baseOf(S), st = id === "contours" ? asContours(b) : asGradient(b, id); if (id === "aura") Object.assign(st.grad, AURA_BASE); return thumb(slotOf(genCards[id]), lightLines(st), 200); });
+    if (p === "generator") for (const [id] of GENS) jobs.push(() => { const b = baseOf(S), st = id === "contours" ? asContours(b) : asGradient(b, id); if (GEN_BASE[id]) Object.assign(st.grad, GEN_BASE[id]); return thumb(slotOf(genCards[id]), lightLines(st), 200); });
     if (p === "shape") {
       if (gen() === "contours") for (const pt of T.PATTERNS) jobs.push(() => thumb(slotOf(patCards[pt.id]), lightLines(strokes({ ...noFx(S), pattern: pt.id })), 130));
       if (gen() === "noise") for (const [id] of NOISE_TYPES) jobs.push(() => thumb(slotOf(noiseCards[id]), { ...noFx(S), grad: { ...S.grad, noise: id } }, 130));

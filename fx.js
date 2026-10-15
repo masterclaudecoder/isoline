@@ -498,6 +498,39 @@ void main() {
   // Both read points travel at a constant speed, so the morph never hurries through part of the loop.
   vec2 L2 = lm * 1.5 * uMotAmt * vec2(sin(tw + 1.3), -cos(tw + 1.3));
   p = 0.5 + (p - 0.5) * (1.0 - 0.07 * uMotAmt * beat);
+  if (uType == 7) {
+    // Wave, after Framer's Wave Gradient shader (the background of caddis.app): four colors in two soft
+    // crossing blends, read through a field that a sine wave twists, so broad bands of color fold and
+    // ripple through each other. Frequency and ripples set the wave across and along its angle, twist
+    // how far it turns the field, softness its edges, and blend how much of the twist shows. Moving, the
+    // wave travels a whole number of periods per loop.
+    float s = mod(uSeed, 100.0), wt = uMotion != 0 ? tw * max(1.0, floor(uMotAmt * 2.0 + 0.5)) : 0.0;
+    vec2 tuv = p - 0.5;
+    float deg = 0.5 + 0.5 * snoise(vec2(tuv.x * tuv.y, 0.0) + vec2(sin(s * 4.37), cos(s * 5.91)) * 10.0 + (uMotion != 0 ? 0.25 * uMotAmt * vec2(cos(tw), sin(tw)) : vec2(0.0)));
+    float rr = radians((deg - 0.5) * 720.0 + 180.0);
+    tuv.y /= a.x; tuv = mat2(cos(rr), sin(rr), -sin(rr), cos(rr)) * tuv; tuv.y *= a.x;
+    vec2 w = (2.0 * p - 1.0) * a / (a.x + 1.0) * 2.0;
+    float pr = fract(sin(s * 5.63) * 173.29) * 6.2832;
+    w = mat2(cos(pr), -sin(pr), sin(pr), cos(pr)) * w;
+    float wa = uAngle + radians(sin(s * 2.73) * 30.0);
+    vec2 r = mat2(cos(wa), -sin(wa), sin(wa), cos(wa)) * w;
+    float fx = uScale * (1.0 + 0.5 * sin(s * 3.17 + uScale)), fy = uStretch * (1.0 + 0.5 * sin(s * 3.17 + uStretch));
+    float px = fract(sin(s * 7.19) * 437.58) * 6.2832, py = fract(cos(s * 3.41) * 291.37) * 6.2832;
+    float ww = fy * r.y - sin(r.x * fx + r.y - wt + px) + sin(s * 1.23) * 0.5 * sin(r.x * fx * 2.0 + r.y * 0.5 + wt + py);
+    ww = smoothstep(cos(ww) * uSoft, sin(ww) * uSoft + 3.0, cos(ww - fy * r.y) - sin(ww - fx * r.x)) * uWarp;
+    vec2 wv = (cos(ww) * w + sin(ww) * vec2(-w.y, w.x)) * 0.5;
+    vec2 b = mix(tuv, wv, clamp(uContrast, 0.0, 1.0));
+    float r1 = radians(-5.0 + sin(s * 1.83) * 20.0), r2 = radians(10.0 + cos(s * 2.47) * 20.0);
+    // Four colors: the palette's own when it has exactly four, otherwise four steps along its ramp.
+    vec3 c0, c1, c2, c3;
+    if (uN == 4) { c0 = uCol[0]; c1 = uCol[1]; c2 = uCol[2]; c3 = uCol[3]; }
+    else { c0 = srgb(fromLab(ramp(0.0))); c1 = srgb(fromLab(ramp(1.0 / 3.0))); c2 = srgb(fromLab(ramp(2.0 / 3.0))); c3 = srgb(fromLab(ramp(1.0))); }
+    vec3 l1 = mix(c0, c2, smoothstep(-0.3, 0.3, (mat2(cos(r1), sin(r1), -sin(r1), cos(r1)) * b).x));
+    vec3 l2 = mix(c3, c1, smoothstep(-0.3, 0.3, (mat2(cos(r2), sin(r2), -sin(r2), cos(r2)) * b).x));
+    vec3 col = mix(l1, l2, smoothstep(0.3, -0.3, b.y));
+    col = mix(col, col * col + 0.5 * sqrt(col), 0.3);
+    o = vec4(clamp(col, 0.0, 1.0), 1.0); return;
+  }
   if (uType == 6) {
     // Aura, after the reactive background of Yandex Music's My Wave: two to four soft blobs of color
     // stacked over a dark ground, each smaller, lighter and a little off-centre from the one behind it.
@@ -593,7 +626,7 @@ void main() {
     lab = ramp(clamp((v - 0.5) * uContrast + 0.5, 0.0, 1.0));
   } else if (uType == 0) {
     vec3 acc = vec3(0.0); float ws = 0.0;
-    for (int i = 0; i < 8; i++) { if (i >= uN) break; vec2 orb = uMotion == 1 ? 0.07 * uMotAmt * vec2(cos(tw + float(i) * 2.1), sin(tw + float(i) * 1.3)) : br ? 0.16 * uMotAmt * vec2(sin(tw + float(i) * 2.1), cos(tw + float(i) * 2.1)) : vec2(0.0); vec2 d = (p - uPt[i] - orb) * a; float w = 1.0 / pow(dot(d, d) + 0.0004, uSoft); acc += toLab(lin(uCol[i])) * w; ws += w; }
+    for (int i = 0; i < 8; i++) { if (i >= uN) break; vec2 orb = uMotion == 1 ? 0.22 * uMotAmt * vec2(cos(tw * (1.0 + mod(float(i), 2.0)) + float(i) * 2.1), sin(tw * (1.0 + mod(float(i) + 1.0, 2.0)) + float(i) * 1.3)) : br ? 0.16 * uMotAmt * vec2(sin(tw + float(i) * 2.1), cos(tw + float(i) * 2.1)) : vec2(0.0); vec2 d = (p - uPt[i] - orb) * a; float w = 1.0 / pow(dot(d, d) + 0.0004, uSoft); acc += toLab(lin(uCol[i])) * w; ws += w; }
     lab = acc / ws;
   } else {
     vec2 c = (p - 0.5) * a; float t;
@@ -1529,7 +1562,7 @@ void main() {
       if (job.grad) {
         const g = job.grad, n = Math.min(8, g.colors.length);
         draw("gradient", srcTex, targets.list[0].f, {
-          uType: ["mesh", "linear", "radial", "conic", "flow", "noise", "aura"].indexOf(g.type), uN: n,
+          uType: ["mesh", "linear", "radial", "conic", "flow", "noise", "aura", "wavegrad"].indexOf(g.type), uN: n,
           uScale: g.scale ?? 1.2, uDetail: g.detail ?? 3, uStretch: g.stretch ?? 1, uContrast: g.contrast ?? 1,
           uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring", "aura", "smoke"].indexOf(g.noise || "clouds"),
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
