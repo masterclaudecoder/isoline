@@ -141,8 +141,9 @@ void main() {
   }
   if (uWarpA > 0.0) {
     float u0 = px / uSc, v0 = py / uSc;
-    float dx = uWarpA * uSc * 0.5 * fbmS(u0 + 5.2 + uLoop.x, v0 + 1.3 + uLoop.y, 2);
-    float dy = uWarpA * uSc * 0.5 * fbmS(u0 + 1.7 - uLoop.y, v0 + 9.2 + uLoop.x, 2);
+    // Read twice, moving opposite ways round the loop, so the shape churns in place (as on the CPU).
+    float dx = uWarpA * uSc * 0.25 * (fbmS(u0 + 5.2 + uLoop.x, v0 + 1.3 + uLoop.y, 2) + fbmS(u0 + 5.2 - uLoop.x, v0 + 1.3 - uLoop.y, 2));
+    float dy = uWarpA * uSc * 0.25 * (fbmS(u0 + 1.7 - uLoop.y, v0 + 9.2 + uLoop.x, 2) + fbmS(u0 + 1.7 + uLoop.y, v0 + 9.2 - uLoop.x, 2));
     px += dx; py += dy;
   }
   float u = px / uSc, v = py / uSc, val; vec2 p = vec2(px, py); float lin = px * uDir.x + py * uDir.y;
@@ -321,6 +322,16 @@ void main() {
   o = vec4(lo, hi, 0.0, 1.0);
 }`,
 
+    // The union of the level ranges sampled round the loop, padded a little on both sides.
+    frange: `
+uniform ivec2 uIn;
+void main() {
+  float lo = 1e30, hi = -1e30;
+  for (int i = 0; i < 16; i++) { if (i >= uIn.x) break; vec4 t = texelFetch(uTex, ivec2(i, 0), 0); lo = min(lo, t.r); hi = max(hi, t.g); }
+  float pad = (hi - lo) * 0.03;
+  o = vec4(lo - pad, hi + pad, 0.0, 1.0);
+}`,
+
     // Separable Gaussian on the field grid: the GPU stand-in for smoothing each contour line.
     fblur: `
 uniform vec2 uDir2; uniform float uSigma; uniform ivec2 uIn;
@@ -429,7 +440,13 @@ void main() {
           float th = radians(-uAng + 90.0), x = dot(dp / uDesign - 0.5, vec2(cos(th), sin(th))) + 0.5;
           float dq = 1.5 / max(2.0, rg.y - rg.x + 1.0);
           col = inkAt((t0 - fmin) / span + dq * (2.0 * x - 1.0));
-        } else col = ink(id, rg.x, uBlend > 0.5);
+        } else {
+          // Colors go by each level's own number, counted from the first level a still frame shows, so
+          // as Breathe slides the levels the colors travel with them instead of all switching at once.
+          float i0 = 1.0;
+          if (uLin > 0.5) { i0 = floor(fmin / uGap); if (i0 * uGap <= fmin) i0 += 1.0; }
+          col = ink(id, i0, uBlend > 0.5);
+        }
       }
     }
   }
@@ -1363,7 +1380,7 @@ void main() {
     // Rendering to float textures needs EXT_color_buffer_float. Without it contours stay on the SVG path.
     const floatOK = !!gl.getExtension("EXT_color_buffer_float"), floatLinear = !!gl.getExtension("OES_texture_float_linear");
     const permTex = gl.createTexture(), fbos = new Map();
-    let permSeed = null;
+    let permSeed = null, rangeKey = "";
     // Float render targets, kept by size and role so a playing animation allocates nothing per frame.
     function floatTarget(role, w, h, fmt) {
       const key = role, have = fbos.get(key);
@@ -1416,21 +1433,30 @@ void main() {
       const snap = [Math.floor(c.drift[0] / c.sx) * c.sx, Math.floor(c.drift[1] / c.sy) * c.sy], shift = [(c.drift[0] - snap[0]) / c.sx, (c.drift[1] - snap[1]) / c.sy];
       const nx = c.nx + 1, ny = c.ny + 1, fld = floatTarget("field", nx, ny);
       draw("field", null, fld.f, { ...fs, uDrift: snap, uCell: [c.sx, c.sy] }, nx, ny, 1, 0);
-      // Min and max come from the raw field, as on the CPU, so levels land in the same places. While
-      // drifting they come from the whole area the window travels over in a loop, the same on every
-      // frame, so the levels hold still instead of shivering as the edges of the window change.
-      let src = fld, iw = nx, ih = ny, n = 0;
-      if (c.driftR > 0) {
-        const R = c.driftR, mx = Math.min(nx, 320), my = Math.max(2, Math.round(mx * (c.h + 2 * R) / (c.w + 2 * R))), all = floatTarget("fieldAll", mx, my);
-        draw("field", null, all.f, { ...fs, uDrift: [-R, -R], uCell: [(c.w + 2 * R) / (mx - 1), (c.h + 2 * R) / (my - 1)] }, mx, my, 1, 0);
-        src = all; iw = mx; ih = my;
+      // The level range comes from the same coarse grid the CPU samples (the canvas plus a wide margin, at
+      // points round the motion's loop; see rangeSpec in the engine), not from what this frame shows, so
+      // levels never jump as the field morphs or a peak crosses the edge. It only changes with the design,
+      // so it's kept until the design does.
+      const rkey = JSON.stringify([fs.uPattern, fs.uSc, fs.uOct, fs.uP, fs.uBump, fs.uLiq, fs.uLiqScale, fs.uWarpA, fs.uDir, fs.uPts, fs.uUser, fs.uFeat, c.seed, c.w, c.h, c.rng]);
+      const keep = floatTarget("mmKeep", 1, 1, "rg");
+      if (rangeKey !== rkey) {
+        rangeKey = rkey;
+        const R = c.rng, all = floatTarget("fieldAll", R.mx, R.my), parts = floatTarget("mmParts", R.loops.length, 1, "rg");
+        R.loops.forEach((lp, i) => {
+          draw("field", null, all.f, { ...fs, uLoop: lp, uDrift: [-R.M, -R.M], uCell: [R.cx, R.cy] }, R.mx, R.my, 1, 0);
+          let src = all, iw = R.mx, ih = R.my, n = 0;
+          while (iw > 1 || ih > 1 || n === 0) {
+            const ow = Math.max(1, Math.ceil(iw / 4)), oh = Math.max(1, Math.ceil(ih / 4)), dst = floatTarget("mm" + n, ow, oh, "rg");
+            draw("fminmax", src.t, dst.f, { uFirst: n === 0 ? 1 : 0, uIn: [iw, ih] }, ow, oh, 1, 0);
+            src = dst; iw = ow; ih = oh; n++;
+          }
+          gl.bindFramebuffer(gl.READ_FRAMEBUFFER, src.f); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, parts.f);
+          gl.blitFramebuffer(0, 0, 1, 1, i, 0, i + 1, 1, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+        });
+        gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+        draw("frange", parts.t, keep.f, { uIn: [R.loops.length, 1] }, 1, 1, 1, 0);
       }
-      while (iw > 1 || ih > 1 || n === 0) {
-        const ow = Math.max(1, Math.ceil(iw / 4)), oh = Math.max(1, Math.ceil(ih / 4)), dst = floatTarget("mm" + n, ow, oh, "rg");
-        draw("fminmax", src.t, dst.f, { uFirst: n === 0 ? 1 : 0, uIn: [iw, ih] }, ow, oh, 1, 0);
-        src = dst; iw = ow; ih = oh; n++;
-      }
-      const mm = src;
+      const mm = keep;
       let fieldTex = fld.t;
       const sg = c.sigma / Math.max(c.sx, c.sy);
       if (sg > 0.3) {

@@ -50,6 +50,21 @@
   }
 
   // ---------- scalar field ----------
+  // Where contour levels get their range. Spreading levels between the lowest and highest point the
+  // window shows made everything shift whenever a peak grew, or crossed the edge: the whole map would
+  // suddenly push one way. Instead the range comes from a coarse grid over the canvas plus a wide
+  // margin, and, for motions that morph the field (Flow and Pulse), from points all round their loop,
+  // so it holds still through playback and the still frame matches the playing ones. Drift is covered
+  // by the margin. The GPU contour pass samples the same grid, so both land levels in the same places.
+  const rangeCache = new Map();
+  function rangeSpec(s, w, h, k = 1) {
+    const M = Math.max(0.3 * Math.max(w, h), (s.driftR || 0) * k + 1), W = w + 2 * M, H = h + 2 * M;
+    const mx = 96, my = Math.max(2, Math.round((mx * H) / W));
+    const m = s.motion || {}, a = m.amt ?? 0.5, a0 = m.seed ? ((m.seed * 0.6180339887) % 1) * 2 * Math.PI : 0;
+    const R = m.type === "breathe" ? 0.45 * a : m.type === "pulse" ? 0.5 * a : 0;
+    const loops = R > 0 ? Array.from({ length: 6 }, (_, i) => [R * Math.cos(a0 + (i * Math.PI) / 3), R * Math.sin(a0 + (i * Math.PI) / 3)]) : [[0, 0]];
+    return { M, mx, my, cx: W / (mx - 1), cy: H / (my - 1), loops };
+  }
   function buildField(s, w, h, res) {
     const cols = Math.max(2, Math.round(w / res)), rows = Math.max(2, Math.round(h / res));
     const sx = w / cols, sy = h / rows, nx = cols + 1, ny = rows + 1;
@@ -91,12 +106,10 @@
     const ang = ((s.angle + 90) * Math.PI) / 180, ca = Math.cos(ang), sa = Math.sin(ang);
     // Motion: the whole field can be offset (drift), in output pixels scaled to this render.
     const driftX = (s.driftX || 0) * k, driftY = (s.driftY || 0) * k;
-    const smk = 40 * k, lx = s.loopX || 0, ly = s.loopY || 0;
+    const smk = 40 * k;
+    let lx = s.loopX || 0, ly = s.loopY || 0;
 
-    let min = Infinity, max = -Infinity;
-    for (let j = 0; j < ny; j++) {
-      for (let i = 0; i < nx; i++) {
-        let px = i * sx + driftX, py = j * sy + driftY;
+    const valAt = (px, py) => {
         if (s.liquify > 0) {
           // Two-level domain warp: the noise is itself displaced by noise, which gives the liquid swirls.
           const ls = Math.max(4, sc * (s.liqScale || 1)), u0 = px / ls, v0 = py / ls;
@@ -106,10 +119,11 @@
         }
         if (s.warp > 0) {
           // loopX and loopY move where the warp is read from round a closed path, so the shape keeps
-          // morphing forward and arrives back where it began (the breathe motion).
+          // morphing forward and arrives back where it began (the breathe motion). Each warp is read twice,
+          // moving opposite ways, so it churns in place rather than sliding across; still, both reads agree.
           const u0 = px / sc, v0 = py / sc;
-          px += s.warp * sc * 0.5 * fbm(u0 + 5.2 + lx, v0 + 1.3 + ly, 2);
-          py += s.warp * sc * 0.5 * fbm(u0 + 1.7 - ly, v0 + 9.2 + lx, 2);
+          px += s.warp * sc * 0.25 * (fbm(u0 + 5.2 + lx, v0 + 1.3 + ly, 2) + fbm(u0 + 5.2 - lx, v0 + 1.3 - ly, 2));
+          py += s.warp * sc * 0.25 * (fbm(u0 + 1.7 - ly, v0 + 9.2 + lx, 2) + fbm(u0 + 1.7 + ly, v0 + 9.2 - lx, 2));
         }
         const u = px / sc, v = py / sc;
         let val;
@@ -144,12 +158,25 @@
           }
           default: val = fbm(u, v, oct);
         }
-        f[j * nx + i] = val;
-        if (val < min) min = val;
-        if (val > max) max = val;
+        return val;
+    };
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) f[j * nx + i] = valAt(i * sx + driftX, j * sy + driftY);
+    // Levels are spread over a range that doesn't depend on what the window happens to show (see
+    // rangeSpec): a coarse grid over the canvas and a margin round it, at every point of the motion's loop.
+    const R = rangeSpec(s, w, h, k), key = JSON.stringify([s.seed, s.pattern, s.scale, s.octaves, s.warp, s.liquify, s.liqScale, s.angle, s.bump, s.bumpSize, s.features, s.falloff, s.usePoints && s.points, w, h, R.loops]);
+    let mm = rangeCache.get(key);
+    if (!mm) {
+      let lo = Infinity, hi = -Infinity;
+      for (const [ax, ay] of R.loops) {
+        lx = ax; ly = ay;
+        for (let j = 0; j < R.my; j++) for (let i = 0; i < R.mx; i++) { const v = valAt(-R.M + i * R.cx, -R.M + j * R.cy); if (v < lo) lo = v; if (v > hi) hi = v; }
       }
+      const pad = (hi - lo) * 0.03;
+      mm = [lo - pad, hi + pad];
+      if (rangeCache.size > 24) rangeCache.clear();
+      rangeCache.set(key, mm);
     }
-    return { f, nx, ny, cols, rows, sx, sy, min, max };
+    return { f, nx, ny, cols, rows, sx, sy, min: mm[0], max: mm[1] };
   }
 
   // ---------- marching squares -> polylines ----------
@@ -430,6 +457,7 @@
       mode: ["lines", "bands", "layers", "shaded"].indexOf(s.mode || "lines"), band: Math.max(0.02, Math.min(0.98, s.band ?? 0.5)),
       weight: s.weight, every: s.indexEvery || 0, indexWeight: s.indexWeight, blend: s.gradient ? 1 : 0, angle: s.angle || 0,
       inks, bg: s.bg, clear: s.transparent ? 1 : 0, opacity: s.opacity ?? 1,
+      seed: s.seed, rng: rangeSpec(s, w, h),
     };
   }
 
@@ -484,6 +512,9 @@
       // Gradient bands: each band runs through the inks on either side of it, lit along the pattern angle.
       // Ids stay unique when several of these SVGs sit inline on one page.
       const uid = (++svgSeq).toString(36), dp = 1.5 / Math.max(2, levels.length), turn = `rotate(${Math.round(-(s.angle || 0) + 90)} .5 .5)`;
+      // Plain band colors go by each level's own number, counted from the first level a still frame
+      // would show, so as Breathe slides the levels the colors travel with them instead of all switching.
+      const base = lin ? (() => { let b = Math.floor(field.min / Math.max(0.5, s.gap * k)); if (b * Math.max(0.5, s.gap * k) <= field.min) b++; return b; })() : 1;
       levels.forEach((lv, i) => {
         const next = levels[i + 1] ? levels[i + 1].t : lv.t + (i > 0 ? lv.t - levels[i - 1].t : span / 10);
         const d = mode === "layers" ? ringsAt(lv.t) : ringsAt(lv.t) + ringsAt(lv.t + band * (next - lv.t));
@@ -492,7 +523,7 @@
           const id = `gb${uid}-${i}`;
           defs += `<linearGradient id="${id}" x1="0" y1="0" x2="1" y2="0" gradientTransform="${turn}"><stop offset="0" stop-color="${inkFor(s, lv.pos - dp, i, true)}"/><stop offset="1" stop-color="${inkFor(s, lv.pos + dp, i, true)}"/></linearGradient>`;
           body += `<path d="${d}" fill="url(#${id})" fill-rule="evenodd"/>`;
-        } else body += `<path d="${d}" fill="${inkFor(s, lv.pos, i, mode === "layers" || s.gradient)}" fill-rule="evenodd"/>`;
+        } else body += `<path d="${d}" fill="${inkFor(s, lv.pos, lv.idx - base, mode === "layers" || s.gradient)}" fill-rule="evenodd"/>`;
         count++;
       });
       levels.length = 0;

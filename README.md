@@ -58,6 +58,7 @@ The color picker has two modes: a color field, or sliders for the chosen format 
 
 ## Motion
 The Motion slot makes the design loop without a visible seam:
+Contour levels are spread over a range sampled from the canvas plus a wide margin and, for Flow and Pulse, from points all round the loop. A peak growing or crossing the edge never re-spaces the whole map, and the still frame matches the playing ones. Breathe slides the levels, and each band keeps its color as it travels.
 - **Drift:** the field glides round a circle; on Mesh, each color point wanders its own loop.
 - **Flow:** the shape keeps morphing along a closed path through the noise at an even pace, so it never visibly reverses or hurries, and flows back into where it started. Linear, radial and conic blends stream instead: their colors run along the blend without end, so radial rings keep moving outward.
 - **Breathe:** contour lines swell outward. Blends sway their colors in and out, and mesh, flow and noise fields swell gently from the middle.
