@@ -39,6 +39,7 @@
     <symbol id="i-dice" viewBox="0 0 20 20"><rect x="3.5" y="3.5" width="13" height="13" rx="3.5"/><circle cx="7.6" cy="7.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="12.4" cy="12.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="12.4" cy="7.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="7.6" cy="12.4" r="1.15" fill="currentColor" stroke="none"/></symbol>
     <symbol id="i-undo" viewBox="0 0 20 20"><path d="M7.5 5.5 4 9l3.5 3.5"/><path d="M4 9h7.5a3.75 3.75 0 0 1 0 7.5H9"/></symbol>
     <symbol id="i-redo" viewBox="0 0 20 20"><path d="m12.5 5.5 3.5 3.5-3.5 3.5"/><path d="M16 9H8.5a3.75 3.75 0 0 0 0 7.5H11"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 20 20"><path d="M15.42 8.24L17.23 8.41L17.23 11.59L15.42 11.76L15.08 12.59L16.23 13.99L13.99 16.23L12.59 15.08L11.76 15.42L11.59 17.23L8.41 17.23L8.24 15.42L7.41 15.08L6.01 16.23L3.77 13.99L4.92 12.59L4.58 11.76L2.77 11.59L2.77 8.41L4.58 8.24L4.92 7.41L3.77 6.01L6.01 3.77L7.41 4.92L8.24 4.58L8.41 2.77L11.59 2.77L11.76 4.58L12.59 4.92L13.99 3.77L16.23 6.01L15.08 7.41Z"/><circle cx="10" cy="10" r="2.4"/></symbol>
     <symbol id="i-sliders" viewBox="0 0 20 20"><path d="M3.5 7h7M14.5 7h2M3.5 13h2M9.5 13h7"/><circle cx="12.5" cy="7" r="2"/><circle cx="7.5" cy="13" r="2"/></symbol>
     <symbol id="i-down" viewBox="0 0 20 20"><path d="M10 3.5v9M6.5 9 10 12.5 13.5 9"/><path d="M4 14v1.5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V14"/></symbol>
     <symbol id="i-up" viewBox="0 0 20 20"><path d="M10 12.5v-9M6.5 7 10 3.5 13.5 7"/><path d="M4 14v1.5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V14"/></symbol>
@@ -102,7 +103,7 @@
     <div class="cp-top" data-for="components"><div class="seg" id="cpMode"><button data-v="libraries">Libraries</button><button data-v="builder">Builder</button></div></div>
     <div class="top-right">
       <div class="menu-wrap">
-        <button class="ib lg" id="settingsBtn" title="Settings" aria-label="Settings" aria-haspopup="true"><svg class="ic"><use href="#i-sliders"/></svg></button>
+        <button class="ib lg" id="settingsBtn" title="Settings" aria-label="Settings" aria-haspopup="true"><svg class="ic"><use href="#i-gear"/></svg></button>
         <div class="pop settings" id="settingsMenu" hidden>
           <label class="set-row" for="safe">
             <span><b>Safe values</b><small>Randomize within clean ranges</small></span>
@@ -120,6 +121,7 @@
           <button class="opt" id="copySettings"><span><svg class="ic"><use href="#i-copy"/></svg>Copy settings</span></button>
           <button class="opt" id="importSettings"><span><svg class="ic"><use href="#i-file"/></svg>Import settings</span></button>
           <div class="set-sep"></div>
+          <button class="opt" id="tourBtn"><span><svg class="ic"><use href="#i-play"/></svg>Show the tutorial</span></button>
           <button class="opt" id="feedbackBtn"><span><svg class="ic"><use href="#i-chat"/></svg>Send feedback</span></button>
           <button class="opt danger" id="resetAll"><span><svg class="ic"><use href="#i-reset"/></svg>Reset to defaults</span></button>
           <div class="set-ver"><span id="verLine"></span><button class="btn sm" id="verReload" hidden>Reload</button></div>
@@ -205,8 +207,10 @@
 
       <div class="panel-sec" data-panel="preset">
         <div class="take" id="takeRow"></div>
+        <label class="cp-search st-search"><svg class="ic"><use href="#i-search"/></svg><input class="field" id="presetQ" type="search" placeholder="Search presets" aria-label="Search presets" spellcheck="false" autocomplete="off"></label>
         <div class="seg filter" id="presetFilter"></div>
         <div class="cards" id="presetGrid"></div>
+        <div class="no-match" id="presetNone" hidden></div>
       </div>
 
       <div class="panel-sec" data-panel="generator">
@@ -264,7 +268,7 @@
           <label class="label-row switch-row" for="transparent"><span class="label">Transparent background</span><span class="switch"><input type="checkbox" id="transparent"><span></span></span></label>
           <div id="color"></div>
         </div>
-        <div class="sub-head"><h3 class="sub">Palettes</h3><button class="btn sm ghost" id="toPalettes" title="Open these colors in the palette tool"><svg class="ic"><use href="#i-palette"/></svg>Edit in Palettes</button></div>
+        <div class="sub-head"><h3 class="sub">Palettes</h3><button class="btn sm ghost pal-sort" id="palSort" data-tip="Sort by color or by name"><svg class="ic"><use href="#i-sort"/></svg><span>Color</span></button><button class="btn sm ghost" id="toPalettes" title="Open these colors in the palette tool"><svg class="ic"><use href="#i-palette"/></svg>Edit in Palettes</button></div>
         <div class="pal-head">
           <div class="seg sm tabs" id="palTabs"></div>
         </div>
@@ -318,7 +322,9 @@
       </div>
 
       <div class="panel-sec" data-panel="addfx">
+        <label class="cp-search st-search"><svg class="ic"><use href="#i-search"/></svg><input class="field" id="fxQ" type="search" placeholder="Search effects" aria-label="Search effects" spellcheck="false" autocomplete="off"></label>
         <div id="fxGallery"></div>
+        <div class="no-match" id="fxNone" hidden></div>
       </div>
       <div class="next-step"><button class="btn primary next-btn" id="nextBtn"><span class="nx-text"><small id="nextKicker">Continue</small><b id="nextLbl"></b></span><span class="nx-end"><small id="nextSub"></small><svg class="ic"><use href="#i-next"/></svg></span></button></div>
     </aside>
@@ -462,5 +468,6 @@
 <script src="shell.js"></script>
 <script src="agent.js"></script>
 <script src="glass.js"></script>
+<script src="tour.js"></script>
 </body>
 </html>

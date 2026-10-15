@@ -34,7 +34,8 @@
       if (!inVT) pt.classList.add("bar-enter");
       clearTimeout(pt._t); pt._t = setTimeout(() => pt.classList.remove("enter", "bar-enter", "vt-enter"), 1600);
     }
-    if (r === "home") paintHome();
+    if (r === "home") paintHome(); else brandClicks = 0;
+    root.Tour?.onRoute(r);
     // One size control: in the top bar for the studio, in the preview's own bar for the builder.
     const size = document.querySelector(".size"), slot = $("cpSizeSlot"), top = document.querySelector(".top");
     if (r === "components" && slot && size.parentElement !== slot) slot.appendChild(size);
@@ -74,10 +75,12 @@
   }
 
   // Home previews: the studio's current design and the palette tool's current colors.
-  async function paintHome() {
+  // fresh: the pictures were just rolled, so they cross-fade in.
+  async function paintHome(fresh = false) {
     const pal = root.Palettes?.colors() || [], w = root.Palettes?.weights?.() || [];
     $("homePalette").innerHTML = pal.map((c, i) => `<i style="background:${c};flex-grow:${w[i] || 1}"></i>`).join("");
     root.Components?.preview($("homeComponents"));
+    if (fresh && !reduce.matches) $("homeComponents").animate([{ opacity: 0.2, filter: "blur(6px)" }, { opacity: 1, filter: "none" }], { duration: 450, easing: "ease-out" });
     const host = $("homeStudio");
     const r = host.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
     const cw = Math.round((r.width || 560) * dpr), ch = Math.round((r.height || 350) * dpr);
@@ -88,26 +91,48 @@
     let kept = null;
     try { kept = JSON.parse(localStorage.getItem(SNAP) || "null"); } catch (e) {}
     if (kept?.url && !host.firstElementChild) { const img = new Image(); img.src = kept.url; img.alt = ""; host.appendChild(img); }
-    if (kept?.k === key) return;
-    await root.introDone;
+    if (kept?.k === key) return homeDone();
+    // The first visit draws it while the loading screen is up, so the entrance plays on an idle page;
+    // later changes wait for the entrance to finish.
+    if (!document.documentElement.classList.contains("loading")) await root.introDone;
     if (seq !== homeSeq) return;
     const c = await root.Studio?.snapshot(cw, ch);
     if (!c || seq !== homeSeq) return;
-    host.innerHTML = ""; host.appendChild(c);
+    host.innerHTML = ""; host.appendChild(c); homeDone();
+    if (fresh && !reduce.matches) c.animate([{ opacity: 0, transform: "scale(1.03)", filter: "blur(8px)" }, { opacity: 1, transform: "none", filter: "none" }], { duration: 520, easing: "cubic-bezier(.22,1,.36,1)" });
     try { localStorage.setItem(SNAP, JSON.stringify({ k: key, url: c.toDataURL("image/jpeg", 0.85) })); } catch (e) {}
   }
   const SNAP = "isoline.homeSnap";
+  let homeDone; const homeReady = new Promise((r) => (homeDone = r));
   let homeSeq = 0;
   const hashStr = (s) => { let a = 0x811c9dc5; for (let i = 0; i < s.length; i++) a = Math.imul(a ^ s.charCodeAt(i), 16777619); return (a >>> 0).toString(36) + s.length; };
 
+  // On the home page the logo rolls a new look for everything: a fresh palette, a new Studio design and a
+  // new kit, both in that palette. The first click only nudges the logo, so a stray click changes nothing;
+  // from the second on, every click rolls again.
+  let brandClicks = 0, remixing = false;
+  function remixAll() {
+    const mark = $("brand").querySelector("svg");
+    if (!reduce.matches) mark?.animate([{ transform: "rotate(0) scale(1)" }, { transform: "rotate(-14deg) scale(.9)", offset: 0.35 }, { transform: "rotate(0) scale(1)" }], { duration: 420, easing: "cubic-bezier(.3,1.4,.5,1)" });
+    if (++brandClicks < 2) return;
+    remixing = true;
+    const pal = root.Palettes?.generate();
+    remixing = false;
+    if (!pal) return;
+    root.Studio?.surprise?.(); root.Studio?.usePalette?.(pal);
+    root.Components?.remix?.(pal);
+    paintHome(true);
+  }
+
   document.addEventListener("click", (e) => {
+    if (route === "home" && e.target.closest("#brand") && !e.metaKey && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); remixAll(); return; }
     const a = e.target.closest("a[href^='#/']");
     if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
     e.preventDefault();
     go(parse(a.getAttribute("href")));
   });
   addEventListener("popstate", () => go(parse(location.hash), false));
-  addEventListener("palette-change", () => { if (route === "home") paintHome(); });
+  addEventListener("palette-change", () => { if (route === "home" && !remixing) paintHome(); });
 
   const Shell = { go, route: null };
   root.Shell = Shell;
@@ -132,6 +157,6 @@
   };
   // The studio also waits for its first drawing (and for a shared design, when the link holds one), so the
   // page doesn't appear empty and then pop; the loading screen covers the wait if it runs long.
-  const firstLook = route === "studio" ? root.firstPaint : null;
+  const firstLook = route === "studio" ? root.firstPaint : route === "home" ? homeReady : null;
   Promise.race([Promise.all([document.fonts?.ready || Promise.resolve(), firstLook]), new Promise((r) => setTimeout(r, firstLook ? 4000 : 700))]).then(() => requestAnimationFrame(() => requestAnimationFrame(reveal)));
 })(window);

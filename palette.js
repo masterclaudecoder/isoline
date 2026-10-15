@@ -154,7 +154,7 @@
         <button class="pt-t" data-a="edit" title="Edit">${ic("sliders")}</button>
         <button class="pt-t" data-a="shades" title="Tints and shades">${ic("shades")}</button>
         <button class="pt-t" data-a="copy" title="Copy hex">${ic("copy")}</button>
-        <span class="pt-t grip" data-a="drag" title="Drag to reorder">${ic("grip")}</span>
+        <span class="pt-t grip" data-a="drag" aria-label="Drag to reorder">${ic("grip")}</span>
         ${st.cols.length > 2 ? `<button class="pt-t" data-a="remove" title="Remove">${ic("x")}</button>` : ""}
       </div>
       <div class="pt-info"><b class="pt-hex">${c.hex.slice(1).toUpperCase()}</b><span class="pt-name">${C.name(c.hex)}</span><span class="pt-ratio">Contrast ${ratio.toFixed(1)}</span></div>

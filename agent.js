@@ -5,6 +5,7 @@
   const $ = (id) => document.getElementById(id);
   const C = root.Color;
   const named = (h) => `${h} (${C.name(h)})`;
+  const hex = (c) => C.parseHex(c) || C.parse?.(c) || c;
 
   const GUIDE = `# Isoline agent guide
 
@@ -29,7 +30,9 @@ line, line2, mids (extra inks), bg, grad.type ("mesh", "flow", "noise", "aura", 
 fx.<id>.on with fxOrder for the effect stack, motion { type, dur, amt, mode, dir, ease }. Motion type ids: "drift", "breathe"
 (shown as Flow, the shape morphs, linear/radial/conic blends stream), "flow" (shown as Breathe, lines swell, blends sway, fields swell), "pulse".
 objects: up to 8 { kind ("sphere", "torus", "cube", "capsule", "blob", "pyramid", "diamond", "image"), x, y, size, rot, tilt, spin, mat ("shaded",
-"design", "preset", "glass", "photo", "palette"), layer ("under" or "over" the effects), anim, speed (-5 to 5, whole numbers) }.
+"design", "preset", "glass", "photo", "palette", "vanta"), preset (a preset name, for mat "preset"), layer ("under" or "over" the effects),
+anim, speed (-5 to 5, whole numbers), and for design or preset surfaces proj ("wrap", "front", "sphere"), texScale, texRot, texX, texY, blend }.
+Effects with a center (rays, lens, dof, swirl, bulge, ripple) take x and y from 0 to 1, measured from the top left.
 
 ## Palettes
 - Isoline.palettes.get() returns the hex colors, and set(["#..."]) loads colors
@@ -43,6 +46,7 @@ objects: up to 8 { kind ("sphere", "torus", "cube", "capsule", "blob", "pyramid"
 - Isoline.components.css() returns them as CSS variables
 - Isoline.components.brief("design" | "dev") returns the brief with the design rules
 - Isoline.components.libraries() lists the UI library directory with links
+- Isoline.components.remix(["#..."]) rolls a new kit look (fonts, scale, radius, depth) in those colors
 
 ## Design rules
 Follow the rules in Isoline.components.brief("design"). The user edits them in Components, Builder, Design rules.
@@ -77,8 +81,9 @@ Follow the rules in Isoline.components.brief("design"). The user edits them in C
     go: (r) => root.Shell.go(r),
     studio: root.Studio,
     palettes: { get: () => root.Palettes.colors(), set: (h) => root.Palettes.load(h), generate: (m) => root.Palettes.generate(m), vary: () => root.Palettes.vary(), lock: (i, on) => root.Palettes.lock(i, on), modes: () => root.Palettes.modes(), saved: () => root.Palettes.saved() },
-    components: { tokens: () => root.Components.tokens(), css: () => root.Components.cssVars(), brief: (k) => root.Components.brief(k), libraries: () => root.Components.libraries() },
-    color: C,
+    components: { tokens: () => root.Components.tokens(), css: () => root.Components.cssVars(), brief: (k) => root.Components.brief(k), libraries: () => root.Components.libraries(), remix: (h) => { root.Components.remix(h); return root.Components.state(); } },
+    // Colors from scripts can be any hex form (#000, 000, #ABCDEF) or a CSS color; they're normalized first.
+    color: { ...C, name: (h) => C.name(hex(h)), contrast: (a, b) => C.contrast(hex(a), hex(b)), format: (h, f) => C.format(hex(h), f) },
     brief,
   };
   // Machine-readable pointer for browsing agents that read the DOM rather than run scripts.

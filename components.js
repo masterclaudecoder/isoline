@@ -207,7 +207,7 @@
   const av = (t, i) => `<span class="k-av" style="--i:${i}">${t}</span>`;
   // The demo product is a document review tool, so the pages can show real content (drafts, comments,
   // sign-offs) instead of placeholder metrics. Each page is built for one task with one focal point.
-  const LOGO = `<span class="k-brand"><svg class="k-mark" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24"/><path d="M8 5.5v13M12 8h5M12 12h5M12 16h3"/><circle cx="8" cy="12" r="2.4"/></svg>Margin</span>`;
+  const LOGO = `<span class="k-brand"><svg class="k-mark" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24"/><path d="M8 5.5v13M12 8h5M12 12h5M12 16h5"/><circle cx="8" cy="12" r="2.4"/></svg>Margin</span>`;
   const NAV = (cta = "Start a document") => `<nav class="k-nav">${LOGO}<span class="k-nl">Product</span><span class="k-nl">Pricing</span><span class="k-nl">Changelog</span><span class="k-grow"></span><span class="k-link k-nl">Sign in</span><button class="k-btn k-sm">${cta}</button><button class="k-btn k-sm k-ghost k-icon k-burger" title="Menu">${ki("menu")}</button></nav>`;
   const FOOT = `<footer class="k-foot"><div class="k-foot-top"><div class="k-foot-brand">${LOGO}<p class="k-small">Write, review and sign off without the email chain.</p></div><div class="k-foot-cols">${[["Product", ["Review", "Sign-off", "Publishing", "Changelog"]], ["Company", ["About", "Careers", "Contact"]], ["Help", ["Guides", "Templates", "Status"]]].map(([h, l]) => `<div><b>${h}</b>${l.map((x) => `<span>${x}</span>`).join("")}</div>`).join("")}</div></div><div class="k-foot-base"><span>© 2026 Margin</span><span class="k-grow"></span><span>Privacy</span><span>Terms</span></div></footer>`;
   const thread = (open = true) => `<div class="k-thread">
@@ -478,11 +478,13 @@
   const beats = (home, low, high) => [[home, 0], [low, 0.26], [low, 0.4], [high, 0.66], [high, 0.8], [home, 1]].map(([k, offset]) => ({ ...k, offset, easing: BEAT.easing }));
   const cs = (el, p) => getComputedStyle(el)[p];
   const TOK_ANIM = {
-    type: [".tt-h", (el) => beats({ scale: 1 }, { scale: 0.7 }, { scale: 1.45 })],
-    // Color: the card swaps to the dark scheme, then to another palette, and back.
-    color: [".tt-scene", () => beats({ filter: "none" }, { filter: "invert(1) hue-rotate(180deg)" }, { filter: "hue-rotate(140deg) saturate(1.3)" })],
+    // Type sizes the heading itself (not a scale), so the lines beside it make way as it grows.
+    type: [".tt-h", (el) => { const f = parseFloat(cs(el, "fontSize")) || 12; return beats({ fontSize: f + "px" }, { fontSize: f * 0.7 + "px" }, { fontSize: f * 1.5 + "px" }); }],
+    // Color: the card swaps to the dark scheme, then to another palette, and back. Every frame lists the
+    // same filters, so the browser blends between them instead of jumping.
+    color: [".tt-scene", () => beats({ filter: "invert(0) hue-rotate(0deg) saturate(1)" }, { filter: "invert(1) hue-rotate(180deg) saturate(1)" }, { filter: "invert(0) hue-rotate(140deg) saturate(1.3)" })],
     artwork: [".tt-scene", () => beats({ backgroundPosition: "50% 50%" }, { backgroundPosition: "10% 20%" }, { backgroundPosition: "90% 80%" })],
-    spacing: [".tt-c", (el) => beats({ paddingInline: cs(el, "paddingLeft"), gap: cs(el, "rowGap") }, { paddingInline: "2px", gap: "1px" }, { paddingInline: "9px", gap: "5px" })],
+    spacing: [".tt-c", (el) => beats({ paddingInline: cs(el, "paddingLeft"), columnGap: cs(el, "columnGap") }, { paddingInline: "2px", columnGap: "2px" }, { paddingInline: "10px", columnGap: "9px" })],
     radius: [".tt-c", (el) => beats({ borderRadius: cs(el, "borderTopLeftRadius") }, { borderRadius: "0px" }, { borderRadius: "14px" })],
     elevation: [".tt-c", (el) => beats({ translate: "0 0", boxShadow: cs(el, "boxShadow") }, { translate: "0 1px", boxShadow: "0 0 0 0 rgba(0,0,0,0)" }, { translate: "0 -3px", boxShadow: "0 8px 14px -4px rgba(0,0,0,.45)" })],
     motion: [".tt-c", (el) => {
@@ -984,5 +986,13 @@
   // A palette sent back from the palette tool.
   function usePalette(hexes) { K.follow = false; K.src = hexes.slice(); K.srcKey = "tool"; K.rc = fromSource(); K.slot = "color"; K.mode = "builder"; save(); }
   const summary = () => `${K.mode}, ${K.mode === "builder" ? `${K.slot} token, ${K.view === "pages" ? LAYOUTS[K.layout][0] + " page" : "components"}, ${pageSize().join("×")}${K.fit ? " (fit)" : ""}` : `${K.fw} framework, ${K.cat} category`}`;
-  root.Components = { onShow: () => setMode(K.mode), usePalette, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
+  // A new look for the kit in the given colors: fonts, scale, shape, depth and color strength rolled at
+  // random, leaving where you are in the tool alone. The home page's logo uses it.
+  function remix(hexes) {
+    const pick = (a) => a[Math.floor(Math.random() * a.length)];
+    Object.assign(K, { pair: Math.floor(Math.random() * PAIRS.length), head: "", body: "", scale: pick([1.2, 1.25, 1.333]), radius: pick([0, 4, 6, 8, 12, 16]), pill: Math.random() < 0.25, density: pick([0.9, 1, 1.1]), elevation: pick(Object.keys(SHADOWS)), tint: pick(["neutral", "tinted", "tinted", "bold"]), ease: pick(["out", "inout", "spring"]) });
+    if (hexes?.length) { K.follow = false; K.src = hexes.slice(); K.srcKey = "tool"; K.rc = fromSource(); }
+    save();
+  }
+  root.Components = { onShow: () => setMode(K.mode), usePalette, remix, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
 })(window);

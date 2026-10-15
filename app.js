@@ -149,6 +149,8 @@
     // Ozon block automated access, so theirs come from their logos as commonly reproduced.
     ["Yandex Neo", ["#050407", "#7a0f5c", "#e0336f", "#f2a81d", "#f4e04d"], ["#e0336f", "#f4e04d", "#050407"]],
     ["Yandex", ["#000000", "#fc3f1d", "#ffffff"], ["#fc3f1d", "#000000", "#ffffff"]],
+    // Yandex Go: the taxi yellow with black and white, as on the app's icon and cars.
+    ["Yandex Go", ["#21201f", "#fce000", "#ffffff", "#f5f4f2"], ["#21201f", "#ffffff", "#fce000"]],
     ["Yandex Intel", ["#120a2e", "#6335e0", "#7a55ff", "#a88cff", "#f3efff"], ["#6335e0", "#a88cff", "#120a2e"]],
     ["Alfa", ["#000000", "#ef3124", "#ffffff"], ["#000000", "#ffffff", "#ef3124"]],
     ["Sber", ["#f2e913", "#a3cd39", "#21a038", "#0fa8e0", "#0291eb", "#ffffff"], ["#21a038", "#0291eb", "#ffffff"]],
@@ -338,6 +340,8 @@
     ["Noise", "Lagoon", { ...G("aura", ["#02161c", "#05607a", "#0fb5d0", "#3fe3ef", "#b8fbff"], { scale: 2.2, detail: 3, warp: 0.6, stretch: 0.8, soft: 2.4, contrast: 0.25, angle: -30 }), motion: { type: "breathe", dur: 12, amt: 0.6 } }],
     // Alfa-Bank's advertising: flat black shapes floating on their red.
     ["Gradients", "Alfa", { ...G("linear", ["#da2618", "#ef3124", "#f5473a"], { angle: 115, warp: 0.15, soft: 1 }), objects: [{ kind: "image", x: 0.6, y: 0.6, size: 0.52, rot: -6, tilt: 16, spin: -14, mat: "vanta", shine: 0.4, ripple: 0, round: 0.2, shadow: 0.35, image: "" }, { kind: "capsule", x: 0.18, y: 0.3, size: 0.34, rot: 38, tilt: 10, spin: 20, mat: "vanta", shine: 0.4, ripple: 0, round: 0.15, shadow: 0.3, image: "" }, { kind: "sphere", x: 0.86, y: 0.2, size: 0.18, rot: 0, tilt: 0, spin: 0, mat: "vanta", shine: 0.4, ripple: 0, round: 0.15, shadow: 0.25, image: "" }] }],
+    // Yandex Go: the taxi yellow, with black and white forms riding on it.
+    ["Gradients", "Yandex Go", { ...G("linear", ["#f2d200", "#fce000", "#ffe94a"], { angle: 125, warp: 0.12, soft: 1 }), objects: [{ kind: "capsule", x: 0.36, y: 0.56, size: 0.5, rot: -28, tilt: 12, spin: 24, mat: "vanta", shine: 0.4, shadow: 0.35 }, { kind: "sphere", x: 0.72, y: 0.36, size: 0.3, tilt: 20, spin: 30, mat: "glass", shine: 0.8, shadow: 0.3, frost: 0.55, tint: "#ffffff", tintAmt: 0.75, rim: 0.7 }, { kind: "torus", x: 0.8, y: 0.76, size: 0.26, rot: 20, tilt: 40, spin: -30, mat: "vanta", shine: 0.4, shadow: 0.3 }] }],
     ["Gradients", "Orb", { ...G("radial", "Dusk", { warp: 0.2, soft: 1.6 }), objects: [{ kind: "blob", x: 0.5, y: 0.5, size: 0.62, tilt: 29, spin: 25, mat: "shaded", shine: 0.6, ripple: 0.3, shadow: 0.35 }], fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Gradients", "Ring", { ...G("radial", "Glacier", { warp: 0, soft: 2 }), objects: [{ kind: "torus", x: 0.5, y: 0.5, size: 0.66, tilt: 29, spin: -30, mat: "shaded", shine: 0.8, shadow: 0.3 }], fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Gradients", "Glass orbs", { ...G("flow", "Prism", { warp: 0.6, scale: 0.45 }), objects: [{ kind: "sphere", x: 0.34, y: 0.42, size: 0.44, mat: "glass", shine: 0.9, shadow: 0.25 }, { kind: "capsule", x: 0.7, y: 0.58, size: 0.4, rot: -30, tilt: 10, spin: 60, mat: "glass", shine: 0.9, shadow: 0.25 }] }],
@@ -461,6 +465,26 @@
     Speed: "Its own pace within the loop. Negative runs backward", Amplitude: "How far things move", "Loop length": "Seconds before the motion repeats",
     Caustics: "The bright web of light a pool casts on its floor", Grain: "Fine film grain", Intensity: "How strong the effect is",
   };
+  // Hints for effect settings whose names don't say enough on their own, keyed effect.setting.
+  const FX_TIP = {
+    "wave.length": "Distance between wave crests", "swirl.amount": "How many turns it twists at the center. Negative twists the other way",
+    "swirl.radius": "How far from the center the twist reaches", "bulge.amount": "Positive swells it outward, negative pinches it in",
+    "bulge.radius": "How far from the center the bulge reaches", "ripple.length": "Distance between rings", "ripple.decay": "How far the rings travel before fading",
+    "ripple.shade": "Light and shadow on the ring slopes", "sea.scale": "Size of the swells", "sea.caustic": "The sunlight patterns on the floor",
+    "sea.chop": "Small choppy waves on top of the swells", "sea.depth": "Tints the picture like deep water", "kaleido.segments": "How many mirrored slices",
+    "glass.width": "Width of each glass rib", "mesh.cell": "Size of each glass block", "mesh.radius": "Rounding of the block corners",
+    "dof.amount": "How blurry the parts out of focus get", "dof.focus": "Size of the area that stays sharp", "dof.falloff": "How gradually it softens past the sharp area",
+    "dof.angle": "Turns the band of focus, like tilting a tilt-shift lens", "dof.bokeh": "Opens bright spots into soft discs, as a camera lens does",
+    "blur.amount": "Blur at the softest end", "blur.start": "Where the blur begins to build",
+    "bloom.threshold": "Only parts brighter than this glow", "bloom.radius": "How far the glow spreads", "emboss.angle": "Where the light comes from",
+    "emboss.depth": "How deep the relief looks", "rays.length": "How far the beams reach from the light", "rays.threshold": "Only parts brighter than this cast beams",
+    "gradmap.mix": "Blends the recolored picture with the original", "posterize.levels": "Steps of tone in each color", "heatmap.glow": "Bloom on the hottest areas",
+    "chrome.strength": "How deep the metal surface looks", "chrome.bands": "How many reflections run across it", "riso.offset": "How far the ink layers slip out of register",
+    "dither.levels": "Steps of tone before dots take over", "dither.pix": "Size of each dot of the pattern", "pixel.bevel": "Raised edges on each pixel",
+    "voronoi.edge": "Lines between the cells", "touch.life": "How long a ripple lasts", "trail.strength": "How hard a drag pushes the picture",
+    "trail.swirl": "How much the trail curls", "trail.life": "How long a trail lasts", "glyphs.change": "How often characters change during the loop",
+    "glyphs.back": "A dark backdrop behind the characters", "chroma.amount": "How far red and blue slip apart", "paper.crumple": "Creases and folds", "paper.fiber": "Fibres in the paper",
+  };
   const SWEEP_GROUPS = new Set(["shape", "lines", "gradient"]), sweeps = [];
   function makeSlider(host, c) {
     c.fmt ||= (v) => String(v);
@@ -472,6 +496,8 @@
     const tipText = c.tip || SLIDER_TIP[c.label];
     if (tipText) {
       const lab = row.querySelector(".label"); lab.dataset.tip = tipText;
+      // A small "i" says there's a hint; hovering the name or the icon shows it.
+      lab.insertAdjacentHTML("beforeend", `<svg class="info-i" aria-hidden="true" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.25"/><path d="M8 7.2v3.8M8 5h.01"/></svg>`);
       if (SWEEP_GROUPS.has(c.group) && !c.noSweep) { c._sweep = sweeps.length; lab.dataset.tipPreview = "sweep:" + c._sweep; sweeps.push(c); }
     }
     const L = Math.log(c.max / c.min);
@@ -621,7 +647,7 @@
   function objTile(o) {
     const t = document.createElement("div");
     t.className = "tile fx obj"; t.dataset.obj = o.id;
-    t.innerHTML = `<span class="grip" title="Drag to reorder. Lower ones draw on top" aria-label="Drag to reorder">${ic("grip")}</span><button class="tile-main" data-slot="obj:${o.id}"><span class="tile-th" data-th="obj:${o.id}"></span><span class="tile-text"><b></b><small></small></span></button><button class="ib xs" data-remove-obj="${o.id}" aria-label="Remove" title="Remove">${ic("x")}</button>`;
+    t.innerHTML = `<span class="grip" aria-label="Drag to reorder. Lower ones draw on top">${ic("grip")}</span><button class="tile-main" data-slot="obj:${o.id}"><span class="tile-th" data-th="obj:${o.id}"></span><span class="tile-text"><b></b><small></small></span></button><button class="ib xs" data-remove-obj="${o.id}" aria-label="Remove" title="Remove">${ic("x")}</button>`;
     return t;
   }
   function renderObjTiles() {
@@ -692,7 +718,7 @@
   function fxTile(id) {
     const t = document.createElement("div");
     t.className = "tile fx"; t.dataset.fx = id;
-    t.innerHTML = `<span class="grip" title="Drag to reorder" aria-label="Drag to reorder ${FXI[id].name}">${ic("grip")}</span><button class="tile-main" data-slot="fx:${id}"><span class="tile-th" data-th="fx:${id}"></span><span class="tile-text"><b>${FXI[id].name}</b><small></small></span></button><button class="ib xs" data-remove="${id}" aria-label="Remove ${FXI[id].name}" title="Remove">${ic("x")}</button>`;
+    t.innerHTML = `<span class="grip" aria-label="Drag to reorder ${FXI[id].name}">${ic("grip")}</span><button class="tile-main" data-slot="fx:${id}"><span class="tile-th" data-th="fx:${id}"></span><span class="tile-text"><b>${FXI[id].name}</b><small></small></span></button><button class="ib xs" data-remove="${id}" aria-label="Remove ${FXI[id].name}" title="Remove">${ic("x")}</button>`;
     return t;
   }
   function renderSlots() {
@@ -1049,13 +1075,23 @@
   addEventListener("palettes-saved", () => { renderTabs(); if (panelOf(P.slot) === "colors") renderPalettes(); });
   P.palTab ||= "Curated"; P.palPage ||= 0;
   let sugList = [];
-  const palList = () => (P.palTab === "Suggested" ? sugList : P.palTab === "Saved" ? savedPals() : PALS.filter((p) => p.group === P.palTab));
+  // Palettes sort by color (neutrals first, then around the hue wheel by their most colorful swatch) or by name.
+  const hueKey = (p) => {
+    const best = p.colors.map((hex) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(r, g, b), d = mx - Math.min(r, g, b); let h = 0; if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return [d, (h * 60 + 360) % 360]; }).reduce((a, x) => (x[0] > a[0] ? x : a));
+    return best[0] < 0.12 ? -1 + best[0] : best[1];
+  };
+  const sorted = (list) => P.palSort === "name" ? list.slice().sort((a, b) => a.name.localeCompare(b.name)) : P.palTab === "Saved" ? list.slice().sort((a, b) => hueKey(a) - hueKey(b)) : list;
+  const COLOR_ORDER = new Map(PALS.slice().sort((a, b) => hueKey(a) - hueKey(b)).map((p, i) => [p, i]));
+  const palList = () => (P.palTab === "Suggested" ? sugList : sorted(P.palTab === "Saved" ? savedPals() : PALS.filter((p) => p.group === P.palTab).sort((a, b) => COLOR_ORDER.get(a) - COLOR_ORDER.get(b))));
+  const syncSort = () => { $("palSort").querySelector("span").textContent = P.palSort === "name" ? "Name" : "Color"; $("palSort").hidden = P.palTab === "Suggested"; };
+  $("palSort").onclick = () => { P.palSort = P.palSort === "name" ? "color" : "name"; const p = currentPal(); P.palPage = p && palList().includes(p) ? Math.floor(palList().indexOf(p) / PER_PAGE) : 0; savePrefs(); palKey = ""; syncSort(); renderPalettes(1); };
   const pageCount = () => Math.max(1, Math.ceil(palList().length / PER_PAGE));
   let palKey = "", shown = [];
   renderTabs();
   function renderPalettes(dir = 0) {
     const page = clamp(P.palPage, 0, pageCount() - 1), contours = gen() === "contours";
-    const key = JSON.stringify([P.palTab, page, contours, inksOf().length, P.palTab === "Suggested" ? sugList.map((p) => p.colors) : 0]);
+    syncSort();
+    const key = JSON.stringify([P.palTab, P.palSort, page, contours, inksOf().length, P.palTab === "Suggested" ? sugList.map((p) => p.colors) : 0]);
     if (key !== palKey) {
       palKey = key;
       shown = palList().slice(page * PER_PAGE, (page + 1) * PER_PAGE);
@@ -1255,7 +1291,7 @@
         inp.addEventListener("change", () => { e()[p.text] = inp.value; update(); });
         syncers.push(() => { row.hidden = !p.when(e()); if (document.activeElement !== inp) inp.value = e()[p.text] || ""; });
         body.appendChild(row);
-      } else fxSliders[id].push(makeSlider(body, { group: "fx-" + id, label: p.label, min: p.min, max: p.max, step: p.step, log: p.log, fmt: p.fmt, pct: p.pct, rand: p.rand, hard: p.hard, when: p.when ? () => p.when(e()) : undefined, get: () => e()[p.k], set: (v) => (e()[p.k] = v) }));
+      } else fxSliders[id].push(makeSlider(body, { group: "fx-" + id, label: p.label, tip: p.tip || FX_TIP[id + "." + p.k], min: p.min, max: p.max, step: p.step, log: p.log, fmt: p.fmt, pct: p.pct, rand: p.rand, hard: p.hard, when: p.when ? () => p.when(e()) : undefined, get: () => e()[p.k], set: (v) => (e()[p.k] = v) }));
     }
     if (SEEDED.has(id)) fxSliders[id].push(makeSlider(body, { group: "fx-" + id, label: "Seed", min: 0, max: 9999, step: 1, fmt: (v) => (v ? String(v) : "Design"), rand: [1, 9999], get: () => e().seed || 0, set: (v) => (e().seed = v) }));
     fxBodies[id] = body;
@@ -1264,6 +1300,36 @@
   let swapping = null;
   $("fxRemove").onclick = () => { const id = fxOf(); if (!id) return; removeFx(id); P.slot = S.fxOrder.length ? "fx:" + S.fxOrder[S.fxOrder.length - 1] : "addfx"; update(); };
   $("fxSwap").onclick = () => { swapping = fxOf(); setSlot("addfx"); };
+  // Search: every word typed has to appear in the name, the group or a few words people use for it.
+  // Cards that come back ease in; when nothing matches, a note says so and offers a way out.
+  let presetQ = "", fxQ = "";
+  const norm = (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const hits = (q, text) => !q || norm(q).split(/\s+/).filter(Boolean).every((w) => norm(text).includes(w));
+  function showCard(el, on) {
+    if (el.hidden === !on) return;
+    el.hidden = !on;
+    if (on && !reduceMotion.matches) el.animate([{ opacity: 0, transform: "scale(.94) translateY(4px)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: "cubic-bezier(.22,1,.36,1)" });
+  }
+  function noMatch(el, empty, q, what, inOther) {
+    const was = el.hidden;
+    el.hidden = !empty;
+    if (!empty) return;
+    const msg = q ? `No ${what} match “${esc(q)}”` : `No ${what} here`;
+    el.innerHTML = `<svg class="ic"><use href="#i-search"/></svg><b>${msg}</b><span>${inOther ? "Some match in another group." : "Try a shorter word, or a kind of look like glass, print or light."}</span><button class="btn sm" data-clear>${inOther ? "Show all groups" : "Clear search"}</button>`;
+    if (was && !reduceMotion.matches) el.animate([{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 280, easing: "cubic-bezier(.22,1,.36,1)" });
+  }
+  const FX_WORDS = { dof: "focus bokeh tilt shift blur", blur: "soft focus", bloom: "glow light bright", rays: "light sun beams", lens: "glass refraction bubble", mesh: "glass tiles", glass: "reeded ribbed", grain: "noise film", paper: "texture fibre", halftone: "dots comic print", cmyk: "dots print", riso: "print ink", dither: "pixel bitmap", pixel: "mosaic blocks", voronoi: "cells crystal", ascii: "text letters", glyphs: "text letters matrix", chroma: "rgb split aberration", scan: "crt tv lines", vignette: "dark edges", gradmap: "recolor duotone", chrome: "metal reflective", sea: "water ocean caustics", water: "caustics pool", swirl: "twist", wave: "warp", liquify: "warp smudge", kaleido: "mirror symmetry", touch: "click interactive", trail: "drag fluid smoke", emboss: "relief bevel 3d", heatmap: "thermal", posterize: "flat bands" };
+  const fxText = (f) => `${f[1]} ${f[2]} ${f[0]} ${FX_WORDS[f[0]] || ""}`;
+  function filterFx() {
+    for (const f of FXC) showCard(fxCards[f[0]], hits(fxQ, fxText(f)));
+    for (const grid of $("fxGallery").querySelectorAll(".cards")) { const any = [...grid.children].some((c) => !c.hidden); grid.hidden = !any; grid.previousElementSibling.hidden = !any; }
+    noMatch($("fxNone"), FXC.every((f) => fxCards[f[0]].hidden), fxQ, "effects");
+    schedulePreviews(0);
+  }
+  $("fxQ").addEventListener("input", (e) => { fxQ = e.target.value.trim(); filterFx(); });
+  $("presetQ").addEventListener("input", (e) => { presetQ = e.target.value.trim(); syncUI(); schedulePreviews(0); });
+  $("fxNone").onclick = (e) => { if (e.target.closest("[data-clear]")) { $("fxQ").value = fxQ = ""; filterFx(); $("fxQ").focus(); } };
+  $("presetNone").onclick = (e) => { if (!e.target.closest("[data-clear]")) return; if (presetQ && presetCards.some((pc) => hits(presetQ, pc.name + " " + pc.group)) && P.filter !== "All") P.filter = "All"; else $("presetQ").value = presetQ = ""; savePrefs(); syncUI(); schedulePreviews(0); };
   const fxCards = {};
   for (const cat of FX_CATS) {
     const h = document.createElement("div");
@@ -1965,6 +2031,7 @@
   window.syncSize = syncSize;
 
   // ---------- menus + modals ----------
+  $("tourBtn").onclick = () => { closeMenus(); window.Tour?.open(); };
   const menus = { sizeBtn: sizeMenu, exportBtn: $("exportMenu"), settingsBtn: $("settingsMenu"), designsBtn: $("designsMenu"), shareBtn: $("shareMenu") };
   // The bigger menus dim and blur the page behind them, so the eye lands on the menu.
   const SCRIMMED = ["exportMenu", "designsMenu", "shareMenu", "cpExportMenu"];
@@ -2073,7 +2140,7 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.14", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "1.15", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
@@ -2488,11 +2555,11 @@
     tseg.innerHTML = `<button data-v="wrap" data-tip="One copy on each side">Wrap</button><button data-v="front" data-tip="Projected straight through from the front">Front</button><button data-v="sphere" data-tip="Wrapped around like a map on a globe">Globe</button>`;
     tex.appendChild(tseg);
     makeSeg(tseg, () => objOf()?.proj || "wrap", (v) => { const o = objOf(); if (o) o.proj = v; });
-    makeSlider(tex, { label: "Scale", ...ob("texScale"), min: 0.1, max: 6, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.5, 2] });
-    makeSlider(tex, { label: "Rotate", ...ob("texRot"), min: -180, max: 180, step: 1, fmt: deg, rand: [-45, 45] });
-    makeSlider(tex, { label: "Shift left to right", ...ob("texX"), min: -1, max: 1, step: 0.005, pct: true, fmt: pct, rand: [-0.5, 0.5] });
-    makeSlider(tex, { label: "Shift top to bottom", ...ob("texY"), min: -1, max: 1, step: 0.005, pct: true, fmt: pct, rand: [-0.5, 0.5] });
-    makeSlider(tex, { label: "Edge blend", ...ob("blend"), min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Sharp"), rand: [0, 0.6], when: () => (objOf()?.proj || "wrap") === "wrap" && !["pyramid", "diamond"].includes(objOf()?.kind) });
+    makeSlider(tex, { label: "Scale", ...ob("texScale"), tip: "Size of the picture on the surface. Smaller repeats it", min: 0.1, max: 6, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.5, 2] });
+    makeSlider(tex, { label: "Rotate", ...ob("texRot"), tip: "Turns the picture on the surface", min: -180, max: 180, step: 1, fmt: deg, rand: [-45, 45] });
+    makeSlider(tex, { label: "Shift left to right", ...ob("texX"), tip: "Slides the picture across the surface", min: -1, max: 1, step: 0.005, pct: true, fmt: pct, rand: [-0.5, 0.5] });
+    makeSlider(tex, { label: "Shift top to bottom", ...ob("texY"), tip: "Slides the picture up or down the surface", min: -1, max: 1, step: 0.005, pct: true, fmt: pct, rand: [-0.5, 0.5] });
+    makeSlider(tex, { label: "Edge blend", ...ob("blend"), tip: "How softly the sides blend where they meet. Sharp gives each side its own copy", min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Sharp"), rand: [0, 0.6], when: () => (objOf()?.proj || "wrap") === "wrap" && !["pyramid", "diamond"].includes(objOf()?.kind) });
     syncers.push(() => (groups.Texture.hidden = isPic() || !["design", "preset"].includes(objOf()?.mat)));
     const place = G("Placement");
     makeSlider(place, { label: "Left to right", ...ob("x"), min: 0, max: 1, step: 0.001, pct: true, fmt: pct, rand: [0.2, 0.8] });
@@ -2999,7 +3066,8 @@
     for (const b of takeRow.querySelectorAll("[data-l]")) { b.classList.toggle("on", !!P.take[b.dataset.l]); b.setAttribute("aria-pressed", !!P.take[b.dataset.l]); }
     for (const b of $("presetFilter").children) b.classList.toggle("on", b.dataset.v === P.filter);
     $("presetGrid").classList.toggle("filtered", P.filter !== "All");
-    for (const pc of presetCards) { pc.el.hidden = P.filter !== "All" && pc.group !== P.filter; pc.el.classList.toggle("on", lookMatches(pc.look)); }
+    for (const pc of presetCards) { showCard(pc.el, (P.filter === "All" || pc.group === P.filter) && hits(presetQ, pc.name + " " + pc.group)); pc.el.classList.toggle("on", lookMatches(pc.look)); }
+    noMatch($("presetNone"), presetCards.every((pc) => pc.el.hidden), presetQ, "presets", P.filter !== "All" && presetCards.some((pc) => hits(presetQ, pc.name + " " + pc.group)));
     for (const [id, c] of Object.entries(genCards)) c.classList.toggle("on", id === g);
     for (const [id, c] of Object.entries(patCards)) c.classList.toggle("on", id === S.pattern);
     for (const [id, c] of Object.entries(noiseCards)) c.classList.toggle("on", id === S.grad.noise);
