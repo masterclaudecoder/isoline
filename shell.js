@@ -131,15 +131,45 @@
     const mark = $("brand").querySelector("svg");
     // The safety click tips the logo to the right; the rolls after it tip it left.
     if (!reduce.matches) mark?.animate([{ transform: "rotate(0) scale(1)" }, { transform: `rotate(${brandClicks ? -14 : 14}deg) scale(.9)`, offset: 0.35 }, { transform: "rotate(0) scale(1)" }], { duration: 420, easing: "cubic-bezier(.3,1.4,.5,1)" });
-    if (++brandClicks < 2) return;
+    if (++brandClicks < 2 || remixing) return;
+    // As in the Studio when a look is applied: each card keeps a still copy of its old picture on top
+    // while the new one is made underneath, and once all three are ready the copies fade out together,
+    // so nothing flashes and the cards change as one. A small note by the logo shows it's working.
     remixing = true;
-    const pal = root.Palettes?.generate();
-    remixing = false;
-    if (!pal) return;
-    // Surprise skips any look that would be slow to draw, so the new design is ready before the cards repaint.
-    await root.Studio?.surprise?.(); root.Studio?.usePalette?.(pal);
-    root.Components?.remix?.(pal);
-    paintHome(true);
+    const ghosts = ["homeStudio", "homePalette", "homeComponents"].map((id) => ghostOver($(id)));
+    const busy = $("remixBusy"), b = $("brand");
+    busy.style.left = b.offsetLeft + b.offsetWidth + 10 + "px";
+    const busyT = setTimeout(() => (busy.hidden = false), 150);
+    try {
+      const pal = root.Palettes?.generate();
+      if (pal) {
+        // Surprise skips any look that would be slow to draw, so the new design is ready before the cards repaint.
+        await root.Studio?.surprise?.(); root.Studio?.usePalette?.(pal);
+        await root.Components?.remix?.(pal);
+        await paintHome(false);
+        await document.fonts?.ready;
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      }
+    } catch (err) { console.error("remix failed", err); } finally {
+      remixing = false;
+      clearTimeout(busyT); busy.hidden = true;
+      for (const g of ghosts) if (g) { g.style.opacity = "0"; setTimeout(() => g.remove(), 700); }
+    }
+  }
+  // A still copy of a card's picture, laid over it (outside it, since the card's contents get replaced).
+  function ghostOver(host) {
+    if (!host || reduce.matches) return null;
+    const g = document.createElement("div");
+    g.className = "home-ghost"; g.setAttribute("aria-hidden", "true");
+    g.style.cssText = host.style.cssText;
+    Object.assign(g.style, { left: host.offsetLeft + "px", top: host.offsetTop + "px", width: host.offsetWidth + "px", height: host.offsetHeight + "px" });
+    for (const n of host.children) {
+      if (n.tagName === "CANVAS") { const c = document.createElement("canvas"); c.width = n.width; c.height = n.height; c.getContext("2d").drawImage(n, 0, 0); c.className = n.className; g.appendChild(c); }
+      else g.appendChild(n.cloneNode(true));
+    }
+    g.classList.add(...[...host.classList].filter((c) => c !== "tool-prev"));
+    host.parentElement.appendChild(g);
+    return g;
   }
 
   document.addEventListener("click", (e) => {

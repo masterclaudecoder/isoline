@@ -994,7 +994,7 @@
     if (hexes?.length) { K.follow = false; K.src = hexes.slice(); K.srcKey = "tool"; K.rc = fromSource(); }
     save();
     // A kit that wears the Studio design picks up the new one too.
-    if (K.art === "studio") refreshArt();
+    if (K.art === "studio") return refreshArt();
   }
   root.Components = { onShow: () => setMode(K.mode), usePalette, remix, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
 })(window);
