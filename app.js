@@ -1785,7 +1785,16 @@
   applyQuality();
   addEventListener("lite-change", applyQuality);
   syncPerfMode();
-  function syncPerfSet() { const v = String(P.perfFps ?? 60); for (const b of $("perfFps").children) if (b.dataset.v) b.classList.toggle("on", b.dataset.v === v); }
+  function syncPerfSet() {
+    const v = String(P.perfFps ?? 60); for (const b of $("perfFps").children) if (b.dataset.v) b.classList.toggle("on", b.dataset.v === v);
+    for (const b of $("perfPrio").children) b.classList.toggle("on", b.dataset.v === (P.priority || "fps"));
+  }
+  // Priority: Frame rate keeps every frame for animations, so previews wait for calm moments, fade in one
+  // after another, and pages are laid out ahead of a first visit. Load speed draws previews straight away,
+  // several per frame, and skips the warm-up.
+  const preferFps = () => P.priority !== "load";
+  window.preferFps = preferFps;
+  $("perfPrio").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P.priority = b.dataset.v; savePrefs(); syncPerfSet(); };
   $("perfFps").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P.perfFps = +b.dataset.v; perfQuiet.clear(); savePrefs(); syncPerfSet(); };
   syncPerfSet();
 
@@ -2997,7 +3006,7 @@
     // Never starves: after a second of constant activity the next job runs anyway. Resolves with the time
     // the slot opened, so cheap jobs can share it.
     for (const t0 = performance.now(); ; ) {
-      const late = performance.now() - t0 > 1000;
+      const late = performance.now() - t0 > 1000 || !preferFps();
       if (!late && performance.now() < quietUntil) { await new Promise((r) => setTimeout(r, Math.min(250, quietUntil - performance.now() + 10))); continue; }
       await afterFrame();
       if (late || performance.now() >= quietUntil) return performance.now();
@@ -3020,7 +3029,7 @@
         const j = queue.splice(next(), 1)[0], j0 = performance.now();
         try { await j(); } catch (e) {}
         if (j.full) { const d = performance.now() - j0; thumbMs = thumbMs ? thumbMs * 0.7 + d * 0.3 : d; }
-      } while (queue.length && performance.now() - t < 6 && performance.now() >= quietUntil);
+      } while (queue.length && (preferFps() ? performance.now() - t < 6 && performance.now() >= quietUntil : performance.now() - t < 24));
     }
     pumping = false;
   }
@@ -3030,7 +3039,7 @@
   function swapIn(slot, node) {
     const old = [...slot.children], now = performance.now();
     revealAt = Math.min(now + 480, Math.max(now, revealAt + 40));
-    const wait = reduceMotion.matches ? 0 : revealAt - now;
+    const wait = reduceMotion.matches || !preferFps() ? 0 : revealAt - now;
     node.classList.add("fresh");
     if (wait) node.style.animationDelay = wait + "ms";
     slot.appendChild(node);
@@ -3157,7 +3166,7 @@
   const hexDist = (a, b) => { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const x = p(a), y = p(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]); };
   const readable = (st) => (st.mode !== "layers" && /^#[0-9a-f]{12}$/i.test(st.line + st.bg.slice(1)) && hexDist(st.line, st.bg) < 60 ? { ...st, line: st.line2, line2: st.line } : st);
   const lightLines = (st) => ({ ...st, gap: Math.max(st.gap, st.w / 18), levels: Math.min(st.levels, 12), weight: Math.max(st.weight, 2.4) });
-  function schedulePreviews(delay = 260) { clearTimeout(previewT); previewT = setTimeout(buildPreviews, delay); }
+  function schedulePreviews(delay = 260) { clearTimeout(previewT); previewT = setTimeout(buildPreviews, preferFps() ? delay : Math.min(delay, 60)); }
   // Effect previews need a base image: the finished design (to preview adding one more effect),
   // or the design before any effects (so each effect tile shows the stack up to that step).
   async function effectBase(W, H, final = true) {

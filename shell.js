@@ -378,6 +378,8 @@
   const idle = () => new Promise((r) => (root.requestIdleCallback ? requestIdleCallback(() => r(), { timeout: 2500 }) : setTimeout(r, 300)));
   const frames = (n) => new Promise((r) => { const f = () => (--n ? requestAnimationFrame(f) : r()); requestAnimationFrame(f); });
   root.introDone.then(async () => {
+    // Load speed (Settings, Performance) skips it.
+    if (root.preferFps?.() === false) return;
     await frames(30);
     for (const page of document.querySelectorAll(".page")) {
       await idle();
