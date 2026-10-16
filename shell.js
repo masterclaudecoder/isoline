@@ -371,6 +371,25 @@
   // main thread free while it plays.
   const done = () => root.__introDone?.();
   root.introDone.then(() => shineLater(3500));
+  // A page is only laid out and drawn the first time it shows, so the first visit to each tool paid for
+  // that (and, in Components, for building the kit) in the middle of its transition. Once the entrance is
+  // over, each hidden page is laid out and drawn once out of sight, one per idle moment, and Components
+  // builds its kit then, so every visit is like a return.
+  const idle = () => new Promise((r) => (root.requestIdleCallback ? requestIdleCallback(() => r(), { timeout: 2500 }) : setTimeout(r, 300)));
+  const frames = (n) => new Promise((r) => { const f = () => (--n ? requestAnimationFrame(f) : r()); requestAnimationFrame(f); });
+  root.introDone.then(async () => {
+    await frames(30);
+    for (const page of document.querySelectorAll(".page")) {
+      await idle();
+      // Not while a switch is under way, and never the page on screen.
+      while (want || document.documentElement.classList.contains("vt")) await idle();
+      if (!page.hidden) continue;
+      page.classList.add("warm");
+      if (page.dataset.page === "components") root.Components?.prepare?.();
+      await frames(2);
+      page.classList.remove("warm");
+    }
+  });
   const html = document.documentElement, reveal = () => {
     // The loading screen, if it got as far as showing, opens from its middle rather than cutting out.
     const sp = $("splash"), shown = sp && +getComputedStyle(sp).opacity > 0.05;

@@ -1132,5 +1132,7 @@
     if (leftKey && leftKey === pageKey() && $("kit")) { leftKey = ""; if (K.mode === "builder") refreshArt(); return; }
     leftKey = ""; setMode(K.mode);
   }
-  root.Components = { onShow, onHide: () => (leftKey = pageKey()), usePalette, remix, look, setLook, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
+  // Built ahead of a first visit (the shell does it while the home page idles), so the visit finds it ready.
+  function prepare() { if (leftKey || root.Shell?.route === "components") return; setMode(K.mode); leftKey = pageKey(); }
+  root.Components = { onShow, prepare, onHide: () => (leftKey = pageKey()), usePalette, remix, look, setLook, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
 })(window);

@@ -61,6 +61,9 @@ button { cursor: pointer; }
 /* Hidden pages stay laid out but skipped: nothing is drawn or updated in them, and switching back reuses
    their cached layout instead of building the page again inside the transition. */
 .page[hidden] { content-visibility: hidden; visibility: hidden; pointer-events: none; }
+/* Laid out and drawn once before a first visit (see shell.js): out of the flow, so the page on screen
+   keeps its size, and too faint to see. */
+.page[hidden].warm { content-visibility: visible; visibility: visible; opacity: .01; position: absolute; inset: 0; overflow: hidden; }
 .ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
 /* scrollbars: thin thumb, no arrow buttons, on every scrolling element (panels, menus, text areas) */
@@ -579,7 +582,7 @@ html.intro .page:not([hidden]) :is(.bento > .tool:nth-child(3), .app > .stage, .
 .progress i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width .15s linear; }
 
 /* ---------- pages ---------- */
-.pages { display: grid; min-height: 0; }
+.pages { display: grid; min-height: 0; position: relative; }
 .page { grid-area: 1 / 1; min-height: 0; }
 a.brand { color: inherit; text-decoration: none; border-radius: 10px; }
 .page.leaving { animation: page-out .2s cubic-bezier(.4,0,.2,1) both; }
