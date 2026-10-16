@@ -119,6 +119,7 @@
             <span class="switch"><input type="checkbox" id="unlock"><span></span></span>
           </label>
           <div class="set-sep"></div>
+          <div class="set-row static"><span><b>Language</b></span><div class="seg sm" id="lang"><button data-v="auto">Auto</button><button data-v="en" translate="no">English</button><button data-v="ru" translate="no">Русский</button></div></div>
           <div class="set-row static"><span><b>Theme</b></span><div class="seg sm" id="theme"><button data-v="system">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
           <div class="set-row static"><span><b>Accent</b></span><div class="accents" id="accents"></div></div>
           <div class="set-sep"></div>
@@ -158,9 +159,9 @@
         <div class="pop designs" id="looksMenu" hidden>
           <div class="dz-head">
             <input class="field dz-name" id="lkName" maxlength="60" spellcheck="false" aria-label="Look name" placeholder="Name this look">
-            <button class="btn primary sm" id="lkSave" title="Save the design, palette and kit together">Save</button>
+            <button class="btn primary sm" id="lkSave" title="Save all three modes as one look">Save</button>
           </div>
-          <p class="dz-state">The design, palette and kit on this page, kept as one.</p>
+          <p class="dz-state">Saves all three modes as one look.</p>
           <div class="set-sep"></div>
           <h3>Saved looks</h3>
           <div class="dz-list" id="lkList"></div>
@@ -174,8 +175,8 @@
       <div class="menu-wrap">
         <button class="btn" id="shareBtn" aria-haspopup="true" title="Share"><svg class="ic"><use href="#i-link"/></svg><span class="lbl">Share</span><svg class="ic chev"><use href="#i-chev"/></svg></button>
         <div class="pop share" id="shareMenu" hidden>
-          <button class="opt rich" id="dzShare" data-for="studio"><svg class="ic"><use href="#i-link"/></svg><span><b>Copy link</b><small>Opens this exact design for anyone, no account needed</small></span></button>
-          <button class="opt rich" id="aiCopy"><span class="tb-ic" aria-hidden="true"><svg class="ic"><use href="#i-copy"/></svg><svg class="ic"><use href="#i-check"/></svg></span><span><b>Copy for agents</b><small>A guide that lets an AI agent drive Isoline for you</small></span></button>
+          <button class="opt rich" id="dzShare" data-for="studio"><svg class="ic"><use href="#i-link"/></svg><span><b>Copy link</b><small>Opens this design for anyone, no account needed</small></span></button>
+          <button class="opt rich" id="aiCopy"><span class="tb-ic" aria-hidden="true"><svg class="ic"><use href="#i-copy"/></svg><svg class="ic"><use href="#i-check"/></svg></span><span><b>Copy for agents</b><small>A guide for AI agents to drive Isoline</small></span></button>
         </div>
       </div>
       <div class="menu-wrap" data-for="studio">
@@ -195,9 +196,9 @@
             <span class="label">Size</span><div class="seg sm" id="gifSize"><button data-v="360">360p</button><button data-v="480">480p</button><button data-v="720">720p</button></div>
             <span class="label">Frame rate</span><div class="seg sm" id="gifFps"><button data-v="15">15</button><button data-v="20">20</button><button data-v="30">30</button></div>
             <span class="label">Loops</span><div class="seg sm" id="gifLoops"><button data-v="1">1</button><button data-v="2">2</button><button data-v="4">4</button></div>
-            <span class="label" id="gifWebpL" data-tip="Full color with no banding, and usually a smaller file. Plays in every current browser">Animated WebP</span><label class="switch" id="gifWebpS"><input type="checkbox" id="gifWebp" aria-labelledby="gifWebpL"><span></span></label>
+            <span class="label" id="gifWebpL" data-tip="Full color, no banding, usually smaller. Plays in all current browsers">Animated WebP</span><label class="switch" id="gifWebpS"><input type="checkbox" id="gifWebp" aria-labelledby="gifWebpL"><span></span></label>
           </div>
-          <p class="note" id="vidNote" hidden>Still designs export with a slow drift. Pick a motion for more control.</p>
+          <p class="note" id="vidNote" hidden>Still designs export with a slow drift.</p>
           <label class="label" for="fname">File</label>
           <input class="field mono" id="fname" spellcheck="false">
           <dl class="facts" id="facts"></dl>
@@ -307,7 +308,7 @@
 
       <div class="panel-sec" data-panel="addobj">
         <div class="cards three" id="objKinds"></div>
-        <p class="hint">Objects sit on the design and under effects. Drag one on the canvas to move it.</p>
+        <p class="hint">Objects sit under effects. Drag one on the canvas to move it.</p>
       </div>
 
       <div class="panel-sec" data-panel="object">
@@ -343,7 +344,7 @@
           <p class="hint mono" id="bezVals"></p>
         </div>
         <button class="btn play-btn" id="playBtn"><svg class="ic"><use href="#i-play"/></svg><span>Play</span></button>
-        <p class="note play-note">Exports render every frame, so they play smoothly even when the preview stutters.</p>
+        <p class="note play-note">Exports render every frame and play smoothly even if the preview stutters.</p>
       </div>
 
       <div class="panel-sec" data-panel="addfx">
@@ -435,7 +436,7 @@
 <div class="modal" id="unlockModal" hidden>
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="unlockTitle">
     <h3 id="unlockTitle">Unlock values?</h3>
-    <p>You'll be able to type values far past the slider limits. Extreme ones, like a 1px grid or thousands of lines, can freeze or crash this tab.</p>
+    <p>You can type values past the slider limits. Extreme ones, like a 1px grid or thousands of lines, can freeze this tab.</p>
     <div class="dialog-actions"><button class="btn" id="unlockCancel">Cancel</button><button class="btn primary" id="unlockOk">Unlock</button></div>
   </div>
 </div>
@@ -455,16 +456,16 @@
   <div class="dialog perf-dialog" role="dialog" aria-modal="true" aria-labelledby="perfTitle">
     <h3 id="perfTitle">Performance</h3>
     <div class="set-row static"><span><b>Performance mode</b><small id="perfModeNote">Lighter drawing for built-in graphics</small></span><div class="seg sm" id="perfMode"><button data-v="auto">Auto</button><button data-v="on">On</button><button data-v="off">Off</button></div></div>
-    <div class="set-row static"><span><b>Lag warning</b><small>A note when playback drops below this frame rate</small></span><div class="seg sm" id="perfFps"><button data-v="0">Off</button><button data-v="30">30</button><button data-v="45">45</button><button data-v="60">60</button></div></div>
-    <label class="set-row" for="showMs"><span><b>Render time</b><small>How long each frame takes, in the corner of the canvas</small></span><span class="switch"><input type="checkbox" id="showMs"><span></span></span></label>
+    <div class="set-row static"><span><b>Lag warning</b><small>Warns when playback drops below this rate</small></span><div class="seg sm" id="perfFps"><button data-v="0">Off</button><button data-v="30">30</button><button data-v="45">45</button><button data-v="60">60</button></div></div>
+    <label class="set-row" for="showMs"><span><b>Render time</b><small>Frame time, shown on the canvas</small></span><span class="switch"><input type="checkbox" id="showMs"><span></span></span></label>
     <div class="set-sep"></div>
-    <div class="perf-head"><b>Effect quality</b><small>Higher draws smoother but slower, in the preview and in exports. Auto is Low in performance mode and Mid otherwise.</small></div>
+    <div class="perf-head"><b>Effect quality</b><small>Higher is smoother but slower, in previews and exports. Auto picks Low in performance mode, Mid otherwise.</small></div>
     <div class="set-row static"><span><b>God rays</b><small>Steps along each ray</small></span><div class="seg sm" id="qRays"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="mid">Mid</button><button data-v="high">High</button></div></div>
     <div class="set-row static"><span><b>Blur and depth of field</b><small>Samples in each blur</small></span><div class="seg sm" id="qTaps"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="mid">Mid</button><button data-v="high">High</button></div></div>
     <div class="set-row static"><span><b>Bloom</b><small>Samples around each glow</small></span><div class="seg sm" id="qBloom"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="mid">Mid</button><button data-v="high">High</button></div></div>
     <div class="set-row static"><span><b>Frosted glass</b><small>Samples in the frost of glass objects</small></span><div class="seg sm" id="qFrost"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="mid">Mid</button><button data-v="high">High</button></div></div>
     <div class="set-row static"><span><b>3D objects</b><small>Detail of edges and fine ripples</small></span><div class="seg sm" id="qSteps"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="mid">Mid</button><button data-v="high">High</button></div></div>
-    <div class="set-row static"><span><b>Glass refraction</b><small>Through the body bends light in and out, so edges and the inside read like real glass</small></span><div class="seg sm" id="qPhys"><button data-v="surface">Surface</button><button data-v="body">Through the body</button></div></div>
+    <div class="set-row static"><span><b>Glass refraction</b><small>Through the body bends light in and out, like real glass</small></span><div class="seg sm" id="qPhys"><button data-v="surface">Surface</button><button data-v="body">Through the body</button></div></div>
     <div class="set-sep"></div>
     <div class="dialog-actions">
       <button class="btn" id="exportLogs"><svg class="ic"><use href="#i-export"/></svg>Export performance log</button>
@@ -494,12 +495,14 @@
     <input class="fb-hp" id="fbHp" tabindex="-1" autocomplete="off" aria-hidden="true">
     <textarea class="field autosize" id="fbText" rows="4" placeholder="What happened, and what did you expect?" aria-label="Details"></textarea>
     <label class="label-row switch-row" for="fbInfo"><span class="label">Attach page details<small id="fbInfoSum"></small></span><span class="switch"><input type="checkbox" id="fbInfo" checked><span></span></span></label>
-    <p class="note">Opens a filled-in issue on GitHub, where you post it with your account.</p>
+    <p class="note">Opens a filled-in GitHub issue to post from your account.</p>
     <div class="dialog-actions"><button class="btn" id="fbCancel">Cancel</button><button class="btn primary" id="fbOk" disabled><svg class="ic"><use href="#i-out"/></svg><span>Continue on GitHub</span></button></div>
   </div>
 </div>
 
 <div class="toasts" id="toasts" aria-live="polite"></div>
+<script src="ru.js"></script>
+<script src="i18n.js"></script>
 <script src="ui.js"></script>
 <script src="colornames.js"></script>
 <script src="color.js"></script>

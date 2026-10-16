@@ -171,7 +171,7 @@
   // browser, opened again in one go, and taken elsewhere as .json.
   const LOOKS = "isoline.looks";
   let looks = (() => { try { const v = JSON.parse(localStorage.getItem(LOOKS) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } })();
-  const saveLooks = () => { try { localStorage.setItem(LOOKS, JSON.stringify(looks)); return true; } catch (e) { root.toastMsg?.("Browser storage is full. Export some looks, then delete them"); return false; } };
+  const saveLooks = () => { try { localStorage.setItem(LOOKS, JSON.stringify(looks)); return true; } catch (e) { root.toastMsg?.("Storage full. Export some looks, then delete them"); return false; } };
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const fileName = (n) => `${String(n || "look").replace(/[^\w-]+/g, "-").toLowerCase()}.isoline-look.json`;
   const validLook = (l) => l && Array.isArray(l.pal) && l.pal.every((h) => /^#[0-9a-f]{6}$/i.test(h)) && l.studio && typeof l.studio === "object" && l.kit && typeof l.kit === "object";
@@ -192,7 +192,7 @@
         <button class="dz-main" data-act="open" title="Open this look"><span class="dz-thumb">${l.thumb ? `<img src="${l.thumb}" alt="">` : ""}</span><span class="dz-text"><b>${esc(l.name)}</b><small>${ago(l.at)}</small></span></button>
         <button class="ib xs" data-act="download" title="Download .json" aria-label="Download"><svg class="ic"><use href="#i-export"/></svg></button>
         <button class="ib xs" data-act="delete" title="Delete" aria-label="Delete"><svg class="ic"><use href="#i-trash"/></svg></button>
-      </div>`).join("") : `<p class="dz-empty">Save the look on this page, the design, palette and kit together, to come back to it.</p>`;
+      </div>`).join("") : `<p class="dz-empty">No saved looks yet.</p>`;
   }
   async function saveLook() {
     const l = homeLook(), name = $("lkName").value.trim() || `Look ${looks.length + 1}`;
@@ -259,11 +259,20 @@
     const l = homeHist[n];
     await homeChange(async () => { if (l.pal) root.Palettes?.load(l.pal); if (l.studio) root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); }, "Going back to that look");
   }
+  // Where the logo ends. The link itself can stretch across its grid column, so this measures the mark
+  // and the word, leaving out the shine layer.
+  function brandRight() {
+    const b = $("brand"), base = $("homeHist").offsetParent?.getBoundingClientRect().left || 0;
+    let r = 0;
+    for (const n of b.children) if (!n.classList.contains("brand-shine")) r = Math.max(r, n.getBoundingClientRect().right);
+    return (r || b.getBoundingClientRect().right) - base;
+  }
   function syncHomeHist() {
-    const b = $("brand"); $("homeHist").style.left = b.offsetLeft + b.offsetWidth + 8 + "px";
+    $("homeHist").style.left = brandRight() + 8 + "px";
     $("homeUndo").disabled = homeAt <= 0; $("homeRedo").disabled = homeAt < 0 || homeAt >= homeHist.length - 1;
     $("homeHist").classList.toggle("on", homeHist.length > 1);
   }
+  addEventListener("resize", () => { if ($("homeHist").classList.contains("on")) syncHomeHist(); });
   $("homeUndo").onclick = () => homeStep(-1);
   $("homeRedo").onclick = () => homeStep(1);
   addEventListener("keydown", (e) => {
@@ -277,8 +286,8 @@
   async function homeChange(work, label = "Rolling a new look") {
     remixing = true;
     const busy = $("remixBusy"), h = $("homeHist");
-    const b = $("brand"), on = h.classList.contains("on");
-    busy.style.left = (on ? h.offsetLeft + h.offsetWidth : b.offsetLeft + b.offsetWidth) + 8 + "px";
+    const on = h.classList.contains("on");
+    busy.style.left = (on ? h.offsetLeft + h.offsetWidth : brandRight()) + 8 + "px";
     // The note shows at once and reaches the screen before the work starts: the work holds the main
     // thread, so a note left to a timer or to the next frame would come late or not at all.
     clearTimeout(busyHide);

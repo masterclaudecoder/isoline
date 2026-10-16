@@ -57,21 +57,31 @@
     "No status dots or markers that never change state.",
     "No dark call-to-action band closing every page.",
     "Lay out each page for its task. Don't reuse one hero, features, stats and call-to-action skeleton everywhere.",
+    "Write like a person. No em dashes, no \"not X, it's Y\", no simply, seamlessly or effortlessly, no exclamation marks.",
+    "Labels name the thing. Helper text says what happens, in one short line, or isn't there.",
+    "Empty states are one line that says what's missing, like \"No saved looks yet.\"",
+    "Name buttons for what they do: Save, Export PNG, Delete look. Never Submit, OK or Click here.",
+    "No purple-to-blue gradients, glass on everything or emoji as icons. Every color and effect has a reason.",
+    "No colored stripe down the side of a card and no rounded box around every section.",
+    "Set type with care: a real scale, tuned tracking and one or two families, not the default stack.",
   ];
-  const RULES_V = 3;
+  const RULES_V = 4;
   const KEY = "isoline-kit";
   const DEF = {
     mode: "builder", fw: "All", cat: "All", q: "", slot: "type", view: "components", layout: "home", hero: "beside", dark: null, follow: true,
     fit: true, pw: 1440, ph: 900, tint: "tinted", src: null, art: "studio", enter: "rise", exit: "fade", stagger: 50, trigger: "load",
     pair: 0, head: "", body: "", scale: 1.25, base: 16, tracking: -0.02,
-    rc: null,
+    rc: null, cyr: root.I18N?.lang === "ru",
     unit: 4, density: 1, radius: 10, pill: false, elevation: "soft", dur: 200, ease: "out",
     rules: RULES.map((t) => ({ t, on: true })),
   };
   let K = { ...DEF };
+  const freshKit = (() => { try { return !localStorage.getItem(KEY); } catch (e) { return false; } })();
   try { K = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch (e) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(K)); } catch (e) {} };
   if (K.view === "landing") K.view = "pages";
+  // A first visit in Russian starts on a pair that sets Cyrillic: Inter Tight over Inter, like the app itself.
+  if (freshKit && K.cyr && !pairOK(PAIRS[K.pair] || PAIRS[0])) K.pair = Math.max(0, PAIRS.findIndex(pairOK));
   // The artwork used to start off, which saved "none" into every kit; switch it on once so the Studio design shows.
   if (!K.artV) { K.art = "studio"; K.artV = 1; save(); }
   // Rules added in later versions join a saved list once, after the rules already there.
@@ -554,7 +564,7 @@
   }
   $("cpSlots").innerHTML = SLOTS.map(([id, label]) => `<div class="slot"><div class="slot-label">${label}</div><button class="tile" data-s="${id}"><span class="tile-th tok-th" data-tt="${id}">${TOK_TH[id]}</span><span class="tile-text"><b></b><small></small></span>${ic("next")}</button></div>`).join("");
   $("cpSlots").querySelectorAll(".tile").forEach(tokHover);
-  const setText = (el, v) => { if (el.textContent === v) return; el.textContent = v; if (!root.UI?.reduce.matches && !build.hidden) el.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 220 + Math.random() * 80, easing: "cubic-bezier(.22,1,.36,1)" }); };
+  const setText = (el, v) => { v = root.I18N ? root.I18N.t(v) : v; if (el.textContent === v) return; el.textContent = v; if (!root.UI?.reduce.matches && !build.hidden) el.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 220 + Math.random() * 80, easing: "cubic-bezier(.22,1,.36,1)" }); };
   function renderSlots() {
     vars($("cpSlots"));
     for (const t of $("cpSlots").querySelectorAll("[data-s]")) {
@@ -672,7 +682,7 @@
       o.querySelector(".ff-pair").onclick = (e) => { const b = e.target.closest(".ff-trigger"); if (!b) return; if (ff?.anchor === b) closeFF(); else fontPicker(b, b.dataset.role); };
       o.insertAdjacentHTML("beforeend", `<label class="set-row cp-cyr"><span><b>Cyrillic only</b><small>Fonts that can set Russian and other Cyrillic text</small></span><span class="switch"><input type="checkbox"${K.cyr ? " checked" : ""}><span></span></span></label>`);
       o.querySelector(".cp-cyr input").onchange = (e) => { K.cyr = e.target.checked; save(); renderOpts(); };
-      o.insertAdjacentHTML("beforeend", `<h3 class="sub"><span class="tipped" data-tip="Pick the body font first, for reading. Then a heading with some contrast, like a serif over a sans or a heavier weight">Pairings</span></h3>`);
+      o.insertAdjacentHTML("beforeend", `<h3 class="sub"><span class="tipped" data-tip="Pick the body font first. Then a heading that contrasts, like a serif over a sans">Pairings</span></h3>`);
       const g = document.createElement("div"); g.className = "cp-pairs";
       const custom0 = K.head || K.body;
       const shown = PAIRS.map((p, k) => [p, k]).filter(([p]) => pairOK(p));

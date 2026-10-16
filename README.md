@@ -2,6 +2,8 @@
 
 Topographic patterns, palettes and design tokens. Static site: open `index.html` or serve the folder (`python3 -m http.server`).
 
+How it's designed, what we avoid and the checklist before shipping: [DESIGN.md](DESIGN.md). The Builder's design rules carry the same ideas into kits.
+
 Live at **https://masterclaudecoder.github.io/isoline/**. Every push to the main branch deploys it through GitHub Actions (`.github/workflows/pages.yml`). The workflow also captures previews for new libraries and commits them to `previews/`. Pages has to be switched on once in the repository settings (Settings, Pages, Source: GitHub Actions).
 
 ## Pages
@@ -104,6 +106,7 @@ Lines (strokes), Bands (filled stripes, PewDiePie-style), Layers (stacked fills)
 - Click any value to type it. Settings import and export as JSON. `⌘Z` / `⇧⌘Z` undo and redo. Shortcuts follow the key's place on the keyboard, so they work in any layout (R is R on a Russian keyboard too).
 - **Export:** SVG for contours, PNG 1–4× for everything, MP4, GIF or animated WebP for motion, HTML (a standalone page that plays the design live, fills the window and answers clicks and drags), or `C` to copy for Figma.
 - **Theme:** Auto, light or dark, plus an accent color, in settings.
+- **Language:** Auto, English or Russian, in settings (Auto follows the browser). The interface is written in English and `ru.js` holds the Russian strings, which `i18n.js` applies to the page as it renders: text, tooltips, labels and placeholders, with patterns for numbers and plurals. Names of presets, palettes, colors, fonts and brands stay as they are, and so does the kit preview. In Russian the Builder starts with Cyrillic only on.
 - **Lag warning:** when motion plays below the frame rate set in Settings → Performance (60 fps by default; 45, 30 or off), a note offers to remove effects or stop motion. Closing it quiets it for that look only, so another slow look brings it back. **Don't remind me** turns it off until a rate is picked again in Settings.
 - **Performance log:** Settings → Performance → Export performance log downloads a JSON file. It holds the frame rate of each look played, still-frame draw times, page-switch frame gaps, and the device and GPU, with the slowest looks summarized first. The last 300 entries are kept in the browser.
 - **Load guard:** a design too heavy for the device can't lock anyone out. If the last visit froze or crashed while starting, the saved design opens without effects or objects, and a note offers to restore them. Designs with effects are also test-drawn small before the first frame, and one that would take more than three seconds opens the same way.

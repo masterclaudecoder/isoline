@@ -454,7 +454,7 @@
     Count: "How many lines are drawn", Gap: "Space between neighboring lines", Bias: "Bunches lines toward the low or the high ground",
     Thickness: "Width of each band", Weight: "Line thickness", Swell: "Lines thicken toward the peaks", "Swell size": "How far the thickening spreads",
     Taper: "Lines thin out toward their ends", "Accent every": "Draws every nth line heavier, like index lines on a map", "Accent weight": "Thickness of the heavier lines",
-    Smooth: "Rounds off small kinks in the lines", Grid: "The spacing the lines are traced on. Smaller follows the shape more closely", Clean: "Drops short scraps of line",
+    Smooth: "Rounds off small kinks in the lines", Grid: "Tracing grid. Smaller follows the shape more closely", Clean: "Drops short scraps of line",
     Softness: "How gently neighboring colors blend", Stretch: "Pulls the pattern out along its angle", Angle: "Turns the pattern",
     Contrast: "Pushes colors apart toward the ends of the palette", Size: "How large the body of light is", Wobble: "How far its outline bends",
     Edge: "How softly the body fades into the background", Lines: "How many rings sit inside the body", "Line width": "Thickness of the rings",
@@ -719,7 +719,7 @@
   }
   const animOK = () => !reduceMotion.matches && !document.body.classList.contains("boot");
   // Text that changes fades in rather than snapping.
-  function setText(el, v) { if (el.textContent === v) return; el.textContent = v; if (animOK()) el.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 200 + Math.random() * 90, easing: EASE }); }
+  function setText(el, v) { if (window.I18N && !el.closest('[translate="no"]')) v = I18N.t(v); if (el.textContent === v) return; el.textContent = v; if (animOK()) el.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 200 + Math.random() * 90, easing: EASE }); }
   function fxTile(id) {
     const t = document.createElement("div");
     t.className = "tile fx"; t.dataset.fx = id;
@@ -738,7 +738,10 @@
       const show = !slotWhen[id] || slotWhen[id]();
       if (wrap.hidden === show) wrap.hidden = !show; // folds open and closed in CSS
       t.classList.toggle("on", P.slot === id);
-      setText(t.querySelector("b"), title); setText(t.querySelector("small"), sub);
+      // Preset and palette names are names, so they stay as they are in any language.
+      const nb = t.querySelector("b");
+      if (id === "colors" || (id === "preset" && currentPreset())) nb.setAttribute("translate", "no"); else nb.removeAttribute("translate");
+      setText(nb, title); setText(t.querySelector("small"), sub);
     }
     // Color tile: same number of colors eases each one; a new count rebuilds the strip.
     const sw = slotEls.colors.querySelector(".tile-sw"), cols = slotColors();
@@ -868,6 +871,7 @@
       update({ fade: true });
       if (layers.length < 4) toast(`Took ${layers.map((l) => LAYER_NAMES[l].toLowerCase()).join(", ")} from ${name}`);
     }, group);
+    c.querySelector(".card-label").setAttribute("translate", "no");
     $("presetGrid").appendChild(c);
     return { el: c, group, name, look, done: false };
   });
@@ -1616,10 +1620,10 @@
   {
     const host = document.createElement("div"); $("motionCtrls").appendChild(host);
     makeSwitch(host, "Endless (no loop)", () => S.motion.endless, (v) => { S.motion.endless = v; if (v) S.motion.mode = "once"; });
-    host.lastElementChild.dataset.tip = "Flow keeps morphing and never repeats. Exports run the whole length without coming back round";
+    host.lastElementChild.dataset.tip = "Keeps morphing and never repeats. Exports run the full length without looping back";
     // Unbound: only meaningful once Endless is on, so it stays dimmed until then.
     makeSwitch(host, "Unbound", () => S.motion.unbound, (v) => (S.motion.unbound = v));
-    const ub = host.lastElementChild; ub.dataset.tip = "Travels on through the pattern for good, so the morph never even revisits similar shapes";
+    const ub = host.lastElementChild; ub.dataset.tip = "Keeps traveling through the pattern and never revisits a shape";
     syncers.push(() => { const on = endless(); ub.classList.toggle("off", !on); ub.querySelector("input").disabled = !on; });
     syncers.push(() => {
       host.hidden = S.motion.type !== "breathe";
@@ -1739,7 +1743,7 @@
   // Closing the note quiets it for this look; with "Don't remind me" ticked it stays off.
   function closePerf() {
     $("perfNote").hidden = true; perfQuiet.add(perfShownFor);
-    if ($("perfOff").checked) { P.perfFps = 0; savePrefs(); syncPerfSet(); toast("Lag warnings are off. Turn them back on in Settings"); }
+    if ($("perfOff").checked) { P.perfFps = 0; savePrefs(); syncPerfSet(); toast("Lag warnings off. Turn them on in Settings"); }
   }
   $("perfFx").onclick = () => { closePerf(); S.fxOrder = []; update(); toast("Effects removed", { action: "Undo", onAction: () => travel(-1) }); };
   $("perfStop").onclick = () => { closePerf(); stopPlay(); S.motion.type = "still"; update(); };
@@ -1750,7 +1754,7 @@
     const L = window.Lite; if (!L) return;
     for (const b of $("perfMode").children) b.classList.toggle("on", b.dataset.v === L.pref);
     $("perfModeNote").textContent = L.pref === "auto" ? (L.on ? "Auto: on for this device" : "Auto: off for this device") : "Lighter drawing for built-in graphics";
-    $("perfSum").textContent = L.on ? "Light" : "";
+    $("perfSum").textContent = L.on ? "On" : "";
   }
   $("perfMode").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; window.Lite.set(b.dataset.v); syncPerfMode(); syncQuality(); };
   // The Performance dialog, from Settings.
@@ -2217,7 +2221,7 @@
   $("theme").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P.theme = b.dataset.v; savePrefs(); window.UI ? UI.swap(applyTheme) : applyTheme(); };
 
   // ---------- settings ----------
-  $("safe").onchange = (e) => { P.safe = e.target.checked; savePrefs(); toast(P.safe ? "Safe values on" : "Safe values off. Randomizing uses the full ranges."); };
+  $("safe").onchange = (e) => { P.safe = e.target.checked; savePrefs(); toast(P.safe ? "Safe values on" : "Safe values off. Randomize uses full ranges"); };
   $("unlock").onchange = (e) => {
     if (e.target.checked) { e.target.checked = false; closeMenus(); openModal("unlockModal"); return; }
     P.unlock = false; savePrefs(); toast("Values locked to slider ranges");
@@ -2275,7 +2279,7 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.21", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "1.22", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
@@ -2358,7 +2362,7 @@
     $("dzVersion").hidden = !cur; $("dzVersion").disabled = !dirty; if (cur) $("dzVersionOf").textContent = cur.name;
     $("dzExportAll").disabled = !lib.length;
     const list = $("dzList");
-    if (!lib.length) { list.innerHTML = `<p class="dz-empty">Your saved designs show up here.</p>`; return; }
+    if (!lib.length) { list.innerHTML = `<p class="dz-empty">No saved designs yet.</p>`; return; }
     const open = list.dataset.open || "";
     list.innerHTML = lib.slice().sort((a, b) => b.updated - a.updated).map((d) => `
       <div class="dz-item${d.id === P.designId ? " on" : ""}${d.id === open ? " open" : ""}" data-id="${d.id}">
@@ -2640,16 +2644,16 @@
   }
   const rowsOf = (host, labels) => [...host.children].filter((r) => labels.includes(r.querySelector(".label")?.textContent));
   const facts = (...xs) => xs.filter(Boolean).join(", ");
-  groupOf([...rowsOf($("shape"), ["Scale", "Detail", "Angle", "Features", "Bulge", "Bulge size"]), document.querySelector(".seed-row")], "Scale and detail", { tip: "The size of the shapes, how much fine detail they carry, and the seed that lays them out", hint: () => facts(px(S.scale), `seed ${S.seed}`) });
+  groupOf([...rowsOf($("shape"), ["Scale", "Detail", "Angle", "Features", "Bulge", "Bulge size"]), document.querySelector(".seed-row")], "Scale and detail", { tip: "Shape size, fine detail and the seed that places them", hint: () => facts(px(S.scale), `seed ${S.seed}`) });
   groupOf(rowsOf($("shape"), ["Warp", "Liquify", "Liquify size"]), "Distortion", { tip: "Bends and swirls the pattern after it is made", hint: () => facts(`warp ${f2(S.warp)}`, S.liquify ? `liquify ${f2(S.liquify)}` : "") });
-  groupOf([document.querySelector(".pts-head"), document.querySelector(".pt-actions"), $("ptHint"), $("pointCtrls")], "Points", { tip: "Your own hills and dips, placed by hand. Turn them on to shape the lines around them", open: false, hint: () => (S.usePoints ? `${S.points.length} in use` : "Off") });
+  groupOf([document.querySelector(".pts-head"), document.querySelector(".pt-actions"), $("ptHint"), $("pointCtrls")], "Points", { tip: "Hills and dips you place by hand. The lines flow around them", open: false, hint: () => (S.usePoints ? `${S.points.length} in use` : "Off") });
   groupOf([$("gradCtrls"), $("gradHint")], "Fine-tune", { tip: "Settings for this generator", hint: () => (gen() === "aura" ? facts(`size ${f2(S.grad.scale)}×`, `${S.grad.detail} layers`) : facts(`warp ${f2(S.grad.warp)}`)) });
-  groupOf(rowsOf($("lines"), ["Count", "Gap", "Bias", "Thickness"]), "Spacing", { tip: "How many lines there are and how they are spread over the shape", hint: () => (linear() ? px(S.gap) + " gap" : S.levels + " levels") });
+  groupOf(rowsOf($("lines"), ["Count", "Gap", "Bias", "Thickness"]), "Spacing", { tip: "How many lines, and how they spread over the shape", hint: () => (linear() ? px(S.gap) + " gap" : S.levels + " levels") });
   groupOf(rowsOf($("lines"), ["Weight", "Swell", "Swell size", "Taper"]), "Stroke", { tip: "How each line is drawn", hint: () => facts(f2(S.weight) + "px", S.swell ? "swell" : "", S.taper ? "taper" : "") });
   groupOf(rowsOf($("lines"), ["Accent every", "Accent weight"]), "Accent lines", { tip: "Every few lines drawn heavier, like index contours on a map", open: false, hint: () => (S.indexEvery ? `every ${S.indexEvery}` : "Off") });
   groupOf(rowsOf($("lines"), ["Smooth", "Grid", "Clean"]), "Detail", { tip: "How finely the lines follow the shape", open: false, hint: () => facts(`smooth ${f2(S.smooth)}`, `grid ${px(S.res)}`) });
   { const sec = document.querySelector('.panel-sec[data-panel="colors"] [data-gen="contours"]'); groupOf([...sec.children], "Fine-tune", { tip: "How the colors fill the lines and the space between them", hint: () => facts(S.gradient || S.mode !== "lines" ? "blended" : "", S.transparent ? "transparent" : "", S.opacity < 1 ? pct(S.opacity) : "") }); }
-  groupOf([$("motionMore")], "Timing", { tip: "How the loop runs: repeating, back and forth or once, and its easing", open: false, hint: () => facts({ loop: "loop", pingpong: "ping-pong", once: "once" }[S.motion.mode], S.motion.ease === "linear" ? "linear" : S.motion.ease) });
+  groupOf([$("motionMore")], "Timing", { tip: "Repeat, back and forth or once, and the easing", open: false, hint: () => facts({ loop: "loop", pingpong: "ping-pong", once: "once" }[S.motion.mode], S.motion.ease === "linear" ? "linear" : S.motion.ease) });
 
   // ---------- objects ----------
   // New objects land off-centre, staggered, so a second one doesn't hide the first.
@@ -3371,7 +3375,7 @@
   let wasCaddis = false;
   function caddisCheck() {
     const look = PRESETS.find((p) => p[1] === "Caddis"), on = !!look && lookMatches(look[2]);
-    if (on && !wasCaddis) window.firstPaint.then(() => setTimeout(() => toast("Caddis is the gradient behind caddis.app. Check them out", { action: "Visit", onAction: () => window.open("https://caddis.app", "_blank", "noopener") }), 500));
+    if (on && !wasCaddis) window.firstPaint.then(() => setTimeout(() => toast("Caddis is the gradient from caddis.app", { action: "Visit", onAction: () => window.open("https://caddis.app", "_blank", "noopener") }), 500));
     wasCaddis = on;
   }
   function update({ draft = false, commit: doCommit = true, instant = false, fade = false } = {}) {
@@ -3543,7 +3547,7 @@
   window.studioBoot = new Promise((r) => (bootDone = r));
   const boot = () => { update({ commit: false }); bootDone(); };
   if (crashed && heavy(S)) { safeOpen("The last design stalled this device, so it opened without effects"); boot(); }
-  else if (heavy(S) && TFX && !/[?&]d=/.test(location.hash)) drawCost(S).then((ms) => { if (ms > SLOW_MS * 4) safeOpen("This design is too heavy for this device, so it opened without effects"); boot(); });
+  else if (heavy(S) && TFX && !/[?&]d=/.test(location.hash)) drawCost(S).then((ms) => { if (ms > SLOW_MS * 4) safeOpen("Opened without effects to keep it smooth"); boot(); });
   else boot();
   setTimeout(() => document.body.classList.remove("boot"), 900);
 
