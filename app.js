@@ -1749,9 +1749,37 @@
   function syncPerfMode() {
     const L = window.Lite; if (!L) return;
     for (const b of $("perfMode").children) b.classList.toggle("on", b.dataset.v === L.pref);
-    $("perfModeNote").textContent = L.pref === "auto" ? (L.on ? "On for this device" : "Off for this device") : "";
+    $("perfModeNote").textContent = L.pref === "auto" ? (L.on ? "Auto: on for this device" : "Auto: off for this device") : "Lighter drawing for built-in graphics";
+    $("perfSum").textContent = L.on ? "Light" : "";
   }
-  $("perfMode").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; window.Lite.set(b.dataset.v); syncPerfMode(); };
+  $("perfMode").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; window.Lite.set(b.dataset.v); syncPerfMode(); syncQuality(); };
+  // The Performance dialog, from Settings.
+  $("perfOpen").onclick = () => { closeMenus(); syncPerfMode(); syncPerfSet(); syncQuality(); openModal("perfModal"); };
+  $("perfDone").onclick = () => closeModal("perfModal");
+  $("perfModal").addEventListener("pointerdown", (e) => { if (e.target === $("perfModal")) closeModal("perfModal"); });
+  // The render time in the canvas corner can be hidden.
+  const syncMs = () => { $("ms").hidden = P.showMs === false; $("showMs").checked = P.showMs !== false; };
+  $("showMs").onchange = (e) => { P.showMs = e.target.checked; savePrefs(); syncMs(); };
+  syncMs();
+  // Effect quality: how many samples the costly effects take (see uQ in fx.js). Kept per device, not per
+  // design, since it's about what this machine can draw. Auto is Low in performance mode, Mid otherwise.
+  const QKEY = "isoline.quality", QLV = { rays: [24, 48, 96], taps: [24, 48, 96], bloom: [20, 40, 80], frost: [4, 8, 24], steps: [48, 80, 160] };
+  const QIDS = { rays: "qRays", taps: "qTaps", bloom: "qBloom", frost: "qFrost", steps: "qSteps", phys: "qPhys" };
+  let QP = {};
+  try { QP = JSON.parse(localStorage.getItem(QKEY) || "{}") || {}; } catch (e) {}
+  function applyQuality() {
+    const lite = !!window.Lite?.on, q = { phys: QP.phys === "body" ? 1 : 0 };
+    for (const [k, lv] of Object.entries(QLV)) { const v = QP[k] || "auto"; q[k] = lv[v === "low" ? 0 : v === "high" ? 2 : v === "mid" ? 1 : lite ? 0 : 1]; }
+    window.TopoFX?.setQuality?.(q);
+  }
+  function syncQuality() { for (const [k, id] of Object.entries(QIDS)) { const v = QP[k] || (k === "phys" ? "surface" : "auto"); for (const b of $(id).children) b.classList.toggle("on", b.dataset.v === v); } }
+  for (const [k, id] of Object.entries(QIDS)) $(id).onclick = (e) => {
+    const b = e.target.closest("[data-v]"); if (!b) return;
+    QP[k] = b.dataset.v; try { localStorage.setItem(QKEY, JSON.stringify(QP)); } catch (err) {}
+    applyQuality(); syncQuality(); update({ commit: false }); schedulePreviews(0);
+  };
+  applyQuality();
+  addEventListener("lite-change", applyQuality);
   syncPerfMode();
   function syncPerfSet() { const v = String(P.perfFps ?? 60); for (const b of $("perfFps").children) if (b.dataset.v) b.classList.toggle("on", b.dataset.v === v); }
   $("perfFps").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P.perfFps = +b.dataset.v; perfQuiet.clear(); savePrefs(); syncPerfSet(); };
@@ -2158,7 +2186,7 @@
     };
   }
   document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".menu-wrap")) closeMenus(); });
-  const openModal = (id) => { $(id).hidden = false; $(id).querySelector("button.primary")?.focus(); };
+  const openModal = (id) => { $(id).hidden = false; $(id).querySelector("button.primary")?.focus({ preventScroll: true }); };
   const closeModal = (id) => ($(id).hidden = true);
   for (const m of document.querySelectorAll(".modal")) m.addEventListener("pointerdown", (e) => { if (e.target === m) m.hidden = true; });
 
@@ -2247,7 +2275,7 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.20", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "1.21", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;

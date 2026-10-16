@@ -10,6 +10,9 @@ void main() { vUv = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }`;
 precision highp float;
 in vec2 vUv; out vec4 o;
 uniform sampler2D uTex; uniform vec2 uRes; uniform float uK; uniform float uSeed;
+// Quality (Settings, Performance): uQ = god ray steps, blur taps, bloom taps, glass frost taps; uQ2.x = object
+// march steps, uQ2.y = 1 for glass that refracts through its body. Zero means the standard amount.
+uniform vec4 uQ; uniform vec4 uQ2;
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 // Quintic fade: its slope and curvature are both continuous across cell edges. With the plain smoothstep
 // fade the curvature jumped at every edge, and effects that light by curvature (caustics, water) drew
@@ -28,9 +31,10 @@ vec4 tex(vec2 uv) { return texture(uTex, clamp(uv, vec2(0.0), vec2(1.0))); }
 // evenly however large it gets. bokeh > 0 weights bright taps up, so highlights open into discs.
 vec4 discBlur(sampler2D m, vec2 uv, float r, float bokeh) {
   if (r < 0.5) return texture(m, uv);
-  float lod = log2(max(1.0, r * 0.3)), j = hash(gl_FragCoord.xy) * 6.2831853; vec4 acc = vec4(0.0); float ws = 0.0;
-  for (int i = 0; i < 48; i++) {
-    float fi = float(i), a = fi * 2.39996 + j, rr = sqrt((fi + 0.5) / 48.0) * r;
+  float lod = log2(max(1.0, r * 0.3)), j = hash(gl_FragCoord.xy) * 6.2831853, n = uQ.y > 0.0 ? uQ.y : 48.0; vec4 acc = vec4(0.0); float ws = 0.0;
+  for (int i = 0; i < 128; i++) {
+    if (float(i) >= n) break;
+    float fi = float(i), a = fi * 2.39996 + j, rr = sqrt((fi + 0.5) / n) * r;
     vec4 c = textureLod(m, clamp(uv + vec2(cos(a), sin(a)) * rr / uRes, vec2(0.0), vec2(1.0)), lod);
     float w = 1.0 + bokeh * 12.0 * pow(max(c.r, max(c.g, c.b)), 6.0);
     acc += c * w; ws += w;
@@ -287,7 +291,8 @@ void main() {
     o = vec4(mix(base.rgb, clamp(col, 0.0, 1.0), cov), base.a); return;
   }
   float t = 0.0, md = 1e9, mt = 0.0;
-  for (int i = 0; i < 80; i++) { float d = sd(Ri * (ro + rd * t)); if (d < md) { md = d; mt = t; } if (d < 0.0005 || t > 6.0) break; t += d; }
+  float steps = uQ2.x > 0.0 ? uQ2.x : 80.0;
+  for (int i = 0; i < 240; i++) { if (float(i) >= steps) break; float d = sd(Ri * (ro + rd * t)); if (d < md) { md = d; mt = t; } if (d < 0.0005 || t > 6.0) break; t += d; }
   float cov = 1.0 - smoothstep(0.0, 1.5 * px, md);
   if (cov <= 0.0) { o = base; return; }
   vec3 pos = ro + rd * mt; vec2 e = vec2(1.0, -1.0) * 0.0015;
@@ -309,13 +314,38 @@ void main() {
     // in a liquid glass pill. Frost blurs it, dispersion splits red from blue along the bend, the rim
     // catches light on the edge facing it, and a tint colors the body.
     vec2 off = n.xy * vec2(1.0, -1.0) * S * 0.45 * uRefr * (0.25 + fr * 1.5);
+    float tir = 0.0;
+    if (uQ2.y > 0.5) {
+      // Through the body: the view ray bends entering the surface, crosses the inside to where it leaves,
+      // bends again on the way out and lands on the picture a little behind the form. So a ball turns
+      // what's behind it over, edges squeeze the most into a thin rim, and where the ray can't get out
+      // (total internal reflection) the edge takes the light of the rim instead.
+      float ior = 1.0 + 0.5 * max(0.05, uRefr);
+      vec3 r1 = refract(rd, n, 1.0 / ior), pin = pos - n * 0.004; float ti = 0.0;
+      float lo = 0.0;
+      for (int i = 0; i < 64; i++) { float d = -sd(Ri * (pin + r1 * ti)); if (d < 0.0006) break; lo = ti; ti += max(d, 0.004); }
+      // The last step can overshoot the far wall, so close in on it; a wider normal there keeps thin
+      // parts and edges from scattering neighbouring pixels across the picture.
+      for (int i = 0; i < 5; i++) { float m = 0.5 * (lo + ti); if (-sd(Ri * (pin + r1 * m)) < 0.0006) ti = m; else lo = m; }
+      vec3 pe = pin + r1 * ti; vec2 e2 = e * 4.0;
+      vec3 n2 = normalize(e2.xyy * sd(Ri * (pe + e2.xyy)) + e2.yyx * sd(Ri * (pe + e2.yyx)) + e2.yxy * sd(Ri * (pe + e2.yxy)) + e2.xxx * sd(Ri * (pe + e2.xxx)));
+      vec3 r2 = refract(r1, -n2, ior);
+      if (dot(r2, r2) < 1e-6) { tir = 1.0; r2 = reflect(r1, -n2); }
+      vec2 hit = pe.xy + r2.xy * ((-4.0 - pe.z) / min(r2.z, -0.15));
+      off = vec2(hit.x - q.x, -(hit.y - q.y)) * S;
+    }
     vec2 bp = pp + mat2(c, s, -s, c) * off, sx = mat2(c, s, -s, c) * normalize(off + 1e-4) * (0.5 + 6.0 * uDisp) * (0.2 + fr) * S * 0.02;
-    float fr2 = uFrost * S * 0.12; vec3 acc = vec3(0.0);
-    for (int k = 0; k < 8; k++) {
-      float a = float(k) * 2.39996, r = fr2 * sqrt((float(k) + 0.5) / 8.0); vec2 j = r * vec2(cos(a), sin(a));
+    // Where the body squeezes a wide stretch of the picture into one pixel, blur over that stretch so
+    // fine lines behind it soften instead of breaking into sparkle.
+    float fp = uQ2.y > 0.5 ? min(length(dFdx(off)) + length(dFdy(off)), S * 0.08) : 0.0;
+    float fr2 = max(uFrost * S * 0.12, fp * 0.6), fn = uQ.w > 0.0 ? uQ.w : 8.0; vec3 acc = vec3(0.0);
+    for (int k = 0; k < 32; k++) {
+      if (float(k) >= fn) break;
+      float a = float(k) * 2.39996, r = fr2 * sqrt((float(k) + 0.5) / fn); vec2 j = r * vec2(cos(a), sin(a));
       acc += vec3(texAt(bp + j + sx).r, texAt(bp + j).g, texAt(bp + j - sx).b);
     }
-    col = acc / 8.0;
+    col = acc / fn;
+    col = mix(col, vec3(1.0), tir * 0.35);
     col = mix(col, col * uTint, uTintAmt);
     float rim = pow(1.0 - abs(n.z), 4.0), face = clamp(dot(n.xy, vec2(-0.6, 0.8)), 0.0, 1.0);
     col = mix(col, vec3(1.0), 0.04 + 0.28 * fr) + uRim * rim * (0.25 + 0.75 * face) * 0.7 + uShine * 0.8 * sp;
@@ -1019,10 +1049,11 @@ void main() {
 // God rays: bright parts of the image are smeared outward from a light point, as through haze.
 void main() {
   vec4 base = tex(vUv);
-  vec2 dir = (vUv - uC) * uLen / 48.0, uv = vUv; vec3 acc = vec3(0.0); float w = 1.0, ws = 0.0;
+  float n = uQ.x > 0.0 ? uQ.x : 48.0, decay = pow(0.965, 48.0 / n);
+  vec2 dir = (vUv - uC) * uLen / n, uv = vUv; vec3 acc = vec3(0.0); float w = 1.0, ws = 0.0;
   float j = hash(gl_FragCoord.xy);
   uv -= dir * j;
-  for (int i = 0; i < 48; i++) { uv -= dir; vec3 s = tex(uv).rgb; acc += max(s - uThr, 0.0) / max(1.0 - uThr, 0.05) * w; ws += w; w *= 0.965; }
+  for (int i = 0; i < 192; i++) { if (float(i) >= n) break; uv -= dir; vec3 s = tex(uv).rgb; acc += max(s - uThr, 0.0) / max(1.0 - uThr, 0.05) * w; ws += w; w *= decay; }
   o = vec4(clamp(base.rgb + acc / ws * uInt, 0.0, 1.0), base.a);
 }`,
 
@@ -1231,9 +1262,9 @@ void main() {
 
     bloom: `uniform float uThr; uniform float uRad; uniform float uInt;
 void main() {
-  vec4 c = tex(vUv); vec3 acc = vec3(0.0); float r = uRad * uK;
-  for (int i = 0; i < 40; i++) { float fi = float(i), a = fi * 2.39996, rr = sqrt((fi + 0.5) / 40.0) * r; vec3 s = tex(vUv + vec2(cos(a), sin(a)) * rr / uRes).rgb; acc += max(s - uThr, 0.0) / (1.0 - uThr + 0.001); }
-  o = vec4(c.rgb + acc / 40.0 * uInt * 1.6, c.a);
+  vec4 c = tex(vUv); vec3 acc = vec3(0.0); float r = uRad * uK, n = uQ.z > 0.0 ? uQ.z : 40.0;
+  for (int i = 0; i < 128; i++) { if (float(i) >= n) break; float fi = float(i), a = fi * 2.39996, rr = sqrt((fi + 0.5) / n) * r; vec3 s = tex(vUv + vec2(cos(a), sin(a)) * rr / uRes).rgb; acc += max(s - uThr, 0.0) / (1.0 - uThr + 0.001); }
+  o = vec4(c.rgb + acc / n * uInt * 1.6, c.a);
 }`,
 
     emboss: `uniform float uStr; uniform float uAngle; uniform float uDepth;
@@ -1472,6 +1503,9 @@ void main() {
       gl.uniform2f(loc("uRes"), w, h);
       gl.uniform1f(loc("uK"), k);
       gl.uniform1f(loc("uSeed"), seed % 1000);
+      const lq = loc("uQ"), lq2 = loc("uQ2");
+      if (lq != null) gl.uniform4f(lq, Q.rays, Q.taps, Q.bloom, Q.frost);
+      if (lq2 != null) gl.uniform4f(lq2, Q.steps, Q.phys, 0, 0);
       for (const [u, v] of Object.entries(uniforms)) {
         const l = loc(u);
         if (l == null) continue;
@@ -1814,5 +1848,8 @@ void main() {
     return { render, maxSize, warm, ready, floatOK, sync };
   }
 
-  root.TopoFX = { createFX, ORDER, CHARSETS, OBJ_KINDS };
+  // Effect quality, shared by every context (Settings, Performance). Zero keeps a shader's standard amount.
+  const Q = { rays: 0, taps: 0, bloom: 0, frost: 0, steps: 0, phys: 0 };
+  const setQuality = (q) => Object.assign(Q, q);
+  root.TopoFX = { createFX, ORDER, CHARSETS, OBJ_KINDS, setQuality, quality: () => ({ ...Q }) };
 })(window);

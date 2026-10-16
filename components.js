@@ -62,7 +62,7 @@
   const KEY = "isoline-kit";
   const DEF = {
     mode: "builder", fw: "All", cat: "All", q: "", slot: "type", view: "components", layout: "home", hero: "beside", dark: null, follow: true,
-    fit: true, pw: 1440, ph: 900, tint: "tinted", src: null, art: "none", enter: "rise", exit: "fade", stagger: 50, trigger: "load",
+    fit: true, pw: 1440, ph: 900, tint: "tinted", src: null, art: "studio", enter: "rise", exit: "fade", stagger: 50, trigger: "load",
     pair: 0, head: "", body: "", scale: 1.25, base: 16, tracking: -0.02,
     rc: null,
     unit: 4, density: 1, radius: 10, pill: false, elevation: "soft", dur: 200, ease: "out",
@@ -72,6 +72,8 @@
   try { K = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch (e) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(K)); } catch (e) {} };
   if (K.view === "landing") K.view = "pages";
+  // The artwork used to start off, which saved "none" into every kit; switch it on once so the Studio design shows.
+  if (!K.artV) { K.art = "studio"; K.artV = 1; save(); }
   // Rules added in later versions join a saved list once, after the rules already there.
   if ((K.rulesV || 1) < RULES_V) { const have = new Set(K.rules.map((r) => r.t)); for (const t of RULES) if (!have.has(t)) K.rules.push({ t, on: true }); K.rulesV = RULES_V; save(); }
   const fonts = () => { const p = PAIRS[K.pair] || PAIRS[0]; return { head: K.head || p[1], body: K.body || p[2], weight: p[3] }; };

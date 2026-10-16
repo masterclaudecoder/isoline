@@ -122,9 +122,7 @@
           <div class="set-row static"><span><b>Theme</b></span><div class="seg sm" id="theme"><button data-v="system">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
           <div class="set-row static"><span><b>Accent</b></span><div class="accents" id="accents"></div></div>
           <div class="set-sep"></div>
-          <div class="set-row static"><span data-tip="Lighter drawing for laptops with built-in graphics: no glass blur, previews at 1x, calmer motion. Auto turns it on for slower devices"><b>Performance mode</b><small id="perfModeNote"></small></span><div class="seg sm" id="perfMode"><button data-v="auto">Auto</button><button data-v="on">On</button><button data-v="off">Off</button></div></div>
-          <div class="set-row static"><span data-tip="Shows a note when playback runs below this many frames a second"><b>Lag warning</b></span><div class="seg sm" id="perfFps"><button data-v="0">Off</button><button data-v="30">30</button><button data-v="45">45</button><button data-v="60">60</button></div></div>
-          <button class="opt" id="exportLogs"><span><svg class="ic"><use href="#i-down"/></svg>Export performance log</span><span class="mono">.json</span></button>
+          <button class="opt" id="perfOpen"><span><svg class="ic"><use href="#i-sliders"/></svg>Performance</span><span class="opt-note" id="perfSum"></span></button>
           <div class="set-sep"></div>
           <button class="opt" id="exportSettings"><span><svg class="ic"><use href="#i-down"/></svg>Download settings</span><span class="mono">.json</span></button>
           <button class="opt" id="copySettings"><span><svg class="ic"><use href="#i-copy"/></svg>Copy settings</span></button>
@@ -453,6 +451,28 @@
   </div>
 </div>
 
+<div class="modal" id="perfModal" hidden>
+  <div class="dialog perf-dialog" role="dialog" aria-modal="true" aria-labelledby="perfTitle">
+    <h3 id="perfTitle">Performance</h3>
+    <div class="set-row static"><span><b>Performance mode</b><small id="perfModeNote">Lighter drawing for built-in graphics</small></span><div class="seg sm" id="perfMode"><button data-v="auto">Auto</button><button data-v="on">On</button><button data-v="off">Off</button></div></div>
+    <div class="set-row static"><span><b>Lag warning</b><small>A note when playback drops below this frame rate</small></span><div class="seg sm" id="perfFps"><button data-v="0">Off</button><button data-v="30">30</button><button data-v="45">45</button><button data-v="60">60</button></div></div>
+    <label class="set-row" for="showMs"><span><b>Render time</b><small>How long each frame takes, in the corner of the canvas</small></span><span class="switch"><input type="checkbox" id="showMs"><span></span></span></label>
+    <div class="set-sep"></div>
+    <div class="perf-head"><b>Effect quality</b><small>Higher draws smoother but slower, in the preview and in exports. Auto is Low in performance mode and Mid otherwise.</small></div>
+    <div class="set-row static"><span><b>God rays</b><small>Steps along each ray</small></span><div class="seg sm" id="qRays"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="mid">Mid</button><button data-v="high">High</button></div></div>
+    <div class="set-row static"><span><b>Blur and depth of field</b><small>Samples in each blur</small></span><div class="seg sm" id="qTaps"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="mid">Mid</button><button data-v="high">High</button></div></div>
+    <div class="set-row static"><span><b>Bloom</b><small>Samples around each glow</small></span><div class="seg sm" id="qBloom"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="mid">Mid</button><button data-v="high">High</button></div></div>
+    <div class="set-row static"><span><b>Frosted glass</b><small>Samples in the frost of glass objects</small></span><div class="seg sm" id="qFrost"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="mid">Mid</button><button data-v="high">High</button></div></div>
+    <div class="set-row static"><span><b>3D objects</b><small>Detail of edges and fine ripples</small></span><div class="seg sm" id="qSteps"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="mid">Mid</button><button data-v="high">High</button></div></div>
+    <div class="set-row static"><span><b>Glass refraction</b><small>Through the body bends light in and out, so edges and the inside read like real glass</small></span><div class="seg sm" id="qPhys"><button data-v="surface">Surface</button><button data-v="body">Through the body</button></div></div>
+    <div class="set-sep"></div>
+    <div class="dialog-actions">
+      <button class="btn" id="exportLogs"><svg class="ic"><use href="#i-export"/></svg>Export performance log</button>
+      <span class="grow"></span>
+      <button class="btn primary" id="perfDone">Done</button>
+    </div>
+  </div>
+</div>
 <div class="modal" id="importModal" hidden>
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="importTitle">
     <h3 id="importTitle">Import settings</h3>
