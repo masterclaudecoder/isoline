@@ -2811,6 +2811,7 @@
   try { TFX = window.TopoFX.createFX(thumbCanvas); } catch (e) { TFX = null; }
   (window.introDone || Promise.resolve()).then(() => setTimeout(() => { FXR?.warm?.(); TFX?.warm?.(); }, 0));
   let showT = 0;
+  let rolling = null;
   let current = { svg: "", raster: false }, raf = 0, anim = 0, painted = null, paintTok = 0, fxWarned = false;
   const rasterCanvas = document.createElement("canvas"), thumbRaster = document.createElement("canvas"), baseCanvas = document.createElement("canvas");
   function rasterize(target, svg, w, h) {
@@ -2947,7 +2948,8 @@
     art.classList.toggle("clear", st.source === "contours" && st.transparent);
     $("ms").textContent = `${Math.round(performance.now() - t0)} ms`;
     $("kind").textContent = raster ? "PNG" : "SVG";
-    painted = clone(st);
+    // A motion frame counts as the design it plays, so a return to the page doesn't take it for a stale one.
+    painted = clone(play ? S : st);
     drawOverlay(st);
     return { svg, raster };
   }
@@ -3023,13 +3025,18 @@
     pumping = false;
   }
   // New thumbnails fade in over the old ones, which leave once the fade is done.
+  // Pictures that land together come in one after another, a beat apart, rather than all at once.
+  let revealAt = 0;
   function swapIn(slot, node) {
-    const old = [...slot.children];
+    const old = [...slot.children], now = performance.now();
+    revealAt = Math.min(now + 480, Math.max(now, revealAt + 40));
+    const wait = reduceMotion.matches ? 0 : revealAt - now;
     node.classList.add("fresh");
+    if (wait) node.style.animationDelay = wait + "ms";
     slot.appendChild(node);
     const drop = () => old.forEach((o) => o.remove());
     if (!old.length || reduceMotion.matches) drop();
-    else { node.addEventListener("animationend", drop, { once: true }); setTimeout(drop, 700); }
+    else { node.addEventListener("animationend", drop, { once: true }); setTimeout(drop, 700 + wait); }
     return node;
   }
   function putCanvas(slot, src, w, h) {
@@ -3186,7 +3193,6 @@
     tileJob("generator", lightLines(strokes(gb)));
     tileJob("shape", lightLines(strokes(noFx(S))));
     if (gen() === "contours") tileJob("lines", lightLines(noFx(S)));
-    jobs.push(motionThumb);
     if (TFX && S.fxOrder.length) jobs.push(async () => {
       await effectBase(128, 80, false);
       for (const id of S.fxOrder) { const el = $("slotList").querySelector(`[data-th="fx:${id}"]`); if (!el) continue; putCanvas(el, fxUpTo(id, 128, 80), 128, 80); }
@@ -3222,35 +3228,39 @@
       jobs.push(() => effectBase(260, 163));
       for (const id of FX_IDS) { const el = slotOf(fxCards[id]), f = () => putCanvas(el, fxThumb(id, 260, 163), 260, 163); f.at = () => el; jobs.push(f); }
     }
+    // The motion tile comes last: its loop takes many frames, made one per turn.
+    jobs.push(motionThumb);
     enqueue([...quick, ...jobs]);
   }
 
   // Motion tile: the finished design playing its loop, like every other tile shows its layer. A short
   // run of small frames is rendered once per change and cycled; a still design shows as a still.
   const thumbSVG = (s, w, h) => { const z = 2, W = w * z, H = h * z; return T.buildSVG(s, { w: W, h: H, res: 2.5 * z, minLen: 8 }).svg.replace(/^<svg([^>]*?) width="\d+" height="\d+" viewBox="[^"]*"/, `<svg$1 width="${w}" height="${h}" viewBox="${(W - w) / 2} ${(H - h) / 2} ${w} ${h}"`); };
-  let motionKey = "", motionTok = 0;
+  // The frames are made one per turn of the queue, and the rest wait behind every other preview, so a
+  // design with motion never holds up the panel's cards. The first frame shows as a still meanwhile.
+  let motionKey = "", motionTok = 0, motionRun = null;
   async function motionThumb() {
     const el = $("slotList").querySelector('[data-th="motion"]'); if (!el) return;
     const key = JSON.stringify(S);
-    if (key === motionKey && el.children.length) return;
-    motionKey = key;
-    const tok = ++motionTok;
-    // A still design previews a gentle drift, so the tile always reads as movement.
-    if (reduceMotion.matches) { await thumb(el, S, 64); return; }
-    const still = S.motion.type === "still", M = still ? { ...S.motion, type: "drift", amt: 0.45, mode: "loop", dir: 1, ease: "linear", seed: 0 } : S.motion, base = still ? { ...S, motion: M } : S;
-    const N = window.Lite?.on ? 12 : 24, w = 64, h = 40, W = 128, H = 80, frames = [];
-    for (let k = 0; k < N; k++) {
-      const st = { ...motionState(base, motionT(k / N, M)), h: Math.round(S.w * 0.625) };
-      const f = document.createElement("canvas"); f.width = W; f.height = H;
-      if (!isRaster(st) || !TFX) await rasterize(f, thumbSVG(st, w, h), W, H);
-      else {
-        TFX.render(await fxJob(TFX, st, W, H, thumbRaster, 2.5)); f.getContext("2d").drawImage(thumbCanvas, 0, 0);
-      }
-      frames.push(f);
-      if (tok !== motionTok) return;
-      await calm();
-      if (tok !== motionTok) return;
+    if (key === motionKey && el.children.length && !motionRun) return;
+    if (key !== motionKey || !motionRun) {
+      motionKey = key; motionTok++;
+      // A still design previews a gentle drift, so the tile always reads as movement.
+      if (reduceMotion.matches) { motionRun = null; await thumb(el, S, 64); return; }
+      const still = S.motion.type === "still", M = still ? { ...S.motion, type: "drift", amt: 0.45, mode: "loop", dir: 1, ease: "linear", seed: 0 } : S.motion;
+      motionRun = { M, base: still ? { ...S, motion: M } : S, frames: [] };
     }
+    const tok = motionTok, { M, base, frames } = motionRun;
+    const N = window.Lite?.on ? 12 : 24, w = 64, h = 40, W = 128, H = 80;
+    const k = frames.length, st = { ...motionState(base, motionT(k / N, M)), h: Math.round(S.w * 0.625) };
+    const f = document.createElement("canvas"); f.width = W; f.height = H;
+    if (!isRaster(st) || !TFX) await rasterize(f, thumbSVG(st, w, h), W, H);
+    else { TFX.render(await fxJob(TFX, st, W, H, thumbRaster, 2.5)); f.getContext("2d").drawImage(thumbCanvas, 0, 0); }
+    if (tok !== motionTok) return;
+    frames.push(f);
+    if (k === 0) { const c = document.createElement("canvas"); c.width = W; c.height = H; c.getContext("2d").drawImage(f, 0, 0); swapIn(el, c); }
+    if (frames.length < N) { queue.push(motionThumb); if (!pumping) pump(); return; }
+    motionRun = null;
     const view = document.createElement("canvas"); view.width = W; view.height = H;
     const x = view.getContext("2d"), L = Math.min(4, Math.max(1.6, S.motion.dur)) * 1000;
     // The loop only has N frames, so it's stepped on a timer at their rate rather than on every display
@@ -3699,18 +3709,24 @@
     onShow() {
       lastWrap = ""; fit(); if (playing) return; quiet(1100); clearTimeout(showT);
       const later = document.documentElement.classList.contains("vt") ? 680 : 0;
-      // Motion that was paused on the way out picks up again once the page has arrived.
-      if (resumeOnShow) { resumeOnShow = false; showT = setTimeout(() => { if (!playing) startPlay(); }, later); return; }
       // The design changed while the page was away (a roll on the home page, say) and the canvas still holds
-      // the old one: that frame is hidden before the page appears and the new one is drawn at once, so the
-      // wrong picture never shows.
-      if (JSON.stringify(painted) !== JSON.stringify(S)) {
+      // the old one: that frame and any cross-fade copy of it are hidden before the page appears and the new
+      // one is drawn at once, so the wrong picture never shows. Motion paused on the way out plays on from it.
+      // A roll still under way on the home page counts too: the canvas stays hidden until its design lands.
+      if (rolling || JSON.stringify(painted) !== JSON.stringify(S)) {
+        const resume = resumeOnShow; resumeOnShow = false;
+        for (const g of art.querySelectorAll(".art-ghost")) g.remove();
         art.classList.add("stale");
-        render().then(() => requestAnimationFrame(() => art.classList.remove("stale")));
+        const show = () => render().then(() => requestAnimationFrame(() => { art.classList.remove("stale"); if (resume && !playing) startPlay(); }));
+        if (rolling) rolling.finally(show); else show();
         return;
       }
+      // Motion that was paused on the way out picks up again once the page has arrived.
+      if (resumeOnShow) { resumeOnShow = false; showT = setTimeout(() => { if (!playing) startPlay(); }, later); return; }
       showT = setTimeout(() => crossfade(render()), later);
     },
+    // The home page's roll in progress, so a Studio opened before it lands waits for it (see onShow).
+    hold(p) { const r = (rolling = p.catch(() => {})); r.then(() => { if (rolling === r) rolling = null; }); },
     // Leaving the Studio: motion stops on the frame it's showing (no redraw), to resume on return.
     onLeave() { if (!playing) return; resumeOnShow = true; playing = false; held = false; clearTimeout(holdT); cancelAnimationFrame(playRaf); syncPlay(); },
     // A contour drawing from default settings plus overrides, as SVG markup. The Components kit uses it

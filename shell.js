@@ -315,7 +315,9 @@
     await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
     const ghosts = ["homeStudio", "homePalette", "homeComponents"].map((id) => ghostOver($(id)));
     try {
-      await work();
+      // The Studio keeps its canvas hidden while this runs, so opening it mid-roll never shows the old design.
+      const w = work(); root.Studio?.hold?.(w);
+      await w;
       await paintHome(false);
       // New kit fonts get a moment to arrive, but a slow connection never holds the roll: they swap in late.
       await Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 900))]);
