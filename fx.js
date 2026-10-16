@@ -11,7 +11,7 @@ precision highp float;
 in vec2 vUv; out vec4 o;
 uniform sampler2D uTex; uniform vec2 uRes; uniform float uK; uniform float uSeed;
 // Quality (Settings, Performance): uQ = god ray steps, blur taps, bloom taps, glass frost taps; uQ2.x = object
-// march steps, uQ2.y = 1 for glass that refracts through its body. Zero means the standard amount.
+// march steps. Zero means the standard amount. (Glass that refracts through its body is per object, uBody.)
 uniform vec4 uQ; uniform vec4 uQ2;
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 // Quintic fade: its slope and curvature are both continuous across cell edges. With the plain smoothstep
@@ -199,7 +199,7 @@ uniform int uKind; uniform vec2 uC; uniform float uSz; uniform float uRot; unifo
 uniform int uMat; uniform float uShine; uniform float uRipple; uniform float uShadow; uniform float uAsp; uniform float uRound;
 uniform vec3 uCol[8]; uniform int uN; uniform sampler2D uTex2; uniform int uHasTex; uniform sampler2D uDes;
 uniform float uTime; uniform int uMotion; uniform float uMotAmt;
-uniform float uRefr; uniform float uFrost; uniform float uDisp; uniform float uRim; uniform vec3 uTint; uniform float uTintAmt;
+uniform float uRefr; uniform float uFrost; uniform float uDisp; uniform float uRim; uniform vec3 uTint; uniform float uTintAmt; uniform float uBody;
 uniform int uProj; uniform float uTexSc; uniform float uTexRot; uniform vec2 uTexOff; uniform float uBlend;
 float gPh = 0.0;
 mat3 rotY(float t) { float c = cos(t), s = sin(t); return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
@@ -315,12 +315,13 @@ void main() {
     // catches light on the edge facing it, and a tint colors the body.
     vec2 off = n.xy * vec2(1.0, -1.0) * S * 0.45 * uRefr * (0.25 + fr * 1.5);
     float tir = 0.0;
-    if (uQ2.y > 0.5) {
+    if (uBody > 0.5) {
       // Through the body: the view ray bends entering the surface, crosses the inside to where it leaves,
       // bends again on the way out and lands on the picture a little behind the form. So a ball turns
       // what's behind it over, edges squeeze the most into a thin rim, and where the ray can't get out
       // (total internal reflection) the edge takes the light of the rim instead.
-      float ior = 1.0 + 0.5 * max(0.05, uRefr);
+      // The index rises quickly at first and levels off toward real glass, so high settings stay readable.
+      float ior = 1.0 + 0.45 * (1.0 - exp(-max(0.05, uRefr)));
       vec3 r1 = refract(rd, n, 1.0 / ior), pin = pos - n * 0.004; float ti = 0.0;
       float lo = 0.0;
       for (int i = 0; i < 64; i++) { float d = -sd(Ri * (pin + r1 * ti)); if (d < 0.0006) break; lo = ti; ti += max(d, 0.004); }
@@ -329,15 +330,22 @@ void main() {
       for (int i = 0; i < 5; i++) { float m = 0.5 * (lo + ti); if (-sd(Ri * (pin + r1 * m)) < 0.0006) ti = m; else lo = m; }
       vec3 pe = pin + r1 * ti; vec2 e2 = e * 4.0;
       vec3 n2 = normalize(e2.xyy * sd(Ri * (pe + e2.xyy)) + e2.yyx * sd(Ri * (pe + e2.yyx)) + e2.yxy * sd(Ri * (pe + e2.yxy)) + e2.xxx * sd(Ri * (pe + e2.xxx)));
-      vec3 r2 = refract(r1, -n2, ior);
-      if (dot(r2, r2) < 1e-6) { tir = 1.0; r2 = reflect(r1, -n2); }
-      vec2 hit = pe.xy + r2.xy * ((-4.0 - pe.z) / min(r2.z, -0.15));
+      // Near the critical angle the way out blends into the reflection over a short range instead of
+      // switching, which flickered as the form turned.
+      float cs = dot(r1, n2), kk = 1.0 - ior * ior * (1.0 - cs * cs);
+      float wt = smoothstep(0.0, 0.12, kk); tir = 1.0 - wt;
+      vec3 r2 = normalize(mix(reflect(r1, -n2), refract(r1, -n2, ior), wt));
+      // The picture sits just behind the form. (A plane far behind it threw small bends across the whole
+      // picture, which broke into flat patches and sparkle.)
+      vec2 hit = pe.xy + r2.xy * ((-1.25 - pe.z) / min(r2.z, -0.3));
       off = vec2(hit.x - q.x, -(hit.y - q.y)) * S;
+      // A soft limit on how far a ray can land, so nothing samples past the picture's edge.
+      float ol = length(off), om = S * 0.6; off *= om * tanh(ol / om) / max(ol, 1e-4);
     }
     vec2 bp = pp + mat2(c, s, -s, c) * off, sx = mat2(c, s, -s, c) * normalize(off + 1e-4) * (0.5 + 6.0 * uDisp) * (0.2 + fr) * S * 0.02;
     // Where the body squeezes a wide stretch of the picture into one pixel, blur over that stretch so
     // fine lines behind it soften instead of breaking into sparkle.
-    float fp = uQ2.y > 0.5 ? min(length(dFdx(off)) + length(dFdy(off)), S * 0.08) : 0.0;
+    float fp = uBody > 0.5 ? min(length(dFdx(off)) + length(dFdy(off)), S * 0.08) : 0.0;
     float fr2 = max(uFrost * S * 0.12, fp * 0.6), fn = uQ.w > 0.0 ? uQ.w : 8.0; vec3 acc = vec3(0.0);
     for (int k = 0; k < 32; k++) {
       if (float(k) >= fn) break;
@@ -891,7 +899,11 @@ void main() {
   vec2 t = 1.0 / uRes;
   float L = texture(uTex2, vUv - vec2(t.x, 0.0)).x, R = texture(uTex2, vUv + vec2(t.x, 0.0)).x, T = texture(uTex2, vUv + vec2(0.0, t.y)).x, B = texture(uTex2, vUv - vec2(0.0, t.y)).x, C = texture(uTex2, vUv).x;
   vec2 f = 0.5 * vec2(abs(T) - abs(B), abs(R) - abs(L)); f /= length(f) + 1e-4; f *= uCurl * C; f.y = -f.y;
-  o = vec4(clamp(texture(uTex, vUv).xy + f * uDt, -2000.0, 2000.0), 0.0, 1.0);
+  // Swirl only where the fluid is really moving: confinement on the faint leftover flow everywhere else
+  // kept the whole picture slowly twisting long after a trail had faded.
+  vec2 v = texture(uTex, vUv).xy;
+  f *= smoothstep(1.5, 14.0, length(v));
+  o = vec4(clamp(v + f * uDt, -2000.0, 2000.0), 0.0, 1.0);
 }`,
     f_div: `
 void main() {
@@ -1326,14 +1338,22 @@ void main() {
     voronoi: `uniform float uCell; uniform float uEdge;
 vec2 h2(vec2 p) { return vec2(hash(p + uSeed), hash(p + 19.19 + uSeed)); }
 void main() {
-  vec2 d = dp() / uCell, i = floor(d), f = fract(d), best = vec2(0.0);
-  float m1 = 8.0, m2 = 8.0;
+  // The nearest site, then the true distance to the nearest border (after Inigo Quilez). The difference
+  // between the two nearest distances, used before, ran long dark wedges into cells whose sites sat close
+  // together, turning them grey.
+  vec2 d = dp() / uCell, i = floor(d), f = fract(d), mg = vec2(0.0), mr = vec2(0.0);
+  float md = 8.0;
   for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
-    vec2 g = vec2(float(x), float(y)), pt = g + h2(i + g); float dd = length(pt - f);
-    if (dd < m1) { m2 = m1; m1 = dd; best = i + pt; } else if (dd < m2) m2 = dd;
+    vec2 g = vec2(float(x), float(y)), r = g + h2(i + g) - f; float dd = dot(r, r);
+    if (dd < md) { md = dd; mr = r; mg = g; }
   }
-  vec4 c = tex(toUv(best * uCell));
-  float e = 1.0 - smoothstep(0.0, uEdge + 0.001, m2 - m1);
+  md = 8.0;
+  for (int y = -2; y <= 2; y++) for (int x = -2; x <= 2; x++) {
+    vec2 g = mg + vec2(float(x), float(y)), r = g + h2(i + g) - f;
+    if (dot(mr - r, mr - r) > 1e-5) md = min(md, dot(0.5 * (mr + r), normalize(r - mr)));
+  }
+  vec4 c = tex(toUv((i + mg + h2(i + mg)) * uCell));
+  float e = 1.0 - smoothstep(0.0, uEdge + 0.001, 2.0 * md);
   o = vec4(c.rgb * (1.0 - e * 0.65), c.a);
 }`,
 
@@ -1773,7 +1793,7 @@ void main() {
             uKind: OBJ_KINDS.indexOf(ob.kind), uC: [ob.x * w, ob.y * h], uSz: Math.max(1, ob.size * sz * 0.5), uRot: rad(ob.rot || 0), uTilt: rad(ob.tilt || 0), uSpin: rad(ob.spin || 0),
             uMat: ["shaded", "design", "preset", "glass", "palette", "photo", "vanta"].indexOf(ob.mat), uShine: ob.shine ?? 0.6, uRipple: ob.ripple || 0, uShadow: ob.shadow ?? 0.4, uAsp: ob.asp || 1, uRound: ob.round ?? 0.2,
             uProj: Math.max(0, ["wrap", "front", "sphere"].indexOf(ob.proj)), uTexSc: ob.texScale ?? 1, uTexRot: rad(ob.texRot || 0), uTexOff: [ob.texX || 0, ob.texY || 0], uBlend: ob.blend || 0,
-            uRefr: ob.refract ?? 1, uFrost: ob.frost || 0, uDisp: ob.disp ?? 0.3, uRim: ob.rim ?? 0.5, uTint: hex3(ob.tint || "#ffffff"), uTintAmt: ob.tintAmt || 0,
+            uRefr: ob.refract ?? 1, uBody: ob.body ? 1 : 0, uFrost: ob.frost || 0, uDisp: ob.disp ?? 0.3, uRim: ob.rim ?? 0.5, uTint: hex3(ob.tint || "#ffffff"), uTintAmt: ob.tintAmt || 0,
             uCol: cols, uN: cols.length, uTex2: tx || srcTex, uHasTex: tx ? 1 : 0, uDes: des,
             uTime: t - Math.floor(t), uMotion: ob.anim === false || !sp ? 0 : ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5,
           }, w, h, k, job.seed);

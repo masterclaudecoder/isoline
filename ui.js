@@ -59,10 +59,12 @@
     if (!tip.isConnected) document.body.appendChild(tip);
     tip.hidden = false; place(el);
   }
-  function hide() { clearTimeout(timer); if (!tip.hidden) lastHide = performance.now(); tip.hidden = true; target = null; touchTip = false; }
+  // A held tip (tapped or clicked open) keeps its trigger lit in the accent color until it closes.
+  function hold(el) { touchTip = true; textOf(el); if (target !== el || tip.hidden) show(el); el.classList.add("tip-held"); }
+  function hide() { clearTimeout(timer); if (!tip.hidden) lastHide = performance.now(); target?.classList.remove("tip-held"); tip.hidden = true; target = null; touchTip = false; }
   const tipTarget = (n) => n?.closest?.("[title], [data-tip]");
   document.addEventListener("pointerover", (e) => {
-    if (e.pointerType === "touch" || e.buttons) return;
+    if (e.pointerType === "touch" || e.buttons || touchTip) return;
     const el = tipTarget(e.target);
     if (el === target) return;
     clearTimeout(timer);
@@ -74,33 +76,36 @@
   });
   document.addEventListener("focusin", (e) => { const el = tipTarget(e.target); if (el && e.target.matches(":focus-visible")) { clearTimeout(timer); show(el); } });
   document.addEventListener("focusout", (e) => { if (!touchTip) hide(); });
-  for (const ev of ["wheel", "keydown"]) document.addEventListener(ev, hide, { passive: true, capture: true });
-  addEventListener("scroll", () => { if (!tip.hidden) hide(); }, { passive: true, capture: true });
-  // Touch: a tap on an info icon, a control's label, or a tip that isn't also a control opens it until the next tap.
+  document.addEventListener("keydown", hide, { passive: true, capture: true });
+  document.addEventListener("wheel", () => { if (!touchTip) hide(); }, { passive: true, capture: true });
+  // A held tip follows its trigger while the page scrolls; a hover tip just goes.
+  addEventListener("scroll", () => { if (tip.hidden) return; if (touchTip && target?.isConnected) place(target); else hide(); }, { passive: true, capture: true });
+  // A tap or click on an info icon, a control's label, or a tip that isn't also a control holds it open until
+  // the next tap or click on it (or anywhere else).
   // Controls (buttons, switches, links) show theirs on a long press, and that press doesn't act.
   const ACT = "button, a[href], input, select, textarea, label, summary, [role=button], [role=tab], [contenteditable]";
   let press = 0, pressed = false, px = 0, py = 0, lastType = "";
   const tapOnly = (el, t) => t.closest(".info-i") || el.matches(".label") || !el.closest(ACT);
   document.addEventListener("pointerdown", (e) => {
     clearTimeout(press); pressed = false; lastType = e.pointerType;
-    if (e.pointerType !== "touch") { touchTip = false; hide(); return; }
     const el = tipTarget(e.target);
     if (el !== target) hide();
+    if (e.pointerType !== "touch") { if (el && !tapOnly(el, e.target)) hide(); return; }
     if (!el || tapOnly(el, e.target)) return;
     px = e.clientX; py = e.clientY;
-    press = setTimeout(() => { pressed = true; touchTip = true; textOf(el); show(el); }, 450);
+    press = setTimeout(() => { pressed = true; hold(el); }, 450);
   }, { passive: true, capture: true });
   document.addEventListener("pointermove", (e) => { if (press && Math.hypot(e.clientX - px, e.clientY - py) > 8) clearTimeout(press); }, { passive: true, capture: true });
   for (const ev of ["pointerup", "pointercancel"]) document.addEventListener(ev, () => clearTimeout(press), { passive: true, capture: true });
   document.addEventListener("contextmenu", (e) => { if (pressed) e.preventDefault(); }, true);
   document.addEventListener("click", (e) => {
     if (pressed) { pressed = false; e.preventDefault(); e.stopPropagation(); return; }
-    if ((e.pointerType || lastType) !== "touch") return;
     const el = tipTarget(e.target);
-    if (!el || !tapOnly(el, e.target)) return;
+    if (!el || !tapOnly(el, e.target) || e.detail === 0) return;
+    if ((e.pointerType || lastType) !== "touch" && !e.target.closest(".info-i") && !el.matches(".label")) return;
     if (el.closest(ACT)) { e.preventDefault(); e.stopPropagation(); }
-    if (el === target) { hide(); return; }
-    touchTip = true; textOf(el); show(el);
+    if (el === target && touchTip) { hide(); return; }
+    hold(el);
   }, true);
   addEventListener("blur", hide);
 

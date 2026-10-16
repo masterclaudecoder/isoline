@@ -470,6 +470,8 @@
     <h3 id="perfTitle">Performance</h3>
     <div class="set-row static"><span><b>Performance mode</b><small id="perfModeNote">Lighter drawing for built-in graphics</small></span><div class="seg sm" id="perfMode"><button data-v="auto">Auto</button><button data-v="on">On</button><button data-v="off">Off</button></div></div>
     <div class="set-row static"><span><b>Priority</b><small>What comes first when the device is busy</small></span><div class="seg sm" id="perfPrio"><button data-v="fps">Frame rate</button><button data-v="load">Load speed</button></div></div>
+    <div class="set-row static"><span><b>Home roll limit</b><small>A roll on the home page that takes longer is skipped</small></span><div class="seg sm" id="rollHome"><button data-v="0">Off</button><button data-v="3">3 s</button><button data-v="6">6 s</button><button data-v="10">10 s</button></div></div>
+    <div class="set-row static"><span><b>Surprise limit</b><small>A Studio look that would take longer to draw is skipped</small></span><div class="seg sm" id="rollStudio"><button data-v="0">Off</button><button data-v="3">3 s</button><button data-v="6">6 s</button><button data-v="10">10 s</button></div></div>
     <div class="set-row static"><span><b>Lag warning</b><small>Warns when playback drops below this rate</small></span><div class="seg sm" id="perfFps"><button data-v="0">Off</button><button data-v="30">30</button><button data-v="45">45</button><button data-v="60">60</button></div></div>
     <label class="set-row" for="showMs"><span><b>Render time</b><small>Frame time, shown on the canvas</small></span><span class="switch"><input type="checkbox" id="showMs"><span></span></span></label>
     <div class="set-sep"></div>
@@ -479,7 +481,6 @@
     <div class="set-row static"><span><b>Bloom</b><small>Samples around each glow</small></span><div class="seg sm" id="qBloom"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="mid">Mid</button><button data-v="high">High</button></div></div>
     <div class="set-row static"><span><b>Frosted glass</b><small>Samples in the frost of glass objects</small></span><div class="seg sm" id="qFrost"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="mid">Mid</button><button data-v="high">High</button></div></div>
     <div class="set-row static"><span><b>3D objects</b><small>Detail of edges and fine ripples</small></span><div class="seg sm" id="qSteps"><button data-v="auto">Auto</button><button data-v="low">Low</button><button data-v="mid">Mid</button><button data-v="high">High</button></div></div>
-    <div class="set-row static"><span><b>Glass refraction</b><small>Through the body bends light in and out, like real glass</small></span><div class="seg sm" id="qPhys"><button data-v="surface">Surface</button><button data-v="body">Through the body</button></div></div>
     <div class="set-sep"></div>
     <div class="dialog-actions">
       <button class="btn ghost" id="exportLogs" data-tip="Download the frame times measured here, to send with a report"><svg class="ic"><use href="#i-export"/></svg>Export log</button>

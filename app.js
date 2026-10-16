@@ -80,7 +80,7 @@
   const OBJ_MATS = [["shaded", "Shaded", "Lit in your palette"], ["design", "Design", "Wrapped in the design underneath"], ["preset", "Preset", "Wrapped in a preset of your choice"], ["glass", "Glass", "Bends what's behind it"], ["vanta", "Vantablack", "Flat black that swallows the light"]];
   const PIC_MATS = [["photo", "Photo", "The picture as it is"], ["palette", "Palette", "The picture in your colors"]];
   const MAT_LABEL = Object.fromEntries([...OBJ_MATS, ...PIC_MATS].map(([k, l]) => [k, l]));
-  const OBJ_DEFAULT = { kind: "sphere", x: 0.5, y: 0.5, size: 0.5, rot: 0, tilt: 20, spin: 30, mat: "shaded", preset: "Prism", shine: 0.6, ripple: 0, round: 0.15, shadow: 0.4, image: "", layer: "under", anim: true, speed: 1, refract: 1, frost: 0, disp: 0.3, rim: 0.5, tint: "#ffffff", tintAmt: 0 };
+  const OBJ_DEFAULT = { kind: "sphere", x: 0.5, y: 0.5, size: 0.5, rot: 0, tilt: 20, spin: 30, mat: "shaded", preset: "Prism", shine: 0.6, ripple: 0, round: 0.15, shadow: 0.4, image: "", layer: "under", anim: true, speed: 1, refract: 1, body: false, frost: 0, disp: 0.3, rim: 0.5, tint: "#ffffff", tintAmt: 0 };
   const objId = () => "o" + Math.random().toString(36).slice(2, 8);
   const NOISE_LABEL = Object.fromEntries(NOISE_TYPES);
   // Palettes: [name, colors dark to light, contour roles [lines, blend, background] when they differ from the default pick]
@@ -96,11 +96,9 @@
     ["Peach", ["#5a2a3c", "#e1665b", "#f3a683", "#f7e3d4"], ["#5a2a3c", "#e1665b", "#f7e3d4"]],
     ["Sage", ["#1f2d24", "#34493b", "#8fa98b", "#e6eadf"], ["#34493b", "#8fa98b", "#e6eadf"]],
     ["Clay", ["#4a2316", "#7d3f2a", "#d9a07f", "#efe2d3"], ["#7d3f2a", "#d9a07f", "#efe2d3"]],
-    ["Ocean", ["#0d2433", "#24506b", "#6fa3c0", "#e9f1f5"], ["#e9f1f5", "#6fa3c0", "#0d2433"]],
     ["Iris", ["#15123a", "#4b3fd1", "#b8a8ff", "#f4f1ff"], ["#4b3fd1", "#b8a8ff", "#f4f1ff"]],
     ["Signal", ["#111111", "#5a0f1f", "#ef2b52", "#ffd9de"], ["#111111", "#5a0f1f", "#ef2b52"]],
     ["Citrus", ["#2b1d0e", "#c8551f", "#f0a830", "#fbe9c6"], ["#c8551f", "#f0a830", "#fbe9c6"]],
-    ["Moss", ["#101a14", "#2f4a37", "#8fa98b", "#e3e7d6"], ["#e3e7d6", "#8fa98b", "#101a14"]],
     ["Lagoon", ["#05232b", "#0f6b6b", "#3fb6a8", "#d6f1e8"], ["#d6f1e8", "#3fb6a8", "#05232b"]],
     ["Rose", ["#3b1f2b", "#a24d6b", "#e8a6b5", "#fbecef"], ["#3b1f2b", "#e8a6b5", "#fbecef"]],
     ["Sand", ["#3d2f22", "#8b6f4e", "#d6bf98", "#f6efe2"], ["#3d2f22", "#d6bf98", "#f6efe2"]],
@@ -108,10 +106,6 @@
     ["Plum", ["#1d0f24", "#552a6b", "#b8789f", "#f3dfe6"], ["#f3dfe6", "#b8789f", "#1d0f24"]],
     ["Cobalt", ["#0a1640", "#1f3fbf", "#6f8cff", "#e6ebff"], ["#1f3fbf", "#6f8cff", "#e6ebff"]],
     ["Terracotta", ["#2a1410", "#a3472d", "#e38b5d", "#f7dcc4"], ["#a3472d", "#e38b5d", "#f7dcc4"]],
-    ["Ink", ["#0d0d0f", "#3a3a40", "#a9a6a0", "#f1ede4"], ["#0d0d0f", "#a9a6a0", "#f1ede4"]],
-    ["Lichen", ["#1e2419", "#4f5e3a", "#a7b36b", "#eef0dc"]],
-    ["Saffron", ["#2a1606", "#a8530f", "#f2a33a", "#fdf0d5"]],
-    ["Fjord", ["#0f1c24", "#2f4f5f", "#7fa7b3", "#e3edef"]],
     ["Orchid", ["#2a0f2e", "#8a2d8f", "#e07ad6", "#fbe6f7"]],
     ["Rust", ["#1f120c", "#6e2b14", "#c4622d", "#f2d6bf"]],
     ["Mint", ["#0f2a22", "#1f7a5c", "#7fd6b0", "#effaf4"]],
@@ -121,47 +115,51 @@
     ["Tide", ["#06141f", "#0e4c6e", "#3aa0c8", "#cfeef7"]],
     ["Blush", ["#3a2226", "#b0636b", "#efb7b3", "#fdf3f0"]],
     ["Slate", ["#14181d", "#3c4652", "#8a96a3", "#e8ecef"]],
+    ["Bauhaus", ["#111111", "#1d4e89", "#d62828", "#f7c548", "#f2eee3"], ["#111111", "#d62828", "#f2eee3"]],
+    ["Candy", ["#2d1e2f", "#ff8fab", "#9be3c4", "#fff3b0"], ["#2d1e2f", "#ff8fab", "#fff3b0"]],
+    ["Retro", ["#1f2b2e", "#2a7f7a", "#d9572b", "#e8a33d", "#f4ead5"], ["#1f2b2e", "#d9572b", "#f4ead5"]],
+    ["Patina", ["#16262a", "#b8733f", "#5fa39a", "#e9e1d3"], ["#5fa39a", "#b8733f", "#16262a"]],
+    ["Acid", ["#0f0a1f", "#5b2bff", "#c6ff3d", "#f2f2f2"], ["#c6ff3d", "#5b2bff", "#0f0a1f"]],
+    ["Reef", ["#082b3a", "#43bccd", "#ff6f59", "#ffd1a6"], ["#ff6f59", "#43bccd", "#082b3a"]],
   ];
-  // Brand palettes, from each company's brand pages where published (Slack, Spotify, Discord, Dropbox) and
-  // otherwise from the values design references agree on (Figma, Stripe, Linear, Mailchimp, Airbnb).
+  // Brand palettes, from each company's brand pages where published (Slack, Spotify, Discord, IKEA, Mastercard)
+  // and otherwise from the values design references agree on (Figma, Stripe, Linear, Airbnb, Instagram).
+  // Brands whose colors are the same three inks share one palette, named for all of them.
   const BRANDS = [
     ["Caddis", ["#2f6fdb", "#6a9f7a", "#d8a51f", "#e2632a", "#c9302c"], ["#2f6fdb", "#e2632a", "#f7f4ee"]],
     ["Slack", ["#4a154b", "#36c5f0", "#2eb67d", "#ecb22e", "#e01e5a"], ["#4a154b", "#36c5f0", "#f4ede4"]],
     ["Figma", ["#a259ff", "#1abcfe", "#0acf83", "#ff7262", "#f24e1e"], ["#1e1e1e", "#a259ff", "#ffffff"]],
-    ["Spotify", ["#191414", "#1ed760", "#ffffff"], ["#1ed760", "#ffffff", "#191414"]],
+    ["Spotify / MegaFon", ["#191414", "#1ed760", "#ffffff"], ["#1ed760", "#ffffff", "#191414"]],
     ["Discord", ["#000000", "#5865f2", "#e0e3ff"], ["#5865f2", "#e0e3ff", "#000000"]],
-    ["Dropbox", ["#1e1919", "#0061fe", "#f7f5f2"], ["#0061fe", "#1e1919", "#f7f5f2"]],
     ["Stripe", ["#0a2540", "#635bff", "#f6f9fc"], ["#635bff", "#0a2540", "#f6f9fc"]],
     ["Linear", ["#08090a", "#5e6ad2", "#f7f8f8"], ["#5e6ad2", "#f7f8f8", "#08090a"]],
-    ["Mailchimp", ["#241c15", "#ffe01b", "#ffffff"], ["#241c15", "#ffffff", "#ffe01b"]],
     ["Airbnb", ["#222222", "#484848", "#ff385c", "#ffffff"], ["#ff385c", "#222222", "#ffffff"]],
     ["GitHub", ["#0d1117", "#238636", "#1f6feb", "#f6f8fa"]],
-    ["Notion", ["#191919", "#787774", "#f7f6f3", "#ffffff"]],
-    ["Vercel", ["#000000", "#666666", "#ffffff"]],
-    ["Duolingo", ["#58cc02", "#1cb0f6", "#ff9600", "#ff4b4b", "#ffffff"]],
-    ["Netflix", ["#141414", "#e50914", "#ffffff"]],
+    ["Notion / Vercel", ["#000000", "#191919", "#787774", "#f7f6f3", "#ffffff"]],
     ["Twitch", ["#0e0e10", "#9146ff", "#efeff1"]],
     ["Shopify", ["#002e25", "#008060", "#95bf47", "#f6f6f1"]],
-    ["Google", ["#4285f4", "#ea4335", "#fbbc05", "#34a853", "#ffffff"]],
+    ["Google / Duolingo", ["#4285f4", "#ea4335", "#fbbc05", "#34a853", "#ffffff"]],
+    ["Instagram", ["#4f5bd5", "#962fbf", "#d62976", "#fa7e1e", "#feda75"], ["#4f5bd5", "#d62976", "#fff8ef"]],
+    ["IKEA", ["#0058a3", "#ffdb00", "#ffffff"], ["#0058a3", "#ffffff", "#ffdb00"]],
+    ["Tiffany", ["#0a0a0a", "#81d8d0", "#ffffff"], ["#0a0a0a", "#ffffff", "#81d8d0"]],
+    ["Starbucks", ["#1e3932", "#00704a", "#d4e9e2", "#f2f0eb"], ["#1e3932", "#00704a", "#f2f0eb"]],
+    ["Mastercard", ["#1a1a1a", "#eb001b", "#ff5f00", "#f79e1b", "#ffffff"], ["#eb001b", "#f79e1b", "#1a1a1a"]],
+    ["LEGO", ["#000000", "#d01012", "#ffcf00", "#ffffff"], ["#d01012", "#000000", "#ffcf00"]],
     // Russian brands, read from the official logo files (Wikimedia Commons SVGs from each bank's site:
     // Yandex, Sber, Alfa, VTB, MegaFon, Wildberries) or the brands' own websites (Alice AI for Yandex
     // Intel, MTS, Kaspersky, Avito, VK's brand page). Yandex Neo is Yandex Music's My Wave glow. T-Bank and
     // Ozon block automated access, so theirs come from their logos as commonly reproduced.
     ["Yandex Neo", ["#050407", "#7a0f5c", "#e0336f", "#f2a81d", "#f4e04d"], ["#e0336f", "#f4e04d", "#050407"]],
-    ["Yandex", ["#000000", "#fc3f1d", "#ffffff"], ["#fc3f1d", "#000000", "#ffffff"]],
-    // Yandex Go: the taxi yellow with black and white, as on the app's icon and cars.
-    ["Yandex Go", ["#21201f", "#fce000", "#ffffff", "#f5f4f2"], ["#21201f", "#ffffff", "#fce000"]],
+    ["Yandex / Alfa / MTS / Netflix", ["#000000", "#fc3f1d", "#e30613", "#ffffff"], ["#e30613", "#000000", "#ffffff"]],
+    // Yandex Go: the taxi yellow with black and white, as on the app's icon and cars (T-Bank's and Mailchimp's match).
+    ["Yandex Go / T-Bank / Mailchimp", ["#21201f", "#fce000", "#ffffff", "#f5f4f2"], ["#21201f", "#ffffff", "#fce000"]],
     ["Yandex Intel", ["#120a2e", "#6335e0", "#7a55ff", "#a88cff", "#f3efff"], ["#6335e0", "#a88cff", "#120a2e"]],
-    ["Alfa", ["#000000", "#ef3124", "#ffffff"], ["#000000", "#ffffff", "#ef3124"]],
     ["Sber", ["#f2e913", "#a3cd39", "#21a038", "#0fa8e0", "#0291eb", "#ffffff"], ["#21a038", "#0291eb", "#ffffff"]],
     ["VTB", ["#0a2973", "#009fdf", "#ffffff"], ["#0a2973", "#009fdf", "#ffffff"]],
-    ["T-Bank", ["#333333", "#ffdd2d", "#ffffff"], ["#333333", "#ffffff", "#ffdd2d"]],
     ["Ozon", ["#001a34", "#005bff", "#f91155", "#ffffff"], ["#005bff", "#f91155", "#ffffff"]],
     ["Wildberries", ["#2b0a3d", "#e313bf", "#f7d4f1"], ["#e313bf", "#2b0a3d", "#f7d4f1"]],
-    ["MTS", ["#000000", "#e30613", "#ffffff"], ["#e30613", "#000000", "#ffffff"]],
-    ["VK", ["#19191a", "#0077ff", "#ffffff"], ["#0077ff", "#19191a", "#ffffff"]],
+    ["VK / Dropbox", ["#19191a", "#0077ff", "#ffffff"], ["#0077ff", "#19191a", "#ffffff"]],
     ["Avito", ["#00aaff", "#97cf26", "#ff6163", "#a169f7", "#ffffff"], ["#a169f7", "#00aaff", "#ffffff"]],
-    ["MegaFon", ["#1f1f1f", "#00b956", "#ffffff"], ["#00b956", "#1f1f1f", "#ffffff"]],
     ["Kaspersky", ["#1d1d1b", "#00a88e", "#ffffff"], ["#00a88e", "#1d1d1b", "#ffffff"]],
   ];
   const lum = (h) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
@@ -326,9 +324,9 @@
     ["Gradients", "Glacier", { ...G("flow", "Glacier", { scale: 0.4, detail: 3, warp: 0.4, stretch: 2.4, angle: 10, contrast: 1 }), fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Gradients", "Dusk", { ...G("mesh", "Dusk", { warp: 0.6, warpScale: 1.3, soft: 1.8 }), fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Gradients", "Peach", { ...G("flow", "Peach", { scale: 0.55, detail: 2, warp: 0.6, stretch: 1.2, angle: 30, contrast: 0.9 }), fx: { blur: { amount: 36, dir: "top", start: 0.4 }, grain: { amount: 0.1, size: 1.2, soft: true } } }],
-    ["Noise", "Ridges", { ...G("noise", "Ink", { noise: "ridges", scale: 1.2, detail: 5, warp: 0.2, stretch: 1, contrast: 1, angle: 0 }) }],
-    ["Noise", "Cells", { ...G("noise", "Moss", { noise: "cells", scale: 2.2, detail: 2, warp: 0.3, stretch: 1, contrast: 1, angle: 0 }) }],
-    ["Noise", "Veins", { ...G("noise", "Ink", { noise: "veins", scale: 1.6, detail: 2, warp: 0.4, stretch: 1, contrast: 1.1, angle: 0 }) }],
+    ["Noise", "Ridges", { ...G("noise", ["#0d0d0f", "#3a3a40", "#a9a6a0", "#f1ede4"], { noise: "ridges", scale: 1.2, detail: 5, warp: 0.2, stretch: 1, contrast: 1, angle: 0 }) }],
+    ["Noise", "Cells", { ...G("noise", ["#101a14", "#2f4a37", "#8fa98b", "#e3e7d6"], { noise: "cells", scale: 2.2, detail: 2, warp: 0.3, stretch: 1, contrast: 1, angle: 0 }) }],
+    ["Noise", "Veins", { ...G("noise", ["#0d0d0f", "#3a3a40", "#a9a6a0", "#f1ede4"], { noise: "veins", scale: 1.6, detail: 2, warp: 0.4, stretch: 1, contrast: 1.1, angle: 0 }) }],
     ["Noise", "Stone", { ...G("noise", "Peach", { noise: "marble", scale: 0.6, detail: 3, warp: 0.5, stretch: 1, contrast: 1, angle: 15 }) }],
     ["Noise", "Clouds", { ...G("noise", "Glacier", { noise: "clouds", scale: 1, detail: 5, warp: 0.3, stretch: 1.4, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Noise", "Neuro", { ...G("noise", "Iris", { noise: "neuro", scale: 1, detail: 3, warp: 0.2, stretch: 1, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
@@ -346,7 +344,7 @@
     ["Gradients", "Ring", { ...G("radial", "Glacier", { warp: 0, soft: 2 }), objects: [{ kind: "torus", x: 0.5, y: 0.5, size: 0.66, tilt: 29, spin: -30, mat: "shaded", shine: 0.8, shadow: 0.3 }], fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Gradients", "Glass orbs", { ...G("flow", "Prism", { warp: 0.6, scale: 0.45 }), objects: [{ kind: "sphere", x: 0.34, y: 0.42, size: 0.44, mat: "glass", shine: 0.9, shadow: 0.25 }, { kind: "capsule", x: 0.7, y: 0.58, size: 0.4, rot: -30, tilt: 10, spin: 60, mat: "glass", shine: 0.9, shadow: 0.25 }] }],
     ["Effects", "Chrome", { pattern: "blobs", usePoints: true, falloff: 1.1, warp: 0.3, octaves: 2, levels: 14, mode: "layers", smooth: 0.7, line: "#1b1b1b", line2: "#f1ede4", bg: "#1b1b1b", fx: { chrome: { strength: 1.2, bands: 2.4, soft: 8, tint: "#d9dde3", mix: 1 } } }],
-    ["Effects", "Thermal", { ...G("noise", "Ink", { noise: "clouds", scale: 0.9, detail: 4, warp: 0.4, stretch: 1.2, contrast: 1.1, angle: 0 }), fx: { heatmap: { glow: 14, mix: 1 } } }],
+    ["Effects", "Thermal", { ...G("noise", ["#0d0d0f", "#3a3a40", "#a9a6a0", "#f1ede4"], { noise: "clouds", scale: 0.9, detail: 4, warp: 0.4, stretch: 1.2, contrast: 1.1, angle: 0 }), fx: { heatmap: { glow: 14, mix: 1 } } }],
     ["Effects", "Press", { ...G("flow", "Prism", { scale: 0.45, detail: 2, warp: 0.5, stretch: 1.8, angle: -25 }), fx: { cmyk: { size: 9, angle: 0 }, paper: { crumple: 0.35, fiber: 0.7, scale: 420 } }, paper: "#f4efe4" }],
     ["Effects", "Fluted", { ...G("mesh", "Dusk", { warp: 0.6, warpScale: 1.3, soft: 1.8 }), fx: { glass: { width: 48, angle: 90, strength: 1, frost: 0.25, light: 0.5 }, grain: { amount: 0.06, size: 1.2, soft: true } } }],
     ["Effects", "Glass blocks", { ...G("flow", "Prism", { scale: 0.45, detail: 2, warp: 0.5, stretch: 1.8, angle: -25, contrast: 1 }), fx: { mesh: { cell: 130, strength: 0.7, frost: 0.25, grout: 1, rim: 0.6, disp: 0.5 } } }],
@@ -656,15 +654,15 @@
     return t;
   }
   function renderObjTiles() {
-    const have = new Map([...objTiles.querySelectorAll("[data-obj]")].map((n) => [n.dataset.obj, n]));
+    const have = new Map([...objTiles.querySelectorAll("[data-obj]:not(.leaving)")].map((n) => [n.dataset.obj, n]));
     for (const o of S.objects) {
       let t = have.get(o.id);
-      if (!t) t = objTile(o);
+      if (!t) { t = objTile(o); fresh.add(t); }
       objTiles.insertBefore(t, objAdd); have.delete(o.id);
       t.classList.toggle("on", P.slot === "obj:" + o.id);
       setText(t.querySelector("b"), objName(o)); setText(t.querySelector("small"), objFact(o));
     }
-    for (const t of have.values()) { if (!animOK()) { t.remove(); continue; } t.animate([{ opacity: 1 }, { opacity: 0, transform: "scale(.95)" }], { duration: 180, easing: EASE }).onfinish = () => t.remove(); }
+    for (const t of have.values()) leave(t);
     objAdd.classList.toggle("on", P.slot === "addobj");
     objCount.hidden = !S.objects.length; objCount.textContent = countText(S.objects.length);
   }
@@ -687,7 +685,7 @@
     const sum = document.createElement("span"); sum.className = "stack-sum"; sum.setAttribute("aria-hidden", "true");
     slot.querySelector(".fx-tiles").insertBefore(sum, slot.querySelector(".tile.add"));
     const b = document.createElement("button"); b.className = "stack-fold"; b.textContent = "Fold"; b.hidden = true;
-    b.onclick = () => { stackOpen[k] = false; slotKey = ""; renderSlots(); spread(slot); };
+    b.onclick = () => { stackOpen[k] = false; slotKey = ""; renderSlots(); };
     slot.querySelector(".slot-label").appendChild(b);
     // Clicking a card in the deck spreads the deck and opens that card's settings; the names open it too.
     slot.addEventListener("click", (e) => {
@@ -696,12 +694,10 @@
       if (!card && !e.target.closest(".stack-sum")) return;
       e.stopPropagation(); stackOpen[k] = true; slotKey = "";
       if (card) setSlot(card.dataset.fx ? "fx:" + card.dataset.fx : "obj:" + card.dataset.obj); else renderSlots();
-      spread(slot);
     }, true);
   }
   // Folding and spreading: the cards ease into their new places one after another instead of snapping.
   function spread(slot) {
-    if (!animOK()) return;
     const open = !slot.classList.contains("folded");
     [...slot.querySelectorAll(".tile.fx:not(.leaving), .stack-sum, .tile.add")].forEach((t, i) => t.animate(open ? [{ opacity: 0, transform: "translateY(-10px) scale(.97)" }, { opacity: 1, transform: "none" }] : [{ opacity: 0, transform: "translateX(-12px)" }, { opacity: getComputedStyle(t).opacity }], { duration: 300, delay: i * 40, easing: EASE, fill: "backwards", composite: "replace" }));
   }
@@ -726,13 +722,30 @@
     t.innerHTML = `<span class="grip" aria-label="Drag to reorder ${FXI[id].name}">${ic("grip")}</span><button class="tile-main" data-slot="fx:${id}"><span class="tile-th" data-th="fx:${id}"></span><span class="tile-text"><b>${FXI[id].name}</b><small></small></span></button><button class="ib xs" data-remove="${id}" aria-label="Remove ${FXI[id].name}" title="Remove">${ic("x")}</button>`;
     return t;
   }
+  // Tiles that arrived in this render, and where every tile sat before it (relative to its slot, since
+  // the slots above may grow or shrink at the same time).
+  const fresh = new Set();
+  let before = new Map();
+  const tileKey = (n) => (n.dataset.fx ? "fx:" + n.dataset.fx : n.dataset.obj ? "obj:" + n.dataset.obj : n.dataset.slot);
+  const rel = (n) => { const r = n.getBoundingClientRect(), s = n.closest(".slot").getBoundingClientRect(); return { x: r.left - s.left, y: r.top - s.top, w: r.width, h: r.height }; };
+  // A removed tile stays where it was, out of the flow, and fades while the rest close the gap.
+  function leave(t) {
+    const b = before.get(tileKey(t));
+    if (!animOK() || !b) { t.remove(); return; }
+    const box = t.parentNode, c = rel(box);
+    t.classList.add("leaving"); box.appendChild(t);
+    Object.assign(t.style, { position: "absolute", margin: "0", left: b.x - c.x + "px", top: b.y - c.y + "px", width: b.w + "px", height: b.h + "px", pointerEvents: "none" });
+    t.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.94)" }], { duration: 220, easing: EASE, fill: "forwards" }).onfinish = () => t.remove();
+  }
   function renderSlots() {
     const key = JSON.stringify([gen(), S.fxOrder, P.slot, ...SLOT_DEFS.map(([id]) => slotInfo(id)), slotColors(), S.motion, S.fxOrder.map(fxFact), S.objects.map((o) => [o.id, objName(o), objFact(o)])]);
     if (key === slotKey) return;
     slotKey = key;
-    const tiles = () => [...slotList.querySelectorAll(".tile")];
-    const keyOf = (n) => (n.dataset.fx ? "fx:" + n.dataset.fx : n.dataset.obj ? "obj:" + n.dataset.obj : n.dataset.slot);
-    const before = new Map(tiles().map((n) => [keyOf(n), n.getBoundingClientRect().top]));
+    const tiles = () => [...slotList.querySelectorAll(".tile:not(.leaving)")];
+    const anim = animOK(), decks = [objSlot, fxSlot];
+    before = anim ? new Map(tiles().filter((n) => n.offsetParent).map((n) => [tileKey(n), rel(n)])) : new Map();
+    const hBefore = decks.map((s) => s.offsetHeight), modeBefore = decks.map((s) => s.classList.contains("fx-stack") + "" + s.classList.contains("folded"));
+    fresh.clear();
     for (const [id] of SLOT_DEFS) {
       const wrap = slotEls[id], t = wrap.querySelector(".tile"), [title, sub] = slotInfo(id);
       const show = !slotWhen[id] || slotWhen[id]();
@@ -749,15 +762,8 @@
     else sw.innerHTML = cols.map((c) => `<i style="background:${c}"></i>`).join("");
     // Effects: keep existing tiles, add new ones, let removed ones collapse out.
     const have = new Map([...fxTiles.querySelectorAll("[data-fx]")].filter((n) => !n.classList.contains("leaving")).map((n) => [n.dataset.fx, n]));
-    const fresh = new Set();
-    for (const id of S.fxOrder) { let t = have.get(id); if (!t) { t = fxTile(id); fresh.add(id); } fxTiles.insertBefore(t, addTile); t.classList.toggle("on", P.slot === "fx:" + id); have.delete(id); }
-    for (const t of have.values()) {
-      if (!animOK()) { t.remove(); continue; }
-      t.classList.add("leaving");
-      fxTiles.appendChild(t);
-      t.style.position = "absolute"; t.style.width = fxTiles.clientWidth + "px"; t.style.top = (before.get("fx:" + t.dataset.fx) - fxTiles.getBoundingClientRect().top) + "px";
-      t.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.95)" }], { duration: 200, easing: EASE }).onfinish = () => t.remove();
-    }
+    for (const id of S.fxOrder) { let t = have.get(id); if (!t) { t = fxTile(id); fresh.add(t); } fxTiles.insertBefore(t, addTile); t.classList.toggle("on", P.slot === "fx:" + id); have.delete(id); }
+    for (const t of have.values()) leave(t);
     addTile.classList.toggle("on", P.slot === "addfx");
     renderObjTiles();
     syncStacks();
@@ -767,12 +773,20 @@
     const n = countText(S.fxOrder.length);
     countEl.hidden = !S.fxOrder.length;
     if (countEl.textContent !== n) { countEl.textContent = n; if (animOK()) countEl.animate([{ transform: "scale(.4)" }, { transform: "scale(1.15)" }, { transform: "none" }], { duration: 320, easing: EASE }); }
-    // FLIP: tiles that moved glide to their new place; new ones grow in.
-    if (animOK()) for (const t of tiles()) {
-      if (t.classList.contains("leaving") || t.offsetParent === null) continue;
-      const k = keyOf(t), top = before.get(k), now = t.getBoundingClientRect().top;
-      if (fresh.has(t.dataset.fx)) t.animate([{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 250 + Math.random() * 90, easing: EASE });
-      else if (top != null && Math.abs(top - now) > 1 && !t.classList.contains("dragging")) t.animate([{ transform: `translateY(${top - now}px)` }, { transform: "none" }], { duration: 260 + Math.random() * 90, easing: EASE });
+    if (anim) {
+      // A deck that folds or unfolds deals its cards in again; the others glide within their slot and
+      // new ones grow in one after another.
+      const redealt = decks.filter((s, i) => modeBefore[i] !== s.classList.contains("fx-stack") + "" + s.classList.contains("folded"));
+      redealt.forEach(spread);
+      let n = 0;
+      for (const t of tiles()) {
+        if (t.offsetParent === null || redealt.includes(t.closest(".slot"))) continue;
+        const b = before.get(tileKey(t));
+        if (fresh.has(t)) t.animate([{ opacity: 0, transform: "translateY(-6px) scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 280, delay: 60 * n++, easing: EASE, fill: "backwards" });
+        else if (b && !t.classList.contains("dragging")) { const a = rel(t), dx = b.x - a.x, dy = b.y - a.y; if (Math.abs(dx) > 1 || Math.abs(dy) > 1) t.animate([{ translate: `${dx}px ${dy}px` }, { translate: "0 0" }], { duration: 300, easing: EASE }); }
+      }
+      // The effect and object slots ease to their new height, so whatever sits below slides rather than jumps.
+      decks.forEach((s, i) => { const h = s.offsetHeight; if (Math.abs(h - hBefore[i]) > 1) { s.style.overflow = "clip"; s.style.overflowClipMargin = "6px"; s.animate([{ height: hBefore[i] + "px" }, { height: h + "px" }], { duration: 320, easing: EASE }).onfinish = () => { s.style.overflow = s.style.overflowClipMargin = ""; }; } });
     }
     schedulePreviews(120);
   }
@@ -1420,20 +1434,31 @@
   // another is rolled; after a few tries the quickest one wins. Rolls happen on a copy, so the design
   // on screen stays put while they're tested.
   const SLOW_MS = 1500;
+  // Roll time limits from the Performance settings, in ms (0 is no limit). The home page reads them too.
+  const rollLimit = (k) => 1000 * (P[k] ?? 6);
+  window.rollLimit = (where) => rollLimit(where === "home" ? "rollHome" : "rollStudio");
+  // A roll that ran past its limit: its spinner shakes, and the look stays as it was.
+  window.rollRejected = (el) => { if (el && !reduceMotion.matches) el.animate([{ translate: "0" }, { translate: "-3px" }, { translate: "3px" }, { translate: "-2px" }, { translate: "2px" }, { translate: "0" }], { duration: 420, easing: "ease-in-out" }); };
   let surpriseTok = 0;
-  async function surprise() {
-    const tok = ++surpriseTok, was = S, t0 = performance.now();
+  // limited: the Studio's own Surprise keeps to its time limit; the home page's roll has its own.
+  async function surprise(limited = true) {
+    const tok = ++surpriseTok, was = S, t0 = performance.now(), lim = limited ? rollLimit("rollStudio") : 0, btn = $("surprise");
     let best = null;
-    // The tests themselves get a second in all, so a slow device isn't kept waiting on them either.
-    for (let i = 0; i < 5 && performance.now() - t0 < 1000; i++) {
-      // Each test gets its own task, so frames keep drawing between them.
-      if (i) { await new Promise((r) => setTimeout(r, 0)); if (tok !== surpriseTok || S !== was) return; }
-      S = clone(was); roll(); const cand = S; S = was;
-      const ms = await drawCost(cand);
-      if (tok !== surpriseTok || S !== was) return;
-      if (!best || ms < best.ms) best = { st: cand, ms };
-      if (ms <= SLOW_MS) break;
-    }
+    btn.classList.add("busy");
+    try {
+      // The tests themselves get a second in all, so a slow device isn't kept waiting on them either.
+      for (let i = 0; i < 5 && performance.now() - t0 < 1000; i++) {
+        // Each test gets its own task, so frames keep drawing between them.
+        if (i) { await new Promise((r) => setTimeout(r, 0)); if (tok !== surpriseTok || S !== was) return; }
+        S = clone(was); roll(); const cand = S; S = was;
+        const ms = await drawCost(cand);
+        if (tok !== surpriseTok || S !== was) return;
+        if (!best || ms < best.ms) best = { st: cand, ms };
+        if (ms <= SLOW_MS) break;
+      }
+    } finally { if (tok === surpriseTok) btn.classList.remove("busy"); }
+    // Even the quickest look would take past the limit to show: the roll is skipped.
+    if (lim && performance.now() - t0 + best.ms > lim) { rollRejected(btn.querySelector(".spark") || btn); toast("That look would take too long to draw, so it was skipped"); return; }
     S = best.st;
     update({ fade: true });
   }
@@ -1674,17 +1699,22 @@
     playBusy = true;
     const secs = (now - playT0) / 1000, raw = endless() ? secs / S.motion.dur : (secs % S.motion.dur) / S.motion.dur;
     const t0 = performance.now();
+    // The frame rate is the gap between drawn frames. (Timing each frame until the GPU reported it done
+    // read two or three display frames long even on fast hardware, since that report only arrives once
+    // per frame.) Gaps over half a second are pauses, not slowness.
+    if (lastDrawn && t0 - lastDrawn < 500) watchPerf(t0 - lastDrawn);
+    lastDrawn = t0;
     // A cross-fade asked for by an edit (or by starting) snapshots the frame on screen before drawing over it.
     let fadeDone = null;
     if (playFade) { playFade = false; crossfade(new Promise((r) => (fadeDone = r))); }
-    paint(motionState(S, motionT(raw)), false, true).then((r) => { playBusy = false; fadeDone?.(); if (r) (r.raster && FXR?.sync ? FXR.sync() : Promise.resolve()).then(() => { const c = performance.now() - t0; $("ms").textContent = `${Math.round(c)} ms`; watchPerf(c); }); });
+    paint(motionState(S, motionT(raw)), false, true).then((r) => { playBusy = false; fadeDone?.(); if (r) (r.raster && FXR?.sync ? FXR.sync() : Promise.resolve()).then(() => { const c = performance.now() - t0; $("ms").textContent = `${Math.round(c)} ms`; }); });
   }
   // Playback draws contours from a grid sized to the preview on screen rather than the full design, which
   // is several times less work on a phone. The grid is chosen once per play and only coarsens once if
   // frames stay slow, so the shape never flickers between two levels of detail.
   let playRes = 0;
   const pickPlayRes = (coarse = 1) => { const shown = Math.max(1, art.clientWidth) / S.w; playRes = Math.max(S.res, (2.4 / shown) * coarse); };
-  function startPlay() { perfTimes = []; lowRes = 0; perfSkip = 8; pickPlayRes(); startPlay0(); }
+  function startPlay() { perfTimes = []; lastDrawn = 0; lowRes = 0; perfSkip = 8; pickPlayRes(); startPlay0(); }
   // The loop's first frame isn't the still design, so starting cross-fades into it rather than cutting.
   function startPlay0() { if (S.motion.type === "still") { S.motion.type = "drift"; update(); } playing = true; held = false; playFade = true; playT0 = performance.now(); cancelAnimationFrame(playRaf); playRaf = requestAnimationFrame(playFrame); syncPlay(); }
   // Editing while it plays: the loop pauses so the edit isn't fighting the motion, the edit lands with
@@ -1705,16 +1735,16 @@
     // A new design gets a fresh start at full detail: the last one's slowness says nothing about it.
     lowRes = 0; pickPlayRes(); perfSkip = 8;
     crossfade(paint(motionState(S, motionT(0)), false, true));
-    perfTimes = []; playT0 = performance.now();
+    perfTimes = []; lastDrawn = 0; playT0 = performance.now();
     playRaf = requestAnimationFrame(playFrame);
   }
-  // Slow playback: frames are timed by how long each one takes to draw, not by the gaps between them,
-  // so a background tab, a pause or a busy moment elsewhere never counts. When the typical frame is
+  // Slow playback: frames are timed by the gap between drawn frames; a background tab or a pause (any gap
+  // over half a second) never counts. When the typical frame is
   // slower than the threshold in Settings (60 fps unless changed), a note offers to lighten the design.
   // Closing it quiets it for that look only: another slow look brings it back. "Don't remind me" turns
   // it off until a threshold is picked again in Settings.
   let resumeOnShow = false;
-  let perfTimes = [], perfSkip = 0, perfSig = "", perfShownFor = "";
+  let perfTimes = [], perfSkip = 0, perfSig = "", perfShownFor = "", lastDrawn = 0;
   const perfQuiet = new Set();
   const lookSig = (st = S) => [st.source === "gradient" ? "gradient:" + st.grad.type : "contours:" + st.pattern + ":" + st.mode, st.fxOrder.filter((id) => st.fx[id]?.on).join("+") || "no effects", st.objects?.length ? st.objects.map((o) => o.kind + ":" + o.mat).join("+") : "", "motion:" + st.motion.type].filter(Boolean).join(" | ");
   document.addEventListener("visibilitychange", () => (perfTimes = []));
@@ -1734,7 +1764,7 @@
     // Detail never steps down mid-play: a visible drop in sharpness reads worse than a lower frame rate,
     // which slow frames give on their own since a frame is skipped while the last one is still drawing.
     const fps = P.perfFps ?? 60;
-    if (fps && mid > 1000 / fps && !perfQuiet.has(sig) && $("perfNote").hidden) {
+    if (fps && mid > 1080 / fps && !perfQuiet.has(sig) && $("perfNote").hidden) {
       perfShownFor = sig;
       $("perfRate").textContent = `About ${Math.max(1, Math.round(1000 / mid))} fps here, below ${fps}.`;
       $("perfNote").hidden = false; $("perfFx").hidden = !S.fxOrder.some((id) => S.fx[id]?.on); $("perfOff").checked = false;
@@ -1768,15 +1798,15 @@
   // Effect quality: how many samples the costly effects take (see uQ in fx.js). Kept per device, not per
   // design, since it's about what this machine can draw. Auto is Low in performance mode, Mid otherwise.
   const QKEY = "isoline.quality", QLV = { rays: [24, 48, 96], taps: [24, 48, 96], bloom: [20, 40, 80], frost: [4, 8, 24], steps: [48, 80, 160] };
-  const QIDS = { rays: "qRays", taps: "qTaps", bloom: "qBloom", frost: "qFrost", steps: "qSteps", phys: "qPhys" };
+  const QIDS = { rays: "qRays", taps: "qTaps", bloom: "qBloom", frost: "qFrost", steps: "qSteps" };
   let QP = {};
   try { QP = JSON.parse(localStorage.getItem(QKEY) || "{}") || {}; } catch (e) {}
   function applyQuality() {
-    const lite = !!window.Lite?.on, q = { phys: QP.phys === "body" ? 1 : 0 };
+    const lite = !!window.Lite?.on, q = {};
     for (const [k, lv] of Object.entries(QLV)) { const v = QP[k] || "auto"; q[k] = lv[v === "low" ? 0 : v === "high" ? 2 : v === "mid" ? 1 : lite ? 0 : 1]; }
     window.TopoFX?.setQuality?.(q);
   }
-  function syncQuality() { for (const [k, id] of Object.entries(QIDS)) { const v = QP[k] || (k === "phys" ? "surface" : "auto"); for (const b of $(id).children) b.classList.toggle("on", b.dataset.v === v); } }
+  function syncQuality() { for (const [k, id] of Object.entries(QIDS)) { const v = QP[k] || "auto"; for (const b of $(id).children) b.classList.toggle("on", b.dataset.v === v); } }
   for (const [k, id] of Object.entries(QIDS)) $(id).onclick = (e) => {
     const b = e.target.closest("[data-v]"); if (!b) return;
     QP[k] = b.dataset.v; try { localStorage.setItem(QKEY, JSON.stringify(QP)); } catch (err) {}
@@ -1787,13 +1817,15 @@
   syncPerfMode();
   function syncPerfSet() {
     const v = String(P.perfFps ?? 60); for (const b of $("perfFps").children) if (b.dataset.v) b.classList.toggle("on", b.dataset.v === v);
-    for (const b of $("perfPrio").children) b.classList.toggle("on", b.dataset.v === (P.priority || "fps"));
+    for (const b of $("perfPrio").children) b.classList.toggle("on", b.dataset.v === (P.priority || "load"));
+    for (const k of ["rollHome", "rollStudio"]) for (const b of $(k).children) b.classList.toggle("on", +b.dataset.v === (P[k] ?? 6));
   }
-  // Priority: Frame rate keeps every frame for animations, so previews wait for calm moments, fade in one
-  // after another, and pages are laid out ahead of a first visit. Load speed draws previews straight away,
-  // several per frame, and skips the warm-up.
-  const preferFps = () => P.priority !== "load";
+  // Priority: Load speed (the default) draws previews straight away, several per frame, and skips the
+  // page warm-up. Frame rate keeps every frame for animations, so previews wait for calm moments, fade in
+  // one after another, and pages are laid out ahead of a first visit.
+  const preferFps = () => P.priority === "fps";
   window.preferFps = preferFps;
+  for (const k of ["rollHome", "rollStudio"]) $(k).onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P[k] = +b.dataset.v; savePrefs(); syncPerfSet(); };
   $("perfPrio").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P.priority = b.dataset.v; savePrefs(); syncPerfSet(); };
   $("perfFps").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P.perfFps = +b.dataset.v; perfQuiet.clear(); savePrefs(); syncPerfSet(); };
   syncPerfSet();
@@ -2735,6 +2767,12 @@
     makeSlider(turn, { label: "Spin", ...ob("spin"), min: -180, max: 180, step: 1, fmt: deg, rand: [-90, 90] });
     // Glass: how far it bends what's behind, frost, color split, the lit rim and a tint.
     const glass = G("Glass");
+    // Surface bends what's behind by the slope of the surface; through the body follows the ray in, across
+    // the inside and out again, like real glass.
+    const bseg = document.createElement("div"); bseg.className = "seg sm"; bseg.id = "objBody";
+    bseg.innerHTML = `<button data-v="surface" data-tip="Bends what's behind by the slope of the surface">Surface</button><button data-v="body" data-tip="Light goes in, across and out again, like real glass">Through the body</button>`;
+    glass.appendChild(bseg);
+    makeSeg(bseg, () => (objOf()?.body ? "body" : "surface"), (v) => { const o = objOf(); if (o) o.body = v === "body"; });
     makeSlider(glass, { label: "Refraction", ...ob("refract"), min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.6, 1.8] });
     makeSlider(glass, { label: "Frost", ...ob("frost"), min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Off"), rand: [0, 0.5] });
     makeSlider(glass, { label: "Dispersion", ...ob("disp"), min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Off"), rand: [0.1, 0.6] });
@@ -2973,7 +3011,7 @@
         const t0 = performance.now(), r = await paint(S, draft);
         if (r && !draft) logStill(t0, r);
         if (r && !draft && !bootShared) firstPainted();
-        if (r && !draft) { current = r; updateMini(); schedulePreviews(); }
+        if (r && !draft) { current = { ...r, of: JSON.stringify(painted) }; updateMini(); schedulePreviews(); }
         resolve(r);
       });
     });
@@ -3419,7 +3457,7 @@
   // What a render would leave behind for exports, the mini preview and thumbnails, without touching the
   // canvas the loop is drawing on.
   let stillT = 0;
-  function syncStill() { current = { svg: S.source === "contours" && !isRaster(S) ? T.buildSVG(S).svg : "", raster: isRaster(S) }; updateMini(); schedulePreviews(); }
+  function syncStill() { current = { svg: S.source === "contours" && !isRaster(S) ? T.buildSVG(S).svg : "", raster: isRaster(S), of: JSON.stringify(S) }; updateMini(); schedulePreviews(); }
   // The Caddis preset is the background of caddis.app; putting it on brings a note pointing there.
   let wasCaddis = false;
   function caddisCheck() {
@@ -3705,7 +3743,9 @@
       let src;
       if (isRaster(st) && TFX) {
         TFX.render(await fxJob(TFX, st, dw, dh, document.createElement("canvas"))); src = thumbCanvas;
-      } else src = await rasterize(document.createElement("canvas"), (!look && current.svg) || T.buildSVG(st).svg, dw, dh);
+      // The last drawing is reused only if it is of this design: right after a change (a roll on the home
+      // page, say) it can still be the one before.
+      } else src = await rasterize(document.createElement("canvas"), (!look && current.svg && current.of === JSON.stringify(S) && current.svg) || T.buildSVG(st).svg, dw, dh);
       x.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
       return c;
     },
@@ -3726,7 +3766,11 @@
         const resume = resumeOnShow; resumeOnShow = false;
         for (const g of art.querySelectorAll(".art-ghost")) g.remove();
         art.classList.add("stale");
-        const show = () => render().then(() => requestAnimationFrame(() => { art.classList.remove("stale"); if (resume && !playing) startPlay(); }));
+        // The build column's and option cards' pictures are of the old design too: they give way to a plain
+        // stand-in (neutral while a roll is still landing, the new colors after) until they're drawn again.
+        const blank = (ph) => { for (const t of document.querySelectorAll('#slotList .tile-th:not([data-th="colors"]), #options .th')) { if (t.closest("#presetGrid")) continue; t._thk = ""; t.replaceChildren(); if (ph) t.style.setProperty("--ph", ph); else t.style.removeProperty("--ph"); } };
+        blank(rolling ? "" : phOf(S));
+        const show = () => { blank(phOf(S)); schedulePreviews(0); return render().then(() => requestAnimationFrame(() => { art.classList.remove("stale"); if (resume && !playing) startPlay(); })); };
         if (rolling) rolling.finally(show); else show();
         return;
       }
@@ -3747,7 +3791,7 @@
     presets: () => PRESETS.map(([group, name]) => ({ group, name })),
     usePreset(name) { const p = PRESETS.find((x) => x[1].toLowerCase() === String(name).toLowerCase()); if (!p) return false; applyLook(p[2]); update({ fade: true }); return true; },
     variation() { variation(); update({ fade: true }); },
-    surprise,
+    surprise: () => surprise(false),
     svg: () => current.svg,
     png: (scale = 1) => pngBlob(scale),
     generators: () => GENS.map(([id, name, what]) => ({ id, name, what })),

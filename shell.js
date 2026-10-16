@@ -36,7 +36,8 @@
       if (!inVT) pt.classList.add("bar-enter");
       clearTimeout(pt._t); pt._t = setTimeout(() => pt.classList.remove("enter", "bar-enter", "vt-enter"), 1600);
     }
-    if (r === "home") paintHome(); else brandClicks = 0;
+    // Leaving home drops a roll queued behind the one under way.
+    if (r === "home") paintHome(); else { brandClicks = 0; if (rollAgain) { rollAgain = false; $("remixBusy").lastChild.textContent = "Rolling a new look"; } }
     root.Tour?.onRoute(r);
     // One size control: in the top bar for the studio, in the preview's own bar for the builder.
     const size = document.querySelector(".size"), slot = $("cpSizeSlot"), top = document.querySelector(".top");
@@ -172,18 +173,25 @@
         r.animate([{ scale: 0.6, opacity: 0.6 }, { scale: 2.2 + i * 0.6, opacity: 0 }], { duration: 640 + i * 140, delay: i * 90, easing: "cubic-bezier(.2,.7,.3,1)", fill: "both" }).onfinish = () => r.remove();
       }
     }
-    if (++brandClicks < 2 || remixing) return;
+    if (++brandClicks < 2) return;
+    // A click during a roll isn't dropped: one more roll follows when this one lands, and the note says so.
+    if (remixing) { if (rollAgain || route !== "home") return; rollAgain = true; const busy = $("remixBusy"); busy.lastChild.textContent = "One more after this"; busy.animate([{ scale: 1 }, { scale: 1.06 }, { scale: 1 }], { duration: 260, easing: "ease-out" }); return; }
+    await rollOnce();
+  }
+  let rollAgain = false;
+  async function rollOnce() {
     // Every roll is kept, so undo brings back a look rolled past by accident and redo returns to it.
     if (homeAt < 0) { homeHist = [homeLook()]; homeAt = 0; }
-    await homeChange(async () => {
+    const ok = await homeChange(async (live) => {
       const pal = root.Palettes?.generate();
-      if (!pal) return;
+      if (!pal || !live()) return;
       // Surprise skips any look that would be slow to draw, so the new design is ready before the cards repaint.
-      await root.Studio?.surprise?.(); root.Studio?.usePalette?.(pal);
+      await root.Studio?.surprise?.(); if (!live()) return;
+      root.Studio?.usePalette?.(pal);
       await root.Components?.remix?.(pal);
-    });
-    homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(homeLook()); if (homeHist.length > 30) homeHist.shift();
-    homeAt = homeHist.length - 1; syncHomeHist();
+    }, "Rolling a new look", root.rollLimit?.("home") || 0);
+    if (ok) { homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(homeLook()); if (homeHist.length > 30) homeHist.shift(); homeAt = homeHist.length - 1; syncHomeHist(); }
+    if (rollAgain) { rollAgain = false; if (route === "home") rollOnce(); }
   }
   // ---------- saved looks ----------
   // The home page's three cards as one look (the Studio design, the palette and the kit), saved in this
@@ -301,9 +309,12 @@
   // As in the Studio when a look is applied: each card keeps a still copy of its old picture on top
   // while the new one is made underneath, and once all three are ready the copies fade out together,
   // so nothing flashes and the cards change as one. A small note by the logo shows it's working.
-  let busyHide = 0;
-  async function homeChange(work, label = "Rolling a new look") {
+  // limit (ms): a change that hasn't landed by then is skipped. Its spinner shakes, the cards go back to
+  // the look before, and the work still running is told it's no longer wanted (live() turns false).
+  let busyHide = 0, changeTok = 0;
+  async function homeChange(work, label = "Rolling a new look", limit = 0) {
     remixing = true;
+    const tok = ++changeTok, live = () => tok === changeTok, before = limit ? homeLook() : null;
     const busy = $("remixBusy"), h = $("homeHist");
     const on = h.classList.contains("on");
     busy.style.left = (on ? h.offsetLeft + h.offsetWidth : brandRight()) + 8 + "px";
@@ -314,20 +325,36 @@
     const shown = performance.now();
     await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
     const ghosts = ["homeStudio", "homePalette", "homeComponents"].map((id) => ghostOver($(id)));
+    let landed = false, late = false, lateT = 0;
     try {
-      // The Studio keeps its canvas hidden while this runs, so opening it mid-roll never shows the old design.
-      const w = work(); root.Studio?.hold?.(w);
-      await w;
-      await paintHome(false);
-      // New kit fonts get a moment to arrive, but a slow connection never holds the roll: they swap in late.
-      await Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 900))]);
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const run = (async () => {
+        // The Studio keeps its canvas hidden while this runs, so opening it mid-roll never shows the old design.
+        const w = work(live); root.Studio?.hold?.(w);
+        await w;
+        if (!live()) return;
+        await paintHome(false);
+        landed = true;
+        // New kit fonts get a moment to arrive, but a slow connection never holds the roll: they swap in late.
+        await Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 900))]);
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      })();
+      await (limit ? Promise.race([run, new Promise((r) => (lateT = setTimeout(() => { late = !landed; r(); }, limit)))]) : run);
+      clearTimeout(lateT);
+      if (late) {
+        changeTok++; homeSeq++;
+        root.rollRejected?.(busy.querySelector("i")); busy.lastChild.textContent = "Took too long, skipped"; rollAgain = false;
+        root.Palettes?.load(before.pal); root.Studio?.apply(before.studio); await root.Components?.setLook?.(before.kit);
+        paintHome(false);
+        // The skipped roll's kit may still finish after this and paint over it, so the old one goes back once more.
+        run.finally(() => { if (live()) root.Components?.setLook?.(before.kit)?.then?.(() => root.Components?.preview($("homeComponents"))); });
+      }
     } catch (err) { console.error("home change failed", err); } finally {
       remixing = false;
-      // Kept up for a moment at least, so a quick roll doesn't blink it.
-      busyHide = setTimeout(() => (busy.hidden = true), Math.max(0, 450 - (performance.now() - shown)));
+      // Kept up for a moment at least, so a quick roll doesn't blink it; a skipped one stays to be read.
+      busyHide = setTimeout(() => (busy.hidden = true), Math.max(late ? 1400 : 0, 450 - (performance.now() - shown)));
       for (const g of ghosts) if (g) { g.style.opacity = "0"; setTimeout(() => g.remove(), 700); }
     }
+    return !late;
   }
   // A still copy of a card's picture, laid over it (outside it, since the card's contents get replaced).
   function ghostOver(host) {

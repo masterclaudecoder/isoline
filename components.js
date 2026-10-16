@@ -27,9 +27,19 @@
     ["Plex", "IBM Plex Sans", "IBM Plex Sans", 600], ["Bookish", "Literata", "Golos Text", 600], ["Garamond", "Cormorant Garamond", "Commissioner", 600],
     ["Rounded", "Nunito", "Nunito", 800], ["Soft", "Rubik", "Rubik", 600],
   ];
-  // Fonts with Cyrillic on Google Fonts. With "Cyrillic only" on, the pairings and the font list keep to these.
+  // Fonts with Cyrillic on Google Fonts. With "Cyrillic supported" on, the pairings and the font list keep to these.
   const CYR = new Set(["Inter", "Inter Tight", "Geist", "Manrope", "Onest", "IBM Plex Sans", "Source Sans 3", "Libre Franklin", "Rubik", "Nunito", "Playfair Display", "Lora", "Merriweather", "Source Serif 4", "Literata", "EB Garamond", "Cormorant Garamond", "Unbounded", "JetBrains Mono", "Geist Mono", "IBM Plex Mono", "Fira Code", "Golos Text", "Commissioner", "Wix Madefor Text", "Geologica"]);
   const pairOK = (p) => !K.cyr || (CYR.has(p[1]) && CYR.has(p[2]));
+  // With Cyrillic on, the kit's demo copy is in Russian (window.KIT_RU in ru.js), so the fonts are seen
+  // setting the text they were picked for. Text the kit changes as you use it is caught as it changes.
+  const kitRU = (v) => { const k = v.trim(), r = k && root.KIT_RU?.[k]; return r ? v.replace(k, r) : v; };
+  function kitLang(el) {
+    if (!el || !K.cyr || !root.KIT_RU) return;
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n; (n = w.nextNode()); ) { const r = n.parentElement?.dataset.ru || kitRU(n.nodeValue); if (r !== n.nodeValue) n.nodeValue = r; }
+    for (const a of el.querySelectorAll("[placeholder], [aria-label], [value]")) for (const k of ["placeholder", "aria-label", "value"]) { const v = a.getAttribute(k); if (v && kitRU(v) !== v) a.setAttribute(k, kitRU(v)); }
+  }
+  const kitWatch = new MutationObserver((list) => { if (K.cyr) for (const m of list) for (const n of m.addedNodes) kitLang(n.nodeType === 1 ? n : n.parentElement); });
   const RULES = [
     "No separator glyphs between items (·, •, |, em dashes). Use spacing, layout or a comma.",
     "No ALL CAPS labels. Use sentence case for every label and heading.",
@@ -220,7 +230,7 @@
   };
   const ki = (n, cls = "") => `<svg class="k-ic ${cls}" viewBox="0 0 20 20" aria-hidden="true">${KI[n]}</svg>`;
   // A bar chart drawn in the accent, so it follows the palette.
-  const bars = (vals, labels, hi = -1) => `<div class="k-bars">${vals.map((v, i) => `<div class="k-bar${i === hi ? " on" : ""}"><i style="height:${v}%"></i>${labels ? `<span>${labels[i]}</span>` : ""}</div>`).join("")}</div>`;
+  const bars = (vals, labels, hi = -1, ru) => `<div class="k-bars">${vals.map((v, i) => `<div class="k-bar${i === hi ? " on" : ""}"><i style="height:${v}%"></i>${labels ? `<span${ru ? ` data-ru="${ru[i]}"` : ""}>${labels[i]}</span>` : ""}</div>`).join("")}</div>`;
   const av = (t, i) => `<span class="k-av" style="--i:${i}">${t}</span>`;
   // The demo product is a document review tool, so the pages can show real content (drafts, comments,
   // sign-offs) instead of placeholder metrics. Each page is built for one task with one focal point.
@@ -281,7 +291,7 @@
       </section>
       <section class="k-card k-chart">
         <h3 class="k-h3">Comments resolved each day</h3><p class="k-small">Last week, most on Thursday</p>
-        ${bars([42, 64, 55, 92, 72, 18, 10], ["M", "T", "W", "T", "F", "S", "S"], 3)}
+        ${bars([42, 64, 55, 92, 72, 18, 10], ["M", "T", "W", "T", "F", "S", "S"], 3, ["П", "В", "С", "Ч", "П", "С", "В"])}
       </section>
       <section class="k-card k-notes">
         <div class="k-alert">${ki("check")}<span><b>Published</b><small>Release notes 4.2 is live on your site.</small></span></div>
@@ -380,6 +390,9 @@
   const sizeHome = (el, w, h) => { el.style.setProperty("--cw", Math.round(w || 600)); el.style.setProperty("--ch", Math.round(h || 380)); };
   function preview(el) {
     if (!el) return;
+    // Switching Cyrillic off puts the English copy back by drawing the page again.
+    const lang = K.cyr ? "ru" : "en";
+    if (el.dataset.lang && el.dataset.lang !== lang) { for (const k of el.querySelectorAll(".kit")) k.innerHTML = `<div class="k-page k-pg-home">${HOME()}</div>`; el.dataset.hero = K.hero; }
     if (!el.querySelector(".cps")) {
       const page = `<div class="k-page k-pg-home">${HOME()}</div>`;
       el.innerHTML = `<div class="cps" aria-hidden="true"><div class="cps-win"><div class="cps-bar"><i></i><i></i><i></i><span></span></div><div class="kit k-landing">${page}</div></div><div class="cps-shade"></div><div class="cps-phone"><div class="kit k-landing">${page}</div></div></div>`;
@@ -398,8 +411,10 @@
       }
     }
     // The card follows the hero layout picked in the Builder.
-    if (el.dataset.hero && el.dataset.hero !== K.hero) for (const h of el.querySelectorAll(".k-hero")) h.outerHTML = K.hero === "below" ? HERO_BELOW : HERO_PIC;
+    const swapped = el.dataset.hero && el.dataset.hero !== K.hero;
+    if (swapped) for (const h of el.querySelectorAll(".k-hero")) h.outerHTML = K.hero === "below" ? HERO_BELOW : HERO_PIC;
     el.dataset.hero = K.hero;
+    if (swapped || el.dataset.lang !== lang) { el.dataset.lang = lang; for (const k of el.querySelectorAll(".kit")) kitLang(k); }
     for (const k of el.querySelectorAll(".kit")) { vars(k); k.classList.toggle("k-has-art", !!artURL); k.style.setProperty("--k-art", artURL ? `url("${artURL}")` : "none"); }
     vars(el.querySelector(".cps"));
     // The ResizeObserver keeps the size after this; reading it on every repaint forced a full layout.
@@ -682,8 +697,8 @@
       o.insertAdjacentHTML("beforeend", `<div class="ff-pair">${[["head", "Headings", f.head, f.weight], ["body", "Body", f.body, 400]].map(([role, label, name, w]) => `<button class="ff-trigger" data-role="${role}" aria-haspopup="listbox"><small>${label}</small><span style="font-family:'${esc(name)}', system-ui;font-weight:${w}">${esc(name)}</span><em${K.cyr && !CYR.has(name) && !custom.has(name) ? ` class="no-cyr">No Cyrillic` : `>${kindOf(name)}`}</em>${ic("chev")}</button>`).join("")}</div>
 `);
       o.querySelector(".ff-pair").onclick = (e) => { const b = e.target.closest(".ff-trigger"); if (!b) return; if (ff?.anchor === b) closeFF(); else fontPicker(b, b.dataset.role); };
-      o.insertAdjacentHTML("beforeend", `<label class="set-row cp-cyr"><span><b>Cyrillic only</b><small>Fonts that can set Russian and other Cyrillic text</small></span><span class="switch"><input type="checkbox"${K.cyr ? " checked" : ""}><span></span></span></label>`);
-      o.querySelector(".cp-cyr input").onchange = (e) => { K.cyr = e.target.checked; save(); renderOpts(); };
+      o.insertAdjacentHTML("beforeend", `<label class="set-row cp-cyr"><span><b>Cyrillic supported</b><small>Fonts that can set Russian and other Cyrillic text. The preview switches to Russian</small></span><span class="switch"><input type="checkbox"${K.cyr ? " checked" : ""}><span></span></span></label>`);
+      o.querySelector(".cp-cyr input").onchange = (e) => { K.cyr = e.target.checked; save(); renderOpts(); renderStage(); const home = $("homeComponents"); if (home?.querySelector(".cps")) preview(home); };
       o.insertAdjacentHTML("beforeend", `<h3 class="sub"><span class="tipped" data-tip="Pick the body font first. Then a heading that contrasts, like a serif over a sans">Pairings</span></h3>`);
       const g = document.createElement("div"); g.className = "cp-pairs";
       const custom0 = K.head || K.body;
@@ -880,6 +895,8 @@
     const kit = $("kit");
     kit.className = "kit" + (K.view === "pages" ? " k-landing" : "");
     kit.innerHTML = previewHTML();
+    kitLang(kit);
+    if (!kit._watched) { kit._watched = true; kitWatch.observe(kit, { childList: true, subtree: true }); }
     fitKit();
     vars(kit);
     renderStageSegs();
@@ -925,7 +942,7 @@
         if ((el = at(".k-tabs > span"))) {
       for (const s of el.parentElement.children) s.classList.toggle("on", s === el);
       const head = el.closest(".k-price-head");
-      if (head) { const m = /^Monthly/.test(el.textContent); head.parentElement.querySelectorAll(".k-amount").forEach((a) => { a.firstChild.textContent = m ? a.dataset.m : a.dataset.y; pulse(a); }); }
+      if (head) { const m = el === el.parentElement.firstElementChild; head.parentElement.querySelectorAll(".k-amount").forEach((a) => { a.firstChild.textContent = m ? a.dataset.m : a.dataset.y; pulse(a); }); }
       return;
     }
     if ((el = at(".k-qa"))) { el.classList.toggle("open"); return; }
@@ -987,7 +1004,7 @@
   $("cpReplay").onclick = () => replay(true);
   // ---------- artwork ----------
   // The studio's current design, captured as a picture for the pages.
-  let artURL = "";
+  let artURL = "", artImg = null; // the decoded picture is kept alive so it stays decoded
   // The backdrop is redrawn only when the Studio design has changed, and encoded off the main thread.
   let artKey = "";
   async function refreshArt() {
@@ -998,8 +1015,12 @@
     try {
       const c = await root.Studio.snapshot(1600, 1000), b = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.86));
       if (artKey !== key) return;
-      if (artURL.startsWith("blob:")) setTimeout(URL.revokeObjectURL, 2000, artURL);
-      artURL = b ? URL.createObjectURL(b) : "";
+      const url = b ? URL.createObjectURL(b) : "";
+      // Decoded before it goes in, so the backdrop never shows empty for a frame while the picture unpacks.
+      if (url) { const img = new Image(); img.src = url; await img.decode().catch(() => {}); artImg = img; }
+      if (artKey !== key) { URL.revokeObjectURL(url); return; }
+      if (artURL.startsWith("blob:")) setTimeout(URL.revokeObjectURL, 10000, artURL); // the roll's still copy may still show it
+      artURL = url;
     } catch (e) { artURL = ""; artKey = ""; }
     applyArt();
   }
