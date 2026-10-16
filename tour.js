@@ -331,7 +331,17 @@
     // where it ends up rather than where it was.
     const settle = async (s) => {
       let y = NaN, still = 0;
-      for (const t0 = performance.now(); performance.now() - t0 < 1200 && still < 4; ) { await frame(); const r = boxOf(s); still = r && Math.abs(r.top - y) < 0.5 ? still + 1 : 0; y = r?.top; }
+      for (const t0 = performance.now(); performance.now() - t0 < 1200 && still < 4; ) { await frame(); const r = typeof s === "function" ? s() : boxOf(s); still = r && Math.abs(r.top - y) < 0.5 ? still + 1 : 0; y = r?.top; }
+    };
+    // Brings a part into view clear of anything floating over the top of the screen (the Studio's mini
+    // canvas on phones), then waits for the scroll to end.
+    const into = async (el, s) => {
+      const box = el.getBoundingClientRect();
+      const over = [...document.querySelectorAll(".mini.show")].map((n) => n.getBoundingClientRect()).filter((r) => r.top < 140 && r.left < box.right && r.right > box.left);
+      el.style.scrollMarginTop = Math.max(0, ...over.map((r) => r.bottom)) + 10 + "px"; el.style.scrollMarginBottom = "10px";
+      el.scrollIntoView({ block: "nearest", behavior: reduce.matches ? "auto" : "smooth" });
+      await settle(s || (() => el.getBoundingClientRect()));
+      el.style.scrollMarginTop = el.style.scrollMarginBottom = "";
     };
     const shown = (s) => { const r = boxOf(s); return r && r.width > 0 && r.height > 0; };
     const go = async (n) => {
@@ -346,7 +356,8 @@
         if (s.pre) await s.pre();
         if (s.act) {
           const b = document.querySelector(s.act);
-          if (b && b.getBoundingClientRect().width) { b.scrollIntoView({ block: "nearest", behavior: "smooth" }); const r = b.getBoundingClientRect(); await cur.to(r.left + Math.min(40, r.width / 2), r.top + r.height / 2); await cur.click(); b.click(); await wait(380); }
+          // The control scrolls into view first and the dot goes to where it ends up, then clicks it.
+          if (b && b.getBoundingClientRect().width) { await into(b); if (!tour) return; const r = b.getBoundingClientRect(); await cur.to(r.left + Math.min(40, r.width / 2), r.top + r.height / 2); await cur.click(); b.click(); await wait(380); }
         }
         if (!tour) return;
         // A part that something just opened may still be on its way in.
@@ -357,8 +368,7 @@
       if (n < 0 || n >= STEPS.length) { busy = false; tip.classList.remove("moving"); if (n >= STEPS.length) finish(); else if (i < 0) end(); return; }
       i = n;
       const last = i === STEPS.length - 1;
-      document.querySelector(s.el).scrollIntoView({ block: "nearest", behavior: "smooth" });
-      await settle(s);
+      await into(document.querySelector(s.el), s);
       if (!tour) return;
       tip.innerHTML = `<span class="tour-kicker">${i + 1} of ${STEPS.length}</span><b>${s.t}</b><p>${s.p}</p><div class="tour-acts"><button class="btn sm ghost" data-a="end">End tour</button><span class="grow"></span>${i ? `<button class="btn sm" data-a="back">Back</button>` : ""}<button class="btn sm primary" data-a="next">${last ? s.done || "Done" : "Next"}</button></div>`;
       place();
@@ -395,17 +405,32 @@
     setTimeout(() => go(0), moving ? 760 : 120);
   }
   // Done: the dot spirals toward the settings button, the curl widening and then tightening as it
-  // closes in, and slips inside in a puff of sparks.
+  // closes in, and slips inside in a puff of sparks. From far away (a phone's last step is often at the
+  // bottom of the screen) it first glides to a point a short way off and flows straight on into the
+  // same small curl, so it never sweeps across the whole screen.
   async function swirlHome(cur, dot) {
     const b = $("settingsBtn").getBoundingClientRect(), tx = b.left + b.width / 2, ty = b.top + b.height / 2;
-    const [x0, y0] = cur.pos, dist = Math.hypot(tx - x0, ty - y0), R = Math.min(110, Math.max(40, dist * 0.22));
+    const [sx, sy] = cur.pos, full = Math.hypot(tx - sx, ty - sy), CURL = 180, far = full > CURL * 1.3;
+    // Where the curl starts: the dot itself, or the point CURL short of the button on the way there.
+    const k = far ? 1 - CURL / full : 0, x0 = sx + (tx - sx) * k, y0 = sy + (ty - sy) * k, glide = full * k;
+    const dist = Math.hypot(tx - x0, ty - y0), R = Math.min(110, Math.max(40, dist * 0.22), innerWidth * 0.13);
     // Turn the way that curls toward the screen's middle, so the loops stay on screen.
     const dir = x0 < tx ? 1 : -1, turns = 1.6, a0 = Math.atan2(ty - y0, tx - x0) + (Math.PI / 2) * dir;
+    // The curl eases out from the glide's speed when there is a glide, and in and out when there isn't.
+    const T2 = 1900, T1 = far ? Math.min(1100, 380 + glide * 0.9) : 0, T = T1 + T2;
+    const v = (2 * dist) / T2, m = (v * T1) / Math.max(1, glide);
     await cur.along((t) => {
-      const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-      const r = R * Math.pow(Math.sin(Math.PI * Math.min(1, t * 1.08)), 1.3), a = a0 + dir * turns * Math.PI * 2 * t;
+      const ms = t * T;
+      if (ms < T1) {
+        // The glide starts from rest and arrives at the curl's opening speed (a cubic Hermite ease).
+        const q = ms / T1, h = 3 * q * q - 2 * q * q * q + m * (q * q * q - q * q);
+        return [sx + (x0 - sx) * h, sy + (y0 - sy) * h];
+      }
+      // After a glide the curl opens more slowly, so the path bends into it instead of kinking.
+      const u = (ms - T1) / T2, e = far ? 1 - (1 - u) * (1 - u) : u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+      const r = R * Math.pow(Math.sin(Math.PI * Math.min(1, u * 1.08)), far ? 3.2 : 1.3), a = a0 + dir * turns * Math.PI * 2 * u;
       return [x0 + (tx - x0) * e + Math.cos(a) * r, y0 + (ty - y0) * e + Math.sin(a) * r];
-    }, 1900);
+    }, T);
     dot.animate([{ scale: 1, opacity: 1 }, { scale: 0.2, opacity: 0 }], { duration: 220, easing: "ease-in", fill: "forwards" });
     root.sparks?.(tx, ty);
     $("settingsBtn").animate([{ scale: 1 }, { scale: 1.12 }, { scale: 1 }], { duration: 360, easing: "cubic-bezier(.3,1.5,.5,1)" });
