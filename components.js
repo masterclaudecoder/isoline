@@ -56,7 +56,7 @@
   const RULES_V = 3;
   const KEY = "isoline-kit";
   const DEF = {
-    mode: "libraries", fw: "All", cat: "All", q: "", slot: "type", view: "components", layout: "home", dark: null, follow: true,
+    mode: "libraries", fw: "All", cat: "All", q: "", slot: "type", view: "components", layout: "home", hero: "beside", dark: null, follow: true,
     fit: true, pw: 1440, ph: 900, tint: "tinted", src: null, art: "none", enter: "rise", exit: "fade", stagger: 50, trigger: "load",
     pair: 0, head: "", body: "", scale: 1.25, base: 16, tracking: -0.02,
     rc: null,
@@ -292,7 +292,7 @@
   // Closing: bring a draft in. The field is a real-looking import that runs when you press it.
   const IMPORT = `<div class="k-import"><div class="k-import-row"><span class="k-input">docs.google.com/document/d/1Xf9…/edit</span><button class="k-btn" data-k="import">Import</button></div><div class="k-import-busy"><div class="k-progress"><i></i></div><span class="k-small">Bringing in the text and 14 comments</span></div><div class="k-import-done"><b>Spring pricing update</b><span class="k-small">Imported with its 14 comments and 3 suggestions.</span><span class="k-row"><button class="k-btn k-sm">Open draft</button><span class="k-link" data-k="import-again">Import another</span></span></div><p class="k-small">Or drop a .docx or Markdown file here.</p></div>`;
   const CLOSE = `<section class="k-close k-close-imp"><div><h2 class="k-h2">Bring the draft you already have</h2><p class="k-p">Paste a Google Doc link or drop a file. Its comments and suggestions come with it.</p><div class="k-row"><button class="k-btn">Start a draft</button><button class="k-btn k-ghost">Talk to us</button></div></div>${IMPORT}</section>`;
-  const LEAD = `<p class="k-lead">Every comment sits in the margin, next to the line it's about. Settle it in place, then publish the moment everyone signs off.</p><div class="k-row"><button class="k-btn k-lg">Start a draft</button><span class="k-link k-under" data-k="how">See how review works${ki("arrow")}</span></div><span class="k-small">Free for three editors. No card needed.</span>`;
+  const LEAD_P = `<p class="k-lead">Every comment sits in the margin, next to the line it's about. Settle it in place, then publish the moment everyone signs off.</p>`, GO = `<div class="k-row"><button class="k-btn k-lg">Start a draft</button><span class="k-link k-under" data-k="how">See how review works${ki("arrow")}</span></div><span class="k-small">Free for three editors. No card needed.</span>`, LEAD = LEAD_P + GO;
   // The headline, copy and buttons stacked on the left, the editor, then three spreads, each a part of
   // the product on its own backdrop (the artwork, or a tint of the accent) beside what it does.
   const SPREADS = [
@@ -300,16 +300,20 @@
     ["signoff", "It publishes when the last person signs off", "Name who approves a draft. Margin asks them, reminds them once, and publishes to your site, help center or a PDF the moment the last one says yes.", ["Anyone can see who's still to approve.", "Sign-off can follow the order you set."]],
     ["history", "Compare any two drafts, down to the word", "Pick two versions and see exactly what moved between them, who moved it and when.", ["Restore any earlier draft.", "Send the comparison as a PDF."]],
   ];
-  // The hero: the copy on the left and the editor beside it on the artwork, running off the page's
-  // edge, so the product is on the first screen. On phones the picture runs edge to edge under the copy.
-  const HERO_PIC = `<section class="k-hero k-hero-pic"><div class="k-hero-copy"><h1 class="k-h1">Review drafts right where they're written</h1>${LEAD}</div><div class="k-hero-frame"><div class="k-shot k-win">${BAR()}<div class="k-shot-body">${DOC(`<p>From 1 April, the Team plan includes unlimited documents and five sign-off requests a month.</p><p><mark>Existing customers keep their current price until their next renewal</mark>, and can switch plans at any time from Settings.</p>`)}<div class="k-margin k-mg-top">${thread()}</div></div></div></div></section>`;
-  const HOME = `${NAV()}
-      ${HERO_PIC}
+  // The hero, in one of two layouts (K.hero). Beside: the copy on the left and the editor beside it on
+  // the artwork, running off the page's edge, so the product is on the first screen. Below: the headline
+  // and buttons on the left, the lead on the right, and the editor across the page under them. On phones
+  // both stack and the picture runs edge to edge under the copy.
+  const HERO_SHOT = `<div class="k-shot k-win">${BAR()}<div class="k-shot-body">${DOC(`<p>From 1 April, the Team plan includes unlimited documents and five sign-off requests a month.</p><p><mark>Existing customers keep their current price until their next renewal</mark>, and can switch plans at any time from Settings.</p>`)}<div class="k-margin k-mg-top">${thread()}</div></div></div>`;
+  const HERO_PIC = `<section class="k-hero k-hero-pic"><div class="k-hero-copy"><h1 class="k-h1">Review drafts right where they're written</h1>${LEAD}</div><div class="k-hero-frame">${HERO_SHOT}</div></section>`;
+  const HERO_BELOW = `<section class="k-hero k-hero-below"><h1 class="k-h1">Review drafts right where they're written</h1>${LEAD_P}<div class="k-hero-go">${GO}</div><div class="k-hero-frame">${HERO_SHOT}</div></section>`;
+  const HOME = () => `${NAV()}
+      ${K.hero === "below" ? HERO_BELOW : HERO_PIC}
       <h2 class="k-h2 k-spreads-head">How review works</h2><div class="k-spreads">${SPREADS.map(([v, h, p, li], n) => `<section class="k-spread${n % 2 ? "" : " k-flip"}"><div class="k-spread-text"><h2 class="k-h2">${h}</h2><p class="k-p">${p}</p><ul>${li.map((x) => `<li>${x}</li>`).join("")}</ul></div><div class="k-frame"><div class="k-shot k-win">${BAR()}${VIEWS[v]}</div></div></section>`).join("")}</div>
       ${CLOSE}
       ${FOOT}<div class="k-sticky"><button class="k-btn k-lg">Start a draft</button></div>`;
   const LAYOUTS = {
-    home: ["Home", HOME],
+    home: ["Home", null],
     article: ["Article", `${NAV()}
       <div class="k-article">
         <article>
@@ -349,7 +353,8 @@
       ${FOOT}`],
   };
   if (!LAYOUTS[K.layout]) K.layout = "home";
-  function previewHTML() { return K.view === "components" ? COMPONENTS : `<div class="k-page k-pg-${K.layout}">${LAYOUTS[K.layout][1]}</div>`; }
+  const layoutHTML = (k) => (k === "home" ? HOME() : LAYOUTS[k][1]);
+  function previewHTML() { return K.view === "components" ? COMPONENTS : `<div class="k-page k-pg-${K.layout}">${layoutHTML(K.layout)}</div>`; }
   if (K.view !== "components") K.view = "pages";
   // Home card: the landing page in a browser window, tilted back in space, with the same page on a phone
   // standing in front of it. Both are drawn at their real widths and scaled to the card.
@@ -358,7 +363,7 @@
   function preview(el) {
     if (!el) return;
     if (!el.querySelector(".cps")) {
-      const page = `<div class="k-page">${LAYOUTS.home[1]}</div>`;
+      const page = `<div class="k-page k-pg-home">${HOME()}</div>`;
       el.innerHTML = `<div class="cps" aria-hidden="true"><div class="cps-win"><div class="cps-bar"><i></i><i></i><i></i><span></span></div><div class="kit k-landing">${page}</div></div><div class="cps-shade"></div><div class="cps-phone"><div class="kit k-landing">${page}</div></div></div>`;
       homeRO.observe(el);
       // The scene tilts toward the pointer while it's over the card, and eases back when it leaves.
@@ -373,6 +378,9 @@
         card.addEventListener("pointerleave", () => { sc.classList.remove("track"); sc.style.setProperty("--tx", 0); sc.style.setProperty("--ty", 0); });
       }
     }
+    // The card follows the hero layout picked in the Builder.
+    if (el.dataset.hero && el.dataset.hero !== K.hero) for (const h of el.querySelectorAll(".k-hero")) h.outerHTML = K.hero === "below" ? HERO_BELOW : HERO_PIC;
+    el.dataset.hero = K.hero;
     for (const k of el.querySelectorAll(".kit")) { vars(k); k.classList.toggle("k-has-art", !!artURL); k.style.setProperty("--k-art", artURL ? `url("${artURL}")` : "none"); }
     vars(el.querySelector(".cps"));
     sizeHome(el, el.clientWidth, el.clientHeight);
@@ -469,7 +477,7 @@
     <section class="cp-stage">
       <div class="cp-stage-top">
         <div class="cp-st-l"><button class="ib cp-wide" id="cpWide" title="Hide the sidebar">${ic("panel")}</button><div class="seg sm" id="cpView"><button data-v="components">Components</button><button data-v="pages">Pages</button></div></div>
-        <div class="seg sm fold-x" id="cpLayout"></div>
+        <div class="cp-st-c"><div class="seg sm fold-x" id="cpLayout"></div><div class="seg sm fold-x cp-hero" id="cpHero"><button data-v="beside" data-tip="Picture beside the headline" aria-label="Picture beside the headline"><svg class="ic" viewBox="0 0 18 18"><path d="M2.5 5.5h5M2.5 8.5h4M2.5 11.5h3"/><rect x="9.5" y="3.5" width="6" height="11" rx="1.5"/></svg></button><button data-v="below" data-tip="Picture below the headline" aria-label="Picture below the headline"><svg class="ic" viewBox="0 0 18 18"><path d="M2.5 3.5h13M2.5 6.5h7"/><rect x="2.5" y="9.5" width="13" height="5.5" rx="1.5"/></svg></button></div></div>
         <div class="cp-st-r"><span class="cp-size-slot" id="cpSizeSlot"></span><button class="ib" id="cpReplay" title="Replay the entrance">${ic("play")}</button><div class="seg sm" id="cpTheme"><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
       </div>
       <div class="cp-canvas" id="cpCanvas"><div class="kit-frame scroll" id="kitFrame"><div class="kit" id="kit"></div></div></div>
@@ -805,8 +813,9 @@
     [1, 2, 3, 4, 6, 8, 12, 16].forEach((n, k) => { const row = host.children[k]; row.querySelector("i").style.width = Math.min(space(n), 200) + "px"; row.lastElementChild.textContent = space(n) + "px"; });
   }
   function renderStageSegs() {
-    for (const [id, v] of [["cpView", K.view], ["cpLayout", K.layout], ["cpTheme", isDark() ? "dark" : "light"]]) for (const b of $(id).querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === v);
+    for (const [id, v] of [["cpView", K.view], ["cpLayout", K.layout], ["cpHero", K.hero], ["cpTheme", isDark() ? "dark" : "light"]]) for (const b of $(id).querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === v);
     $("cpLayout").hidden = K.view !== "pages";
+    $("cpHero").hidden = K.view !== "pages" || K.layout !== "home";
   }
   // ---------- page size ----------
   // The preview is a page of a real size: the window's own room ("Fit"), or a preset or dragged size,
@@ -986,6 +995,8 @@
   setWide(!!K.wide);
   const swapStage = () => { const go = () => { renderStage(); replay(false); }; root.UI ? root.UI.swap(go) : go(); };
   $("cpView").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && K.view !== b.dataset.v) { K.view = b.dataset.v; save(); swapStage(); } };
+  // The home page's hero layout: some kits read better with the picture beside the headline, some below it.
+  $("cpHero").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && K.hero !== b.dataset.v) { K.hero = b.dataset.v; save(); swapStage(); } };
   $("cpLayout").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && K.layout !== b.dataset.v) { K.layout = b.dataset.v; save(); swapStage(); } };
   $("cpTheme").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b) { K.dark = b.dataset.v === "dark"; renderStageSegs(); changed(K.slot === "color"); } };
   let changeT = 0;

@@ -741,7 +741,8 @@ body:not([data-route="studio"]) .mini { display: none; }
 .cp-stage { min-width: 0; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 10px; }
 .cp-stage-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
 .cp-stage-top .seg { flex: none; }
-.cp-st-l, .cp-st-r { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cp-hero .ic { width: 16px; height: 16px; }
+.cp-st-l, .cp-st-r, .cp-st-c { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .cp-st-r { justify-content: flex-end; }
 .cp-canvas { position: relative; min-height: 0; border-radius: 18px; display: grid; place-items: center; padding: 26px; overflow: hidden; background: var(--well) radial-gradient(rgba(var(--line-rgb), .07) 1px, transparent 1px) 0 0 / 18px 18px; box-shadow: var(--sunken); }
 .kit-frame { overflow: hidden auto; overscroll-behavior: contain; border-radius: 10px; background: var(--k-bg, var(--panel)); box-shadow: 0 0 0 1px rgba(var(--line-rgb), .08), 0 10px 30px -14px rgba(var(--shadow-rgb), .28); min-height: 0; view-transition-name: kit-frame; }
@@ -1459,7 +1460,7 @@ a.btn { text-decoration: none; color: inherit; }
 .cp-stage { container-type: inline-size; container-name: stage; }
 @container stage (max-width: 880px) {
   .cp-stage-top { grid-template-columns: minmax(0, 1fr) auto; }
-  #cpLayout { grid-row: 2; grid-column: 1 / -1; justify-self: start; }
+  .cp-st-c { grid-row: 2; grid-column: 1 / -1; justify-self: start; }
 }
 
 /* ---------- slow playback note ---------- */
@@ -1527,7 +1528,8 @@ a.btn { text-decoration: none; color: inherit; }
   .cp-build .kit-frame { height: auto; }
   .cp-build .cp-canvas { height: 64vh; min-height: 360px; padding: 12px; }
   .cp-stage-top { grid-template-columns: 1fr auto; row-gap: 8px; }
-  .cp-stage-top > #cpLayout { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; overflow-x: auto; scrollbar-width: none; }
+  .cp-stage-top > .cp-st-c { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; }
+  .cp-st-c > #cpLayout { flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
   .cp-build #cpSlots { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0 10px; }
   .cp-build .slots, .cp-build .options { padding: 14px 10px; }
 }
@@ -1543,7 +1545,7 @@ a.btn { text-decoration: none; color: inherit; }
   /* The stage bar folds into two rows: view and actions, then the page picker. Fit is the only size
      that makes sense on a phone, so the size field steps aside. */
   .cp-stage-top { display: flex; flex-wrap: wrap; justify-content: space-between; }
-  .cp-stage-top > #cpLayout { order: 3; flex-basis: 100%; }
+  .cp-stage-top > .cp-st-c { order: 3; flex-basis: 100%; }
   #cpSizeSlot { display: none; }
 }
 .play-note { margin-top: 10px; text-align: center; }
@@ -2093,11 +2095,25 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .k-at { color: var(--k-accent); font-weight: 600; }
 .k-margin .k-cmt p { margin: 4px 0 0; }
 /* Hero: the editor is in the hero, beside the copy, on the artwork, running off the page's right edge. */
-.k-hero-pic { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--k-s8); align-items: center; padding: var(--k-s8) 0 var(--k-s16); }
+/* The copy column is measured in the headline's own font (ch), so a wide or large display face gets the
+   room it needs instead of breaking the headline into a narrow stack; the picture takes the rest. */
+.k-hero-pic { --hh: min(clamp(var(--k-3xl), 4.4cqi, calc(var(--k-4xl) * 1.1)), 4.4cqi); font: var(--k-hw) var(--hh) / 1.1 var(--k-head), system-ui, sans-serif; letter-spacing: var(--k-track); grid-template-columns: minmax(0, clamp(34%, 16ch, 58%)) minmax(0, 1fr); gap: var(--k-s8); align-items: center; padding: var(--k-s8) 0 var(--k-s16); }
+.k-hero-pic > * { font: 400 var(--k-base) / 1.5 var(--k-body), system-ui, sans-serif; letter-spacing: normal; }
 .k-hero-copy { display: grid; gap: var(--k-s4); justify-items: start; }
 .k-hero-copy .k-lead { margin: 0; }
 .k-hero-copy .k-row { gap: var(--k-s6); margin-top: var(--k-s2); }
-.k-landing .k-pg-home .k-hero-pic .k-h1, .cps-win .k-landing .k-pg-home .k-hero-pic .k-h1 { font-size: min(clamp(var(--k-3xl), 4.4cqi, calc(var(--k-4xl) * 1.1)), 4.4cqi); max-width: 9em; margin-bottom: var(--k-s2); }
+.k-landing .k-pg-home .k-hero-pic .k-h1, .cps-win .k-landing .k-pg-home .k-hero-pic .k-h1 { font-size: var(--hh); max-width: none; text-wrap: balance; margin-bottom: var(--k-s2); }
+/* Below: the headline with the buttons under it on the left, the lead on the right level with the
+   headline's last line, and the picture across the page under both. The headline column is measured in
+   the headline's own font, like the side-by-side hero. */
+.k-hero-below { --hh: min(clamp(var(--k-3xl), 4.6cqi, calc(var(--k-4xl) * 1.2)), 4.6cqi); font: var(--k-hw) var(--hh) / 1.1 var(--k-head), system-ui, sans-serif; letter-spacing: var(--k-track); grid-template-columns: minmax(0, clamp(48%, 23ch, 68%)) minmax(0, 1fr); grid-template-areas: "h lead" "go ." "pic pic"; gap: var(--k-s6) var(--k-s12); align-items: start; padding: var(--k-s12) 0 var(--k-s16); }
+.k-hero-below > * { font: 400 var(--k-base) / 1.5 var(--k-body), system-ui, sans-serif; letter-spacing: normal; }
+.k-landing .k-pg-home .k-hero-below .k-h1, .cps-win .k-landing .k-pg-home .k-hero-below .k-h1 { grid-area: h; max-width: none; font-size: var(--hh); text-wrap: balance; margin: 0; }
+.k-hero-below > .k-lead { grid-area: lead; align-self: end; margin: 0; max-width: 32em; }
+.k-hero-go { grid-area: go; display: grid; gap: var(--k-s3); justify-items: start; }
+.k-hero-go .k-row { gap: var(--k-s6); }
+.k-hero-below .k-hero-frame { grid-area: pic; margin: var(--k-s4) 0 0; padding: clamp(20px, 4cqi, 56px) clamp(20px, 4cqi, 56px) 0; border-radius: calc(var(--k-r) + 10px); }
+.k-hero-below .k-hero-frame .k-win { border-right: 1px solid var(--k-border); border-radius: calc(var(--k-r) + 8px) calc(var(--k-r) + 8px) 0 0; }
 .k-hero-frame { margin-right: calc(-1 * (clamp(20px, 5cqi, 72px) + max(0px, (100cqi - 1320px) / 2))); padding: clamp(20px, 3.5cqi, 44px) 0 0 clamp(20px, 3.5cqi, 44px); border-radius: calc(var(--k-r) + 10px) 0 0 calc(var(--k-r) + 10px); overflow: hidden; background: color-mix(in srgb, var(--k-accent) 10%, var(--k-bg)); }
 .k-has-art .k-hero-frame { background: var(--k-art) center / cover; }
 .k-hero-frame .k-win { max-height: 26em; border-right: 0; border-top-right-radius: 0; }
@@ -2181,7 +2197,16 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
   /* Phones get their own layout: the picture runs edge to edge under the copy, the features become a
      row of cards you swipe through, and the sticky button waits until the hero's own is scrolled past. */
   .k-hero-pic { grid-template-columns: minmax(0, 1fr); gap: var(--k-s8); padding: var(--k-s6) 0 var(--k-s12); }
-  .k-hero-copy { justify-items: stretch; }
+  .k-hero-copy, .k-hero-go { justify-items: stretch; }
+  .k-hero-below { grid-template-columns: minmax(0, 1fr); grid-template-areas: "h" "lead" "go" "pic"; }
+  .k-hero-below > .k-lead { align-self: start; }
+  .k-hero-go .k-row { flex-direction: column; align-items: stretch; gap: var(--k-s4); }
+  .k-hero-go .k-row .k-btn { width: 100%; }
+  .k-hero-go .k-under { justify-content: center; }
+  .k-hero-go > .k-small { justify-self: center; }
+  .k-hero-below { padding: var(--k-s6) 0 var(--k-s12); }
+  .k-landing .k-pg-home .k-hero-below .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 11.5cqi); }
+  .k-hero-below .k-hero-frame { margin: var(--k-s2) calc(-1 * clamp(20px, 5cqi, 72px)) 0; border-radius: 0; }
   .k-hero-copy .k-row { flex-direction: column; align-items: stretch; gap: var(--k-s4); }
   .k-hero-copy .k-row .k-btn { width: 100%; }
   .k-hero-copy .k-under { justify-content: center; }
