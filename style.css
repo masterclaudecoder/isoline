@@ -53,7 +53,10 @@ button, input, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-[hidden] { display: none !important; }
+[hidden]:not(.page) { display: none !important; }
+/* Hidden pages stay laid out but skipped: nothing is drawn or updated in them, and switching back reuses
+   their cached layout instead of building the page again inside the transition. */
+.page[hidden] { content-visibility: hidden; visibility: hidden; pointer-events: none; }
 .ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
 /* scrollbars: thin thumb, no arrow buttons, on every scrolling element (panels, menus, text areas) */
@@ -2077,11 +2080,6 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .k-under { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .k-landing .k-pg-home .k-hero .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 5.2cqi); max-width: 12em; }
 .cps-win .k-landing .k-pg-home .k-hero .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 4.4cqi); }
-/* Home: the hero stacked on the left, so the product picture follows straight under it. */
-.k-hero-stack { grid-template-columns: minmax(0, 1fr); justify-items: start; gap: var(--k-s4); padding-bottom: var(--k-s12); }
-.k-hero-stack .k-h1 { max-width: 13em; margin-bottom: var(--k-s2); }
-.k-hero-stack .k-lead { max-width: 34em; margin: 0; }
-.k-hero-stack .k-row { gap: var(--k-s6); margin-top: var(--k-s2); }
 /* Product views: the editor's margin shows one part of the work. */
 .k-mg-top { padding-top: 28px; display: grid; gap: 12px; align-content: start; }
 .k-mg-h { font-size: 15px; }
@@ -2094,6 +2092,19 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .k-ver { cursor: pointer; }
 .k-at { color: var(--k-accent); font-weight: 600; }
 .k-margin .k-cmt p { margin: 4px 0 0; }
+/* Hero: the editor is in the hero, beside the copy, on the artwork, running off the page's right edge. */
+.k-hero-pic { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--k-s8); align-items: center; padding: var(--k-s8) 0 var(--k-s16); }
+.k-hero-copy { display: grid; gap: var(--k-s4); justify-items: start; }
+.k-hero-copy .k-lead { margin: 0; }
+.k-hero-copy .k-row { gap: var(--k-s6); margin-top: var(--k-s2); }
+.k-landing .k-pg-home .k-hero-pic .k-h1, .cps-win .k-landing .k-pg-home .k-hero-pic .k-h1 { font-size: min(clamp(var(--k-3xl), 4.4cqi, calc(var(--k-4xl) * 1.1)), 4.4cqi); max-width: 9em; margin-bottom: var(--k-s2); }
+.k-hero-frame { margin-right: calc(-1 * (clamp(20px, 5cqi, 72px) + max(0px, (100cqi - 1320px) / 2))); padding: clamp(20px, 3.5cqi, 44px) 0 0 clamp(20px, 3.5cqi, 44px); border-radius: calc(var(--k-r) + 10px) 0 0 calc(var(--k-r) + 10px); overflow: hidden; background: color-mix(in srgb, var(--k-accent) 10%, var(--k-bg)); }
+.k-has-art .k-hero-frame { background: var(--k-art) center / cover; }
+.k-hero-frame .k-win { max-height: 26em; border-right: 0; border-top-right-radius: 0; }
+.k-hero-frame .k-shot-body { grid-template-columns: minmax(0, 1fr) minmax(0, 280px); }
+.k-hero-frame .k-doc { padding: 28px 32px; font-size: 15px; }
+.k-hero-frame .k-doc .k-h3 { font-size: 22px; }
+.k-hero-frame .k-margin { padding-top: 64px; }
 /* Spreads: the view sits on the artwork (or a tint of the accent) and runs off the edge, like
    a crop of the real app. */
 .k-spread { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--k-s12); align-items: center; margin-bottom: var(--k-s16); }
@@ -2147,10 +2158,13 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .k-btn.k-wait::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: k-spin .8s linear infinite; }
 .k-btn.k-done .k-ic { width: 14px; height: 14px; }
 @keyframes k-spin { to { rotate: 1turn; } }
+@keyframes k-sticky-in { 0%, 70% { opacity: 0; translate: 0 16px; visibility: hidden; } 100% { opacity: 1; translate: none; visibility: visible; } }
 .k-qa:not(.open) .k-p { display: none; }
 /* Phones: a real menu behind a full-size burger, a full-width call to action that stays in reach, and
    the comment thread as a sheet over the draft. */
 .k-mnav, .k-sticky, .k-i-close { display: none; }
+/* The "How review works" heading only appears over the swipeable cards on phones; it sits above the row. */
+.k-spreads-head { display: none; }
 .k-nav { position: relative; }
 @container (max-width: 640px) {
   .k-burger { width: 44px; height: 44px; border-radius: var(--k-rb); border: 1px solid var(--k-border); background: var(--k-surface); color: var(--k-text); }
@@ -2164,10 +2178,37 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
   .k-landing .k-pg-home .k-hero .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 11.5cqi); }
   .k-hero-side .k-row { align-items: stretch; }
   .k-hero-side .k-row .k-btn { width: 100%; }
-  .k-hero-stack .k-row { justify-self: stretch; align-items: stretch; }
-  .k-hero-stack .k-row .k-btn { width: 100%; }
-  .k-spread, .k-close-imp { grid-template-columns: minmax(0, 1fr); gap: var(--k-s6); margin-bottom: var(--k-s12); }
-  .k-flip > .k-spread-text { order: 0; }
+  /* Phones get their own layout: the picture runs edge to edge under the copy, the features become a
+     row of cards you swipe through, and the sticky button waits until the hero's own is scrolled past. */
+  .k-hero-pic { grid-template-columns: minmax(0, 1fr); gap: var(--k-s8); padding: var(--k-s6) 0 var(--k-s12); }
+  .k-hero-copy { justify-items: stretch; }
+  .k-hero-copy .k-row { flex-direction: column; align-items: stretch; gap: var(--k-s4); }
+  .k-hero-copy .k-row .k-btn { width: 100%; }
+  .k-hero-copy .k-under { justify-content: center; }
+  .k-hero-copy > .k-small { justify-self: center; }
+  .k-landing .k-pg-home .k-hero-pic .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 11.5cqi); max-width: none; }
+  .k-hero-frame { margin: 0 calc(-1 * clamp(20px, 5cqi, 72px)); padding: 28px 20px 0; border-radius: 0; }
+  .k-hero-frame .k-win { max-height: 30em; border-right: 1px solid var(--k-border); border-radius: calc(var(--k-r) + 8px) calc(var(--k-r) + 8px) 0 0; }
+  .k-shot-bar .k-small { display: none; }
+  .k-hero-frame .k-shot-body { grid-template-columns: minmax(0, 1fr); }
+  .k-hero-frame .k-doc .k-ghostline, .k-hero-frame .k-doc .k-h3 { display: none; }
+  .k-hero-frame .k-doc { padding: 20px 20px 28px; font-size: 15px; }
+  .k-hero-frame .k-margin { padding-top: 14px; }
+  .k-pg-home .k-spreads-head { display: block; font-size: var(--k-2xl); margin: 0 0 var(--k-s6); }
+  .k-spread .k-shot-bar { display: none; }
+  .k-spreads { display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 calc(-1 * clamp(20px, 5cqi, 72px)) var(--k-s12); padding: 0 clamp(20px, 5cqi, 72px); scroll-padding: 0 clamp(20px, 5cqi, 72px); }
+  .k-spreads::-webkit-scrollbar { display: none; }
+  .k-spread, .k-flip { flex: 0 0 84%; display: flex; flex-direction: column; gap: var(--k-s4); margin: 0; scroll-snap-align: start; }
+  .k-spread .k-frame { order: -1; padding: 16px 16px 0; border-radius: calc(var(--k-r) + 8px); }
+  .k-spread .k-win { max-height: 15em; }
+  .k-spread .k-doc { display: none; }
+  .k-spread .k-margin { margin: 0; padding: 16px; border: 0; border-radius: 0; box-shadow: none; background: var(--k-surface); }
+  .k-spread .k-margin::before { display: none; }
+  .k-spread-text { gap: var(--k-s2); }
+  .k-spread-text .k-h2 { font-size: var(--k-xl); }
+  .k-spread-text .k-p { font-size: var(--k-sm); }
+  .k-spread-text ul { display: none; }
+  .k-close-imp { grid-template-columns: minmax(0, 1fr); gap: var(--k-s6); padding-top: 0; margin-bottom: var(--k-s12); }
   .k-frame { padding: 16px 16px 0; }
   .k-win { max-height: none; }
   .k-win .k-doc { padding: 20px; }
@@ -2176,6 +2217,11 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
   .k-win .k-doc { padding: 20px 20px 28px; font-size: 15px; }
   .k-import-row { flex-direction: column; }
   .k-sticky { display: block; position: sticky; bottom: 12px; z-index: 4; margin-top: var(--k-s4); }
+  /* While the hero's own button is on screen the sticky one stays out of the way; it rises in once the
+     page has scrolled past it (where scroll-driven animations are supported). */
+  @supports (animation-timeline: scroll()) {
+    .k-sticky { animation: k-sticky-in linear both; animation-timeline: scroll(nearest block); animation-range: 0 560px; }
+  }
   .k-sticky .k-btn { width: 100%; box-shadow: 0 14px 30px -10px rgba(0,0,0,.4); }
   .k-margin { margin: -14px 10px 10px; padding: 14px 16px 16px; border: 1px solid var(--k-border); border-radius: calc(var(--k-r) + 8px); background: var(--k-surface); box-shadow: 0 -12px 30px -18px rgba(0,0,0,.35); position: relative; }
   .k-margin::before { content: ""; display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--k-border); margin: 0 auto 12px; }

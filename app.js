@@ -1422,6 +1422,8 @@
     let best = null;
     // The tests themselves get a second in all, so a slow device isn't kept waiting on them either.
     for (let i = 0; i < 5 && performance.now() - t0 < 1000; i++) {
+      // Each test gets its own task, so frames keep drawing between them.
+      if (i) { await new Promise((r) => setTimeout(r, 0)); if (tok !== surpriseTok || S !== was) return; }
       S = clone(was); roll(); const cand = S; S = was;
       const ms = await drawCost(cand);
       if (tok !== surpriseTok || S !== was) return;
@@ -2236,7 +2238,7 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.17", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "1.18", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
@@ -2498,7 +2500,7 @@
     return blob;
   }
   const pngBlob = (scale, on) => (isRaster(S) ? rasterPng(scale, on) : svgPng(scale, on));
-  let pngCache = null, exportTok = 0;
+  let exportTok = 0;
   const gifDims = () => { const sc = Math.min(S.gif.size / Math.min(S.w, S.h), 1600 / Math.max(S.w, S.h)); return [Math.round(S.w * sc), Math.round(S.h * sc)]; };
   const vidDims = () => { const even = (v) => Math.max(2, Math.round(v / 2) * 2), sc = Math.min(S.vid.size / Math.min(S.w, S.h), 3840 / Math.max(S.w, S.h)); return [even(S.w * sc), even(S.h * sc)]; };
   function refreshExport() {
@@ -2533,13 +2535,22 @@
       facts([["Fills", "The whole window"], ["Plays", plays || "A still frame"]]);
       return;
     }
-    const tok = ++exportTok, key = JSON.stringify(S);
-    if (pngCache?.key === key && pngCache.scale === S.pngScale) { facts([["Dimensions", dims], ["File size", fmtBytes(pngCache.blob.size)]]); return; }
+    const tok = ++exportTok;
     facts([["Dimensions", dims], ["File size", "Measuring"]]);
-    // Measuring renders the full PNG, which is heavy. It waits until the menu has finished opening so the
-    // opening animation never stalls on it.
+    // The size is estimated from a small sample rather than rendering the full PNG, which used to stall
+    // the page for seconds after the menu opened. Raster designs sample the canvas already on screen.
     setTimeout(() => { if (tok !== exportTok || $("exportMenu").hidden) return; measure(); }, 420);
-    const measure = () => pngBlob(S.pngScale).then((b) => { if (tok !== exportTok) return; pngCache = { key, scale: S.pngScale, blob: b }; facts([["Dimensions", dims], ["File size", fmtBytes(b.size)]]); }).catch(() => facts([["Dimensions", dims], ["File size", "Unknown"]]));
+    const measure = async () => {
+      try {
+        const full = S.w * S.pngScale * S.h * S.pngScale;
+        let src = fxCanvas;
+        if (!isRaster(S)) { const k = Math.min(1, Math.sqrt(360000 / (S.w * S.h))); src = await rasterize(document.createElement("canvas"), current.svg, Math.round(S.w * k), Math.round(S.h * k)); }
+        const b = await new Promise((r) => src.toBlob(r, "image/png"));
+        if (tok !== exportTok || !b) return;
+        const est = (b.size * full) / (src.width * src.height);
+        facts([["Dimensions", dims], ["File size", "About " + fmtBytes(est)]]);
+      } catch (e) { facts([["Dimensions", dims], ["File size", "Unknown"]]); }
+    };
   }
   $("fname").oninput = (e) => { e.target.dataset.edited = e.target.value ? "1" : ""; };
   $("fmt").onclick = (e) => { const b = e.target.closest("button"); if (b && !b.disabled) { S.fmt = b.dataset.v; save(); refreshExport(); } };
@@ -2558,7 +2569,7 @@
     if (fmt === "svg") { setProg("Saving", 1); await download(new Blob([current.svg], { type: "image/svg+xml" }), fileName() + ".svg", "SVG saved"); setTimeout(hideProg, 600); return; }
     $("download").disabled = true;
     try {
-      const blob = pngCache?.key === JSON.stringify(S) ? (setProg("Ready", 0.9), pngCache.blob) : await pngBlob(S.pngScale, setProg);
+      const blob = await pngBlob(S.pngScale, setProg);
       setProg("Saving", 1);
       await download(blob, fileName() + ".png", "PNG saved");
     } catch (e) { toast("PNG failed. Try a smaller scale"); }
@@ -2918,7 +2929,24 @@
   // ---------- previews ----------
   let queue = [], pumping = false, previewT = 0, quietUntil = 0;
   const quiet = (ms = 500) => (quietUntil = Math.max(quietUntil, performance.now() + ms));
-  document.addEventListener("pointerdown", (e) => { if (e.target.closest(".top button, .dd-btn, .bar-btn, .tile")) quiet(); }, true);
+  document.addEventListener("pointerdown", (e) => { quiet(e.target.closest(".top button, .dd-btn, .bar-btn, .tile") ? 500 : 250); }, true);
+  // Thumbnails also hold off while the pointer is moving, the page is scrolling or a transition runs, so
+  // hover effects and animations get every frame. They draw once things settle.
+  for (const t of ["pointermove", "wheel", "keydown"]) document.addEventListener(t, () => quiet(160), { capture: true, passive: true });
+  document.addEventListener("scroll", () => quiet(200), { capture: true, passive: true });
+  document.addEventListener("transitionrun", () => quiet(350), true);
+  // Waits for a calm moment: past any quiet window, then an idle slot between frames.
+  const idleIC = window.requestIdleCallback || ((f) => setTimeout(f, 16));
+  async function calm() {
+    // Nothing is drawn for a Studio that isn't on screen, or while the page is switching.
+    while (window.Shell?.route !== "studio" || document.documentElement.classList.contains("vt") || document.hidden) await new Promise((r) => setTimeout(r, 250));
+    // Never starves: after a few seconds of constant activity the next job runs anyway.
+    for (const t0 = performance.now(); performance.now() - t0 < 4000; ) {
+      while (performance.now() < quietUntil) await new Promise((r) => setTimeout(r, quietUntil - performance.now() + 10));
+      await new Promise((r) => idleIC(r, { timeout: 1200 }));
+      if (performance.now() >= quietUntil) return;
+    }
+  }
   function enqueue(jobs) { queue = jobs; if (!pumping) pump(); }
   async function pump() {
     pumping = true;
@@ -2926,9 +2954,9 @@
     while (queue.length) {
       // Thumbnails wait while shaders are still compiling in the background rather than blocking on them.
       for (let n = 0; TFX?.ready && !TFX.ready() && n < 60; n++) await new Promise((r) => setTimeout(r, 50));
-      // And while a menu or panel is opening, so its animation gets the frames.
-      while (performance.now() < quietUntil) await new Promise((r) => setTimeout(r, quietUntil - performance.now() + 10));
-      const j = queue.shift(); try { await j(); } catch (e) {} await new Promise((r) => setTimeout(r, 0));
+      // And while the user is interacting or something is animating, so the page stays smooth.
+      await calm();
+      const j = queue.shift(); try { await j(); } catch (e) {}
     }
     pumping = false;
   }
@@ -3052,7 +3080,8 @@
       }
       frames.push(f);
       if (tok !== motionTok) return;
-      await new Promise((r) => setTimeout(r, 0));
+      await calm();
+      if (tok !== motionTok) return;
     }
     const view = document.createElement("canvas"); view.width = W; view.height = H;
     const x = view.getContext("2d"), L = Math.min(4, Math.max(1.6, S.motion.dur)) * 1000;

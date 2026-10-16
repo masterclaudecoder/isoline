@@ -14,6 +14,7 @@
   // inVT: the page is arriving inside a view transition, which already pulls the bars up, so their own
   // entrance is skipped (it would restart and play a second time once the transition ends).
   function show(r, inVT = false) {
+    if (route === "components" && r !== "components") root.Components?.onHide?.();
     route = r;
     Shell.route = r;
     for (const p of document.querySelectorAll(".page")) p.hidden = p.dataset.page !== r;

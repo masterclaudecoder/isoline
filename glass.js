@@ -61,7 +61,10 @@
       el.style.backdropFilter = el.style.webkitBackdropFilter = frost ? `blur(${frost}px) url(#${id})` : `url(#${id}) blur(0.6px)`;
       el.classList.add("glass-live");
     };
-    new ResizeObserver(fit).observe(el);
+    // A resize redraws the map once things settle, rather than inside the frame that resized the bar.
+    const idle = root.requestIdleCallback || ((f) => setTimeout(f, 50));
+    let pend = 0;
+    new ResizeObserver(() => { if (!pend) pend = idle(() => { pend = 0; fit(); }, { timeout: 400 }); }).observe(el);
     fit();
   }
   root.Glass = { attach, supported: ok };

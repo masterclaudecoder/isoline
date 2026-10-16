@@ -300,10 +300,12 @@
     ["signoff", "It publishes when the last person signs off", "Name who approves a draft. Margin asks them, reminds them once, and publishes to your site, help center or a PDF the moment the last one says yes.", ["Anyone can see who's still to approve.", "Sign-off can follow the order you set."]],
     ["history", "Compare any two drafts, down to the word", "Pick two versions and see exactly what moved between them, who moved it and when.", ["Restore any earlier draft.", "Send the comparison as a PDF."]],
   ];
+  // The hero: the copy on the left and the editor beside it on the artwork, running off the page's
+  // edge, so the product is on the first screen. On phones the picture runs edge to edge under the copy.
+  const HERO_PIC = `<section class="k-hero k-hero-pic"><div class="k-hero-copy"><h1 class="k-h1">Review drafts right where they're written</h1>${LEAD}</div><div class="k-hero-frame"><div class="k-shot k-win">${BAR()}<div class="k-shot-body">${DOC(`<p>From 1 April, the Team plan includes unlimited documents and five sign-off requests a month.</p><p><mark>Existing customers keep their current price until their next renewal</mark>, and can switch plans at any time from Settings.</p>`)}<div class="k-margin k-mg-top">${thread()}</div></div></div></div></section>`;
   const HOME = `${NAV()}
-      <section class="k-hero k-hero-stack"><h1 class="k-h1">Review drafts right where they're written</h1>${LEAD}</section>
-      <div class="k-showcase">${EDITOR}</div>
-      ${SPREADS.map(([v, h, p, li], n) => `<section class="k-spread${n % 2 ? " k-flip" : ""}"><div class="k-spread-text"><h2 class="k-h2">${h}</h2><p class="k-p">${p}</p><ul>${li.map((x) => `<li>${x}</li>`).join("")}</ul></div><div class="k-frame"><div class="k-shot k-win">${BAR()}${VIEWS[v]}</div></div></section>`).join("")}
+      ${HERO_PIC}
+      <h2 class="k-h2 k-spreads-head">How review works</h2><div class="k-spreads">${SPREADS.map(([v, h, p, li], n) => `<section class="k-spread${n % 2 ? "" : " k-flip"}"><div class="k-spread-text"><h2 class="k-h2">${h}</h2><p class="k-p">${p}</p><ul>${li.map((x) => `<li>${x}</li>`).join("")}</ul></div><div class="k-frame"><div class="k-shot k-win">${BAR()}${VIEWS[v]}</div></div></section>`).join("")}</div>
       ${CLOSE}
       ${FOOT}<div class="k-sticky"><button class="k-btn k-lg">Start a draft</button></div>`;
   const LAYOUTS = {
@@ -952,9 +954,19 @@
   // ---------- artwork ----------
   // The studio's current design, captured as a picture for the pages.
   let artURL = "";
+  // The backdrop is redrawn only when the Studio design has changed, and encoded off the main thread.
+  let artKey = "";
   async function refreshArt() {
-    if (K.art !== "studio" || !root.Studio) { artURL = ""; applyArt(); return; }
-    try { const c = await root.Studio.snapshot(1600, 1000); artURL = c.toDataURL("image/jpeg", 0.86); } catch (e) { artURL = ""; }
+    if (K.art !== "studio" || !root.Studio) { artKey = ""; artURL = ""; applyArt(); return; }
+    const key = JSON.stringify(root.Studio.state?.() || Math.random());
+    if (key === artKey && artURL) return applyArt();
+    artKey = key;
+    try {
+      const c = await root.Studio.snapshot(1600, 1000), b = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.86));
+      if (artKey !== key) return;
+      if (artURL.startsWith("blob:")) setTimeout(URL.revokeObjectURL, 2000, artURL);
+      artURL = b ? URL.createObjectURL(b) : "";
+    } catch (e) { artURL = ""; artKey = ""; }
     applyArt();
   }
   function applyArt() {
@@ -1076,5 +1088,12 @@
   const LOOK = ["pair", "head", "body", "scale", "radius", "pill", "density", "elevation", "tint", "ease", "follow", "src", "srcKey", "rc"];
   const look = () => JSON.parse(JSON.stringify(Object.fromEntries(LOOK.map((k) => [k, K[k]]))));
   function setLook(l) { Object.assign(K, JSON.parse(JSON.stringify(l))); save(); const kit = $("kit"); if (kit) vars(kit); if (K.art === "studio") return refreshArt(); }
-  root.Components = { onShow: () => setMode(K.mode), usePalette, remix, look, setLook, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
+  // Coming back to an unchanged page keeps what is already built, so the page switch only has to show it.
+  let leftKey = "";
+  const pageKey = () => JSON.stringify([K, root.Palettes?.colors?.(), document.documentElement.dataset.theme]);
+  function onShow() {
+    if (leftKey && leftKey === pageKey() && $("kit")) { leftKey = ""; if (K.mode === "builder") refreshArt(); return; }
+    leftKey = ""; setMode(K.mode);
+  }
+  root.Components = { onShow, onHide: () => (leftKey = pageKey()), usePalette, remix, look, setLook, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
 })(window);
