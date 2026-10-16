@@ -132,7 +132,8 @@
   let snapT = 0;
   function keepSnap(c, key) {
     clearTimeout(snapT);
-    snapT = setTimeout(() => c.toBlob((b) => {
+    // Reading the picture back holds the page for a moment, so it waits out a roll rather than delaying its note.
+    snapT = setTimeout(() => remixing ? keepSnap(c, key) : c.toBlob((b) => {
       if (!b) return;
       const fr = new FileReader();
       fr.onload = () => { try { localStorage.setItem(SNAP, JSON.stringify({ k: key, url: fr.result })); } catch (e) {} };
@@ -203,7 +204,7 @@
     if (remixing) return;
     $("looksMenu").hidden = true; root.syncScrim?.();
     if (homeAt < 0) { homeHist = [homeLook()]; homeAt = 0; }
-    await homeChange(async () => { root.Palettes?.load(l.pal); root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); });
+    await homeChange(async () => { root.Palettes?.load(l.pal); root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); }, "Opening the look");
     homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(homeLook()); homeAt = homeHist.length - 1; syncHomeHist();
   }
   const download = (data, name) => root.downloadBlob?.(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), name, "Look saved");
@@ -256,7 +257,7 @@
     if (remixing || n < 0 || n >= homeHist.length) return;
     homeAt = n; syncHomeHist();
     const l = homeHist[n];
-    await homeChange(async () => { if (l.pal) root.Palettes?.load(l.pal); if (l.studio) root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); });
+    await homeChange(async () => { if (l.pal) root.Palettes?.load(l.pal); if (l.studio) root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); }, "Going back to that look");
   }
   function syncHomeHist() {
     const b = $("brand"); $("homeHist").style.left = b.offsetLeft + b.offsetWidth + 8 + "px";
@@ -272,13 +273,19 @@
   // As in the Studio when a look is applied: each card keeps a still copy of its old picture on top
   // while the new one is made underneath, and once all three are ready the copies fade out together,
   // so nothing flashes and the cards change as one. A small note by the logo shows it's working.
-  async function homeChange(work) {
+  let busyHide = 0;
+  async function homeChange(work, label = "Rolling a new look") {
     remixing = true;
-    const ghosts = ["homeStudio", "homePalette", "homeComponents"].map((id) => ghostOver($(id)));
     const busy = $("remixBusy"), h = $("homeHist");
     const b = $("brand"), on = h.classList.contains("on");
     busy.style.left = (on ? h.offsetLeft + h.offsetWidth : b.offsetLeft + b.offsetWidth) + 8 + "px";
-    const busyT = setTimeout(() => (busy.hidden = false), 150);
+    // The note shows at once and reaches the screen before the work starts: the work holds the main
+    // thread, so a note left to a timer or to the next frame would come late or not at all.
+    clearTimeout(busyHide);
+    busy.lastChild.textContent = label; busy.hidden = false;
+    const shown = performance.now();
+    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+    const ghosts = ["homeStudio", "homePalette", "homeComponents"].map((id) => ghostOver($(id)));
     try {
       await work();
       await paintHome(false);
@@ -287,7 +294,8 @@
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     } catch (err) { console.error("home change failed", err); } finally {
       remixing = false;
-      clearTimeout(busyT); busy.hidden = true;
+      // Kept up for a moment at least, so a quick roll doesn't blink it.
+      busyHide = setTimeout(() => (busy.hidden = true), Math.max(0, 450 - (performance.now() - shown)));
       for (const g of ghosts) if (g) { g.style.opacity = "0"; setTimeout(() => g.remove(), 700); }
     }
   }
