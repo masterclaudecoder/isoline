@@ -3113,7 +3113,7 @@
   // visit shows them at once. Each carries a fingerprint of its look; an edited preset is drawn live instead.
   const lookHash = (look) => { const t = JSON.stringify(look); let a = 0x811c9dc5; for (let i = 0; i < t.length; i++) a = Math.imul(a ^ t.charCodeAt(i), 16777619); return (a >>> 0).toString(36); };
   let sheet = null;
-  const presetSheet = () => (sheet ||= fetch("previews/presets.json").then((r) => (r.ok ? r.json() : null)).then(async (m) => {
+  const presetSheet = () => (sheet ||= fetch("previews/presets.json", { priority: "low" }).then((r) => (r.ok ? r.json() : null)).then(async (m) => {
     if (!m) return null;
     const img = new Image(); img.src = "previews/presets.webp" + (m.v ? "?v=" + m.v : ""); await img.decode();
     return { m, img };
@@ -3126,6 +3126,14 @@
     c.getContext("2d").drawImage(s.img, (it[0] % cols) * w, Math.floor(it[0] / cols) * h, w, h, 0, 0, w, h);
     swapIn(slot, c); return true;
   }
+  // A preview not drawn yet shows a soft wash of its own colors instead of an empty well.
+  const phOf = (st) => `linear-gradient(135deg, ${st.source === "contours" ? `${st.bg} 30%, color-mix(in oklab, ${st.bg} 70%, ${st.line})` : st.grad.colors.join(", ")})`;
+  // Shipped preset pictures go in as soon as the sheet arrives, without waiting for the Studio's first
+  // render, the entrance or the preview queue.
+  Promise.resolve().then(() => {
+    for (const pc of presetCards) try { slotOf(pc.el).style.setProperty("--ph", phOf(resolveLook(pc.look))); } catch (e) {}
+    return presetSheet();
+  }).then(() => Promise.all(presetCards.map(async (pc) => { if (!pc.done && (await sheetThumb(slotOf(pc.el), pc))) pc.done = true; }))).catch(() => {});
   function keepThumb(name, node) {
     const put = (c, body, type) => c.put(thumbDir() + encodeURIComponent(name), new Response(body, { headers: { "content-type": type } })).catch(() => {});
     thumbCache.then((c) => {
@@ -3167,6 +3175,7 @@
   }
   function buildPreviews() {
     if (drag) return;
+    try { document.querySelector('[data-page="studio"]').style.setProperty("--ph", phOf(S)); } catch (e) {}
     const jobs = [];
     // Slot tile thumbnails first: they're always on screen.
     const tileJob = (key, st) => jobs.push(async () => { const el = $("slotList").querySelector(`[data-th="${key}"]`); if (!el) return; await thumb(el, st, 64); });
