@@ -99,16 +99,29 @@
   if (document.body) start(); else document.addEventListener("DOMContentLoaded", start);
 })(window);
 
-// The language switch in Settings saves the choice and reloads, so every part starts in that language.
+// The language switch in Settings shows the language in use, saves a new choice and reloads, so every
+// part starts in that language. Three quick taps on the current flag swap it for its emoji, and back.
 document.addEventListener("DOMContentLoaded", () => {
   const seg = document.getElementById("lang");
   if (!seg) return;
-  const cur = I18N.pref === "ru" || I18N.pref === "en" ? I18N.pref : "auto";
-  for (const b of seg.querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === cur);
+  for (const b of seg.querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === I18N.lang);
+  let taps = [];
   seg.addEventListener("click", (e) => {
     const b = e.target.closest("button[data-v]");
-    if (!b || b.dataset.v === cur) return;
-    try { localStorage.setItem("isoline.lang", b.dataset.v); } catch (err) {}
-    location.reload();
+    if (!b) return;
+    if (b.dataset.v !== I18N.lang) {
+      try { localStorage.setItem("isoline.lang", b.dataset.v); } catch (err) {}
+      location.reload();
+      return;
+    }
+    const now = performance.now();
+    taps = taps.filter((t) => now - t < 700).concat(now);
+    if (taps.length < 3) return;
+    taps = [];
+    const egg = b.querySelector(".egg");
+    b.classList.toggle("egged", !egg);
+    if (egg) { egg.remove(); return; }
+    const s = document.createElement("span"); s.className = "egg"; s.textContent = b.dataset.egg; s.setAttribute("aria-hidden", "true");
+    b.appendChild(s);
   });
 });

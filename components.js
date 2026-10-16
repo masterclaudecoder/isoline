@@ -349,7 +349,7 @@
       </div>
       ${FOOT}`],
     app: ["App", `<div class="k-app">
-      <aside class="k-side">${LOGO}${[["home", "Home"], ["file", "Documents", "24"], ["check", "Needs sign-off", "3"], ["users", "People"], ["gear", "Settings", "", 1]].map(([icn, t, n, on]) => `<span class="${on ? "on" : ""}">${ki(icn)}${t}${n ? `<em>${n}</em>` : ""}</span>`).join("")}</aside>
+      <aside class="k-side">${LOGO}${[["home", "Home"], ["file", "Documents", "24"], ["check", "Needs sign-off", "3"], ["users", "People"], ["gear", "Settings", "", 1]].map(([icn, t, n, on]) => `<span class="${on ? "on" : ""}" title="${t}">${ki(icn)}<span class="k-sl">${t}</span>${n ? `<em>${n}</em>` : ""}</span>`).join("")}</aside>
       <main class="k-main">
         <h1 class="k-h2">Settings</h1>
         <div class="k-tabs k-tabs-line"><span class="on">Workspace</span><span>People</span><span>Billing</span></div>
@@ -366,6 +366,7 @@
         <div class="k-cmp-row k-cmp-head"><span></span>${[["Free", "$0", "For trying it on one draft"], ["Team", "$24", "For a team that reviews every week", 1], ["Business", "$64", "For teams that need controls"]].map(([n, p, w, on]) => `<div class="${on ? "k-pick" : ""}"><b class="k-h3">${n}</b><span class="k-amount" data-y="${p}" data-m="${{ $0: "$0", $24: "$29", $64: "$77" }[p]}">${p}<small>a month</small></span><span class="k-small">${w}</span><button class="k-btn${on ? "" : " k-sec"}">${on ? "Start a 14-day trial" : n === "Free" ? "Start free" : "Contact sales"}</button></div>`).join("")}</div>
         ${[["Editors", "3", "Unlimited", "Unlimited"], ["Documents", "10", "Unlimited", "Unlimited"], ["Sign-off requests", "", "5 a month", "Unlimited"], ["Version history", "7 days", "1 year", "Forever"], ["Single sign-on", "", "", "yes"], ["Audit history", "", "", "yes"]].map(([f, ...v]) => `<div class="k-cmp-row"><span>${f}</span>${v.map((x, n) => `<span class="${n === 1 ? "k-pick" : ""}">${x === "yes" ? ki("check") : x || `<i class="k-none"></i>`}</span>`).join("")}</div>`).join("")}
       </div></div>
+      <div class="k-plans">${[["Free", "$0", "For trying it on one draft", 0, ["3 editors", "10 documents", "7 days of history"]], ["Team", "$24", "For a team that reviews every week", 1, ["Unlimited editors and documents", "5 sign-off requests a month", "1 year of history"]], ["Business", "$64", "For teams that need controls", 0, ["Everything in Team", "Unlimited sign-off requests", "Single sign-on and audit history"]]].map(([n, p, w, on, f]) => `<div class="k-card k-plan${on ? " k-on" : ""}"><b class="k-h3">${n}</b><span class="k-amount" data-y="${p}" data-m="${{ $0: "$0", $24: "$29", $64: "$77" }[p]}">${p}<small>a month</small></span><span class="k-small">${w}</span><ul>${f.map((x) => `<li>${ki("check")}${x}</li>`).join("")}</ul><button class="k-btn${on ? "" : " k-sec"}">${on ? "Start a 14-day trial" : n === "Free" ? "Start free" : "Contact sales"}</button></div>`).join("")}</div>
       <section class="k-faq">${[["Do commenters need a seat?", "No. Anyone you invite to comment or sign off is free on every plan."], ["What happens when a trial ends?", "You move to Free and keep everything. Drafts over the limit become read-only."], ["Can I pay by invoice?", "Yes, on yearly Business plans."]].map(([q, a], i) => `<div class="k-qa${i === 0 ? " open" : ""}"><b>${q}${ki("chev")}</b><p class="k-p">${a}</p></div>`).join("")}</section>
       ${FOOT}`],
   };
@@ -427,13 +428,14 @@
   loadIndex("").catch(() => loadIndex(SITE)).then((m) => { local = m; if (Object.keys(local).length && !lib.hidden && $("cpResults").children.length) renderLibs(); }).catch(() => {});
   const favicon = (l, sz = 64) => `https://www.google.com/s2/favicons?domain=${enc(hostOf(l.url))}&sz=${sz}`;
   const tintOf = (name) => { let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
-  const fwText = (fw) => { const n = fw.map((f) => (f === ANY ? "Any framework" : f)); return n.length > 3 ? `${n.slice(0, 3).join(", ")} and ${n.length - 3} more` : n.join(", "); };
+  const tr = (x) => root.I18N?.t(x) ?? x;
+  const fwText = (fw) => { const n = fw.map((f) => (f === ANY ? tr("Any framework") : f)); return n.length > 3 ? `${n.slice(0, 3).join(", ")} ${tr("and")} ${tr(`${n.length - 3} more`)}` : n.join(", "); };
   function libCard(l) {
     const h = tintOf(l.name);
     return `<a class="lib${l.pick ? " pick" : ""}" href="${l.url}" target="_blank" rel="noopener" data-key="${esc(l.name)}" style="--h:${h}">
       <span class="lib-pane"><span class="lib-fallback"><img src="${favicon(l)}" alt="" loading="lazy" referrerpolicy="no-referrer"><b>${esc(l.name)}</b></span><img class="lib-shot" src="${shots(l)[0]}" data-step="0" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span>
       <span class="lib-body">
-        <span class="lib-top"><b class="lib-name" title="${esc(l.name)}">${esc(l.name)}</b>${l.pick ? `<em class="lib-pick">Pick</em>` : ""}</span>
+        <span class="lib-top"><b class="lib-name" title="${esc(l.name)}">${esc(l.name)}</b>${l.pick ? `<em class="lib-pick">${root.I18N?.t("Pick") ?? "Pick"}</em>` : ""}</span>
         <span class="lib-desc">${esc(l.desc)}</span>
         <span class="lib-fw">${esc(fwText(l.fw))}</span>
         <span class="lib-host"><img src="${favicon(l, 32)}" alt="" loading="lazy" referrerpolicy="no-referrer"><span>${hostOf(l.url)}</span>${ic("out")}</span>
@@ -508,11 +510,11 @@
   const ELEV_FACT = { none: "No shadow", hairline: "1px outline", soft: "24px blur, faint", crisp: "6px blur, close", lifted: "40px blur, deep" };
   const cap = (t) => t[0].toUpperCase() + t.slice(1);
   const slotInfo = {
-    type: () => { const f = fonts(), p = PAIRS[K.pair]; return [!K.head && !K.body && p ? p[0] : "Custom", f.head === f.body ? f.head : `${f.head} and ${f.body}`]; },
+    type: () => { const f = fonts(), p = PAIRS[K.pair]; return [!K.head && !K.body && p ? p[0] : "Custom", f.head === f.body ? f.head : `${f.head} ${tr("and")} ${f.body}`]; },
     color: () => { const r = roles(); return [K.follow ? "Isoline" : C.name(r.accent), `${isDark() ? "Dark" : "Light"}, ${r.contrast.toFixed(1)}:1 text`]; },
     artwork: () => (K.art === "studio" ? ["Studio design", "On the home and article pages"] : ["None", "Plain backgrounds"]),
     spacing: () => [{ 0.8: "Compact", 1: "Regular", 1.25: "Roomy" }[K.density] || "Custom", `${K.unit}px unit`],
-    radius: () => [K.radius === 0 ? "Square" : K.radius <= 6 ? "Subtle" : K.radius <= 14 ? "Rounded" : "Soft", `${K.radius}px${K.pill ? ", pill buttons" : ""}`],
+    radius: () => [K.radius === 0 ? "Sharp" : K.radius <= 6 ? "Subtle" : K.radius <= 14 ? "Rounded" : "Soft", `${K.radius}px${K.pill ? ", pill buttons" : ""}`],
     elevation: () => [cap(K.elevation), ELEV_FACT[K.elevation]],
     motion: () => [EASE_NAME[K.ease], `${K.dur}ms, ${K.enter === "none" ? "no entrance" : MOVE_NAME[K.enter].toLowerCase() + " in"}`],
     rules: () => { const on = K.rules.filter((r) => r.on && r.t.trim()).length, off = K.rules.length - on; return [on ? `${on} ${on === 1 ? "rule" : "rules"}` : "No rules", off ? `${off} switched off` : K.rules.length ? "All on" : "Add your own"]; },
@@ -686,7 +688,7 @@
       const g = document.createElement("div"); g.className = "cp-pairs";
       const custom0 = K.head || K.body;
       const shown = PAIRS.map((p, k) => [p, k]).filter(([p]) => pairOK(p));
-      g.innerHTML = shown.map(([[n, h, b, w], k], i) => { loadFont(h); loadFont(b); return `<button class="pair${K.pair === k && !custom0 ? " on" : ""}${i >= 6 ? " extra" : ""}" data-k="${k}" title="${h === b ? h : `${h} and ${b}`}"><span class="pair-aa" style="font-family:'${h}';font-weight:${w}">Aa</span><span class="pair-t"><b translate="no">${n}</b><small style="font-family:'${b}'">${h === b ? h : `${h}, ${b}`}</small></span></button>`; }).join("");
+      g.innerHTML = shown.map(([[n, h, b, w], k], i) => { loadFont(h); loadFont(b); return `<button class="pair${K.pair === k && !custom0 ? " on" : ""}${i >= 6 ? " extra" : ""}" data-k="${k}" title="${h === b ? h : `${h} ${tr("and")} ${b}`}"><span class="pair-aa" style="font-family:'${h}';font-weight:${w}">Aa</span><span class="pair-t"><b translate="no">${n}</b><small style="font-family:'${b}'">${h === b ? h : `${h}, ${b}`}</small></span></button>`; }).join("");
       g.onclick = (e) => { const b = e.target.closest("[data-k]"); if (!b) return; K.pair = +b.dataset.k; K.head = K.body = ""; changed(); };
       o.appendChild(g);
       if (shown.length > 6) {

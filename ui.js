@@ -8,28 +8,36 @@
 
   // ---------- tooltips ----------
   // Any element with a title (or data-tip) gets a custom tooltip after a short delay; moving between
-  // targets while one is showing switches instantly. data-tip-pos="right" places it to the side.
+  // targets while one is showing switches instantly. It sits centered over its trigger (or over the info
+  // icon inside it) with a nib pointing at it. data-tip-pos picks the side (top, bottom, left, right) and
+  // data-tip-align the alignment along it (center, start, end); a side with no room flips to the other.
   const tip = document.createElement("div");
   tip.className = "tip"; tip.setAttribute("role", "tooltip"); tip.hidden = true;
-  let target = null, timer = 0, lastHide = 0;
+  let target = null, timer = 0, lastHide = 0, touchTip = false;
   const textOf = (el) => {
     const t = el.getAttribute("title");
     if (t) { el.dataset.tip = t; el.removeAttribute("title"); if (!el.hasAttribute("aria-label")) el.setAttribute("aria-label", t); }
     return el.dataset.tip || "";
   };
+  const SIDES = { top: "up", below: "down", bottom: "down", left: "left", right: "right" };
+  const FLIP = { up: "down", down: "up", left: "right", right: "left" };
   function place(el) {
-    const r = el.getBoundingClientRect(), side = el.dataset.tipPos || "auto";
+    const r = (el.querySelector(":scope > .info-i") || el).getBoundingClientRect();
+    const align = el.dataset.tipAlign || "center";
     tip.style.left = tip.style.top = "0px";
-    const w = tip.offsetWidth, h = tip.offsetHeight, m = 8, W = innerWidth, H = innerHeight;
-    let x, y, dir;
-    if (side === "right" && r.right + m + w < W - 8) { x = r.right + m; y = r.top + r.height / 2 - h / 2; dir = "right"; }
-    else {
-      x = r.left + r.width / 2 - w / 2;
-      const up = side !== "below" && r.top - m - h > 8;
-      y = up ? r.top - m - h : r.bottom + m; dir = up ? "up" : "down";
-    }
-    tip.style.left = Math.round(Math.max(8, Math.min(W - w - 8, x))) + "px";
-    tip.style.top = Math.round(Math.max(8, Math.min(H - h - 8, y))) + "px";
+    const w = tip.offsetWidth, h = tip.offsetHeight, m = 10, e = 8, W = innerWidth, H = innerHeight;
+    const fits = { up: r.top - m - h > e, down: r.bottom + m + h < H - e, left: r.left - m - w > e, right: r.right + m + w < W - e };
+    let dir = SIDES[el.dataset.tipPos] || "up";
+    if (!fits[dir]) dir = fits[FLIP[dir]] ? FLIP[dir] : fits.up || !fits.down ? "up" : "down";
+    const along = (lo, size, len) => (align === "start" ? lo : align === "end" ? lo + size - len : lo + size / 2 - len / 2);
+    let x, y;
+    if (dir === "up" || dir === "down") { x = along(r.left, r.width, w); y = dir === "up" ? r.top - m - h : r.bottom + m; }
+    else { y = along(r.top, r.height, h); x = dir === "left" ? r.left - m - w : r.right + m; }
+    x = Math.round(Math.max(e, Math.min(W - w - e, x))); y = Math.round(Math.max(e, Math.min(H - h - e, y)));
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+    // The nib points at the middle of the trigger, wherever the edge of the screen pushed the bubble.
+    const r8 = tip.classList.contains("rich") ? 12 : 9;
+    tip.style.setProperty("--nib", Math.round(dir === "up" || dir === "down" ? Math.max(r8, Math.min(w - r8, r.left + r.width / 2 - x)) : Math.max(r8, Math.min(h - r8, r.top + r.height / 2 - y))) + "px");
     tip.dataset.dir = dir;
   }
   // Rich tooltips: data-tip-media names a recorded clip in window.TIP_MEDIA, shown above the text;
@@ -51,7 +59,7 @@
     if (!tip.isConnected) document.body.appendChild(tip);
     tip.hidden = false; place(el);
   }
-  function hide() { clearTimeout(timer); if (!tip.hidden) lastHide = performance.now(); tip.hidden = true; target = null; }
+  function hide() { clearTimeout(timer); if (!tip.hidden) lastHide = performance.now(); tip.hidden = true; target = null; touchTip = false; }
   const tipTarget = (n) => n?.closest?.("[title], [data-tip]");
   document.addEventListener("pointerover", (e) => {
     if (e.pointerType === "touch" || e.buttons) return;
@@ -65,9 +73,42 @@
     timer = setTimeout(() => { if (el.isConnected && el.matches(":hover")) show(el); }, warm ? 0 : 480);
   });
   document.addEventListener("focusin", (e) => { const el = tipTarget(e.target); if (el && e.target.matches(":focus-visible")) { clearTimeout(timer); show(el); } });
-  document.addEventListener("focusout", hide);
-  for (const ev of ["pointerdown", "wheel", "keydown"]) document.addEventListener(ev, hide, { passive: true, capture: true });
+  document.addEventListener("focusout", (e) => { if (!touchTip) hide(); });
+  for (const ev of ["wheel", "keydown"]) document.addEventListener(ev, hide, { passive: true, capture: true });
+  addEventListener("scroll", () => { if (!tip.hidden) hide(); }, { passive: true, capture: true });
+  // Touch: a tap on an info icon, a control's label, or a tip that isn't also a control opens it until the next tap.
+  // Controls (buttons, switches, links) show theirs on a long press, and that press doesn't act.
+  const ACT = "button, a[href], input, select, textarea, label, summary, [role=button], [role=tab], [contenteditable]";
+  let press = 0, pressed = false, px = 0, py = 0, lastType = "";
+  const tapOnly = (el, t) => t.closest(".info-i") || el.matches(".label") || !el.closest(ACT);
+  document.addEventListener("pointerdown", (e) => {
+    clearTimeout(press); pressed = false; lastType = e.pointerType;
+    if (e.pointerType !== "touch") { touchTip = false; hide(); return; }
+    const el = tipTarget(e.target);
+    if (el !== target) hide();
+    if (!el || tapOnly(el, e.target)) return;
+    px = e.clientX; py = e.clientY;
+    press = setTimeout(() => { pressed = true; touchTip = true; textOf(el); show(el); }, 450);
+  }, { passive: true, capture: true });
+  document.addEventListener("pointermove", (e) => { if (press && Math.hypot(e.clientX - px, e.clientY - py) > 8) clearTimeout(press); }, { passive: true, capture: true });
+  for (const ev of ["pointerup", "pointercancel"]) document.addEventListener(ev, () => clearTimeout(press), { passive: true, capture: true });
+  document.addEventListener("contextmenu", (e) => { if (pressed) e.preventDefault(); }, true);
+  document.addEventListener("click", (e) => {
+    if (pressed) { pressed = false; e.preventDefault(); e.stopPropagation(); return; }
+    if ((e.pointerType || lastType) !== "touch") return;
+    const el = tipTarget(e.target);
+    if (!el || !tapOnly(el, e.target)) return;
+    if (el.closest(ACT)) { e.preventDefault(); e.stopPropagation(); }
+    if (el === target) { hide(); return; }
+    touchTip = true; textOf(el); show(el);
+  }, true);
   addEventListener("blur", hide);
+
+  // Dice buttons tumble when pressed, so they read as a roll.
+  document.addEventListener("click", (e) => {
+    const d = e.target.closest?.("button")?.querySelector(':scope > svg.ic:has(> use[href="#i-dice"])');
+    if (d && !reduce.matches) d.animate([{ rotate: "0deg", scale: 1 }, { rotate: "-20deg", scale: 0.82, offset: 0.25 }, { rotate: "360deg", scale: 1 }], { duration: 520, easing: "cubic-bezier(.3,1.25,.5,1)" });
+  });
 
   // ---------- segmented controls ----------
   // A single indicator slides to the selected button instead of the highlight jumping between them.

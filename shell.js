@@ -115,7 +115,14 @@
     // full one is drawn. A roll covers the card with its still copies anyway, so it skips this.
     if (!remixing) {
       const t = await root.Studio?.snapshot(Math.max(24, cw >> 4), Math.max(15, ch >> 4))?.catch(() => null);
-      if (t && seq === homeSeq) { t.className = "lqip"; host.replaceChildren(t); }
+      if (t && seq === homeSeq) {
+        // Blurred as it's drawn: a CSS blur on a canvas showed as a black box on some phones.
+        const c = document.createElement("canvas"), W = Math.min(cw, 240), H = Math.round(W * ch / cw), x = c.getContext("2d"), b = W / 24;
+        c.width = W; c.height = H; x.imageSmoothingQuality = "high";
+        if ("filter" in x) x.filter = `blur(${b}px)`;
+        x.drawImage(t, -b * 2, -b * 2, W + b * 4, H + b * 4);
+        c.className = "lqip"; host.replaceChildren(c);
+      }
     }
     // The first visit draws it while the loading screen is up, so the entrance plays on an idle page;
     // later changes wait for the entrance to finish.
@@ -124,7 +131,8 @@
     const c = await root.Studio?.snapshot(cw, ch);
     if (!c || seq !== homeSeq) return;
     host.innerHTML = ""; host.appendChild(c); homeDone();
-    if (fresh && !reduce.matches) c.animate(root.Lite?.on ? [{ opacity: 0, transform: "scale(1.03)" }, { opacity: 1, transform: "none" }] : [{ opacity: 0, transform: "scale(1.03)", filter: "blur(8px)" }, { opacity: 1, transform: "none", filter: "none" }], { duration: 520, easing: "cubic-bezier(.22,1,.36,1)" });
+    // No blur on phones: a CSS blur over a canvas can draw as a black box there.
+    if (fresh && !reduce.matches) c.animate(root.Lite?.on || matchMedia("(pointer: coarse)").matches ? [{ opacity: 0, transform: "scale(1.03)" }, { opacity: 1, transform: "none" }] : [{ opacity: 0, transform: "scale(1.03)", filter: "blur(8px)" }, { opacity: 1, transform: "none", filter: "none" }], { duration: 520, easing: "cubic-bezier(.22,1,.36,1)" });
     keepSnap(c, key);
   }
   // The picture is kept a moment later and encoded off the main thread (toDataURL took most of a second
@@ -152,7 +160,18 @@
   async function remixAll() {
     const mark = $("brand").querySelector("svg");
     // The safety click tips the logo to the right; the rolls after it tip it left.
-    if (!reduce.matches) mark?.animate([{ transform: "rotate(0) scale(1)" }, { transform: `rotate(${brandClicks ? -14 : 14}deg) scale(.9)`, offset: 0.35 }, { transform: "rotate(0) scale(1)" }], { duration: 420, easing: "cubic-bezier(.3,1.4,.5,1)" });
+    // Every click also sends two contour rings out from the mark, so it reads as a press even when it only nudges.
+    if (!reduce.matches && mark) {
+      mark.animate([{ transform: "rotate(0) scale(1)" }, { transform: `rotate(${brandClicks ? -18 : 18}deg) scale(.82)`, offset: 0.3 }, { transform: "rotate(0) scale(1)" }], { duration: 520, easing: "cubic-bezier(.3,1.5,.5,1)" });
+      const b = $("brand"), br = b.getBoundingClientRect(), mr = mark.getBoundingClientRect();
+      for (let i = 0; i < 2; i++) {
+        const r = document.createElement("i");
+        r.className = "brand-ripple"; r.setAttribute("aria-hidden", "true");
+        r.style.left = mr.left - br.left + mr.width / 2 + "px"; r.style.top = mr.top - br.top + mr.height / 2 + "px";
+        b.appendChild(r);
+        r.animate([{ scale: 0.6, opacity: 0.6 }, { scale: 2.2 + i * 0.6, opacity: 0 }], { duration: 640 + i * 140, delay: i * 90, easing: "cubic-bezier(.2,.7,.3,1)", fill: "both" }).onfinish = () => r.remove();
+      }
+    }
     if (++brandClicks < 2 || remixing) return;
     // Every roll is kept, so undo brings back a look rolled past by accident and redo returns to it.
     if (homeAt < 0) { homeHist = [homeLook()]; homeAt = 0; }

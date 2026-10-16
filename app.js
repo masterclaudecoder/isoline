@@ -626,7 +626,7 @@
     return ["", ""];
   }
   // An effect tile's subtitle is its first setting and value, like "Rib width 44px".
-  function fxFact(id) { const p = FXI[id].p.find((q) => q.k); if (!p) return FXI[id].cat; const v = S.fx[id][p.k]; return `${p.label} ${p.fmt ? p.fmt(v) : v}`; }
+  function fxFact(id) { const p = FXI[id].p.find((q) => q.k); if (!p) return FXI[id].cat; const v = S.fx[id][p.k]; return `${window.I18N?.t(p.label) ?? p.label} ${p.fmt ? p.fmt(v) : v}`; }
   const slotColors = () => (gen() === "contours" ? (S.gradient || S.mode === "layers" || S.mode === "shaded" || S.mids.length ? [S.bg, S.line, ...S.mids, S.line2] : [S.bg, S.line]) : S.grad.colors);
   // The build column is built once and patched in place, so selection, text and colors can transition.
   let slotKey = "";
@@ -709,7 +709,7 @@
     for (const [k, slot, n] of [["fx", fxSlot, S.fxOrder.length], ["obj", objSlot, S.objects.length]]) {
       const deck = n >= 2;
       if (!deck) stackOpen[k] = false;
-      const names = k === "fx" ? S.fxOrder.map((id) => FXI[id].name) : S.objects.map(objName);
+      const names = (k === "fx" ? S.fxOrder.map((id) => FXI[id].name) : S.objects.map(objName)).map((x) => window.I18N?.t(x) ?? x);
       slot.querySelector(".stack-sum").innerHTML = `<b>${names.join(", ")}</b><small>${names.length} ${k === "fx" ? "effects" : "objects"}</small>`;
       slot.style.setProperty("--n", n);
       slot.classList.toggle("fx-stack", deck); slot.classList.toggle("folded", deck && !stackOpen[k]);
@@ -1070,7 +1070,7 @@
       ["Opposite", mk([[0.24, C * 0.7, H], [0.5, C, H], [0.66, C, H + 180], [0.84, C * 0.6, H + 180], [0.95, C * 0.15, H + 90]])],
       ["Triad", mk([[0.22, C * 0.4, H], [0.55, C, H], [0.68, C, H + 120], [0.76, C, H + 240], [0.96, C * 0.15, H]])],
       ["Muted", mk([[0.22, C * 0.25, H], [0.42, C * 0.35, H + 10], [0.62, C * 0.4, H - 10], [0.8, C * 0.3, H], [0.94, C * 0.1, H]])],
-    ].map(([name, colors]) => ({ name, colors, group: "Suggested" }));
+    ].map(([name, colors]) => ({ name: window.I18N?.t(name) ?? name, colors, group: "Suggested" }));
     const mine = cols.map(toLab), dist = (p) => p.colors.map(toLab).reduce((a, x) => a + Math.min(...mine.map((y) => Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]))), 0) / p.colors.length;
     for (const p of PALS.filter((p) => !palMatches(p)).sort((a, b) => dist(a) - dist(b)).slice(0, 1)) out.push({ ...p, group: "Suggested" });
     return out;
@@ -2197,20 +2197,23 @@
   // ---------- theme + accent ----------
   const ACCENTS = ["#e8572a", "#3557d6", "#6d4ce0", "#2f7d5b", "#d6457a", "#c08a2b"];
   P.theme ||= "system"; P.accent ||= ACCENTS[0];
+  const darkMQ = matchMedia("(prefers-color-scheme: dark)");
   function applyTheme() {
     const r = document.documentElement;
     if (P.theme === "system") delete r.dataset.theme; else r.dataset.theme = P.theme;
     r.style.setProperty("--accent", P.accent);
     r.style.setProperty("--on-accent", window.Color.contrast(P.accent, "#ffffff") < 2.6 ? "#1c1c1e" : "#ffffff");
     window.TopoBrand?.favicon(P.accent);
-    for (const b of $("theme").children) b.classList.toggle("on", b.dataset.v === P.theme);
+    // No "Auto" button: the switch shows the theme in use, which follows the system until one is picked.
+    const shown = P.theme === "system" ? (darkMQ.matches ? "dark" : "light") : P.theme;
+    for (const b of $("theme").children) b.classList.toggle("on", b.dataset.v === shown);
     for (const b of $("accents").querySelectorAll("[data-c]")) b.classList.toggle("on", b.dataset.c === P.accent);
     $("accents").querySelector(".custom").classList.toggle("on", !ACCENTS.includes(P.accent));
     $("accents").querySelector(".custom").style.setProperty("--c", P.accent);
     if (painted) drawOverlay();
     window.dispatchEvent(new Event("theme-change"));
   }
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => window.dispatchEvent(new Event("theme-change")));
+  darkMQ.addEventListener("change", () => { if (P.theme === "system") applyTheme(); else window.dispatchEvent(new Event("theme-change")); });
   $("accents").innerHTML = ACCENTS.map((c) => `<button class="sw" data-c="${c}" style="background:${c}" aria-label="Accent ${c}"></button>`).join("") + `<button class="sw custom" aria-label="Custom accent"></button>`;
   $("accents").onclick = (e) => {
     const b = e.target.closest("[data-c]");
@@ -2218,7 +2221,7 @@
     const c = e.target.closest(".custom");
     if (c) picker.open(c, P.accent, (v) => { P.accent = v; applyTheme(); }, () => savePrefs(), [["Palette", inPlay()]]);
   };
-  $("theme").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P.theme = b.dataset.v; savePrefs(); window.UI ? UI.swap(applyTheme) : applyTheme(); };
+  $("theme").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b || b.classList.contains("on")) return; P.theme = b.dataset.v; savePrefs(); window.UI ? UI.swap(applyTheme) : applyTheme(); };
 
   // ---------- settings ----------
   $("safe").onchange = (e) => { P.safe = e.target.checked; savePrefs(); toast(P.safe ? "Safe values on" : "Safe values off. Randomize uses full ranges"); };
@@ -2279,7 +2282,7 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.22", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "2.0", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
@@ -3047,6 +3050,15 @@
   // lq draws a rough stand-in instead (a sixth of the size, coarse lines), shown blurred until the real one.
   async function thumb(slot, st, w = 200, ar = 0.625, lq = false) {
     const h = Math.round(w * ar), s = { ...st, h: Math.round(st.w * ar) };
+    // A card whose picture wouldn't change (adding an effect leaves every shape card as it was) keeps it,
+    // with no stand-in and no redraw.
+    const key = JSON.stringify(s.fxOrder?.length ? s : { ...s, fx: null, motion: null }) + w + ":" + TH_DPR, have = slot.lastElementChild;
+    if (slot._thk === key && have && !have.classList.contains("lqip")) return have;
+    const n = await drawThumb(slot, s, w, h, lq);
+    if (!lq) slot._thk = n ? key : "";
+    return n;
+  }
+  async function drawThumb(slot, s, w, h, lq) {
     if (!isRaster(s) || !TFX) {
       if (s.source !== "contours") { slot.innerHTML = ""; return null; }
       const z = 2, W = w * z, H = h * z;
@@ -3056,9 +3068,18 @@
     }
     const k = lq ? 1 / 6 : TH_DPR, W = Math.max(16, Math.round(w * k)), H = Math.max(10, Math.round(h * k));
     TFX.render(await fxJob(TFX, s, W, H, thumbRaster, 2.5));
-    const n = putCanvas(slot, thumbCanvas, W, H);
-    if (lq) n.classList.add("lqip");
-    return n;
+    if (lq) { const n = soften(thumbCanvas, W, H, w, h); n.classList.add("lqip"); return swapIn(slot, n); }
+    return putCanvas(slot, thumbCanvas, W, H);
+  }
+  // A rough stand-in, blurred as it's drawn. A CSS blur on a canvas showed as a black box on some phones.
+  function soften(src, sw, sh, w, h) {
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    const x = c.getContext("2d"), b = Math.max(2, w / 22);
+    x.imageSmoothingQuality = "high";
+    if ("filter" in x) x.filter = `blur(${b}px)`;
+    // Drawn a little past the edges, so the blur doesn't pull in transparent (dark) borders.
+    x.drawImage(src, 0, 0, sw, sh, -b * 2, -b * 2, w + b * 4, h + b * 4);
+    return c;
   }
   // How long a full thumbnail takes here, on average. Where it's slow, every card first gets a rough,
   // blurred stand-in of its new picture, so nothing shows a stale or empty preview while the queue works.
@@ -3671,6 +3692,14 @@
       const later = document.documentElement.classList.contains("vt") ? 680 : 0;
       // Motion that was paused on the way out picks up again once the page has arrived.
       if (resumeOnShow) { resumeOnShow = false; showT = setTimeout(() => { if (!playing) startPlay(); }, later); return; }
+      // The design changed while the page was away (a roll on the home page, say) and the canvas still holds
+      // the old one: that frame is hidden before the page appears and the new one is drawn at once, so the
+      // wrong picture never shows.
+      if (JSON.stringify(painted) !== JSON.stringify(S)) {
+        art.classList.add("stale");
+        render().then(() => requestAnimationFrame(() => art.classList.remove("stale")));
+        return;
+      }
       showT = setTimeout(() => crossfade(render()), later);
     },
     // Leaving the Studio: motion stops on the frame it's showing (no redraw), to resume on return.
