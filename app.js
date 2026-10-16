@@ -1109,7 +1109,7 @@
       else palEl.innerHTML = shown.map((p, i) => {
         const f = fitPal(p);
         const sw = contours ? `<span class="pal-sw" style="background:${f.bg}">${f.inks.map((c) => `<i style="background:${c}"></i>`).join("")}</span>` : `<span class="pal-bar" style="background:linear-gradient(90deg,${f.inks.join(",")})"></span>`;
-        return `<button class="pal" data-i="${i}">${sw}<span>${p.name}</span></button>`;
+        return `<button class="pal" data-i="${i}">${sw}<span translate="no">${p.name}</span></button>`;
       }).join("");
       if (dir) { palEl.classList.remove("from-l", "from-r"); void palEl.offsetWidth; palEl.classList.add(dir > 0 ? "from-r" : "from-l"); }
     }
@@ -2357,7 +2357,7 @@
     if (!cur && P.designId) { P.designId = null; savePrefs(); }
     const dirty = cur && !sameState(latest(cur).state, S);
     if (document.activeElement !== $("dzName")) $("dzName").value = cur?.name || "";
-    $("dzState").textContent = !cur ? "Not saved yet" : dirty ? "Unsaved changes" : "Saved";
+    $("dzState").textContent = !cur ? "Not saved yet" : dirty ? "Unsaved changes" : "All changes saved";
     $("dzState").classList.toggle("dirty", !!dirty);
     $("dzVersion").hidden = !cur; $("dzVersion").disabled = !dirty; if (cur) $("dzVersionOf").textContent = cur.name;
     $("dzExportAll").disabled = !lib.length;

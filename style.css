@@ -157,7 +157,7 @@ textarea::-webkit-scrollbar-thumb { border-width: 3px; }
 h3.sub { font-size: 13px; font-weight: 600; color: var(--ink-2); margin: 22px 0 10px; }
 h3.sub.first { margin-top: 4px; }
 h3.sub.inline { margin: 0; }
-.sub-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 22px 0 10px; }
+.sub-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; margin: 22px 0 10px; }
 .sub-head h3.sub { margin: 0; }
 .sub-note { font-size: 12px; color: var(--muted); }
 .hint { margin: 10px 0 14px; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
@@ -177,9 +177,9 @@ h3.sub.inline { margin: 0; }
 .tog.on { background: var(--panel); color: var(--ink); box-shadow: var(--raised); }
 .tog.on .tick { background: var(--accent); box-shadow: none; }
 .tog.on .tick .ic { opacity: 1; transform: none; }
-.seg.filter { display: flex; margin-bottom: 14px; }
-.seg.filter button { padding: 0 6px; flex: 1 1 auto; font-size: 12px; }
-.lang-ru .seg.filter button { padding: 0 2px; font-size: 11.5px; letter-spacing: -.01em; }
+/* Six filters sit in two rows of three, so they never squeeze into one line in any language. */
+.seg.filter { grid-auto-flow: row; grid-template-columns: repeat(3, 1fr); margin-bottom: 14px; }
+.seg.filter button { padding: 0 6px; font-size: 12px; }
 
 .cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .cards.three { grid-template-columns: repeat(3, 1fr); }
@@ -195,6 +195,7 @@ h3.sub.inline { margin: 0; }
 @keyframes fade-in { from { opacity: 0; } }
 .card-label { display: block; padding: 6px 4px 0; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-sub { display: block; padding: 0 4px; font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cards.three .card-sub { font-size: 11px; padding: 0 3px; }
 .card.on { box-shadow: 0 0 0 1.5px var(--accent); }
 .card.on .card-label { color: var(--accent); }
 #presetGrid.filtered .card-sub { display: none; }
@@ -458,7 +459,9 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
 
 /* ---------- responsive ---------- */
 @media (max-width: 1280px) {
-  .app { grid-template-columns: 240px 310px minmax(0, 1fr); }
+  /* The canvas gives up the width here, so the layer names and the options still fit. */
+  .app { grid-template-columns: 240px 330px minmax(0, 1fr); }
+  .seg.wrap5 button { font-size: 12px; }
   .top { grid-template-columns: auto 1fr auto; }
   .stage-bar kbd { display: none; }
 }
@@ -555,7 +558,7 @@ html.intro .page:not([hidden]) :is(.bento > .tool:nth-child(3), .app > .stage, .
 /* ---------- motion ---------- */
 .seg.wrap4 { grid-auto-flow: row; grid-template-columns: repeat(4, 1fr); margin-bottom: 10px; }
 .play-btn { width: 100%; justify-content: center; margin-top: 16px; }
-.ex-grid { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 14px; }
+.ex-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px 14px; }
 .progress { height: 6px; border-radius: 99px; background: var(--well); box-shadow: var(--sunken); overflow: hidden; margin-top: 16px; }
 .progress i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width .15s linear; }
 
@@ -705,7 +708,9 @@ body:not([data-route="studio"]) .mini { display: none; }
 .ex-actions:has(#copy[hidden]) { grid-template-columns: 1fr; }
 .ex-actions:has(#exCancel:not([hidden])) { grid-template-columns: auto 1fr; }
 .next-step { margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--hair); }
-.motion-grid { margin-top: 16px; }
+/* Labels sit above their controls here, so a long label never pushes a control past the panel. */
+.motion-grid { margin-top: 16px; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.motion-grid > .label:not(:first-child) { margin-top: 8px; }
 #motionEase { margin-bottom: 10px; }
 .bezier { display: block; width: 100%; max-width: 300px; height: auto; margin: 0 auto; touch-action: none; }
 .bz-box { fill: var(--well); stroke: var(--hair); }
