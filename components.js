@@ -24,7 +24,12 @@
     ["Bold", "Syne", "Manrope", 700], ["Friendly", "Bricolage Grotesque", "Figtree", 700], ["Newsroom", "Newsreader", "Inter", 600],
     ["Geometric", "Sora", "Plus Jakarta Sans", 600], ["Wide", "Unbounded", "Onest", 600], ["Archive", "Archivo", "Archivo", 700],
     ["Literary", "Libre Caslon Text", "Libre Franklin", 700], ["Developer", "JetBrains Mono", "Inter", 700], ["Geist", "Geist", "Geist", 600],
+    ["Plex", "IBM Plex Sans", "IBM Plex Sans", 600], ["Bookish", "Literata", "Golos Text", 600], ["Garamond", "Cormorant Garamond", "Commissioner", 600],
+    ["Rounded", "Nunito", "Nunito", 800], ["Soft", "Rubik", "Rubik", 600],
   ];
+  // Fonts with Cyrillic on Google Fonts. With "Cyrillic only" on, the pairings and the font list keep to these.
+  const CYR = new Set(["Inter", "Inter Tight", "Geist", "Manrope", "Onest", "IBM Plex Sans", "Source Sans 3", "Libre Franklin", "Rubik", "Nunito", "Playfair Display", "Lora", "Merriweather", "Source Serif 4", "Literata", "EB Garamond", "Cormorant Garamond", "Unbounded", "JetBrains Mono", "Geist Mono", "IBM Plex Mono", "Fira Code", "Golos Text", "Commissioner", "Wix Madefor Text", "Geologica"]);
+  const pairOK = (p) => !K.cyr || (CYR.has(p[1]) && CYR.has(p[2]));
   const RULES = [
     "No separator glyphs between items (·, •, |, em dashes). Use spacing, layout or a comma.",
     "No ALL CAPS labels. Use sentence case for every label and heading.",
@@ -56,7 +61,7 @@
   const RULES_V = 3;
   const KEY = "isoline-kit";
   const DEF = {
-    mode: "libraries", fw: "All", cat: "All", q: "", slot: "type", view: "components", layout: "home", hero: "beside", dark: null, follow: true,
+    mode: "builder", fw: "All", cat: "All", q: "", slot: "type", view: "components", layout: "home", hero: "beside", dark: null, follow: true,
     fit: true, pw: 1440, ph: 900, tint: "tinted", src: null, art: "none", enter: "rise", exit: "fade", stagger: 50, trigger: "load",
     pair: 0, head: "", body: "", scale: 1.25, base: 16, tracking: -0.02,
     rc: null,
@@ -370,6 +375,7 @@
       const card = el.closest(".tool") || el, sc = el.querySelector(".cps");
       if (!root.UI?.reduce.matches && matchMedia("(hover: hover)").matches) {
         card.addEventListener("pointermove", (e) => {
+          if (root.Lite?.on) return;
           const r = el.getBoundingClientRect();
           sc.classList.add("track");
           sc.style.setProperty("--tx", Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1)).toFixed(3));
@@ -383,7 +389,8 @@
     el.dataset.hero = K.hero;
     for (const k of el.querySelectorAll(".kit")) { vars(k); k.classList.toggle("k-has-art", !!artURL); k.style.setProperty("--k-art", artURL ? `url("${artURL}")` : "none"); }
     vars(el.querySelector(".cps"));
-    sizeHome(el, el.clientWidth, el.clientHeight);
+    // The ResizeObserver keeps the size after this; reading it on every repaint forced a full layout.
+    if (!el.style.getPropertyValue("--cw")) sizeHome(el, el.clientWidth, el.clientHeight);
   }
   // The kit wears the app's colors until you change them, so it follows the app's theme and accent.
   root.addEventListener("theme-change", () => {
@@ -588,7 +595,7 @@
   // ---------- fonts ----------
   // A small catalog from Google Fonts, grouped by kind, so the picker can suggest rather than ask for a name.
   const CATALOG = {
-    Sans: ["Inter", "Inter Tight", "Instrument Sans", "Geist", "DM Sans", "Manrope", "Figtree", "Plus Jakarta Sans", "Onest", "IBM Plex Sans", "Source Sans 3", "Libre Franklin", "Archivo", "Work Sans", "Outfit", "Lexend", "Rubik", "Nunito", "Public Sans", "Albert Sans", "Hanken Grotesk", "Schibsted Grotesk", "Red Hat Display", "Space Grotesk", "Sora", "Bricolage Grotesque", "Epilogue", "Urbanist"],
+    Sans: ["Inter", "Inter Tight", "Instrument Sans", "Geist", "DM Sans", "Manrope", "Figtree", "Plus Jakarta Sans", "Onest", "IBM Plex Sans", "Source Sans 3", "Libre Franklin", "Archivo", "Work Sans", "Outfit", "Lexend", "Rubik", "Nunito", "Public Sans", "Albert Sans", "Hanken Grotesk", "Schibsted Grotesk", "Golos Text", "Commissioner", "Wix Madefor Text", "Geologica", "Red Hat Display", "Space Grotesk", "Sora", "Bricolage Grotesque", "Epilogue", "Urbanist"],
     Serif: ["Fraunces", "Newsreader", "Playfair Display", "DM Serif Display", "Instrument Serif", "Libre Caslon Text", "Lora", "Merriweather", "Source Serif 4", "Literata", "EB Garamond", "Cormorant Garamond", "Crimson Pro", "Young Serif", "Gloock"],
     Display: ["Syne", "Unbounded", "Bebas Neue", "Anton", "Archivo Black", "Big Shoulders Display", "Righteous"],
     Mono: ["JetBrains Mono", "Geist Mono", "IBM Plex Mono", "Space Mono", "DM Mono", "Fira Code"],
@@ -621,12 +628,13 @@
     const group = (title, names) => (names.length ? `<h3>${esc(title)}</h3>` + names.map(rowHTML).join("") : "");
     function paint() {
       const q = input.value.trim().toLowerCase(), hit = (n) => !q || n.toLowerCase().includes(q);
+      const cyrOK = (n) => !K.cyr || CYR.has(n);
       const all = [...custom, ...Object.values(CATALOG).flat()];
       let html = "";
       if (q && !all.some((n) => n.toLowerCase() === q)) html += `<button class="ff-row use" data-f="${esc(input.value.trim())}"><span>Use “${esc(input.value.trim())}”</span><small>Google Fonts or installed</small></button>`;
       html += group("Your fonts", [...custom].filter(hit));
-      if (!q) html += group(`Pairs with ${other}`, suggest(role, other));
-      for (const [k, names] of Object.entries(CATALOG)) html += group(k, names.filter(hit));
+      if (!q) html += group(`Pairs with ${other}`, suggest(role, other).filter(cyrOK));
+      for (const [k, names] of Object.entries(CATALOG)) html += group(k, names.filter((n) => hit(n) && cyrOK(n)));
       if (!html) html = `<p class="note ff-none">No fonts match.</p>`;
       listEl.innerHTML = html;
       for (const b of listEl.querySelectorAll("[data-f]")) if (!b.classList.contains("use")) io.observe(b);
@@ -657,19 +665,22 @@
     o.innerHTML = "";
     if (K.slot === "type") {
       const f = fonts();
-      o.insertAdjacentHTML("beforeend", `<div class="ff-pair">${[["head", "Headings", f.head, f.weight], ["body", "Body", f.body, 400]].map(([role, label, name, w]) => `<button class="ff-trigger" data-role="${role}" aria-haspopup="listbox"><small>${label}</small><span style="font-family:'${esc(name)}', system-ui;font-weight:${w}">${esc(name)}</span><em>${kindOf(name)}</em>${ic("chev")}</button>`).join("")}</div>
+      o.insertAdjacentHTML("beforeend", `<div class="ff-pair">${[["head", "Headings", f.head, f.weight], ["body", "Body", f.body, 400]].map(([role, label, name, w]) => `<button class="ff-trigger" data-role="${role}" aria-haspopup="listbox"><small>${label}</small><span style="font-family:'${esc(name)}', system-ui;font-weight:${w}">${esc(name)}</span><em${K.cyr && !CYR.has(name) && !custom.has(name) ? ` class="no-cyr">No Cyrillic` : `>${kindOf(name)}`}</em>${ic("chev")}</button>`).join("")}</div>
 `);
       o.querySelector(".ff-pair").onclick = (e) => { const b = e.target.closest(".ff-trigger"); if (!b) return; if (ff?.anchor === b) closeFF(); else fontPicker(b, b.dataset.role); };
+      o.insertAdjacentHTML("beforeend", `<label class="set-row cp-cyr"><span><b>Cyrillic only</b><small>Fonts that can set Russian and other Cyrillic text</small></span><span class="switch"><input type="checkbox"${K.cyr ? " checked" : ""}><span></span></span></label>`);
+      o.querySelector(".cp-cyr input").onchange = (e) => { K.cyr = e.target.checked; save(); renderOpts(); };
       o.insertAdjacentHTML("beforeend", `<h3 class="sub"><span class="tipped" data-tip="Pick the body font first, for reading. Then a heading with some contrast, like a serif over a sans or a heavier weight">Pairings</span></h3>`);
       const g = document.createElement("div"); g.className = "cp-pairs";
       const custom0 = K.head || K.body;
-      g.innerHTML = PAIRS.map(([n, h, b, w], k) => { loadFont(h); loadFont(b); return `<button class="pair${K.pair === k && !custom0 ? " on" : ""}${k >= 6 ? " extra" : ""}" data-k="${k}" title="${h === b ? h : `${h} and ${b}`}"><span class="pair-aa" style="font-family:'${h}';font-weight:${w}">Aa</span><span class="pair-t"><b>${n}</b><small style="font-family:'${b}'">${h === b ? h : `${h}, ${b}`}</small></span></button>`; }).join("");
+      const shown = PAIRS.map((p, k) => [p, k]).filter(([p]) => pairOK(p));
+      g.innerHTML = shown.map(([[n, h, b, w], k], i) => { loadFont(h); loadFont(b); return `<button class="pair${K.pair === k && !custom0 ? " on" : ""}${i >= 6 ? " extra" : ""}" data-k="${k}" title="${h === b ? h : `${h} and ${b}`}"><span class="pair-aa" style="font-family:'${h}';font-weight:${w}">Aa</span><span class="pair-t"><b>${n}</b><small style="font-family:'${b}'">${h === b ? h : `${h}, ${b}`}</small></span></button>`; }).join("");
       g.onclick = (e) => { const b = e.target.closest("[data-k]"); if (!b) return; K.pair = +b.dataset.k; K.head = K.body = ""; changed(); };
       o.appendChild(g);
-      if (PAIRS.length > 6) {
-        o.insertAdjacentHTML("beforeend", `<button class="btn sm ghost cp-more" aria-expanded="${!!K.morePairs}">${K.morePairs ? "Show fewer" : `Show all ${PAIRS.length}`}</button>`);
+      if (shown.length > 6) {
+        o.insertAdjacentHTML("beforeend", `<button class="btn sm ghost cp-more" aria-expanded="${!!K.morePairs}">${K.morePairs ? "Show fewer" : `Show all ${shown.length}`}</button>`);
         g.classList.toggle("all", !!K.morePairs);
-        o.querySelector(".cp-more").onclick = (e) => { K.morePairs = !K.morePairs; save(); g.classList.toggle("all", K.morePairs); e.currentTarget.textContent = K.morePairs ? "Show fewer" : `Show all ${PAIRS.length}`; };
+        o.querySelector(".cp-more").onclick = (e) => { K.morePairs = !K.morePairs; save(); g.classList.toggle("all", K.morePairs); e.currentTarget.textContent = K.morePairs ? "Show fewer" : `Show all ${shown.length}`; };
       }
       const fontsG = grp(o, "Your fonts", false);
       const mine = document.createElement("div"); mine.className = "cp-mine";
@@ -1089,7 +1100,8 @@
   // random, leaving where you are in the tool alone. The home page's logo uses it.
   function remix(hexes) {
     const pick = (a) => a[Math.floor(Math.random() * a.length)];
-    Object.assign(K, { pair: Math.floor(Math.random() * PAIRS.length), head: "", body: "", scale: pick([1.2, 1.25]), radius: pick([0, 4, 6, 8, 12, 16]), pill: Math.random() < 0.25, density: pick([0.9, 1, 1.1]), elevation: pick(Object.keys(SHADOWS)), tint: pick(["neutral", "tinted", "tinted", "bold"]), ease: pick(["out", "inout", "spring"]) });
+    const okPairs = PAIRS.map((p, k) => k).filter((k) => pairOK(PAIRS[k]));
+    Object.assign(K, { pair: okPairs[Math.floor(Math.random() * okPairs.length)], head: "", body: "", scale: pick([1.2, 1.25]), radius: pick([0, 4, 6, 8, 12, 16]), pill: Math.random() < 0.25, density: pick([0.9, 1, 1.1]), elevation: pick(Object.keys(SHADOWS)), tint: pick(["neutral", "tinted", "tinted", "bold"]), ease: pick(["out", "inout", "spring"]) });
     if (hexes?.length) { K.follow = false; K.src = hexes.slice(); K.srcKey = "tool"; K.rc = fromSource(); }
     save();
     // A kit that wears the Studio design picks up the new one too.

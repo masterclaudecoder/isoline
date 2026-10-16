@@ -285,5 +285,33 @@
     return g;
   }
 
+  // ---------- performance mode ----------
+  // Lighter rendering for weak devices: no live glass or backdrop blur, thumbnails and the canvas preview
+  // at 1x, a calmer motion tile and a still home card. "auto" turns it on where the graphics are integrated
+  // or software, or the device has few cores and little memory; the setting can force it either way.
+  const LITE_KEY = "isoline.perfMode";
+  function weakDevice() {
+    try {
+      const n = navigator, cpu = (n.hardwareConcurrency || 8) <= 4 && (n.deviceMemory || 8) <= 4;
+      const gl = document.createElement("canvas").getContext("webgl"), x = gl?.getExtension("WEBGL_debug_renderer_info");
+      const gpu = x ? String(gl.getParameter(x.UNMASKED_RENDERER_WEBGL)) : "";
+      gl?.getExtension("WEBGL_lose_context")?.loseContext();
+      return { weak: !gl || cpu || /swiftshader|llvmpipe|software|microsoft basic|mali|powervr|adreno \(tm\) [1-5]\d\d\b|intel.*\b(hd|uhd)\b/i.test(gpu), gpu };
+    } catch (e) { return { weak: false, gpu: "" }; }
+  }
+  const device = weakDevice();
+  const Lite = {
+    pref: (() => { try { return localStorage.getItem(LITE_KEY) || "auto"; } catch (e) { return "auto"; } })(),
+    weak: device.weak, on: false,
+    set(v) { Lite.pref = v; try { localStorage.setItem(LITE_KEY, v); } catch (e) {} sync(); },
+  };
+  function sync() {
+    const on = Lite.pref === "on" || (Lite.pref === "auto" && Lite.weak);
+    document.documentElement.classList.toggle("lite", on);
+    if (on !== Lite.on) { Lite.on = on; root.dispatchEvent(new CustomEvent("lite-change", { detail: on })); }
+  }
+  sync();
+  root.Lite = Lite;
+
   root.UI = { flip, swap, autosize, collapse, resizable, dropdown, group, wrapGroup, tip: { show, hide }, tipPreview: (name, fn) => (previews[name] = fn), reduce };
 })(window);

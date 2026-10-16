@@ -5,6 +5,7 @@
   "use strict";
   const C = root.Color, picker = root.ColorPicker;
   const $ = (id) => document.getElementById(id);
+  const keyOf = (e) => (/^Key[A-Z]$/.test(e.code) ? e.code[3].toLowerCase() : /^Digit\d$/.test(e.code) ? e.code[5] : (e.key || "").toLowerCase());
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const rnd = (a, b) => a + Math.random() * (b - a);
   const ic = (n) => `<svg class="ic" aria-hidden="true"><use href="#i-${n}"/></svg>`;
@@ -368,8 +369,8 @@
   document.addEventListener("keydown", (e) => {
     if (root.Shell?.route !== "palettes" || e.target.matches?.("input, textarea")) return;
     if (e.code === "Space") { e.preventDefault(); const now = performance.now(); if (e.repeat && now - lastGen < 160) return; lastGen = now; generate(); }
-    else if (e.key.toLowerCase() === "v" && !e.metaKey && !e.ctrlKey) vary();
-    else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { e.preventDefault(); travel(e.shiftKey ? 1 : -1); }
+    else if (keyOf(e) === "v" && !e.metaKey && !e.ctrlKey) vary();
+    else if ((e.metaKey || e.ctrlKey) && keyOf(e) === "z") { e.preventDefault(); travel(e.shiftKey ? 1 : -1); }
   });
 
   // A palette in the URL (#/palettes/2f6fdb-6a9f7a-...) wins over the stored one.

@@ -5,6 +5,7 @@
 (function (root) {
   "use strict";
   const $ = (id) => document.getElementById(id);
+  const keyOf = (e) => (/^Key[A-Z]$/.test(e.code) ? e.code[3].toLowerCase() : /^Digit\d$/.test(e.code) ? e.code[5] : (e.key || "").toLowerCase());
   const ORDER = { home: 0, studio: 1, palettes: 2, components: 3 };
   const reduce = matchMedia("(prefers-reduced-motion: reduce)");
   const parse = (h) => (h.startsWith("#/palettes") ? "palettes" : h.startsWith("#/studio") ? "studio" : h.startsWith("#/components") ? "components" : "home");
@@ -95,11 +96,11 @@
     const pal = root.Palettes?.colors() || [], w = root.Palettes?.weights?.() || [];
     $("homePalette").innerHTML = pal.map((c, i) => `<i style="background:${c};flex-grow:${w[i] || 1}"></i>`).join("");
     root.Components?.preview($("homeComponents"));
-    if (fresh && !reduce.matches) $("homeComponents").animate([{ opacity: 0.2, filter: "blur(6px)" }, { opacity: 1, filter: "none" }], { duration: 450, easing: "ease-out" });
+    if (fresh && !reduce.matches) $("homeComponents").animate(root.Lite?.on ? [{ opacity: 0.2 }, { opacity: 1 }] : [{ opacity: 0.2, filter: "blur(6px)" }, { opacity: 1, filter: "none" }], { duration: 450, easing: "ease-out" });
     // The Studio decides first whether its saved design is safe to draw on this device.
     await root.studioBoot;
     const host = $("homeStudio");
-    const r = host.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+    const r = host.getBoundingClientRect(), dpr = Math.min(root.Lite?.on ? 1 : 2, devicePixelRatio || 1);
     const cw = Math.round((r.width || 560) * dpr), ch = Math.round((r.height || 350) * dpr);
     // Drawing the card is a full render of the design, the slowest thing on the home page. The last one is
     // kept in the browser with a fingerprint of the design and size, so an unchanged design shows at once;
@@ -109,6 +110,13 @@
     try { kept = JSON.parse(localStorage.getItem(SNAP) || "null"); } catch (e) {}
     if (kept?.url && !host.firstElementChild) { const img = new Image(); img.src = kept.url; img.alt = ""; host.appendChild(img); }
     if (kept?.k === key) return homeDone();
+    // The kept picture is of an older design (or there is none yet): a tiny render of the current one,
+    // blurred, stands in at once, so the card never shows the wrong picture or an empty frame while the
+    // full one is drawn. A roll covers the card with its still copies anyway, so it skips this.
+    if (!remixing) {
+      const t = await root.Studio?.snapshot(Math.max(24, cw >> 4), Math.max(15, ch >> 4))?.catch(() => null);
+      if (t && seq === homeSeq) { t.className = "lqip"; host.replaceChildren(t); }
+    }
     // The first visit draws it while the loading screen is up, so the entrance plays on an idle page;
     // later changes wait for the entrance to finish.
     if (!document.documentElement.classList.contains("loading")) await root.introDone;
@@ -116,8 +124,20 @@
     const c = await root.Studio?.snapshot(cw, ch);
     if (!c || seq !== homeSeq) return;
     host.innerHTML = ""; host.appendChild(c); homeDone();
-    if (fresh && !reduce.matches) c.animate([{ opacity: 0, transform: "scale(1.03)", filter: "blur(8px)" }, { opacity: 1, transform: "none", filter: "none" }], { duration: 520, easing: "cubic-bezier(.22,1,.36,1)" });
-    try { localStorage.setItem(SNAP, JSON.stringify({ k: key, url: c.toDataURL("image/jpeg", 0.85) })); } catch (e) {}
+    if (fresh && !reduce.matches) c.animate(root.Lite?.on ? [{ opacity: 0, transform: "scale(1.03)" }, { opacity: 1, transform: "none" }] : [{ opacity: 0, transform: "scale(1.03)", filter: "blur(8px)" }, { opacity: 1, transform: "none", filter: "none" }], { duration: 520, easing: "cubic-bezier(.22,1,.36,1)" });
+    keepSnap(c, key);
+  }
+  // The picture is kept a moment later and encoded off the main thread (toDataURL took most of a second
+  // on a weak device, and every roll waited on it); a quick run of rolls keeps only the last.
+  let snapT = 0;
+  function keepSnap(c, key) {
+    clearTimeout(snapT);
+    snapT = setTimeout(() => c.toBlob((b) => {
+      if (!b) return;
+      const fr = new FileReader();
+      fr.onload = () => { try { localStorage.setItem(SNAP, JSON.stringify({ k: key, url: fr.result })); } catch (e) {} };
+      fr.readAsDataURL(b);
+    }, "image/jpeg", 0.85), 1500);
   }
   const SNAP = "isoline.homeSnap";
   let homeDone; const homeReady = new Promise((r) => (homeDone = r));
@@ -145,6 +165,89 @@
     homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(homeLook()); if (homeHist.length > 30) homeHist.shift();
     homeAt = homeHist.length - 1; syncHomeHist();
   }
+  // ---------- saved looks ----------
+  // The home page's three cards as one look (the Studio design, the palette and the kit), saved in this
+  // browser, opened again in one go, and taken elsewhere as .json.
+  const LOOKS = "isoline.looks";
+  let looks = (() => { try { const v = JSON.parse(localStorage.getItem(LOOKS) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } })();
+  const saveLooks = () => { try { localStorage.setItem(LOOKS, JSON.stringify(looks)); return true; } catch (e) { root.toastMsg?.("Browser storage is full. Export some looks, then delete them"); return false; } };
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const fileName = (n) => `${String(n || "look").replace(/[^\w-]+/g, "-").toLowerCase()}.isoline-look.json`;
+  const validLook = (l) => l && Array.isArray(l.pal) && l.pal.every((h) => /^#[0-9a-f]{6}$/i.test(h)) && l.studio && typeof l.studio === "object" && l.kit && typeof l.kit === "object";
+  // The thumbnail: the design, with the palette as a strip along the bottom.
+  async function lookThumb(pal) {
+    try {
+      const c = await root.Studio.snapshot(192, 120), x = c.getContext("2d"), w = 192 / pal.length;
+      pal.forEach((h, i) => { x.fillStyle = h; x.fillRect(Math.floor(i * w), 104, Math.ceil(w), 16); });
+      return c.toDataURL("image/jpeg", 0.8);
+    } catch (e) { return ""; }
+  }
+  const ago = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : new Date(t).toLocaleDateString(); };
+  function renderLooks() {
+    const list = $("lkList");
+    $("lkExportAll").disabled = !looks.length;
+    list.innerHTML = looks.length ? looks.slice().sort((a, b) => b.at - a.at).map((l) => `
+      <div class="dz-item" data-id="${l.id}">
+        <button class="dz-main" data-act="open" title="Open this look"><span class="dz-thumb">${l.thumb ? `<img src="${l.thumb}" alt="">` : ""}</span><span class="dz-text"><b>${esc(l.name)}</b><small>${ago(l.at)}</small></span></button>
+        <button class="ib xs" data-act="download" title="Download .json" aria-label="Download"><svg class="ic"><use href="#i-export"/></svg></button>
+        <button class="ib xs" data-act="delete" title="Delete" aria-label="Delete"><svg class="ic"><use href="#i-trash"/></svg></button>
+      </div>`).join("") : `<p class="dz-empty">Save the look on this page, the design, palette and kit together, to come back to it.</p>`;
+  }
+  async function saveLook() {
+    const l = homeLook(), name = $("lkName").value.trim() || `Look ${looks.length + 1}`;
+    looks.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: name.slice(0, 60), at: Date.now(), thumb: await lookThumb(l.pal || []), ...l });
+    if (!saveLooks()) { looks.pop(); return; }
+    $("lkName").value = ""; renderLooks(); root.toastMsg?.(`Saved ${name}`);
+  }
+  async function openLook(l) {
+    if (remixing) return;
+    $("looksMenu").hidden = true; root.syncScrim?.();
+    if (homeAt < 0) { homeHist = [homeLook()]; homeAt = 0; }
+    await homeChange(async () => { root.Palettes?.load(l.pal); root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); });
+    homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(homeLook()); homeAt = homeHist.length - 1; syncHomeHist();
+  }
+  const download = (data, name) => root.downloadBlob?.(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), name, "Look saved");
+  $("lkSave").onclick = saveLook;
+  $("lkName").onkeydown = (e) => { if (e.key === "Enter") saveLook(); };
+  $("lkList").onclick = (e) => {
+    const b = e.target.closest("[data-act]"), id = e.target.closest(".dz-item")?.dataset.id, l = looks.find((x) => x.id === id);
+    if (!b || !l) return;
+    if (b.dataset.act === "open") openLook(l);
+    else if (b.dataset.act === "download") download({ app: "isoline", kind: "look", ...l }, fileName(l.name));
+    else if (b.dataset.act === "delete") {
+      const i = looks.indexOf(l); looks.splice(i, 1); saveLooks(); renderLooks();
+      root.toastMsg?.(`Deleted ${l.name}`, { action: "Undo", onAction: () => { looks.splice(i, 0, l); saveLooks(); renderLooks(); } });
+    }
+  };
+  $("lkExportAll").onclick = () => download({ app: "isoline", kind: "looks", items: looks }, "isoline-looks.json");
+  $("lkImport").onchange = async (e) => {
+    const f = e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    try {
+      const d = JSON.parse(await f.text()), items = (d.kind === "looks" ? d.items : [d]).filter(validLook);
+      if (!items.length) throw new Error("no looks");
+      for (const l of items) looks.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: String(l.name || "Imported look").slice(0, 60), at: Date.now(), thumb: typeof l.thumb === "string" && l.thumb.startsWith("data:image/") ? l.thumb : "", pal: l.pal, studio: l.studio, kit: l.kit });
+      if (saveLooks()) { renderLooks(); root.toastMsg?.(items.length === 1 ? `Imported ${items[0].name || "a look"}` : `Imported ${items.length} looks`); }
+    } catch (err) { root.toastMsg?.("That file has no Isoline looks in it"); }
+  };
+
+  // ---------- the logo's shine ----------
+  // On the home page a soft band of dithered light crosses the logo now and then, as on Apple's hardware
+  // pages, a hint that it does something. A copy of the logo in the light's color sits over it and shows
+  // only inside the band (a gradient mask crossed with a dither pattern).
+  let shineT = 0;
+  function shineLater(ms = 8000 + Math.random() * 7000) { clearTimeout(shineT); shineT = setTimeout(shine, ms); }
+  function shine() {
+    const b = $("brand");
+    const busy = route !== "home" || remixing || document.hidden || b.matches(":hover") || document.documentElement.classList.contains("loading") || document.querySelector(".tour-tip");
+    if (reduce.matches) return;
+    if (!busy) {
+      let g = b.querySelector(".brand-shine");
+      if (!g) { g = document.createElement("span"); g.className = "brand-shine"; g.setAttribute("aria-hidden", "true"); g.innerHTML = b.innerHTML; b.appendChild(g); }
+      g.classList.remove("go"); void g.offsetWidth; g.classList.add("go");
+    }
+    shineLater();
+  }
   // ---------- home undo and redo ----------
   let homeHist = [], homeAt = -1;
   const homeLook = () => ({ pal: root.Palettes?.colors(), studio: root.Studio?.state(), kit: root.Components?.look?.() });
@@ -163,7 +266,7 @@
   $("homeUndo").onclick = () => homeStep(-1);
   $("homeRedo").onclick = () => homeStep(1);
   addEventListener("keydown", (e) => {
-    if (route !== "home" || !(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z" || e.target.closest?.("input, textarea, [contenteditable]")) return;
+    if (route !== "home" || !(e.metaKey || e.ctrlKey) || keyOf(e) !== "z" || e.target.closest?.("input, textarea, [contenteditable]")) return;
     e.preventDefault(); homeStep(e.shiftKey ? 1 : -1);
   });
   // As in the Studio when a look is applied: each card keeps a still copy of its old picture on top
@@ -179,7 +282,8 @@
     try {
       await work();
       await paintHome(false);
-      await document.fonts?.ready;
+      // New kit fonts get a moment to arrive, but a slow connection never holds the roll: they swap in late.
+      await Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 900))]);
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     } catch (err) { console.error("home change failed", err); } finally {
       remixing = false;
@@ -213,8 +317,13 @@
   addEventListener("popstate", () => go(parse(location.hash), false));
   addEventListener("palette-change", () => { if (route === "home" && !remixing) paintHome(); });
 
-  const Shell = { go, route: null };
+  const Shell = { go, route: null, looks: () => renderLooks() };
   root.Shell = Shell;
+  // A fresh visit (typed, a bookmark, the address bar filling in the last page) starts on the main menu.
+  // A bare tool route carries nothing to open, so only reloads, back/forward and links holding a design
+  // or a palette land straight in a tool.
+  const nav = performance.getEntriesByType?.("navigation")[0]?.type;
+  if (nav === "navigate" && /^#\/(studio|palettes|components)\/?$/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
   visited.add(parse(location.hash));
   show(parse(location.hash));
   // First load: the page stays out of sight until its fonts are in (or a moment has passed), then the
@@ -223,6 +332,7 @@
   // Heavy start-up work (compiling every shader, drawing thumbnails) waits on introDone to keep the
   // main thread free while it plays.
   const done = () => root.__introDone?.();
+  root.introDone.then(() => shineLater(3500));
   const html = document.documentElement, reveal = () => {
     // The loading screen, if it got as far as showing, opens from its middle rather than cutting out.
     const sp = $("splash"), shown = sp && +getComputedStyle(sp).opacity > 0.05;

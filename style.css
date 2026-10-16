@@ -183,7 +183,7 @@ h3.sub.inline { margin: 0; }
   text-align: left; transition: transform .12s, box-shadow .12s; min-width: 0;
 }
 .card .th { aspect-ratio: 16 / 10; border-radius: 8px; overflow: hidden; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); line-height: 0; }
-.card .th svg, .card .th canvas { display: block; width: 100%; height: 100%; }
+.card .th svg, .card .th canvas, .card .th img { display: block; width: 100%; height: 100%; }
 .th, .tile-th { position: relative; }
 .th > *, .tile-th > * { position: absolute; inset: 0; }
 .fresh { animation: fade-in .4s ease both; }
@@ -932,6 +932,7 @@ html.vt-local::view-transition-new(*) { animation: fade-in .32s ease both; }
 .ff-trigger small { grid-area: l; font-size: 12px; color: var(--muted); font-weight: 500; }
 .ff-trigger span { grid-area: n; font-size: 21px; line-height: 1.25; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ff-trigger em { grid-area: k; font-style: normal; font-size: 11px; color: var(--muted); }
+.ff-trigger em.no-cyr { color: var(--ink); font-weight: 600; }
 .ff-trigger .ic { grid-area: c; width: 16px; height: 16px; color: var(--muted); transition: rotate .3s var(--ease); }
 .ff-trigger.open .ic { rotate: 180deg; color: var(--accent); }
 .pop.ff { position: fixed; width: 320px; max-height: 380px; padding: 8px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; z-index: 45; }
@@ -2260,3 +2261,41 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .home-hist { position: absolute; top: 50%; left: 150px; translate: 0 -50%; display: inline-flex; gap: 2px; opacity: 0; pointer-events: none; transition: opacity .25s ease; }
 .home-hist.on { opacity: 1; pointer-events: auto; }
 .home-hist .ib:disabled { opacity: .35; }
+
+/* Performance mode (html.lite, see ui.js): backdrop blur and the live glass refraction redraw whatever lies
+   behind them on every frame, which integrated graphics feel most, so bars and menus go solid instead.
+   The home card's scene stays still under the pointer. */
+html.lite { --glass: var(--panel); }
+html.lite *, html.lite *::before, html.lite *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.lite .scrim { background: rgba(var(--shadow-rgb, 0,0,0), .26); }
+html.lite .cps { --tx: 0 !important; --ty: 0 !important; }
+html.lite .glass, html.lite .glass.glass-live { background: var(--panel) !important; color: var(--ink); }
+html.lite .glass.glass-live > *, html.lite .glass.glass-live .bar-btn, html.lite .glass.glass-live .ib { color: var(--ink); }
+@media (max-width: 900px) { html.lite .pt-bar, html.lite .pt-bar.glass.glass-live { background: transparent !important; } }
+
+/* The logo's shine (shell.js): a copy of the logo in a pale accent light, shown only inside a band that
+   sweeps across, crossed with a dither so it glints like a sheen rather than a flat wipe. */
+.brand { position: relative; }
+.brand-shine {
+  position: absolute; inset: 0 auto 0 0; width: max-content; display: flex; align-items: center; gap: 9px; pointer-events: none; opacity: 0;
+  color: var(--accent);
+  --dither: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 5 -1.6'/%3E%3C/filter%3E%3Crect width='48' height='48' filter='url(%23n)'/%3E%3C/svg%3E");
+  -webkit-mask: linear-gradient(100deg, transparent 34%, rgba(0,0,0,.55) 44%, #000 50%, rgba(0,0,0,.55) 56%, transparent 66%) 100% 0 / 260% 100% no-repeat, var(--dither) 0 0 / 24px 24px;
+  -webkit-mask-composite: source-in;
+  mask: linear-gradient(100deg, transparent 34%, rgba(0,0,0,.55) 44%, #000 50%, rgba(0,0,0,.55) 56%, transparent 66%) 100% 0 / 260% 100% no-repeat, var(--dither) 0 0 / 24px 24px;
+  mask-composite: intersect;
+}
+.brand-shine .lg-mark circle { display: none; }
+.brand-shine .lg-word { color: inherit !important; }
+:root[data-theme="dark"] .brand-shine { color: color-mix(in srgb, var(--accent) 35%, #fff); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand-shine { color: color-mix(in srgb, var(--accent) 35%, #fff); } }
+.brand-shine.go { animation: brand-shine 2.2s cubic-bezier(.4, 0, .6, 1) both; }
+@keyframes brand-shine {
+  0% { opacity: 1; -webkit-mask-position: 100% 0, 0 0; mask-position: 100% 0, 0 0; }
+  100% { opacity: 1; -webkit-mask-position: 0 0, 0 0; mask-position: 0 0, 0 0; }
+}
+
+/* Rough stand-ins (app.js thumb with lq, the home card): a small render of the right picture, blurred,
+   until the real one fades in over it. */
+.th > .lqip, #homeStudio > .lqip { filter: blur(8px); scale: 1.15; }
+#homeStudio > .lqip { filter: blur(18px); scale: 1.1; width: 100%; height: 100%; object-fit: cover; }

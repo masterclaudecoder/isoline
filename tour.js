@@ -242,12 +242,13 @@
   function closePane() { if (!pane) return; pane.el.hidden = true; run++; }
 
   // ---------- the guided tours ----------
-  // The Libraries steps of the Components tour switch back to Libraries first, if the Builder is open
-  // (from an earlier visit, or going Back from the Builder step).
-  async function libraries() {
-    const b = document.querySelector('#cpMode [data-v="libraries"]');
+  // Components tour steps switch to the mode they show first, if the other one is open (from an earlier
+  // visit, or going Back past the switch).
+  const mode = (m) => async () => {
+    const b = document.querySelector(`#cpMode [data-v="${m}"]`);
     if (b && !b.classList.contains("on")) { b.click(); await wait(420); }
-  }
+  };
+  const builder = mode("builder"), libraries = mode("libraries");
   // A spotlight moves from part to part of the real page while the dot goes there first; steps that
   // open something click it for real, so you watch the page do it. Each page has its own short tour,
   // offered the first time you visit it. The home tour ends by walking you into the Studio, where the
@@ -260,7 +261,7 @@
     home: [
       { el: '.home [data-go="studio"]', t: "Studio", p: "Make patterns, gradients and effects, put them in motion, and export them anywhere." },
       { el: '.home [data-go="palettes"]', t: "Palettes", p: "Roll color palettes and check their names and contrast. Your colors travel to the other tools." },
-      { el: '.home [data-go="components"]', t: "Components", p: "Browse UI libraries, or build a kit of tokens and pages in your colors." },
+      { el: '.home [data-go="components"]', t: "Components", p: "Build a kit of tokens and pages in your colors, or browse UI libraries." },
       { el: "#brand", inner: true, calm: true, t: "Feeling lucky?", p: "Click the logo twice for a new palette, design and kit all at once." },
       { el: '.home [data-go="studio"]', t: "Let's begin", p: "Everything starts in the Studio. A short tutorial waits for you there.", done: "Open the Studio" },
     ],
@@ -282,10 +283,10 @@
       { el: "#ptUse", t: "Use them", p: "Send the colors to the Studio, or to the Builder in Components." },
     ],
     components: [
-      { pre: libraries, el: "#cpMode", t: "Two modes", p: "Libraries collects UI kits to browse. Builder makes a kit of your own, in your colors." },
-      { pre: libraries, el: ".cp-filters", t: "Find a library", p: "Search, or narrow the list by framework and category." },
+      { pre: builder, el: "#cpMode", t: "Two modes", p: "Builder makes a kit of your own, in your colors. Libraries collects UI kits to browse." },
+      { pre: builder, el: "#cpBuild", t: "Builder", p: "Pick fonts, scale, radius and depth, and see them on real pages. Export the tokens as CSS or a brief." },
+      { act: '#cpMode [data-v="libraries"]', el: ".cp-filters", t: "Find a library", p: "Search, or narrow the list by framework and category." },
       { pre: libraries, el: ".cp-grid .lib", t: "A library", p: "Each card opens onto the library's own site, with a link to its docs." },
-      { act: '#cpMode [data-v="builder"]', el: "#cpBuild", t: "Builder", p: "Pick fonts, scale, radius and depth, and see them on real pages. Export the tokens as CSS or a brief." },
     ],
   };
   const KEY = (name) => (name === "studio" ? "isoline.tour.studio" : "isoline.tour." + name);

@@ -1499,7 +1499,7 @@
   document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && stageEl.classList.contains("full")) setFull(false); });
   addEventListener("keydown", (e) => {
     if (document.body.dataset.route !== "studio" || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.("input, textarea, select, [contenteditable]")) return;
-    if (e.key === "f" || e.key === "F") { e.preventDefault(); setFull(!stageEl.classList.contains("full")); }
+    if (keyOf(e) === "f") { e.preventDefault(); setFull(!stageEl.classList.contains("full")); }
     else if (e.key === "Escape" && stageEl.classList.contains("full")) setFull(false);
   });
   // Surprise throws a few sparks as it rolls a new look.
@@ -1745,6 +1745,14 @@
   $("perfStop").onclick = () => { closePerf(); stopPlay(); S.motion.type = "still"; update(); };
   $("perfX").onclick = closePerf;
   // Settings: the frame rate below which playback counts as slow, or off.
+  // Performance mode (see ui.js): Auto, On or Off, with a note saying what Auto decided here.
+  function syncPerfMode() {
+    const L = window.Lite; if (!L) return;
+    for (const b of $("perfMode").children) b.classList.toggle("on", b.dataset.v === L.pref);
+    $("perfModeNote").textContent = L.pref === "auto" ? (L.on ? "On for this device" : "Off for this device") : "";
+  }
+  $("perfMode").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; window.Lite.set(b.dataset.v); syncPerfMode(); };
+  syncPerfMode();
   function syncPerfSet() { const v = String(P.perfFps ?? 60); for (const b of $("perfFps").children) if (b.dataset.v) b.classList.toggle("on", b.dataset.v === v); }
   $("perfFps").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P.perfFps = +b.dataset.v; perfQuiet.clear(); savePrefs(); syncPerfSet(); };
   syncPerfSet();
@@ -2130,9 +2138,9 @@
 
   // ---------- menus + modals ----------
   $("tourBtn").onclick = () => { closeMenus(); window.Tour?.show(window.Shell?.route); };
-  const menus = { sizeBtn: sizeMenu, exportBtn: $("exportMenu"), settingsBtn: $("settingsMenu"), designsBtn: $("designsMenu"), shareBtn: $("shareMenu") };
+  const menus = { sizeBtn: sizeMenu, exportBtn: $("exportMenu"), settingsBtn: $("settingsMenu"), designsBtn: $("designsMenu"), shareBtn: $("shareMenu"), looksBtn: $("looksMenu") };
   // The bigger menus dim and blur the page behind them, so the eye lands on the menu.
-  const SCRIMMED = ["exportMenu", "designsMenu", "shareMenu", "cpExportMenu"];
+  const SCRIMMED = ["exportMenu", "designsMenu", "shareMenu", "cpExportMenu", "looksMenu"];
   const syncScrim = () => document.body.classList.toggle("scrimmed", SCRIMMED.some((id) => $(id) && !$(id).hidden));
   window.syncScrim = syncScrim;
   function closeMenus() { Object.values(menus).forEach((m) => (m.hidden = true)); syncScrim(); }
@@ -2145,6 +2153,7 @@
       if (open && menu === sizeMenu) { const [w, h] = sizer().get(), fitting = !!sizer().fitting?.(); for (const o of sizeMenu.querySelectorAll(".opt")) o.classList.toggle("on", o.hasAttribute("data-fit") ? fitting : !fitting && +o.dataset.w === w && +o.dataset.h === h); }
       if (open && menu.id === "exportMenu") refreshExport();
       if (open && menu.id === "designsMenu") dzSync();
+      if (open && menu.id === "looksMenu") window.Shell?.looks();
       syncScrim();
     };
   }
@@ -2238,7 +2247,7 @@
   // ---------- version ----------
   // The deploy stamps the build and its date in here; the site also publishes version.json so an open
   // or cached copy can tell when a newer build is live.
-  const VERSION = "1.19", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
+  const VERSION = "1.20", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
@@ -2318,7 +2327,7 @@
     if (document.activeElement !== $("dzName")) $("dzName").value = cur?.name || "";
     $("dzState").textContent = !cur ? "Not saved yet" : dirty ? "Unsaved changes" : "Saved";
     $("dzState").classList.toggle("dirty", !!dirty);
-    $("dzCopy").hidden = !cur;
+    $("dzVersion").hidden = !cur; $("dzVersion").disabled = !dirty; if (cur) $("dzVersionOf").textContent = cur.name;
     $("dzExportAll").disabled = !lib.length;
     const list = $("dzList");
     if (!lib.length) { list.innerHTML = `<p class="dz-empty">Your saved designs show up here.</p>`; return; }
@@ -2335,20 +2344,24 @@
         <div class="dz-vers"><div>${d.versions.map((v, i) => ({ v, i })).reverse().map(({ v, i }) => `<button class="opt" data-act="restore" data-v="${i}"><span>Version ${i + 1}</span><span class="mono">${when(v.at)}</span></button>`).join("")}</div></div>
       </div>`).join("");
   }
-  async function saveDesign(asNew = false) {
-    let cur = asNew ? null : libItem(P.designId);
-    const name = $("dzName").value.trim() || cur?.name || `Design ${lib.length + 1}`;
-    if (cur && sameState(latest(cur).state, S) && cur.name === name) { toast("Nothing new to save"); return; }
+  // Save keeps a new design every time, so nothing saved earlier is ever changed by it; "Save as a new
+  // version" adds to the design that's open instead, which keeps its history of versions.
+  const freeName = (name) => { const taken = new Set(lib.map((d) => d.name)); if (!taken.has(name)) return name; const base = name.replace(/ \d+$/, ""); let n = 2; while (taken.has(`${base} ${n}`)) n++; return `${base} ${n}`; };
+  async function saveDesign(asVersion = false) {
+    const open = libItem(P.designId);
+    let cur = asVersion ? open : null;
+    const name = $("dzName").value.trim() || open?.name || `Design ${lib.length + 1}`;
+    if (open && sameState(latest(open).state, S) && open.name === name) { toast(`${open.name} is already saved`); return; }
     const thumb = await thumbURL(), now = Date.now(), version = { at: now, schema: SCHEMA, app: VERSION, state: clone(S) };
     if (cur && sameState(latest(cur).state, S)) { cur.name = name; cur.updated = now; }
     else if (cur) { cur.name = name; cur.versions.push(version); if (cur.versions.length > MAX_VERSIONS) cur.versions.splice(0, cur.versions.length - MAX_VERSIONS); cur.thumb = thumb || cur.thumb; cur.updated = now; }
-    else { cur = { id: uid(), name: asNew && libItem(P.designId) ? `${name} copy` : name, created: now, updated: now, thumb, versions: [version] }; lib.push(cur); }
+    else { cur = { id: uid(), name: freeName(name), created: now, updated: now, thumb, versions: [version] }; lib.push(cur); }
     if (!saveLib()) return;
     P.designId = cur.id; savePrefs(); dzSync();
-    toast(`Saved ${cur.name}`);
+    toast(asVersion ? `Saved version ${cur.versions.length} of ${cur.name}` : `Saved ${cur.name}`);
   }
   $("dzSave").onclick = () => saveDesign();
-  $("dzCopy").onclick = () => saveDesign(true);
+  $("dzVersion").onclick = () => saveDesign(true);
   $("dzName").onkeydown = (e) => { if (e.key === "Enter") saveDesign(); };
   $("dzList").onclick = (e) => {
     const b = e.target.closest("[data-act]"), item = e.target.closest(".dz-item");
@@ -2447,7 +2460,7 @@
   addEventListener("hashchange", openShared);
   setTimeout(openShared, 0);
   document.addEventListener("keydown", (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s" && window.Shell?.route === "studio") { e.preventDefault(); saveDesign(); }
+    if ((e.metaKey || e.ctrlKey) && keyOf(e) === "s" && window.Shell?.route === "studio") { e.preventDefault(); saveDesign(); }
   });
 
   $("resetAll").onclick = () => { closeMenus(); S = withDefaults(null); sel = null; P.slot = "preset"; update(); toast("Reset", { action: "Undo", onAction: () => travel(-1) }); };
@@ -2706,6 +2719,8 @@
   }
 
   // ---------- keyboard ----------
+  // Shortcuts follow the key's place on the keyboard, so they work in any layout (R is R in Russian too).
+  const keyOf = (e) => (/^Key[A-Z]$/.test(e.code) ? e.code[3].toLowerCase() : /^Digit\d$/.test(e.code) ? e.code[5] : (e.key || "").toLowerCase());
   const SLOT_KEYS = ["preset", "generator", "shape", "lines", "colors", "addfx", "motion"];
   document.addEventListener("keydown", (e) => {
     const typing = !!e.target.matches?.("input:not([type=range]):not([type=checkbox]), textarea");
@@ -2713,9 +2728,9 @@
     if (e.key === "Escape") { picker.close(); closeMenus(); for (const m of document.querySelectorAll(".modal")) m.hidden = true; if (sel != null) { sel = null; syncUI(); drawOverlay(); } return; }
     if (document.querySelector(".modal:not([hidden])")) return;
     if (window.Shell && window.Shell.route !== "studio") return;
-    if (mod && e.key.toLowerCase() === "z" && !typing) { e.preventDefault(); travel(e.shiftKey ? 1 : -1); return; }
+    if (mod && keyOf(e) === "z" && !typing) { e.preventDefault(); travel(e.shiftKey ? 1 : -1); return; }
     if (typing || mod || e.altKey) return;
-    const key = e.key.toLowerCase();
+    const key = keyOf(e);
     if (key === "r") { e.preventDefault(); if (e.shiftKey) surprise(); else { variation(); update({ fade: true }); } }
     else if (key === "c") copyOut();
     else if (key === "e") $("exportBtn").click();
@@ -2869,7 +2884,7 @@
   }
   // Playback and slider drags preview effects at less detail, stepping down further when frames run slow.
   function previewDims(st, draft) {
-    const dpr = Math.min(playing ? 1.5 : draft ? 1.25 : 2, window.devicePixelRatio || 1);
+    const dpr = Math.min(window.Lite?.on ? (playing || draft ? 1 : 1.25) : playing ? 1.5 : draft ? 1.25 : 2, window.devicePixelRatio || 1);
     // The frame's final width, not its width mid-glide, so a new size renders once at the right detail.
     let w = Math.max(64, Math.round((parseFloat(art.style.width) || art.clientWidth) * dpr)), h = Math.round((w * st.h) / st.w);
     const cap = playing ? 1600 : draft ? 1400 : 2200, m = Math.max(w, h);
@@ -2932,31 +2947,43 @@
   document.addEventListener("pointerdown", (e) => { quiet(e.target.closest(".top button, .dd-btn, .bar-btn, .tile") ? 500 : 250); }, true);
   // Thumbnails also hold off while the pointer is moving, the page is scrolling or a transition runs, so
   // hover effects and animations get every frame. They draw once things settle.
-  for (const t of ["pointermove", "wheel", "keydown"]) document.addEventListener(t, () => quiet(160), { capture: true, passive: true });
+  // A moving pointer alone needs no frames; the hover effects it starts are caught by transitionrun.
+  for (const t of ["wheel", "keydown"]) document.addEventListener(t, () => quiet(160), { capture: true, passive: true });
   document.addEventListener("scroll", () => quiet(200), { capture: true, passive: true });
   document.addEventListener("transitionrun", () => quiet(350), true);
-  // Waits for a calm moment: past any quiet window, then an idle slot between frames.
-  const idleIC = window.requestIdleCallback || ((f) => setTimeout(f, 16));
+  // Waits for a calm moment: past any quiet window, then the start of the gap after a frame. (Idle callbacks
+  // were tried, but an animating tile leaves a weak device no idle time, so every job waited out the timeout.)
+  const afterFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
   async function calm() {
     // Nothing is drawn for a Studio that isn't on screen, or while the page is switching.
     while (window.Shell?.route !== "studio" || document.documentElement.classList.contains("vt") || document.hidden) await new Promise((r) => setTimeout(r, 250));
-    // Never starves: after a few seconds of constant activity the next job runs anyway.
-    for (const t0 = performance.now(); performance.now() - t0 < 4000; ) {
-      while (performance.now() < quietUntil) await new Promise((r) => setTimeout(r, quietUntil - performance.now() + 10));
-      await new Promise((r) => idleIC(r, { timeout: 1200 }));
-      if (performance.now() >= quietUntil) return;
+    // Never starves: after a second of constant activity the next job runs anyway. Resolves with the time
+    // the slot opened, so cheap jobs can share it.
+    for (const t0 = performance.now(); ; ) {
+      const late = performance.now() - t0 > 1000;
+      if (!late && performance.now() < quietUntil) { await new Promise((r) => setTimeout(r, Math.min(250, quietUntil - performance.now() + 10))); continue; }
+      await afterFrame();
+      if (late || performance.now() >= quietUntil) return performance.now();
     }
   }
   function enqueue(jobs) { queue = jobs; if (!pumping) pump(); }
   async function pump() {
     pumping = true;
     await window.introDone;
+    // The next job: the first whose card is in view (jobs without a card count as in view), else the first.
+    const next = () => { const i = queue.findIndex((j) => !j.at || inView(j.at())); return i < 0 ? 0 : i; };
     while (queue.length) {
       // Thumbnails wait while shaders are still compiling in the background rather than blocking on them.
-      for (let n = 0; TFX?.ready && !TFX.ready() && n < 60; n++) await new Promise((r) => setTimeout(r, 50));
+      for (let n = 0; queue.length && !queue[next()].cheap && TFX?.ready && !TFX.ready() && n < 60; n++) await new Promise((r) => setTimeout(r, 50));
       // And while the user is interacting or something is animating, so the page stays smooth.
-      await calm();
-      const j = queue.shift(); try { await j(); } catch (e) {}
+      const t = await calm();
+      // Cheap jobs keep going while the slot they started in has time left.
+      do {
+        if (!queue.length) break;
+        const j = queue.splice(next(), 1)[0], j0 = performance.now();
+        try { await j(); } catch (e) {}
+        if (j.full) { const d = performance.now() - j0; thumbMs = thumbMs ? thumbMs * 0.7 + d * 0.3 : d; }
+      } while (queue.length && performance.now() - t < 6 && performance.now() >= quietUntil);
     }
     pumping = false;
   }
@@ -2976,19 +3003,83 @@
     c.getContext("2d").drawImage(src, 0, 0, w, h);
     return swapIn(slot, c);
   }
+  // Thumbnails are drawn at the screen's pixel density (up to 2x), not always at 2x: on a 1x screen that's
+  // a quarter of the pixels, which is most of the cost on a weak GPU.
+  let TH_DPR = 1;
+  const thDpr = () => { TH_DPR = window.Lite?.on ? 1 : Math.min(2, Math.max(1, devicePixelRatio || 1)); };
+  thDpr();
+  addEventListener("lite-change", () => { thDpr(); for (const pc of presetCards) pc.done = false; schedulePreviews(0); render(); });
   const svgNode = (markup) => { const t = document.createElement("template"); t.innerHTML = markup.trim(); return t.content.firstChild; };
   // Render a state into a thumbnail slot at a 16:10 frame.
   // Contour previews zoom into the center so individual lines stay readable at thumbnail size.
-  async function thumb(slot, st, w = 200, ar = 0.625) {
+  // lq draws a rough stand-in instead (a sixth of the size, coarse lines), shown blurred until the real one.
+  async function thumb(slot, st, w = 200, ar = 0.625, lq = false) {
     const h = Math.round(w * ar), s = { ...st, h: Math.round(st.w * ar) };
     if (!isRaster(s) || !TFX) {
       if (s.source !== "contours") { slot.innerHTML = ""; return null; }
       const z = 2, W = w * z, H = h * z;
-      return swapIn(slot, svgNode(T.buildSVG(s, { w: W, h: H, res: 2.5 * z, minLen: 8 }).svg.replace(/^<svg([^>]*?) width="\d+" height="\d+" viewBox="[^"]*"/, `<svg$1 width="${w}" height="${h}" viewBox="${(W - w) / 2} ${(H - h) / 2} ${w} ${h}"`)));
+      const n = svgNode(T.buildSVG(s, { w: W, h: H, res: 2.5 * z * (lq ? 4 : 1), minLen: 8 }).svg.replace(/^<svg([^>]*?) width="\d+" height="\d+" viewBox="[^"]*"/, `<svg$1 width="${w}" height="${h}" viewBox="${(W - w) / 2} ${(H - h) / 2} ${w} ${h}"`));
+      if (lq) n.classList.add("lqip");
+      return swapIn(slot, n);
     }
-    const W = w * 2, H = h * 2;
+    const k = lq ? 1 / 6 : TH_DPR, W = Math.max(16, Math.round(w * k)), H = Math.max(10, Math.round(h * k));
     TFX.render(await fxJob(TFX, s, W, H, thumbRaster, 2.5));
-    return putCanvas(slot, thumbCanvas, W, H);
+    const n = putCanvas(slot, thumbCanvas, W, H);
+    if (lq) n.classList.add("lqip");
+    return n;
+  }
+  // How long a full thumbnail takes here, on average. Where it's slow, every card first gets a rough,
+  // blurred stand-in of its new picture, so nothing shows a stale or empty preview while the queue works.
+  let thumbMs = 0;
+  const slowThumbs = () => thumbMs > 25 || (!thumbMs && !!window.Lite?.on);
+  // A job's card is in view when it's on screen and inside its scrolling panel; those are drawn first.
+  function inView(el) {
+    if (!el?.isConnected) return false;
+    const r = el.getBoundingClientRect();
+    if (!r.width || r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) return false;
+    const box = el.closest("#options, #slots")?.getBoundingClientRect();
+    return !box || (r.bottom > box.top && r.top < box.bottom);
+  }
+  // Preset thumbnails don't depend on the design being edited, so they're kept between visits (per build,
+  // so a change to the drawing code redraws them) and a returning visitor sees them at once.
+  const thumbDir = () => `thumbs/${stamped ? BUILD : "dev"}/${TH_DPR}/`;
+  const thumbCache = window.caches && isSecureContext ? caches.open("isoline-thumbs").catch(() => null) : Promise.resolve(null);
+  thumbCache.then((c) => c?.keys().then((ks) => { for (const k of ks) if (!k.url.includes("/" + thumbDir())) c.delete(k); })).catch(() => {});
+  async function cachedThumb(slot, name) {
+    try {
+      const r = await (await thumbCache)?.match(thumbDir() + encodeURIComponent(name));
+      if (!r) return false;
+      const blob = await r.blob();
+      if (blob.type === "image/svg+xml") { swapIn(slot, svgNode(await blob.text())); return true; }
+      const img = new Image(), url = URL.createObjectURL(blob);
+      img.src = url; await img.decode(); URL.revokeObjectURL(url);
+      swapIn(slot, img); return true;
+    } catch (e) { return false; }
+  }
+  // Shipped preset thumbnails (previews/presets.webp, made by tools/preset-thumbs.mjs), so even a first
+  // visit shows them at once. Each carries a fingerprint of its look; an edited preset is drawn live instead.
+  const lookHash = (look) => { const t = JSON.stringify(look); let a = 0x811c9dc5; for (let i = 0; i < t.length; i++) a = Math.imul(a ^ t.charCodeAt(i), 16777619); return (a >>> 0).toString(36); };
+  let sheet = null;
+  const presetSheet = () => (sheet ||= fetch("previews/presets.json").then((r) => (r.ok ? r.json() : null)).then(async (m) => {
+    if (!m) return null;
+    const img = new Image(); img.src = "previews/presets.webp" + (m.v ? "?v=" + m.v : ""); await img.decode();
+    return { m, img };
+  }).catch(() => null));
+  async function sheetThumb(slot, pc) {
+    const s = await presetSheet(), it = s?.m.items[pc.name];
+    if (!it || it[1] !== lookHash(pc.look)) return false;
+    const { w, h, cols } = s.m, c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    c.getContext("2d").drawImage(s.img, (it[0] % cols) * w, Math.floor(it[0] / cols) * h, w, h, 0, 0, w, h);
+    swapIn(slot, c); return true;
+  }
+  function keepThumb(name, node) {
+    const put = (c, body, type) => c.put(thumbDir() + encodeURIComponent(name), new Response(body, { headers: { "content-type": type } })).catch(() => {});
+    thumbCache.then((c) => {
+      if (!c || !node) return;
+      if (node instanceof HTMLCanvasElement) node.toBlob((b) => b && put(c, b, b.type), "image/webp", 0.92);
+      else put(c, node.outerHTML, "image/svg+xml");
+    });
   }
   const slotOf = (c) => c.querySelector(".th");
   const noFx = (st) => ({ ...st, fxOrder: [], objects: [] });
@@ -3039,22 +3130,37 @@
       for (const id of S.fxOrder) { const el = $("slotList").querySelector(`[data-th="fx:${id}"]`); if (!el) continue; putCanvas(el, fxUpTo(id, 128, 80), 128, 80); }
     });
     const p = panelOf(P.slot);
-    if (p === "preset") for (const pc of presetCards) { if (!pc.done && !pc.el.hidden) jobs.push(async () => { await thumb(slotOf(pc.el), resolveLook(pc.look), 220); pc.done = true; }); }
-    if (p === "generator") for (const [id] of GENS) jobs.push(() => { const b = baseOf(S), st = id === "contours" ? asContours(b) : asGradient(b, id); if (GEN_BASE[id]) Object.assign(st.grad, GEN_BASE[id]); return thumb(slotOf(genCards[id]), lightLines(st), 200); });
+    // A panel card's thumbnail: the full one, plus a rough stand-in first where thumbnails are slow.
+    // st may be a function, so the state is made only when the job runs.
+    const quick = [], lq = slowThumbs();
+    const card = (el, st, w, skip, done) => {
+      const at = () => (el.isConnected ? el : null), get = () => (typeof st === "function" ? st() : st);
+      const f = async () => { if (skip?.()) return; const n = await thumb(el, get(), w); done?.(n); };
+      f.at = at; f.full = true; jobs.push(f);
+      if (lq) { const q = () => (skip?.() ? null : thumb(el, get(), w, 0.625, true)); q.at = at; quick.push(q); }
+    };
+    if (p === "preset") {
+      const todo = presetCards.filter((pc) => !pc.done && !pc.el.hidden);
+      // Kept thumbnails come in all at once, ahead of everything else, without waiting on shaders.
+      const kept = async () => { await Promise.all(todo.map(async (pc) => { if ((await sheetThumb(slotOf(pc.el), pc)) || (await cachedThumb(slotOf(pc.el), pc.name))) pc.done = true; })); };
+      kept.cheap = true; quick.unshift(kept);
+      for (const pc of todo) card(slotOf(pc.el), () => resolveLook(pc.look), 220, () => pc.done, (n) => { keepThumb(pc.name, n); pc.done = true; });
+    }
+    if (p === "generator") for (const [id] of GENS) card(slotOf(genCards[id]), () => { const b = baseOf(S), st = id === "contours" ? asContours(b) : asGradient(b, id); if (GEN_BASE[id]) Object.assign(st.grad, GEN_BASE[id]); return lightLines(st); }, 200);
     if (p === "shape") {
-      if (gen() === "contours") for (const pt of T.PATTERNS) jobs.push(() => thumb(slotOf(patCards[pt.id]), lightLines(strokes({ ...noFx(S), pattern: pt.id })), 130));
-      if (gen() === "noise") for (const [id] of NOISE_TYPES) jobs.push(() => thumb(slotOf(noiseCards[id]), { ...noFx(S), grad: { ...S.grad, noise: id } }, 130));
-      varCards.forEach((c, i) => { c._seed = variationSeed(i); jobs.push(() => thumb(slotOf(c), { ...S, seed: c._seed }, 130)); });
+      if (gen() === "contours") for (const pt of T.PATTERNS) card(slotOf(patCards[pt.id]), () => lightLines(strokes({ ...noFx(S), pattern: pt.id })), 130);
+      if (gen() === "noise") for (const [id] of NOISE_TYPES) card(slotOf(noiseCards[id]), () => ({ ...noFx(S), grad: { ...S.grad, noise: id } }), 130);
+      varCards.forEach((c, i) => { c._seed = variationSeed(i); card(slotOf(c), { ...S, seed: c._seed }, 130); });
     }
     for (const o of S.objects) tileJob("obj:" + o.id, { ...noFx(S), objects: [{ ...o, x: 0.5, y: 0.5, size: Math.min(0.9, Math.max(0.6, o.size)) }] });
-    if (p === "addobj") for (const [id] of OBJ_KINDS) if (id !== "image" || [...PICS.keys()].length) jobs.push(() => thumb(slotOf(objKindCards[id]), { ...noFx(S), objects: [{ ...OBJ_DEFAULT, kind: id, image: [...PICS.keys()].pop() || "", mat: id === "image" ? "photo" : "shaded", size: 0.62, tilt: id === "image" ? 0 : 20 }] }, 130));
-    if (p === "object" && objOf() && !isPic()) { const o = objOf(); for (const id of Object.keys(objFormCards)) jobs.push(() => thumb(slotOf(objFormCards[id]), { ...noFx(S), objects: [{ ...o, kind: id, x: 0.5, y: 0.5, size: 0.62 }] }, 130)); }
-    if (p === "lines" && gen() === "contours") for (const m of Object.keys(modeCards)) jobs.push(() => thumb(slotOf(modeCards[m]), lightLines(readable({ ...noFx(S), mode: m })), 130));
+    if (p === "addobj") for (const [id] of OBJ_KINDS) if (id !== "image" || [...PICS.keys()].length) card(slotOf(objKindCards[id]), () => ({ ...noFx(S), objects: [{ ...OBJ_DEFAULT, kind: id, image: [...PICS.keys()].pop() || "", mat: id === "image" ? "photo" : "shaded", size: 0.62, tilt: id === "image" ? 0 : 20 }] }), 130);
+    if (p === "object" && objOf() && !isPic()) { const o = objOf(); for (const id of Object.keys(objFormCards)) card(slotOf(objFormCards[id]), { ...noFx(S), objects: [{ ...o, kind: id, x: 0.5, y: 0.5, size: 0.62 }] }, 130); }
+    if (p === "lines" && gen() === "contours") for (const m of Object.keys(modeCards)) card(slotOf(modeCards[m]), () => lightLines(readable({ ...noFx(S), mode: m })), 130);
     if (p === "addfx" && TFX) {
       jobs.push(() => effectBase(260, 163));
-      for (const id of FX_IDS) jobs.push(() => putCanvas(slotOf(fxCards[id]), fxThumb(id, 260, 163), 260, 163));
+      for (const id of FX_IDS) { const el = slotOf(fxCards[id]), f = () => putCanvas(el, fxThumb(id, 260, 163), 260, 163); f.at = () => el; jobs.push(f); }
     }
-    enqueue(jobs);
+    enqueue([...quick, ...jobs]);
   }
 
   // Motion tile: the finished design playing its loop, like every other tile shows its layer. A short
@@ -3070,7 +3176,7 @@
     // A still design previews a gentle drift, so the tile always reads as movement.
     if (reduceMotion.matches) { await thumb(el, S, 64); return; }
     const still = S.motion.type === "still", M = still ? { ...S.motion, type: "drift", amt: 0.45, mode: "loop", dir: 1, ease: "linear", seed: 0 } : S.motion, base = still ? { ...S, motion: M } : S;
-    const N = 24, w = 64, h = 40, W = 128, H = 80, frames = [];
+    const N = window.Lite?.on ? 12 : 24, w = 64, h = 40, W = 128, H = 80, frames = [];
     for (let k = 0; k < N; k++) {
       const st = { ...motionState(base, motionT(k / N, M)), h: Math.round(S.w * 0.625) };
       const f = document.createElement("canvas"); f.width = W; f.height = H;
@@ -3085,12 +3191,14 @@
     }
     const view = document.createElement("canvas"); view.width = W; view.height = H;
     const x = view.getContext("2d"), L = Math.min(4, Math.max(1.6, S.motion.dur)) * 1000;
+    // The loop only has N frames, so it's stepped on a timer at their rate rather than on every display
+    // frame, which left a weak device no idle time between frames.
     let last = -1;
-    const tick = (now) => {
+    const tick = () => {
       if (tok !== motionTok || !view.isConnected) return;
-      requestAnimationFrame(tick);
+      setTimeout(() => requestAnimationFrame(tick), L / N);
       if (document.body.dataset.route !== "studio") return;
-      const i = Math.floor(((now % L) / L) * N);
+      const i = Math.floor(((performance.now() % L) / L) * N);
       if (i !== last) { last = i; x.drawImage(frames[i], 0, 0); }
     };
     x.drawImage(frames[0], 0, 0);
@@ -3520,6 +3628,8 @@
       x.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
       return c;
     },
+    // Each preset's name and look fingerprint, for tools/preset-thumbs.mjs.
+    presetLooks: () => PRESETS.map((p) => [p[1], lookHash(p[2])]),
     // One frame of the motion loop at t (0 to 1), w x h, for scripts that record previews.
     async frameAt(t, w = 440, h = 275) { const c = document.createElement("canvas"); c.width = w; c.height = h; await loopFrame(S, t, c); return c; },
     // Arriving from another page, the canvas still holds its last frame, so the redraw (and the thumbnails

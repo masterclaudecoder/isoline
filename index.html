@@ -82,6 +82,9 @@
     <symbol id="i-link" viewBox="0 0 20 20"><path d="M8.6 11.4a3 3 0 0 0 4.3 0l2.3-2.3a3 3 0 0 0-4.3-4.3l-.9.9M11.4 8.6a3 3 0 0 0-4.3 0l-2.3 2.3a3 3 0 0 0 4.3 4.3l.9-.9"/></symbol>
     <symbol id="i-history" viewBox="0 0 20 20"><path d="M4.5 10a5.5 5.5 0 1 0 1.6-3.9"/><path d="M4.5 4v3.5H8M10 7v3.2l2.2 1.4"/></symbol>
     <symbol id="i-trash" viewBox="0 0 20 20"><path d="M4.5 6h11M8 6V4.5h4V6M6 6l.7 9.5h6.6L14 6"/></symbol>
+    <symbol id="i-import" viewBox="0 0 20 20"><path d="M11.5 4h3a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-3"/><path d="M3.5 10h8.5M9 7l3 3-3 3"/></symbol>
+    <symbol id="i-export" viewBox="0 0 20 20"><path d="M8.5 4h-3A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16h3"/><path d="M8 10h8.5M13.5 7l3 3-3 3"/></symbol>
+    <symbol id="i-version" viewBox="0 0 20 20"><path d="M6.5 6.5h8a1.5 1.5 0 0 1 1.5 1.5v6.5a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 5 14.5V8a1.5 1.5 0 0 1 1.5-1.5Z"/><path d="M7 4h7"/><path d="M10.5 9.2v4M8.5 11.2h4"/></symbol>
     <symbol id="i-out" viewBox="0 0 20 20"><path d="M7.5 5.5h7v7M14.5 5.5l-9 9"/></symbol>
   </defs>
 </svg>
@@ -102,7 +105,7 @@
       </div>
       <button class="ib" id="swap" title="Swap width and height" aria-label="Swap width and height"><svg class="ic"><use href="#i-swap"/></svg></button>
     </div>
-    <div class="cp-top" data-for="components"><div class="seg" id="cpMode"><button data-v="libraries">Libraries</button><button data-v="builder">Builder</button></div></div>
+    <div class="cp-top" data-for="components"><div class="seg" id="cpMode"><button data-v="builder">Builder</button><button data-v="libraries">Libraries</button></div></div>
     <div class="top-right">
       <div class="menu-wrap">
         <button class="ib lg" id="settingsBtn" title="Settings" aria-label="Settings" aria-haspopup="true"><svg class="ic"><use href="#i-gear"/></svg></button>
@@ -119,12 +122,13 @@
           <div class="set-row static"><span><b>Theme</b></span><div class="seg sm" id="theme"><button data-v="system">Auto</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
           <div class="set-row static"><span><b>Accent</b></span><div class="accents" id="accents"></div></div>
           <div class="set-sep"></div>
+          <div class="set-row static"><span data-tip="Lighter drawing for laptops with built-in graphics: no glass blur, previews at 1x, calmer motion. Auto turns it on for slower devices"><b>Performance mode</b><small id="perfModeNote"></small></span><div class="seg sm" id="perfMode"><button data-v="auto">Auto</button><button data-v="on">On</button><button data-v="off">Off</button></div></div>
           <div class="set-row static"><span data-tip="Shows a note when playback runs below this many frames a second"><b>Lag warning</b></span><div class="seg sm" id="perfFps"><button data-v="0">Off</button><button data-v="30">30</button><button data-v="45">45</button><button data-v="60">60</button></div></div>
           <button class="opt" id="exportLogs"><span><svg class="ic"><use href="#i-down"/></svg>Export performance log</span><span class="mono">.json</span></button>
           <div class="set-sep"></div>
           <button class="opt" id="exportSettings"><span><svg class="ic"><use href="#i-down"/></svg>Download settings</span><span class="mono">.json</span></button>
           <button class="opt" id="copySettings"><span><svg class="ic"><use href="#i-copy"/></svg>Copy settings</span></button>
-          <button class="opt" id="importSettings"><span><svg class="ic"><use href="#i-file"/></svg>Import settings</span></button>
+          <button class="opt" id="importSettings"><span><svg class="ic"><use href="#i-import"/></svg>Import settings</span></button>
           <div class="set-sep"></div>
           <button class="opt" id="tourBtn"><span><svg class="ic"><use href="#i-play"/></svg>Show the tutorial</span></button>
           <button class="opt" id="feedbackBtn"><span><svg class="ic"><use href="#i-chat"/></svg>Send feedback</span></button>
@@ -137,17 +141,35 @@
         <div class="pop designs" id="designsMenu" hidden>
           <div class="dz-head">
             <input class="field dz-name" id="dzName" maxlength="60" spellcheck="false" aria-label="Design name" placeholder="Untitled design">
-            <button class="btn primary sm" id="dzSave" title="Save (⌘S)">Save</button>
+            <button class="btn primary sm" id="dzSave" title="Save as a new design (⌘S)">Save</button>
           </div>
           <p class="dz-state" id="dzState"></p>
-          <button class="opt" id="dzCopy" hidden><span><svg class="ic"><use href="#i-plus"/></svg>Save as new design</span></button>
+          <button class="opt" id="dzVersion" hidden><span><svg class="ic"><use href="#i-version"/></svg><span>Save as a new version of <b id="dzVersionOf"></b></span></span></button>
           <div class="set-sep"></div>
           <h3>Saved in this browser</h3>
           <div class="dz-list" id="dzList"></div>
           <div class="set-sep"></div>
           <div class="dz-foot">
-            <label class="btn sm"><svg class="ic"><use href="#i-up"/></svg>Import<input type="file" id="dzImport" accept=".json,application/json" hidden></label>
-            <button class="btn sm" id="dzExportAll"><svg class="ic"><use href="#i-down"/></svg>Export all</button>
+            <label class="btn sm"><svg class="ic"><use href="#i-import"/></svg>Import<input type="file" id="dzImport" accept=".json,application/json" hidden></label>
+            <button class="btn sm" id="dzExportAll"><svg class="ic"><use href="#i-export"/></svg>Export all</button>
+          </div>
+        </div>
+      </div>
+      <div class="menu-wrap" data-for="home">
+        <button class="btn" id="looksBtn" aria-haspopup="true"><svg class="ic"><use href="#i-folder"/></svg><span class="lbl">Looks</span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+        <div class="pop designs" id="looksMenu" hidden>
+          <div class="dz-head">
+            <input class="field dz-name" id="lkName" maxlength="60" spellcheck="false" aria-label="Look name" placeholder="Name this look">
+            <button class="btn primary sm" id="lkSave" title="Save the design, palette and kit together">Save</button>
+          </div>
+          <p class="dz-state">The design, palette and kit on this page, kept as one.</p>
+          <div class="set-sep"></div>
+          <h3>Saved looks</h3>
+          <div class="dz-list" id="lkList"></div>
+          <div class="set-sep"></div>
+          <div class="dz-foot">
+            <label class="btn sm"><svg class="ic"><use href="#i-import"/></svg>Import<input type="file" id="lkImport" accept=".json,application/json" hidden></label>
+            <button class="btn sm" id="lkExportAll"><svg class="ic"><use href="#i-export"/></svg>Export all</button>
           </div>
         </div>
       </div>
