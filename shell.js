@@ -253,7 +253,9 @@
   let rollAgain = false;
   async function rollOnce() {
     // Every roll is kept, so undo brings back a look rolled past by accident and redo returns to it.
-    if (homeAt < 0) { homeHist = [homeLook()]; homeAt = 0; }
+    noteLook();
+    // Undo and redo show from the first roll on, so the note settles beside them instead of over their place.
+    syncHomeHist(true);
     const ok = await homeChange(async (live) => {
       const pal = root.Palettes?.generate();
       if (!pal || !live()) return;
@@ -262,7 +264,8 @@
       root.Studio?.usePalette?.(pal);
       await root.Components?.remix?.(pal);
     }, "Rolling a new look", root.rollLimit?.("home") || 0);
-    if (ok) { homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(homeLook()); if (homeHist.length > 30) homeHist.shift(); homeAt = homeHist.length - 1; syncHomeHist(); }
+    if (ok) { homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(homeLook()); if (homeHist.length > 30) homeHist.shift(); homeAt = homeHist.length - 1; }
+    syncHomeHist();
     if (rollAgain) { rollAgain = false; if (route === "home") return rollOnce(); }
     autoNext();
   }
@@ -303,7 +306,7 @@
   async function openLook(l) {
     if (remixing) return;
     $("looksMenu").hidden = true; root.syncScrim?.();
-    if (homeAt < 0) { homeHist = [homeLook()]; homeAt = 0; }
+    noteLook(); syncHomeHist(true);
     await homeChange(async () => { root.Palettes?.load(l.pal); root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); }, "Opening the look");
     homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(homeLook()); homeAt = homeHist.length - 1; syncHomeHist();
   }
@@ -352,10 +355,19 @@
   // ---------- home undo and redo ----------
   let homeHist = [], homeAt = -1;
   const homeLook = () => ({ pal: root.Palettes?.colors(), studio: root.Studio?.state(), kit: root.Components?.look?.() });
+  // The look on screen joins the history when it has changed since its step (a design edited in the
+  // Studio, say), so undo comes back to it rather than skipping to the look from before the edit.
+  function noteLook() {
+    const now = homeLook();
+    if (homeAt < 0) { homeHist = [now]; homeAt = 0; return; }
+    if (JSON.stringify(now) === JSON.stringify(homeHist[homeAt])) return;
+    homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(now); if (homeHist.length > 30) homeHist.shift(); homeAt = homeHist.length - 1;
+  }
   // Quick presses aren't lost: while one step lands the buttons keep counting, and once it has landed
   // the look they reached follows. A roll under way ignores them (it adds its own step when it lands).
   let stepping = false;
   async function homeStep(d) {
+    if (!remixing && !stepping) noteLook();
     const n = homeAt + d;
     if ((remixing && !stepping) || n < 0 || n >= homeHist.length) return;
     homeAt = n; syncHomeHist();
@@ -377,14 +389,15 @@
     return (r || b.getBoundingClientRect().right) - base;
   }
   const narrowBar = matchMedia("(max-width: 360px)");
-  function syncHomeHist() {
+  // show: keep the pair up even before there's a step to go back to (while the first roll lands).
+  function syncHomeHist(show = false) {
     // Clear of the logo's outline (9px past it, 6px on the narrowest phones), so a hovered undo never
     // touches it. Where the bar is short of room the gap shrinks, keeping clear of the buttons on the right.
     const h = $("homeHist"), out = narrowBar.matches ? 6 : 9, br = brandRight(), base = h.offsetParent?.getBoundingClientRect().left || 0;
     const end = (document.querySelector(".top-right")?.getBoundingClientRect().left ?? Infinity) - base - 4;
     h.style.left = Math.max(br + out + 3, Math.min(br + out + 9, end - h.offsetWidth)) + "px";
     $("homeUndo").disabled = homeAt <= 0; $("homeRedo").disabled = homeAt < 0 || homeAt >= homeHist.length - 1;
-    $("homeHist").classList.toggle("on", homeHist.length > 1);
+    $("homeHist").classList.toggle("on", show || homeHist.length > 1);
   }
   addEventListener("resize", () => { if ($("homeHist").classList.contains("on")) syncHomeHist(); });
   $("homeUndo").onclick = () => homeStep(-1);
@@ -404,7 +417,7 @@
     const tok = ++changeTok, live = () => tok === changeTok, before = limit ? homeLook() : null;
     const busy = $("remixBusy"), h = $("homeHist");
     const on = h.classList.contains("on");
-    busy.style.left = (on ? h.offsetLeft + h.offsetWidth : brandRight()) + 8 + "px";
+    busy.style.left = (on ? h.offsetLeft + h.offsetWidth : brandRight() + 10) + 8 + "px";
     // The note shows at once and reaches the screen before the work starts: the work holds the main
     // thread, so a note left to a timer or to the next frame would come late or not at all.
     clearTimeout(busyHide);
