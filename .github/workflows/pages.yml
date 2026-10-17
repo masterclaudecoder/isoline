@@ -1,11 +1,15 @@
-# Publishes the app to GitHub Pages. Before deploying, it captures a preview image for each library in
-# libs.js (tools/previews.mjs) and commits new ones to previews/, so later runs only fetch what's new.
+# Publishes the app to GitHub Pages from main. Changes reach main through pull requests: each pull
+# request into main runs the same build as a check (nothing is committed or deployed), and merging it
+# deploys. Before deploying, it captures a preview image for each library in libs.js
+# (tools/previews.mjs) and commits new ones to previews/, so later runs only fetch what's new.
 # Pages must be enabled once in the repository settings, with GitHub Actions as the source.
 name: Pages
 
 on:
   push:
-    branches: [claude/dreamy-edison-0dx0xi]
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -13,8 +17,9 @@ permissions:
   pages: write
   id-token: write
 
+# A newer push to main replaces a deploy still running; a pull request's newer push replaces its check.
 concurrency:
-  group: pages
+  group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.event.number) || 'pages' }}
   cancel-in-progress: true
 
 jobs:
@@ -33,6 +38,7 @@ jobs:
         run: node tools/previews.mjs
       # Pushes made with the workflow's own token don't start another run.
       - name: Commit new previews
+        if: github.event_name != 'pull_request'
         run: |
           git add previews
           if ! git diff --cached --quiet; then
@@ -55,12 +61,15 @@ jobs:
           echo "{\"build\":\"$SHA\"}" > _site/version.json
           cp og.jpg favicon.svg _site/
       - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
         with:
           path: _site
 
   deploy:
     needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

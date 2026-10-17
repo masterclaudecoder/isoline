@@ -1378,7 +1378,7 @@
   function randomEffects() {
     for (const id of [...S.fxOrder]) removeFx(id);
     // Curated pairings read better than any two effects at random.
-    const combos = [["glass", "grain"], ["mesh"], ["lens", "grain"], ["blur", "grain"], ["halftone"], ["riso"], ["linescreen"], ["emboss"], ["gradmap", "grain"], ["bloom", "vignette"], ["wave", "chroma", "scan"], ["voronoi"], ["dither"], ["pixel"], ["chrome"], ["cmyk", "paper"], ["water"], ["bulge", "grain"], ["heatmap"], ["rays", "grain"], ["ripple"], ["paper", "grain"]];
+    const combos = [["glass", "grain"], ["mesh"], ["lens", "grain"], ["blur", "grain"], ["halftone"], ["riso"], ["linescreen"], ["emboss"], ["bloom", "vignette"], ["wave", "chroma", "scan"], ["voronoi"], ["dither"], ["pixel"], ["chrome"], ["cmyk", "paper"], ["water"], ["bulge", "grain"], ["heatmap"], ["rays", "grain"], ["ripple"], ["paper", "grain"]];
     for (const id of pick(combos)) { addFx(id); randomizeFx(id); }
     if (P.safe) safeFix();
   }
@@ -1478,8 +1478,9 @@
       return ms > SLOW_MS ? await once() : ms;
     } catch (e) { return Infinity; }
   }
+  // Rolls never land on a gradient map: it recolors the whole picture away from the palette just rolled.
   function roll() {
-    const others = PRESETS.filter((p) => !lookMatches(p[2]));
+    const others = PRESETS.filter((p) => !lookMatches(p[2]) && !p[2].fx?.gradmap);
     const a = pick(others)[2], roll = Math.random();
     if (roll < 0.3) { applyLook(a); if (Math.random() < 0.25) randomPalette(); }
     else if (roll < 0.62) {
@@ -1505,6 +1506,7 @@
       const n = Math.random() < 0.7 ? 1 : 2;
       for (let i = 0; i < n; i++) S.objects.push({ ...OBJ_DEFAULT, id: objId(), kind: pick(OBJ_KINDS.filter(([k]) => k !== "image"))[0], mat: pick(["shaded", "glass", "design", "shaded"]), x: n === 1 ? 0.5 : [0.36, 0.64][i], y: n === 1 ? 0.5 : [0.42, 0.58][i], size: n === 1 ? +rnd(0.42, 0.62).toFixed(2) : +rnd(0.3, 0.42).toFixed(2), tilt: Math.round(rnd(-25, 40)), spin: Math.round(rnd(-80, 80)), rot: Math.round(rnd(-20, 20)) });
     }
+    if (S.fx.gradmap.on) removeFx("gradmap");
     if (P.safe) safeFix();
     variation();
   }
@@ -1519,16 +1521,40 @@
   setStudioWide(!!P.wide);
   const stageEl = $("stFull").closest(".stage");
   function setFull(on) {
+    if (!on) setFill(false);
     stageEl.classList.toggle("full", on); $("stFull").classList.toggle("on", on);
     $("stFull").dataset.tip = on ? "Exit full screen (Esc)" : "Full screen (F)";
     if (on && !document.fullscreenElement) stageEl.requestFullscreen?.().catch(() => {});
     if (!on && document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
   }
   $("stFull").onclick = () => { window.UI?.tip?.hide?.(); setFull(!stageEl.classList.contains("full")); };
+  // Fill: from full screen, the design grows to cover the whole screen (cropped like a wallpaper, the
+  // design itself unchanged) and the bar goes. Double-click brings the bar back; Esc leaves full screen.
+  let fillIdle = 0;
+  const fillRest = () => { stageEl.classList.remove("idle"); clearTimeout(fillIdle); if (stageEl.classList.contains("fill")) fillIdle = setTimeout(() => stageEl.classList.add("idle"), 1800); };
+  function setFill(on) {
+    if (on === stageEl.classList.contains("fill")) return;
+    if (on && !stageEl.classList.contains("full")) setFull(true);
+    window.UI?.tip?.hide?.();
+    stageEl.classList.toggle("fill", on);
+    stageEl.querySelector(".fill-hint")?.remove();
+    if (on) {
+      const hint = document.createElement("div");
+      hint.className = "fill-hint"; hint.textContent = "Double-click to show the controls. Esc to leave";
+      stageEl.appendChild(hint);
+      setTimeout(() => hint.classList.add("out"), 2400); setTimeout(() => hint.remove(), 3200);
+    }
+    fillRest();
+    fit(); if (!playing) render();
+  }
+  $("stFill").onclick = () => setFill(true);
+  stageEl.addEventListener("dblclick", (e) => { if (stageEl.classList.contains("fill")) { e.preventDefault(); setFill(false); } });
+  stageEl.addEventListener("pointermove", () => { if (stageEl.classList.contains("fill")) fillRest(); });
   document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && stageEl.classList.contains("full")) setFull(false); });
   addEventListener("keydown", (e) => {
     if (document.body.dataset.route !== "studio" || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.("input, textarea, select, [contenteditable]")) return;
     if (keyOf(e) === "f") { e.preventDefault(); setFull(!stageEl.classList.contains("full")); }
+    else if (keyOf(e) === "w") { e.preventDefault(); setFill(!stageEl.classList.contains("fill")); }
     else if (e.key === "Escape" && stageEl.classList.contains("full")) setFull(false);
   });
   // Surprise throws a few sparks as it rolls a new look.
@@ -2953,7 +2979,8 @@
   function fit() {
     const cs = getComputedStyle(wrap);
     const aw = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), ah = wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-    const sc = rzScale || Math.min(aw / S.w, ah / S.h), key = S.w + "x" + S.h;
+    // Filling the screen covers it, like object-fit: cover; otherwise the design fits inside.
+    const sc = rzScale || (wrap.parentElement.classList.contains("fill") ? Math.max : Math.min)(aw / S.w, ah / S.h), key = S.w + "x" + S.h;
     // A new size glides into place; dragging a handle or resizing the window tracks directly. Paints call
     // this every frame, so a glide in progress is left alone until it lands: clearing the transition
     // part-way would cut it short and snap the frame to its new size.
@@ -3004,15 +3031,20 @@
   let bootShared = /[?&]d=/.test(location.hash), firstDone = null;
   window.firstPaint = new Promise((r) => (firstDone = r));
   const firstPainted = () => { bootShared = false; firstDone?.(); firstDone = null; };
+  // A render that's overtaken by the next one (undo pressed quickly, say) settles when that one lands,
+  // so a cross-fade waiting on it lifts off the picture actually drawn, not a frame or two early or late.
+  let renderWait = [];
   function render(draft = false) {
     cancelAnimationFrame(raf); cancelAnimationFrame(anim); anim = 0;
     return new Promise((resolve) => {
+      renderWait.push(resolve);
       raf = requestAnimationFrame(async () => {
+        const mine = renderWait; renderWait = [];
         const t0 = performance.now(), r = await paint(S, draft);
         if (r && !draft) logStill(t0, r);
         if (r && !draft && !bootShared) firstPainted();
         if (r && !draft) { current = { ...r, of: JSON.stringify(painted) }; updateMini(); schedulePreviews(); }
-        resolve(r);
+        if (!r && renderWait.length) renderWait.push(...mine); else for (const f of mine) f(r);
       });
     });
   }

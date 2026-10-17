@@ -262,7 +262,7 @@
       { el: '.home [data-go="studio"]', t: "Studio", p: "Make patterns, gradients and effects, animate them and export anywhere." },
       { el: '.home [data-go="palettes"]', t: "Palettes", p: "Roll palettes and check names and contrast. Your colors carry over to the other tools." },
       { el: '.home [data-go="components"]', t: "Components", p: "Build a kit in your colors or browse UI libraries." },
-      { el: "#brand", inner: true, calm: true, t: "Feeling lucky?", p: "Click the logo twice to roll all three at once." },
+      { el: "#brand", inner: true, calm: true, t: "Feeling lucky?", p: "Click the logo to roll all three at once. Hold it to keep rolling until you press again." },
       { el: '.home [data-go="studio"]', t: "Let's begin", p: "Start in the Studio. A short tutorial is waiting there.", done: "Open the Studio" },
     ],
     studio: [

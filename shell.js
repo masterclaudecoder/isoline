@@ -37,7 +37,7 @@
       clearTimeout(pt._t); pt._t = setTimeout(() => pt.classList.remove("enter", "bar-enter", "vt-enter"), 1600);
     }
     // Leaving home drops a roll queued behind the one under way.
-    if (r === "home") paintHome(); else { brandClicks = 0; if (rollAgain) { rollAgain = false; $("remixBusy").lastChild.textContent = "Rolling a new look"; } }
+    if (r === "home") paintHome(); else { setAuto(false); if (rollAgain) { rollAgain = false; $("remixBusy").lastChild.textContent = "Rolling a new look"; } }
     root.Tour?.onRoute(r);
     // One size control: in the top bar for the studio, in the preview's own bar for the builder.
     const size = document.querySelector(".size"), slot = $("cpSizeSlot"), top = document.querySelector(".top");
@@ -106,10 +106,21 @@
     // Drawing the card is a full render of the design, the slowest thing on the home page. The last one is
     // kept in the browser with a fingerprint of the design and size, so an unchanged design shows at once;
     // a changed one is drawn after the entrance has played, keeping the first second smooth.
-    const key = hashStr(JSON.stringify(root.Studio?.state?.() || "") + cw + "x" + ch), seq = ++homeSeq;
+    // The card notes which design its picture is of, so a step back to a look whose picture is kept swaps
+    // it in, rather than leaving the picture of the look it just stepped away from.
+    const keyNow = () => hashStr(JSON.stringify(root.Studio?.state?.() || "") + cw + "x" + ch);
+    const key = keyNow(), seq = ++homeSeq;
+    // The Components card wears the Studio design too, so it follows a design changed in the Studio.
+    if (!remixing) root.introDone.then(() => { if (seq === homeSeq) root.Components?.art?.(); });
+    if (host.dataset.key === key && host.firstElementChild) return homeDone();
     let kept = null;
     try { kept = JSON.parse(localStorage.getItem(SNAP) || "null"); } catch (e) {}
-    if (kept?.url && !host.firstElementChild) { const img = new Image(); img.src = kept.url; img.alt = ""; host.appendChild(img); }
+    if (kept?.url && (kept.k === key || !host.firstElementChild)) {
+      const img = new Image(); img.src = kept.url; img.alt = "";
+      await img.decode().catch(() => {});
+      if (seq !== homeSeq) return;
+      host.replaceChildren(img); host.dataset.key = kept.k === key ? key : "";
+    }
     if (kept?.k === key) return homeDone();
     // The kept picture is of an older design (or there is none yet): a tiny render of the current one,
     // blurred, stands in at once, so the card never shows the wrong picture or an empty frame while the
@@ -122,19 +133,20 @@
         c.width = W; c.height = H; x.imageSmoothingQuality = "high";
         if ("filter" in x) x.filter = `blur(${b}px)`;
         x.drawImage(t, -b * 2, -b * 2, W + b * 4, H + b * 4);
-        c.className = "lqip"; host.replaceChildren(c);
+        c.className = "lqip"; host.replaceChildren(c); host.dataset.key = "";
       }
     }
     // The first visit draws it while the loading screen is up, so the entrance plays on an idle page;
     // later changes wait for the entrance to finish.
     if (!document.documentElement.classList.contains("loading")) await root.introDone;
     if (seq !== homeSeq) return;
-    const c = await root.Studio?.snapshot(cw, ch);
+    // The design can move on while this waits (a palette applied, say): the picture is filed under what it shows.
+    const drawn = keyNow(), c = await root.Studio?.snapshot(cw, ch);
     if (!c || seq !== homeSeq) return;
-    host.innerHTML = ""; host.appendChild(c); homeDone();
+    host.replaceChildren(c); host.dataset.key = drawn; homeDone();
     // No blur on phones: a CSS blur over a canvas can draw as a black box there.
     if (fresh && !reduce.matches) c.animate(root.Lite?.on || matchMedia("(pointer: coarse)").matches ? [{ opacity: 0, transform: "scale(1.03)" }, { opacity: 1, transform: "none" }] : [{ opacity: 0, transform: "scale(1.03)", filter: "blur(8px)" }, { opacity: 1, transform: "none", filter: "none" }], { duration: 520, easing: "cubic-bezier(.22,1,.36,1)" });
-    keepSnap(c, key);
+    keepSnap(c, drawn);
   }
   // The picture is kept a moment later and encoded off the main thread (toDataURL took most of a second
   // on a weak device, and every roll waited on it); a quick run of rolls keeps only the last.
@@ -155,28 +167,88 @@
   const hashStr = (s) => { let a = 0x811c9dc5; for (let i = 0; i < s.length; i++) a = Math.imul(a ^ s.charCodeAt(i), 16777619); return (a >>> 0).toString(36) + s.length; };
 
   // On the home page the logo rolls a new look for everything: a fresh palette, a new Studio design and a
-  // new kit, both in that palette. The first click only nudges the logo, so a stray click changes nothing;
-  // from the second on, every click rolls again.
-  let brandClicks = 0, remixing = false;
+  // new kit, both in that palette. A click lights an orange outline round the logo that fades away.
+  // Holding it draws the outline round the logo, and once it closes the logo keeps rolling by itself
+  // (auto roll) with the outline left on, until the next press.
+  let remixing = false;
   async function remixAll() {
-    const mark = $("brand").querySelector("svg");
-    // The safety click tips the logo to the right; the rolls after it tip it left.
-    // Every click also sends two contour rings out from the mark, so it reads as a press even when it only nudges.
-    if (!reduce.matches && mark) {
-      mark.animate([{ transform: "rotate(0) scale(1)" }, { transform: `rotate(${brandClicks ? -18 : 18}deg) scale(.82)`, offset: 0.3 }, { transform: "rotate(0) scale(1)" }], { duration: 520, easing: "cubic-bezier(.3,1.5,.5,1)" });
-      const b = $("brand"), br = b.getBoundingClientRect(), mr = mark.getBoundingClientRect();
-      for (let i = 0; i < 2; i++) {
-        const r = document.createElement("i");
-        r.className = "brand-ripple"; r.setAttribute("aria-hidden", "true");
-        r.style.left = mr.left - br.left + mr.width / 2 + "px"; r.style.top = mr.top - br.top + mr.height / 2 + "px";
-        b.appendChild(r);
-        r.animate([{ scale: 0.6, opacity: 0.6 }, { scale: 2.2 + i * 0.6, opacity: 0 }], { duration: 640 + i * 140, delay: i * 90, easing: "cubic-bezier(.2,.7,.3,1)", fill: "both" }).onfinish = () => r.remove();
-      }
-    }
-    if (++brandClicks < 2) return;
     // A click during a roll isn't dropped: one more roll follows when this one lands, and the note says so.
     if (remixing) { if (rollAgain || route !== "home") return; rollAgain = true; const busy = $("remixBusy"); busy.lastChild.textContent = "One more after this"; busy.animate([{ scale: 1 }, { scale: 1.06 }, { scale: 1 }], { duration: 260, easing: "ease-out" }); return; }
     await rollOnce();
+  }
+  // ---------- the logo's outline: click, hold, auto roll ----------
+  const HOLD_MS = 650, HOLD_DELAY = 140, AUTO_GAP = 2600;
+  let auto = false, autoT = 0, holdT = 0, holdAnim = null, eatClick = false, ringAnim = null;
+  function ring() {
+    const b = $("brand");
+    let svg = b.querySelector(".brand-ring");
+    if (!svg) {
+      svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "brand-ring"); svg.setAttribute("aria-hidden", "true");
+      svg.innerHTML = '<rect pathLength="100"/>';
+      b.appendChild(svg);
+    }
+    // Sized to the logo as it is now, so the outline hugs it whatever the font or width.
+    const w = svg.clientWidth, h = svg.clientHeight, r = svg.firstChild;
+    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    r.setAttribute("x", 1); r.setAttribute("y", 1); r.setAttribute("width", Math.max(0, w - 2)); r.setAttribute("height", Math.max(0, h - 2)); r.setAttribute("rx", 10);
+    return r;
+  }
+  const stopRing = () => { holdAnim?.cancel(); holdAnim = null; ringAnim?.cancel(); ringAnim = null; };
+  // A click: the outline shows at once and fades off smoothly.
+  function flash() {
+    if (auto) return;
+    const r = ring(); stopRing();
+    ringAnim = r.animate([{ strokeDashoffset: 0, opacity: 1 }, { strokeDashoffset: 0, opacity: 0 }], { duration: reduce.matches ? 400 : 750, easing: "cubic-bezier(.4,0,.2,1)" });
+  }
+  function holdStart() {
+    clearTimeout(holdT);
+    const r = ring(); stopRing();
+    // The tracing starts a beat in, so an ordinary click never shows the start of it.
+    holdAnim = r.animate([{ strokeDashoffset: 100, opacity: 1 }, { strokeDashoffset: 0, opacity: 1 }], { duration: HOLD_MS, delay: HOLD_DELAY, easing: "cubic-bezier(.45,0,.55,1)", fill: "forwards" });
+    holdT = setTimeout(() => { holdT = 0; eatClick = true; setAuto(true); }, HOLD_MS + HOLD_DELAY);
+  }
+  function holdEnd() {
+    if (!holdT) return;
+    clearTimeout(holdT); holdT = 0;
+    holdAnim?.cancel(); holdAnim = null;
+  }
+  function setAuto(on) {
+    if (on === auto) return;
+    auto = on; clearTimeout(autoT);
+    const b = $("brand"), r = ring();
+    b.classList.toggle("auto", on);
+    b.setAttribute("aria-pressed", on);
+    b.title = on ? "Rolling new looks by itself. Press to stop" : "";
+    stopRing();
+    if (on) { r.style.strokeDashoffset = "0"; r.style.opacity = "1"; if (remixing) autoNext(); else rollOnce(); return; }
+    r.style.opacity = "0";
+    ringAnim = r.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 600, easing: "cubic-bezier(.4,0,.2,1)" });
+  }
+  // The next automatic roll, a moment after the last one has landed. It waits while the tab is hidden or
+  // a menu is open over the page.
+  function autoNext() {
+    clearTimeout(autoT);
+    if (!auto) return;
+    autoT = setTimeout(() => {
+      if (!auto || route !== "home") return;
+      if (remixing || document.hidden || !$("looksMenu").hidden || document.querySelector(".tour-tip")) return autoNext();
+      const r = ring();
+      if (!reduce.matches) r.animate([{ opacity: 1 }, { opacity: 0.35 }, { opacity: 1 }], { duration: 500, easing: "ease-in-out" });
+      rollOnce();
+    }, AUTO_GAP);
+  }
+  {
+    const b = $("brand");
+    b.draggable = false;
+    b.addEventListener("pointerdown", (e) => {
+      eatClick = false;
+      if (route !== "home" || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || auto) return;
+      holdStart();
+    });
+    for (const t of ["pointerup", "pointercancel", "pointerleave"]) b.addEventListener(t, holdEnd);
+    // A long press on a touch screen would open the link's menu instead.
+    b.addEventListener("contextmenu", (e) => { if (route === "home" && (holdT || auto || eatClick)) e.preventDefault(); });
   }
   let rollAgain = false;
   async function rollOnce() {
@@ -191,7 +263,8 @@
       await root.Components?.remix?.(pal);
     }, "Rolling a new look", root.rollLimit?.("home") || 0);
     if (ok) { homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(homeLook()); if (homeHist.length > 30) homeHist.shift(); homeAt = homeHist.length - 1; syncHomeHist(); }
-    if (rollAgain) { rollAgain = false; if (route === "home") rollOnce(); }
+    if (rollAgain) { rollAgain = false; if (route === "home") return rollOnce(); }
+    autoNext();
   }
   // ---------- saved looks ----------
   // The home page's three cards as one look (the Studio design, the palette and the kit), saved in this
@@ -271,7 +344,7 @@
     if (reduce.matches) return;
     if (!busy) {
       let g = b.querySelector(".brand-shine");
-      if (!g) { g = document.createElement("span"); g.className = "brand-shine"; g.setAttribute("aria-hidden", "true"); g.innerHTML = b.innerHTML; b.appendChild(g); }
+      if (!g) { g = document.createElement("span"); g.className = "brand-shine"; g.setAttribute("aria-hidden", "true"); for (const n of b.children) if (!n.matches(".brand-ring")) g.appendChild(n.cloneNode(true)); b.appendChild(g); }
       g.classList.remove("go"); void g.offsetWidth; g.classList.add("go");
     }
     shineLater();
@@ -279,19 +352,28 @@
   // ---------- home undo and redo ----------
   let homeHist = [], homeAt = -1;
   const homeLook = () => ({ pal: root.Palettes?.colors(), studio: root.Studio?.state(), kit: root.Components?.look?.() });
+  // Quick presses aren't lost: while one step lands the buttons keep counting, and once it has landed
+  // the look they reached follows. A roll under way ignores them (it adds its own step when it lands).
+  let stepping = false;
   async function homeStep(d) {
     const n = homeAt + d;
-    if (remixing || n < 0 || n >= homeHist.length) return;
+    if ((remixing && !stepping) || n < 0 || n >= homeHist.length) return;
     homeAt = n; syncHomeHist();
-    const l = homeHist[n];
-    await homeChange(async () => { if (l.pal) root.Palettes?.load(l.pal); if (l.studio) root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); }, "Going back to that look");
+    if (stepping) return;
+    stepping = true;
+    try {
+      for (let at = -1; at !== homeAt; ) {
+        at = homeAt;
+        const l = homeHist[at];
+        await homeChange(async () => { if (l.pal) root.Palettes?.load(l.pal); if (l.studio) root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); }, "Going back to that look");
+      }
+    } finally { stepping = false; }
   }
-  // Where the logo ends. The link itself can stretch across its grid column, so this measures the mark
-  // and the word, leaving out the shine layer.
+  // Where the logo ends: the mark and the word, leaving out the shine and the outline.
   function brandRight() {
     const b = $("brand"), base = $("homeHist").offsetParent?.getBoundingClientRect().left || 0;
     let r = 0;
-    for (const n of b.children) if (!n.classList.contains("brand-shine")) r = Math.max(r, n.getBoundingClientRect().right);
+    for (const n of b.children) if (!n.matches(".brand-shine, .brand-ring")) r = Math.max(r, n.getBoundingClientRect().right);
     return (r || b.getBoundingClientRect().right) - base;
   }
   function syncHomeHist() {
@@ -373,7 +455,13 @@
   }
 
   document.addEventListener("click", (e) => {
-    if (route === "home" && e.target.closest("#brand") && !e.metaKey && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); remixAll(); return; }
+    if (route === "home" && e.target.closest("#brand") && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+      e.preventDefault();
+      // The click that ends a hold has already turned auto roll on; a press while it's on turns it off.
+      if (eatClick) { eatClick = false; return; }
+      if (auto) { setAuto(false); return; }
+      flash(); remixAll(); return;
+    }
     const a = e.target.closest("a[href^='#/']");
     if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
     e.preventDefault();
