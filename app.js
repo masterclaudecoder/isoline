@@ -126,7 +126,7 @@
   // and otherwise from the values design references agree on (Figma, Stripe, Linear, Airbnb, Instagram).
   // Brands whose colors are the same three inks share one palette, named for the best known of them
   // (Spotify for MegaFon too, Notion for Vercel, Google for Duolingo, Netflix for Yandex, Alfa and MTS,
-  // Mailchimp for Yandex Go and T-Bank, Dropbox for VK).
+  // Yandex (Yandex Go's taxi yellow) for T-Bank and Mailchimp, Dropbox for VK).
   const BRANDS = [
     ["Caddis", ["#2f6fdb", "#6a9f7a", "#d8a51f", "#e2632a", "#c9302c"], ["#2f6fdb", "#e2632a", "#f7f4ee"]],
     ["Slack", ["#4a154b", "#36c5f0", "#2eb67d", "#ecb22e", "#e01e5a"], ["#4a154b", "#36c5f0", "#f4ede4"]],
@@ -154,7 +154,7 @@
     ["Yandex Neo", ["#050407", "#7a0f5c", "#e0336f", "#f2a81d", "#f4e04d"], ["#e0336f", "#f4e04d", "#050407"]],
     ["Netflix", ["#000000", "#fc3f1d", "#e30613", "#ffffff"], ["#e30613", "#000000", "#ffffff"]],
     // The taxi yellow with black and white, as on Yandex Go's icon and cars (T-Bank's and Mailchimp's match).
-    ["Mailchimp", ["#21201f", "#fce000", "#ffffff", "#f5f4f2"], ["#21201f", "#ffffff", "#fce000"]],
+    ["Yandex", ["#21201f", "#fce000", "#ffffff", "#f5f4f2"], ["#21201f", "#ffffff", "#fce000"]],
     ["Yandex Intel", ["#120a2e", "#6335e0", "#7a55ff", "#a88cff", "#f3efff"], ["#6335e0", "#a88cff", "#120a2e"]],
     ["Sber", ["#f2e913", "#a3cd39", "#21a038", "#0fa8e0", "#0291eb", "#ffffff"], ["#21a038", "#0291eb", "#ffffff"]],
     ["VTB", ["#0a2973", "#009fdf", "#ffffff"], ["#0a2973", "#009fdf", "#ffffff"]],
