@@ -1006,23 +1006,34 @@
   // The studio's current design, captured as a picture for the pages.
   let artURL = "", artImg = null; // the decoded picture is kept alive so it stays decoded
   // The backdrop is redrawn only when the Studio design has changed, and encoded off the main thread.
-  let artKey = "";
+  // The last few pictures are kept by design, so stepping back and forth through looks swaps them at
+  // once. A call made while the same design is still being drawn waits for that drawing.
+  let artKey = "", artJob = null;
+  const artCache = new Map();
   async function refreshArt() {
-    if (K.art !== "studio" || !root.Studio) { artKey = ""; artURL = ""; applyArt(); return; }
+    if (K.art !== "studio" || !root.Studio) { artKey = ""; artJob = null; artURL = ""; applyArt(); return; }
     const key = JSON.stringify(root.Studio.state?.() || Math.random());
-    if (key === artKey && artURL) return applyArt();
+    if (key === artKey) return artJob || applyArt();
     artKey = key;
-    try {
-      const c = await root.Studio.snapshot(1600, 1000), b = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.86));
-      if (artKey !== key) return;
-      const url = b ? URL.createObjectURL(b) : "";
-      // Decoded before it goes in, so the backdrop never shows empty for a frame while the picture unpacks.
-      if (url) { const img = new Image(); img.src = url; await img.decode().catch(() => {}); artImg = img; }
-      if (artKey !== key) { URL.revokeObjectURL(url); return; }
-      if (artURL.startsWith("blob:")) setTimeout(URL.revokeObjectURL, 10000, artURL); // the roll's still copy may still show it
-      artURL = url;
-    } catch (e) { artURL = ""; artKey = ""; }
-    applyArt();
+    const hit = artCache.get(key);
+    if (hit) { artCache.delete(key); artCache.set(key, hit); artJob = null; artURL = hit.url; artImg = hit.img; applyArt(); return; }
+    const job = (artJob = (async () => {
+      try {
+        const c = await root.Studio.snapshot(1600, 1000), b = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.86));
+        if (!b) throw new Error("no picture");
+        const url = URL.createObjectURL(b);
+        // Decoded before it goes in, so the backdrop never shows empty for a frame while the picture unpacks.
+        const img = new Image(); img.src = url; await img.decode().catch(() => {});
+        artCache.set(key, { url, img });
+        // The oldest go, a while later: a roll's still copy may still show one.
+        for (const [k, v] of artCache) { if (artCache.size <= 8) break; if (v.url === artURL || k === key) continue; artCache.delete(k); setTimeout(URL.revokeObjectURL, 10000, v.url); }
+        if (artKey !== key) return;
+        artURL = url; artImg = img;
+      } catch (e) { if (artKey === key) { artURL = ""; artKey = ""; } }
+      finally { if (artJob === job) artJob = null; }
+      if (artKey === key || !artKey) applyArt();
+    })());
+    return job;
   }
   function applyArt() {
     for (const el of [$("kit"), ...($("homeComponents")?.querySelectorAll(".kit") || [])]) if (el) { el.classList.toggle("k-has-art", !!artURL); el.style.setProperty("--k-art", artURL ? `url("${artURL}")` : "none"); }
@@ -1155,5 +1166,5 @@
   }
   // Built ahead of a first visit (the shell does it while the home page idles), so the visit finds it ready.
   function prepare() { if (leftKey || root.Shell?.route === "components") return; setMode(K.mode); leftKey = pageKey(); }
-  root.Components = { onShow, prepare, onHide: () => (leftKey = pageKey()), usePalette, remix, look, setLook, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
+  root.Components = { onShow, prepare, art: refreshArt, onHide: () => (leftKey = pageKey()), usePalette, remix, look, setLook, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
 })(window);
