@@ -124,21 +124,23 @@
   ];
   // Brand palettes, from each company's brand pages where published (Slack, Spotify, Discord, IKEA, Mastercard)
   // and otherwise from the values design references agree on (Figma, Stripe, Linear, Airbnb, Instagram).
-  // Brands whose colors are the same three inks share one palette, named for all of them.
+  // Brands whose colors are the same three inks share one palette, named for the best known of them
+  // (Spotify for MegaFon too, Notion for Vercel, Google for Duolingo, Netflix for Yandex, Alfa and MTS,
+  // Mailchimp for Yandex Go and T-Bank, Dropbox for VK).
   const BRANDS = [
     ["Caddis", ["#2f6fdb", "#6a9f7a", "#d8a51f", "#e2632a", "#c9302c"], ["#2f6fdb", "#e2632a", "#f7f4ee"]],
     ["Slack", ["#4a154b", "#36c5f0", "#2eb67d", "#ecb22e", "#e01e5a"], ["#4a154b", "#36c5f0", "#f4ede4"]],
     ["Figma", ["#a259ff", "#1abcfe", "#0acf83", "#ff7262", "#f24e1e"], ["#1e1e1e", "#a259ff", "#ffffff"]],
-    ["Spotify / MegaFon", ["#191414", "#1ed760", "#ffffff"], ["#1ed760", "#ffffff", "#191414"]],
+    ["Spotify", ["#191414", "#1ed760", "#ffffff"], ["#1ed760", "#ffffff", "#191414"]],
     ["Discord", ["#000000", "#5865f2", "#e0e3ff"], ["#5865f2", "#e0e3ff", "#000000"]],
     ["Stripe", ["#0a2540", "#635bff", "#f6f9fc"], ["#635bff", "#0a2540", "#f6f9fc"]],
     ["Linear", ["#08090a", "#5e6ad2", "#f7f8f8"], ["#5e6ad2", "#f7f8f8", "#08090a"]],
     ["Airbnb", ["#222222", "#484848", "#ff385c", "#ffffff"], ["#ff385c", "#222222", "#ffffff"]],
     ["GitHub", ["#0d1117", "#238636", "#1f6feb", "#f6f8fa"]],
-    ["Notion / Vercel", ["#000000", "#191919", "#787774", "#f7f6f3", "#ffffff"]],
+    ["Notion", ["#000000", "#191919", "#787774", "#f7f6f3", "#ffffff"]],
     ["Twitch", ["#0e0e10", "#9146ff", "#efeff1"]],
     ["Shopify", ["#002e25", "#008060", "#95bf47", "#f6f6f1"]],
-    ["Google / Duolingo", ["#4285f4", "#ea4335", "#fbbc05", "#34a853", "#ffffff"]],
+    ["Google", ["#4285f4", "#ea4335", "#fbbc05", "#34a853", "#ffffff"]],
     ["Instagram", ["#4f5bd5", "#962fbf", "#d62976", "#fa7e1e", "#feda75"], ["#4f5bd5", "#d62976", "#fff8ef"]],
     ["IKEA", ["#0058a3", "#ffdb00", "#ffffff"], ["#0058a3", "#ffffff", "#ffdb00"]],
     ["Tiffany", ["#0a0a0a", "#81d8d0", "#ffffff"], ["#0a0a0a", "#ffffff", "#81d8d0"]],
@@ -150,15 +152,15 @@
     // Intel, MTS, Kaspersky, Avito, VK's brand page). Yandex Neo is Yandex Music's My Wave glow. T-Bank and
     // Ozon block automated access, so theirs come from their logos as commonly reproduced.
     ["Yandex Neo", ["#050407", "#7a0f5c", "#e0336f", "#f2a81d", "#f4e04d"], ["#e0336f", "#f4e04d", "#050407"]],
-    ["Yandex / Alfa / MTS / Netflix", ["#000000", "#fc3f1d", "#e30613", "#ffffff"], ["#e30613", "#000000", "#ffffff"]],
-    // Yandex Go: the taxi yellow with black and white, as on the app's icon and cars (T-Bank's and Mailchimp's match).
-    ["Yandex Go / T-Bank / Mailchimp", ["#21201f", "#fce000", "#ffffff", "#f5f4f2"], ["#21201f", "#ffffff", "#fce000"]],
+    ["Netflix", ["#000000", "#fc3f1d", "#e30613", "#ffffff"], ["#e30613", "#000000", "#ffffff"]],
+    // The taxi yellow with black and white, as on Yandex Go's icon and cars (T-Bank's and Mailchimp's match).
+    ["Mailchimp", ["#21201f", "#fce000", "#ffffff", "#f5f4f2"], ["#21201f", "#ffffff", "#fce000"]],
     ["Yandex Intel", ["#120a2e", "#6335e0", "#7a55ff", "#a88cff", "#f3efff"], ["#6335e0", "#a88cff", "#120a2e"]],
     ["Sber", ["#f2e913", "#a3cd39", "#21a038", "#0fa8e0", "#0291eb", "#ffffff"], ["#21a038", "#0291eb", "#ffffff"]],
     ["VTB", ["#0a2973", "#009fdf", "#ffffff"], ["#0a2973", "#009fdf", "#ffffff"]],
     ["Ozon", ["#001a34", "#005bff", "#f91155", "#ffffff"], ["#005bff", "#f91155", "#ffffff"]],
     ["Wildberries", ["#2b0a3d", "#e313bf", "#f7d4f1"], ["#e313bf", "#2b0a3d", "#f7d4f1"]],
-    ["VK / Dropbox", ["#19191a", "#0077ff", "#ffffff"], ["#0077ff", "#19191a", "#ffffff"]],
+    ["Dropbox", ["#19191a", "#0077ff", "#ffffff"], ["#0077ff", "#19191a", "#ffffff"]],
     ["Avito", ["#00aaff", "#97cf26", "#ff6163", "#a169f7", "#ffffff"], ["#a169f7", "#00aaff", "#ffffff"]],
     ["Kaspersky", ["#1d1d1b", "#00a88e", "#ffffff"], ["#00a88e", "#1d1d1b", "#ffffff"]],
   ];
