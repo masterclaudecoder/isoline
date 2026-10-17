@@ -177,7 +177,7 @@
     await rollOnce();
   }
   // ---------- the logo's outline: click, hold, auto roll ----------
-  const HOLD_MS = 650, HOLD_DELAY = 140, AUTO_GAP = 2600;
+  const HOLD_MS = 650, HOLD_DELAY = 140, AUTO_GAP = 8000;
   let auto = false, autoT = 0, holdT = 0, holdAnim = null, eatClick = false, ringAnim = null;
   function ring() {
     const b = $("brand");
@@ -376,8 +376,13 @@
     for (const n of b.children) if (!n.matches(".brand-shine, .brand-ring")) r = Math.max(r, n.getBoundingClientRect().right);
     return (r || b.getBoundingClientRect().right) - base;
   }
+  const narrowBar = matchMedia("(max-width: 360px)");
   function syncHomeHist() {
-    $("homeHist").style.left = brandRight() + 8 + "px";
+    // Clear of the logo's outline (9px past it, 6px on the narrowest phones), so a hovered undo never
+    // touches it. Where the bar is short of room the gap shrinks, keeping clear of the buttons on the right.
+    const h = $("homeHist"), out = narrowBar.matches ? 6 : 9, br = brandRight(), base = h.offsetParent?.getBoundingClientRect().left || 0;
+    const end = (document.querySelector(".top-right")?.getBoundingClientRect().left ?? Infinity) - base - 4;
+    h.style.left = Math.max(br + out + 3, Math.min(br + out + 9, end - h.offsetWidth)) + "px";
     $("homeUndo").disabled = homeAt <= 0; $("homeRedo").disabled = homeAt < 0 || homeAt >= homeHist.length - 1;
     $("homeHist").classList.toggle("on", homeHist.length > 1);
   }

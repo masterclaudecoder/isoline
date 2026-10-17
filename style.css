@@ -2371,6 +2371,12 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .home-hist { position: absolute; top: 50%; left: 150px; translate: 0 -50%; display: inline-flex; gap: 2px; opacity: 0; pointer-events: none; transition: opacity .25s ease; }
 .home-hist.on { opacity: 1; pointer-events: auto; }
 .home-hist .ib:disabled { opacity: .35; }
+/* The narrowest phones: the outline hugs the logo closer and undo and redo get a little smaller, so the
+   pair fits between the logo and the buttons on the right. */
+@media (max-width: 360px) {
+  .home-hist { gap: 0; }
+  .home-hist .ib { width: 28px; }
+}
 
 /* Performance mode (html.lite, see ui.js): backdrop blur and the live glass refraction redraw whatever lies
    behind them on every frame, which integrated graphics feel most, so bars and menus go solid instead.
@@ -2391,6 +2397,7 @@ html.lite .glass.glass-live > *, html.lite .glass.glass-live .bar-btn, html.lite
 .top > .brand { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
 .brand-ring { position: absolute; left: -9px; top: -6px; width: calc(100% + 18px); height: calc(100% + 12px); overflow: visible; pointer-events: none; }
 .brand-ring rect { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 0; opacity: 0; }
+@media (max-width: 360px) { .brand-ring { left: -6px; width: calc(100% + 12px); } }
 .brand-shine {
   position: absolute; inset: 0 auto 0 0; width: max-content; display: flex; align-items: center; gap: 9px; pointer-events: none; opacity: 0;
   color: var(--accent);
