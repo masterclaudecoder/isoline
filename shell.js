@@ -177,7 +177,7 @@
     await rollOnce();
   }
   // ---------- the logo's outline: click, hold, auto roll ----------
-  const HOLD_MS = 650, HOLD_DELAY = 140, AUTO_GAP = 2600;
+  const HOLD_MS = 650, HOLD_DELAY = 140, AUTO_GAP = 8000;
   let auto = false, autoT = 0, holdT = 0, holdAnim = null, eatClick = false, ringAnim = null;
   function ring() {
     const b = $("brand");
@@ -377,7 +377,8 @@
     return (r || b.getBoundingClientRect().right) - base;
   }
   function syncHomeHist() {
-    $("homeHist").style.left = brandRight() + 8 + "px";
+    // Clear of the logo's outline (9px past it), so a hovered undo never touches it.
+    $("homeHist").style.left = brandRight() + 18 + "px";
     $("homeUndo").disabled = homeAt <= 0; $("homeRedo").disabled = homeAt < 0 || homeAt >= homeHist.length - 1;
     $("homeHist").classList.toggle("on", homeHist.length > 1);
   }
