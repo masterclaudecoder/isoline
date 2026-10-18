@@ -2497,6 +2497,8 @@ html.lite .glass.glass-live > *, html.lite .glass.glass-live .bar-btn, html.lite
 .as-chip svg { width: 100%; max-width: 44px; aspect-ratio: 1; }
 .as-chip span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .as-chip.on { box-shadow: var(--raised), 0 0 0 1.5px var(--accent); color: var(--ink); }
+.as-chip.meh { opacity: .45; }
+.as-chip.meh:hover { opacity: .8; }
 .as-chip:hover { background: var(--well); }
 .as-fill.off { opacity: .4; pointer-events: none; }
 .as-sliders { margin: 6px 0 10px; }

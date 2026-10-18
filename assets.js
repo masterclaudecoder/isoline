@@ -32,10 +32,11 @@
     ["none", "None", "The form on its own"], ["ring", "Ring", "Enclosed by a ring"], ["echo", "Echo", "The form repeated outward, a rhythm"],
     ["orbit", "Orbit", "A tilted ring passing behind and in front"], ["radial", "Radial", "Pieces spaced evenly around it"], ["overlap", "Overlap", "Two forms overlapping"],
     ["bite", "Bite", "A piece cut out of the form, negative space"], ["satellite", "Satellite", "One small piece beside it"],
+    ["initial", "Initial", "Your first letter cut out of the form"],
   ];
   const USES_PIECE = new Set(["radial", "bite", "satellite", "orbit"]);
   const CONTAINERS = [["none", "None", "Nothing around the mark"], ["circle", "Circle", "A round badge"], ["rounded", "Rounded", "A rounded square"], ["squircle", "Squircle", "A soft square, like an app icon"], ["hexagon", "Hexagon", "Six sides"], ["diamond", "Diamond", "A square on its point"]];
-  const HOLDS = [["cut", "Cut", "The mark cut to the container's outline"], ["frame", "Frame", "The container drawn as a line around the mark"], ["badge", "Badge", "A solid container with the mark knocked out of it"]];
+  const HOLDS = [["frame", "Frame", "The container drawn as a line around the mark"], ["badge", "Badge", "A solid container with the mark knocked out of it"]];
   const FINISHES = [["none", "None", "No finish"], ["slice", "Slice", "A clean cut straight through"], ["split", "Split", "One side in the accent"], ["shadow", "Shadow", "An offset copy behind, in the accent"]];
   const ACCENTS = [["none", "None", "One color"], ["form", "Form", "The form in the accent"], ["around", "Around", "The composition in the accent"], ["container", "Container", "The container in the accent (with a frame or badge)"]];
 
@@ -55,7 +56,7 @@
     "a.piece": { poly: "hexagon", petal: "lens", blob: "circle", drop: "circle", leaf: "lens", arch: "half", cross: "diamond" },
     "a.kind": { repeat: "radial", offset: "overlap", pair: "overlap" },
     "w.shape": { hex: "hexagon", shield: "rounded", arch: "rounded", pill: "rounded" },
-    "f.kind": { stripes: "none", notch: "none" }, accent: { center: "form", one: "around", wrap: "container" },
+    "f.kind": { stripes: "none", notch: "none" }, "w.hold": { cut: "frame", mode: "frame" }, accent: { center: "form", one: "around", wrap: "container" },
   };
   // A mark from anywhere (storage, a saved look, a script) made safe to draw.
   function norm(m) {
@@ -100,7 +101,7 @@
   // ---------- how busy a mark is ----------
   // Lasting marks usually hold one to three elements. Each step adds to a running count, which the
   // meter shows and Shuffle keeps under.
-  const COST = { kind: { none: 0, ring: 0.5, echo: 1, orbit: 1, radial: 1, overlap: 0.7, bite: 0.5, satellite: 0.4 }, fill: { plain: 0, hatch: 0.8, dots: 0.8, contour: 1, rings: 0.7 }, hold: { cut: 0.2, frame: 0.5, badge: 0.4 }, finish: { none: 0, slice: 0.4, split: 0.5, shadow: 0.6 } };
+  const COST = { kind: { none: 0, ring: 0.5, echo: 1, orbit: 1, radial: 1, overlap: 0.7, bite: 0.5, satellite: 0.4, initial: 0.6 }, fill: { plain: 0, hatch: 0.8, dots: 0.8, contour: 1, rings: 0.7 }, hold: { frame: 0.5, badge: 0.4 }, finish: { none: 0, slice: 0.4, split: 0.5, shadow: 0.6 } };
   function busy(m) {
     let n = 1 + COST.kind[m.a.kind] + COST.fill[m.s.fill] + (m.w.shape === "none" ? 0 : COST.hold[m.w.hold]) + COST.finish[m.f.kind];
     if (m.a.kind === "radial" && m.a.count > 0.6) n += 0.3;
@@ -184,7 +185,8 @@
     let out = "";
     // A gap in the surface color under the form, so it reads apart from whatever it overlaps.
     if (g.halo && g.hw > 0.2) out += node(line ? `fill="none" stroke="${g.halo}" stroke-width="${f1(+sw + g.hw * 2)}" stroke-linejoin="round"` : `fill="${g.halo}" stroke="${g.halo}" stroke-width="${f1(g.hw * 2)}" stroke-linejoin="round"`);
-    const col = g.color, edge = line ? node(`fill="none" stroke="${col}" stroke-width="${sw}" stroke-linejoin="round"`) : "";
+    // Textures always get an edge: hatching or dots with no outline read as a frayed, fuzzy shape.
+    const col = g.color, edge = line || fill !== "plain" ? node(`fill="none" stroke="${col}" stroke-width="${f1(line ? sw : Math.max(2.2, sw * 0.7))}" stroke-linejoin="round"`) : "";
     if (fill === "plain") return out + (line ? edge : node(`fill="${col}"`));
     if (fill === "rings") {
       // Nested copies, each a constant line width, spaced so they never run together.
@@ -237,7 +239,7 @@
       const form = c.form === "letter" ? "circle" : c.form;
       for (let k = n; k >= 1; k--) {
         const s = (rc + k * step) / rc;
-        back += `<path d="${formD(form, rc, opt)}" transform="translate(50 50) rotate(${c.turn + k * a.spin * 0.2}) scale(${f1(s * 1000) / 1000})" fill="none" stroke="${aroCol}" stroke-width="${f1(sw / s)}" stroke-linejoin="round"/>`;
+        back += `<path d="${formD(form, rc, opt)}" transform="translate(50 50) rotate(${c.turn}) scale(${f1(s * 1000) / 1000})" fill="none" stroke="${aroCol}" stroke-width="${f1(sw / s)}" stroke-linejoin="round"/>`;
       }
       ext = rc + n * step + sw;
     } else if (a.kind === "orbit") {
@@ -263,36 +265,45 @@
       const s = rc * lerp(0.3, 0.55, a.size), R = rc * lerp(0.55, 0.95, a.dist), t = rad(a.spin - 45), px = 50 + R * Math.cos(t), py = 50 + R * Math.sin(t);
       cut = `<path d="${formD(a.piece, s + hw, opt)}" transform="translate(${f1(px)} ${f1(py)}) rotate(${a.spin})" fill="#000"/>`;
       if (a.count > 0.5) front += paintForm(a.piece, px, py, s * 0.55, a.spin, aroLine, opt, look(aroCol, aroLine, false));
+    } else if (a.kind === "initial") {
+      // A monogram cut into the form: the letter is a real gap, sized to sit well inside.
+      const fs = rc * lerp(0.95, 1.35, a.size);
+      cut = `<text x="50" y="${f1(50 + fs * 0.04)}" text-anchor="middle" dominant-baseline="central" font-family="'${esc(letter.font)}', system-ui, sans-serif" font-weight="${Math.max(600, letter.weight)}" font-size="${f1(fs)}" fill="#000">${esc(letter.ch)}</text>`;
     } else if (a.kind === "satellite") {
       // Close enough to belong to the form, large enough to read as a second shape, not a speck.
       const s = Math.max(rc * 0.28, lerp(6.5, 13, a.size)), R = rc + hw + s * 0.9 + a.dist * 6, t = rad(a.spin - 45);
-      front += paintForm(a.piece, 50 + R * Math.cos(t), 50 + R * Math.sin(t), s, a.spin, formLine, opt, look(aroCol, formLine, true));
+      // Solid whatever the style: a small outline reads as a speck, a small solid as a deliberate dot.
+      front += paintForm(a.piece, 50 + R * Math.cos(t), 50 + R * Math.sin(t), s, a.spin, false, opt, look(aroCol, false, true));
       ext = Math.max(rc, R + s);
     }
-    let form = paintForm(c.form, cx, cy, rc, c.turn, formLine, opt, look(formCol, formLine, a.kind === "overlap", st.fill));
+    // A letter stays upright and solid: turned, it reads as another glyph, and outlined, it goes weak.
+    const isLetter = c.form === "letter";
+    let form = paintForm(c.form, cx, cy, rc, isLetter ? 0 : c.turn, formLine && !isLetter, opt, look(formCol, formLine, a.kind === "overlap", isLetter ? "plain" : st.fill));
     if (cut) { const id = uid(); form = `<defs><mask id="${id}" maskUnits="userSpaceOnUse" x="-10" y="-10" width="120" height="120"><rect x="-10" y="-10" width="120" height="120" fill="#fff"/>${cut}</mask></defs><g mask="url(#${id})">${form}</g>`; }
     // Everything is scaled to fit the board, then stepped in to sit inside a frame or badge with room.
-    // A cut grows the mark past the container's edge so the container crops it.
-    const fit = Math.min(1, 46 / Math.max(ext, 1)) * (frame ? 0.74 : badge ? 0.78 : contOn ? 1.32 : 1);
+    const fit = Math.min(1, 46 / Math.max(ext, 1)) * (frame ? 0.74 : badge ? 0.78 : 1);
     const body = `<g transform="translate(50 50) scale(${f1(fit * 1000) / 1000}) translate(-50 -50)">${back}${form}${front}</g>`;
     let out = body;
     if (contOn) {
       const cd = CONT_D[w.shape];
       if (badge) out = `<path d="${cd}" transform="translate(50 50)" fill="${contCol}"/>` + body;
       else if (frame) out = body + `<path d="${cd}" transform="translate(50 50) scale(.95)" fill="none" stroke="${contCol}" stroke-width="${f1(Math.max(3, sw * 0.85))}" stroke-linejoin="round"/>`;
-      else { const id = uid(); out = `<defs><clipPath id="${id}"><path d="${cd}" transform="translate(50 50)"/></clipPath></defs><g clip-path="url(#${id})">${body}</g>`; }
     }
     return finish(out, m, hw);
   }
   // The finish: a cut (a mask, so it stays a real gap on any background) or an accent copy.
   const reid = (s, k) => s.replace(/id="(lg\w+)"/g, `id="$1${k}"`).replace(/url\(#(lg\w+)\)/g, `url(#$1${k})`);
+  // The copy a shadow or split adds is in the other color, so it never melts into the form: ink parts
+  // turn accent and accent parts turn ink. A shadow is one color, whichever the form isn't.
+  const swap = (s) => s.replace(/INK|ACC/g, (t) => (t === "INK" ? "ACC" : "INK"));
+  const flat = (s, m) => s.replace(/INK|ACC/g, m.accent === "form" ? "INK" : "ACC");
   function finish(art, m, hw) {
     const k = m.f.kind, ang = m.f.angle * 180;
     if (k === "none") return art;
-    if (k === "shadow") { const d = 3 + hw, t = rad(ang + 45); return `<g transform="translate(${f1(d * Math.cos(t))} ${f1(d * Math.sin(t))})">${reid(art.replace(/INK/g, "ACC"), "s")}</g>${art}`; }
+    if (k === "shadow") { const d = 3 + hw, t = rad(ang + 45); return `<g transform="translate(${f1(d * Math.cos(t))} ${f1(d * Math.sin(t))})">${reid(flat(art, m), "s")}</g>${art}`; }
     if (k === "split") {
       const id = uid();
-      return art + `<defs><clipPath id="${id}"><path d="M-100 0H100V100H-100Z" transform="translate(50 50) rotate(${f1(ang)})"/></clipPath></defs><g clip-path="url(#${id})">${reid(art.replace(/INK/g, "ACC"), "h")}</g>`;
+      return art + `<defs><clipPath id="${id}"><path d="M-100 0H100V100H-100Z" transform="translate(50 50) rotate(${f1(ang)})"/></clipPath></defs><g clip-path="url(#${id})">${reid(swap(art), "h")}</g>`;
     }
     const id = uid();
     return `<defs><mask id="${id}" maskUnits="userSpaceOnUse" x="-10" y="-10" width="120" height="120"><rect x="-10" y="-10" width="120" height="120" fill="#fff"/><path d="M-80 0H80" transform="translate(50 50) rotate(${f1(ang - 30)})" stroke="#000" stroke-width="${f1(2.5 + hw)}"/></mask></defs><g mask="url(#${id})">${art}</g>`;
@@ -314,37 +325,54 @@
   const pickW = (w) => { const e = Object.entries(w), t = e.reduce((s, [, v]) => s + v, 0); let x = Math.random() * t; for (const [k, v] of e) if ((x -= v) < 0) return k; return e[0][0]; };
   const rnd = (a, b) => +(a + Math.random() * (b - a)).toFixed(2);
   const ROLL = {
-    c: () => ({ form: pickW({ circle: 3, square: 2, triangle: 1.5, diamond: 1, hexagon: 1.5, star: 1, lens: 1, half: 1.2, quarter: 1, cross: 0.7, letter: 2 }), size: rnd(0.45, 0.8), turn: Math.random() < 0.7 ? 0 : Math.round(Math.random() * 8) * 45, points: rnd(0, 0.7), round: rnd(0.15, 0.6) }),
-    s: () => ({ style: pickW({ solid: 4, line: 3, mixed: 2 }), fill: pickW({ plain: 6, hatch: 1, dots: 0.6, contour: 1.2, rings: 1 }), detail: rnd(0.25, 0.7) }),
-    a: () => ({ kind: pickW({ none: 2.5, ring: 1.5, echo: 1.2, orbit: 1.2, radial: 1.5, overlap: 1, bite: 1.5, satellite: 1.2 }), piece: pickW({ circle: 4, square: 1, triangle: 1, diamond: 1, hexagon: 0.5, star: 0.6, lens: 1.2, half: 0.6, quarter: 0.6 }), count: rnd(0.1, 0.8), dist: rnd(0.1, 0.7), size: rnd(0.25, 0.75), spin: Math.round(Math.random() * 8) * 45 }),
-    w: () => ({ shape: pickW({ none: 4, circle: 2, rounded: 1.5, squircle: 1.5, hexagon: 0.8, diamond: 0.5 }), hold: pickW({ cut: 1, frame: 2, badge: 2.5 }) }),
+    c: () => { const form = pickW({ circle: 3, square: 2, triangle: 1.5, diamond: 1, hexagon: 1.5, star: 1, lens: 1, half: 1.2, quarter: 1, cross: 0.7, letter: 2 }); return { form, size: rnd(0.45, 0.8), turn: pick(TURN_OK[form] || [0]), points: rnd(0, 0.7), round: rnd(0.15, 0.6) }; },
+    s: () => ({ style: pickW({ solid: 4, line: 2.5, mixed: 2 }), fill: pickW({ plain: 6, hatch: 1, dots: 0.6, contour: 1.2, rings: 1 }), detail: rnd(0.25, 0.7) }),
+    a: () => ({ kind: pickW({ none: 2.5, ring: 1.5, echo: 1.2, orbit: 1, radial: 1.2, overlap: 1, bite: 1.6, satellite: 1.6, initial: 1.2 }), piece: pickW({ circle: 5, square: 1.2, triangle: 1, diamond: 1.2, hexagon: 0.4, star: 0.5, lens: 1, half: 0.5, quarter: 0.6 }), count: rnd(0.1, 0.8), dist: rnd(0.1, 0.7), size: rnd(0.25, 0.75), spin: Math.round(Math.random() * 8) * 45 }),
+    w: () => ({ shape: pickW({ none: 4, circle: 2, rounded: 1.5, squircle: 1.5, hexagon: 0.8, diamond: 0.5 }), hold: pickW({ frame: 2, badge: 2.5 }) }),
     f: () => ({ kind: pickW({ none: 6, slice: 1, split: 1, shadow: 0.8 }), angle: rnd(0, 1) }),
   };
   // A new take on one step (or all of them), keeping the rest. Rolls stay within the element budget,
   // and a few pairings that never read well are rolled again: texture inside a small form, a textured
   // form inside a badge with lines all around it, or two ideas competing for the edge.
-  function sensible(m) {
-    if (m.s.fill !== "plain" && (m.c.size < 0.5 || m.c.form === "letter" || m.a.kind === "radial")) return false;
-    if (m.a.kind === "echo" && m.w.shape !== "none" && m.w.hold === "frame") return false;
-    if (m.a.kind === "bite" && m.c.form === "letter") return false;
-    if (m.f.kind !== "none" && m.a.kind !== "none" && m.s.fill !== "plain") return false;
-    if (m.accent === "container" && (m.w.shape === "none" || m.w.hold === "cut")) return false;
-    return true;
-  }
+  // Turns that suit each form; anything else looks like a mistake rather than a choice.
+  const TURN_OK = { triangle: [0, 0, 90, 180, 270], half: [0, 0, 180], quarter: [0, 90, 180, 270], lens: [0, 0, 45, 90], star: [0], cross: [0, 0, 45], diamond: [0], square: [0, 0, 45] };
+  const CONVEX = new Set(["circle", "square", "hexagon", "diamond", "triangle", "half", "lens"]);
+  const has = (list, v) => list.includes(v);
+  // What reads well together, learned from rolling many marks and looking at what failed. Each rule
+  // names a step and the choices it needs from the others; manual picks may break them (the option
+  // cards fade), rolls never do.
+  const RULES = {
+    fill: (m) => m.s.fill === "plain" || (CONVEX.has(m.c.form) && m.c.size >= 0.5 && has(["none", "ring", "satellite"], m.a.kind) && m.f.kind !== "shadow" && m.f.kind !== "split" && (m.s.style !== "line" || m.s.fill === "rings")),
+    overlap: (m) => m.a.kind !== "overlap" || (m.s.style !== "line" && has(["circle", "square", "diamond", "hexagon", "lens", "half"], m.c.form) && m.f.kind === "none"),
+    bite: (m) => m.a.kind !== "bite" || (m.s.style !== "line" && !has(["letter", "cross"], m.c.form) && has(["circle", "square", "triangle", "diamond", "quarter", "lens"], m.a.piece)),
+    radial: (m) => m.a.kind !== "radial" || (has(["circle", "lens", "square", "diamond"], m.a.piece) && m.f.kind === "none" && !has(["half", "quarter"], m.c.form)),
+    echo: (m) => m.a.kind !== "echo" || (has(["circle", "square", "hexagon", "diamond", "triangle", "letter"], m.c.form) && m.f.kind !== "shadow" && m.f.kind !== "split"),
+    orbit: (m) => m.a.kind !== "orbit" || (has(["circle", "hexagon", "star", "diamond"], m.c.form) && m.s.style !== "line" && m.f.kind === "none" && m.w.hold !== "frame"),
+    satellite: (m) => m.a.kind !== "satellite" || (has(["circle", "square", "diamond"], m.a.piece) && (m.c.form !== "letter" || m.a.piece === "circle")),
+    initial: (m) => m.a.kind !== "initial" || (has(["circle", "square", "hexagon", "diamond"], m.c.form) && m.c.size >= 0.45 && m.s.style !== "line" && m.s.fill === "plain" && has(["none", "slice"], m.f.kind)),
+    halves: (m) => !has(["half", "quarter"], m.c.form) || has(["none", "ring", "satellite", "bite"], m.a.kind),
+    shadow: (m) => m.f.kind !== "shadow" || (m.a.kind === "none" && m.w.shape === "none" && m.s.style === "solid"),
+    split: (m) => m.f.kind !== "split" || (has(["none", "bite"], m.a.kind) && m.w.shape === "none"),
+    slice: (m) => m.f.kind !== "slice" || (has(["none", "bite", "initial"], m.a.kind) && m.s.style !== "line" && m.s.fill === "plain" && m.c.form !== "letter" && (m.w.shape === "none" || m.w.hold === "badge")),
+    accent: (m) => m.accent !== "container" || m.w.shape !== "none",
+  };
+  const sensible = (m) => Object.values(RULES).every((r) => r(m));
   function rollPart(m, part) {
-    const budget = part ? 3.3 : pickW({ 1.8: 3, 2.6: 4, 3.3: 2 });
+    const budget = part ? 3 : pickW({ 1.8: 3, 2.4: 4, 3: 2 });
     let best = null;
     for (let i = 0; i < 30; i++) {
       const o = JSON.parse(JSON.stringify(m));
       // The last step's die rolls its finish and its accent together.
       for (const k of part ? (part === "x" ? ["f"] : [part]) : ["c", "s", "a", "w", "f"]) if (ROLL[k]) o[k] = ROLL[k]();
-      if (!part || part === "x") { o.accent = pickW({ none: 0.6, form: 2.5, around: o.a.kind === "none" ? 0 : 2, container: o.w.shape !== "none" && o.w.hold !== "cut" ? 1.2 : 0 }); o.weight = rnd(0.3, 0.65); o.gap = rnd(0.25, 0.65); }
+      if (!part || part === "x") { o.accent = pickW({ none: 0.6, form: 2.5, around: o.a.kind === "none" ? 0 : 2, container: o.w.shape !== "none" ? 1.2 : 0 }); o.weight = rnd(0.3, 0.65); o.gap = rnd(0.25, 0.65); }
       if (!part || part === "seed") o.seed = newSeed();
-      const n = norm(o);
-      if (sensible(n) && busy(n) <= budget) return n;
-      if (!best || busy(n) < busy(best)) best = n;
+      const n = norm(o), broken = Object.values(RULES).filter((r) => !r(n)).length, over = Math.max(0, busy(n) - budget);
+      if (!broken && !over) return n;
+      // Nothing fit: keep the roll that breaks the fewest rules, then the least busy.
+      const score = broken * 10 + over;
+      if (!best || score < best.score) best = { m: n, score };
     }
-    return best;
+    return best.m;
   }
 
   // ---------- type and color ----------
@@ -509,8 +537,6 @@
     const g = document.createElement("div"); g.className = "as-chips"; g.style.setProperty("--cols", cols); host.appendChild(g);
     g.onclick = (e) => {
       const b = e.target.closest("[data-v]"); if (!b) return;
-      // A container picked from none starts as a frame, the hold that shows it.
-      if (path === "w.shape" && L.mark.w.shape === "none" && L.mark.w.hold === "cut") setK("w.hold", "frame");
       setK(path, b.dataset.v); syncAll(); changed();
     };
     chipSets.push({ g, path, list });
@@ -589,7 +615,7 @@
   const USED = {
     "c.points": (m) => m.c.form === "star", "c.round": (m) => ["square", "triangle", "diamond", "hexagon", "star", "cross"].includes(m.c.form),
     "s.detail": (m) => m.s.fill !== "plain",
-    "a.count": (m) => ["echo", "orbit", "radial", "bite"].includes(m.a.kind), "a.dist": (m) => m.a.kind !== "none", "a.size": (m) => ["orbit", "radial", "satellite", "bite"].includes(m.a.kind), "a.spin": (m) => m.a.kind !== "none" && m.a.kind !== "ring",
+    "a.count": (m) => ["echo", "orbit", "radial", "bite"].includes(m.a.kind), "a.dist": (m) => !["none", "initial"].includes(m.a.kind), "a.size": (m) => ["orbit", "radial", "satellite", "bite", "initial"].includes(m.a.kind), "a.spin": (m) => !["none", "ring", "initial"].includes(m.a.kind),
     "f.angle": (m) => m.f.kind !== "none",
   };
   function renderChips() {
@@ -601,14 +627,15 @@
         let o = t; for (const k of ks.slice(0, -1)) o = o[k]; o[ks[ks.length - 1]] = v;
         // A piece shows even while the composition doesn't use one.
         if (path === "a.piece" && !USES_PIECE.has(t.a.kind)) t.a.kind = "satellite";
-        if (path === "w.shape" && m.w.shape === "none" && t.w.hold === "cut") t.w.hold = "frame";
-        return `<button class="as-chip${cur === v ? " on" : ""}" data-v="${v}" data-tip="${esc(tip)}">${markOnly(norm(t), c, f)}<span>${name}</span></button>`;
+        // Choices that rarely read well with the rest of the mark fade, but stay clickable.
+        const meh = cur !== v && !sensible(norm(t));
+        return `<button class="as-chip${cur === v ? " on" : ""}${meh ? " meh" : ""}" data-v="${v}" data-tip="${esc(meh ? tip + ". Rarely reads well with the rest of this mark" : tip)}">${markOnly(norm(t), c, f)}<span>${name}</span></button>`;
       }).join("");
     }
     for (const row of $("asOpts").querySelectorAll(".ctrl[data-k]")) row.classList.toggle("off", USED[row.dataset.k] ? !USED[row.dataset.k](m) : false);
     $("asOpts").querySelector(".as-piece").classList.toggle("off", !USES_PIECE.has(m.a.kind));
     $("asOpts").querySelector(".as-mode").classList.toggle("off", m.w.shape === "none");
-    $("asOpts").querySelector(".as-acc button[data-v=container]").disabled = m.w.shape === "none" || m.w.hold === "cut";
+    $("asOpts").querySelector(".as-acc button[data-v=container]").disabled = m.w.shape === "none";
   }
   function renderFonts() {
     const sel = $("asFont"), t = kitTokens(), kitF = t?.font.heading || "Instrument Sans";
