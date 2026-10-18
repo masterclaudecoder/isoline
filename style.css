@@ -2475,7 +2475,17 @@ html.lite .glass.glass-live > *, html.lite .glass.glass-live .bar-btn, html.lite
 .as-head { margin: 20px 0 10px; }
 .as-head .ib.xs { color: var(--muted); }
 .as-head .ib.xs:hover { color: var(--accent); background: var(--well); }
-.as-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.as-chips { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.as-chips.sm .as-chip { padding: 5px 4px 4px; font-size: 11px; }
+.as-chips.sm .as-chip svg { max-width: 30px; }
+.as-chips.off, .as-mode.off, .ctrl.off { opacity: .4; }
+.as-chips.off { pointer-events: auto; }
+.as-step { border-top: 1px solid var(--hair); margin-top: 18px; }
+.as-step .as-head { margin: 14px 0 10px; }
+.as-n { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 7px; border-radius: 50%; background: var(--well); box-shadow: var(--sunken); font-size: 10.5px; color: var(--muted); vertical-align: 1px; }
+.as-lbl { font-size: 12px; font-weight: 600; color: var(--muted); margin: 4px 0 6px; }
+.as-acc2 { margin: 6px 0 12px; }
+.as-mode { margin-top: 2px; }
 .as-chip { display: grid; gap: 4px; justify-items: center; padding: 8px 4px 6px; border: 0; border-radius: 12px; background: var(--panel); box-shadow: var(--raised); font-size: 11.5px; font-weight: 600; color: var(--ink-2); min-width: 0; }
 .as-chip svg { width: 100%; max-width: 44px; aspect-ratio: 1; }
 .as-chip span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
