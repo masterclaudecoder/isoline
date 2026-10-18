@@ -388,6 +388,14 @@
   // standing in front of it. Both are drawn at their real widths and scaled to the card.
   const homeRO = new ResizeObserver((en) => { for (const e of en) sizeHome(e.target, e.contentRect.width, e.contentRect.height); });
   const sizeHome = (el, w, h) => { el.style.setProperty("--cw", Math.round(w || 600)); el.style.setProperty("--ch", Math.round(h || 380)); };
+  // The logo from Assets, when it's set to stand in for Margin's: every brand in the kit swaps to it,
+  // and back to Margin's when it's switched off. A brand already wearing the current logo is left alone.
+  function brandPass(el) {
+    if (!el) return;
+    const key = root.Assets?.kitKey?.() || "", html = key ? root.Assets.kitBrand() : LOGO;
+    for (const b of el.querySelectorAll(".k-brand")) if ((b.dataset.bk || "") !== key) { b.outerHTML = html.replace('class="k-brand"', `class="k-brand" data-bk="${key.replace(/"/g, "")}"`); }
+  }
+  const brand = () => { brandPass($("kit")); brandPass($("homeComponents")); };
   function preview(el) {
     if (!el) return;
     // Switching Cyrillic off puts the English copy back by drawing the page again.
@@ -417,6 +425,7 @@
     if (swapped || el.dataset.lang !== lang) { el.dataset.lang = lang; for (const k of el.querySelectorAll(".kit")) kitLang(k); }
     for (const k of el.querySelectorAll(".kit")) { vars(k); k.classList.toggle("k-has-art", !!artURL); k.style.setProperty("--k-art", artURL ? `url("${artURL}")` : "none"); }
     vars(el.querySelector(".cps"));
+    brandPass(el);
     // The ResizeObserver keeps the size after this; reading it on every repaint forced a full layout.
     if (!el.style.getPropertyValue("--cw")) sizeHome(el, el.clientWidth, el.clientHeight);
   }
@@ -894,7 +903,7 @@
   function renderStage() {
     const kit = $("kit");
     kit.className = "kit" + (K.view === "pages" ? " k-landing" : "");
-    kit.innerHTML = previewHTML();
+    kit.innerHTML = previewHTML(); brandPass(kit);
     kitLang(kit);
     if (!kit._watched) { kit._watched = true; kitWatch.observe(kit, { childList: true, subtree: true }); }
     fitKit();
@@ -1166,5 +1175,5 @@
   }
   // Built ahead of a first visit (the shell does it while the home page idles), so the visit finds it ready.
   function prepare() { if (leftKey || root.Shell?.route === "components") return; setMode(K.mode); leftKey = pageKey(); }
-  root.Components = { onShow, prepare, art: refreshArt, onHide: () => (leftKey = pageKey()), usePalette, remix, look, setLook, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
+  root.Components = { onShow, prepare, art: refreshArt, brand, onHide: () => (leftKey = pageKey()), usePalette, remix, look, setLook, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
 })(window);

@@ -4,7 +4,7 @@
 
 # Isoline
 
-**Topographic patterns, gradients, palettes and design tokens, in one browser tab.**
+**Topographic patterns, gradients, palettes, design tokens and logos, in one browser tab.**
 Make a background, pick its colors and turn it into a kit, without fighting Figma.
 
 [![Live site](https://img.shields.io/badge/open-isoline-e8572a?style=flat-square)](https://masterclaudecoder.github.io/isoline/)
@@ -13,13 +13,13 @@ Make a background, pick its colors and turn it into a kit, without fighting Figm
 ![Vanilla JS](https://img.shields.io/badge/vanilla-JS-f7df1e?style=flat-square&logo=javascript&logoColor=000)
 ![WebGL2](https://img.shields.io/badge/WebGL2-990000?style=flat-square&logo=webgl&logoColor=fff)
 
-`generative-art` · `topography` · `contours` · `gradients` · `shaders` · `color-palettes` · `design-tokens` · `svg` · `webgl`
+`generative-art` · `topography` · `contours` · `gradients` · `shaders` · `color-palettes` · `design-tokens` · `logo-maker` · `svg` · `webgl`
 
 <br>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/home-dark.jpg">
-  <img src="docs/home.jpg" alt="The Isoline home page: Studio, Palettes and Components cards" width="900">
+  <img src="docs/home.jpg" alt="The Isoline home page: Studio, Palettes, Assets and Components cards" width="900">
 </picture>
 
 </div>
@@ -54,9 +54,18 @@ A token builder (type, color, spacing, radius, elevation, motion) previewed on r
 </td>
 <td><img src="docs/components.jpg" alt="The Components builder"></td>
 </tr>
+<tr>
+<td valign="top">
+
+### Assets
+A logo maker: a mark in one of seven drawn styles plus your project's name, set in the kit's font and colors. Preview it on dark, on your accent, over your design and as an app icon, then export SVG or PNG. It can stand in for the kit's logo in Components.
+
+</td>
+<td><img src="docs/assets.jpg" alt="The logo maker"></td>
+</tr>
 </table>
 
-**Roll a whole look** by clicking the logo on the home page: a new palette, design and kit at once. Hold the logo to keep rolling every 8 seconds.
+**Roll a whole look** by clicking the logo on the home page: a new palette, design, kit and logo at once. Hold the logo to keep rolling every 8 seconds.
 
 <img src="docs/presets.jpg" alt="Presets: Ember, Glass orbs, Liquid and Riso">
 
@@ -75,7 +84,7 @@ Changes go to `main` through pull requests. Each pull request runs the site buil
 
 ## For agents
 
-**Share → Copy for agents** copies a guide to the app. Scripts and agents can drive everything through `window.Isoline` (`studio`, `palettes`, `components`, `go`, `guide()`).
+**Share → Copy for agents** copies a guide to the app. Scripts and agents can drive everything through `window.Isoline` (`studio`, `palettes`, `components`, `assets`, `go`, `guide()`).
 
 ## Project
 
@@ -84,6 +93,7 @@ Changes go to `main` through pull requests. Each pull request runs the site buil
 | `app.js` · `engine.js` · `fx.js` | Studio, the contour engine (no DOM), WebGL generators and effects |
 | `palette.js` · `color.js` · `colornames.js` | Palette tool, color math, color names |
 | `components.js` · `libs.js` | Token builder and the library directory |
+| `assets.js` | Logo maker |
 | `shell.js` · `ui.js` · `glass.js` · `tour.js` | Pages and transitions, shared motion, glass bars, tutorials |
 | `i18n.js` · `ru.js` | Russian translation |
 | `tools/` | Library preview capture, preset thumbnails, tooltip recordings |

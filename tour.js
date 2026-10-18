@@ -262,7 +262,8 @@
       { el: '.home [data-go="studio"]', t: "Studio", p: "Make patterns, gradients and effects, animate them and export anywhere." },
       { el: '.home [data-go="palettes"]', t: "Palettes", p: "Roll palettes and check names and contrast. Your colors carry over to the other tools." },
       { el: '.home [data-go="components"]', t: "Components", p: "Build a kit in your colors or browse UI libraries." },
-      { el: "#brand", inner: true, calm: true, t: "Feeling lucky?", p: "Click the logo to roll all three at once. Hold it to keep rolling until you press again." },
+      { el: '.home [data-go="assets"]', t: "Assets", p: "Make a logo for your project in the kit's font and colors." },
+      { el: "#brand", inner: true, calm: true, t: "Feeling lucky?", p: "Click the logo to roll everything at once. Hold it to keep rolling until you press again." },
       { el: '.home [data-go="studio"]', t: "Let's begin", p: "Start in the Studio. A short tutorial is waiting there.", done: "Open the Studio" },
     ],
     studio: [
@@ -273,6 +274,12 @@
       { el: "#surprise", t: "Surprise", p: "Rolls a whole new look. Variation (R) reshuffles the one you have." },
       { el: "#exportBtn", t: "Export", p: "PNG, SVG, video, GIF or HTML. Share has a link and a brief for AI agents." },
       { el: "#settingsBtn", t: "Settings", p: "Theme, accent, safe values and the tutorials." },
+    ],
+    assets: [
+      { el: "#asOpts", t: "Your logo", p: "Name it, then pick a mark. Every style is drawn fresh, so no two logos are alike." },
+      { el: "#asStage .as-tiles", t: "Everywhere it goes", p: "See it on dark, on your accent, over your Studio design and as an app icon." },
+      { el: "#asShuffle", t: "Shuffle", p: "R gives a new take on the style, Shift R a new style. Export SVG or PNG from here." },
+      { el: ".as-kit", t: "In your kit", p: "Switch this on and the Components preview wears your logo." },
     ],
     palettes: [
       { el: ".pt-col", t: "Your colors", p: "Each column is a color. Hover for lock, copy and shades. Drag to reorder." },

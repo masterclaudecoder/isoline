@@ -826,7 +826,7 @@ window.I18N_RU = {
   "{n}s, once": "{n} с, один раз",
   "Build a kit in your colors or browse UI libraries.": "Соберите набор в своих цветах или посмотрите UI-библиотеки.",
   "Builder makes a kit in your colors. Libraries lists UI kits to browse.": "Конструктор собирает набор в ваших цветах. В Библиотеках собраны готовые UI-киты.",
-  "Click the logo to roll all three at once. Hold it to keep rolling until you press again.": "Нажмите на логотип, чтобы обновить все три раздела. Удерживайте его, и они будут обновляться сами, пока вы не нажмёте снова.",
+  "Click the logo to roll everything at once. Hold it to keep rolling until you press again.": "Нажмите на логотип, чтобы обновить всё сразу. Удерживайте его, и всё будет обновляться само, пока вы не нажмёте снова.",
   "Rolling new looks by itself. Press to stop": "Новые образы подбираются сами. Нажмите, чтобы остановить",
   "Drag points, objects and handles here. Drag the edges to resize.": "Здесь двигаются точки, объекты и маркеры. Потяните за край, чтобы изменить размер.",
   "Each card opens the library's site and docs.": "Карточка ведёт на сайт библиотеки и её документацию.",

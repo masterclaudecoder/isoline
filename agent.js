@@ -10,11 +10,11 @@
   const GUIDE = `# Isoline agent guide
 
 Isoline is a single-page app with three tools. Everything is scriptable from the browser console or an
-automation tool through window.Isoline. Routes: #/ (home), #/studio, #/palettes, #/components.
+automation tool through window.Isoline. Routes: #/ (home), #/studio, #/palettes, #/components, #/assets.
 A palette can be passed in the URL: #/palettes/2f6fdb-6a9f7a-d8a51f.
 
 ## Navigation
-- Isoline.go("studio" | "palettes" | "components" | "home")
+- Isoline.go("studio" | "palettes" | "components" | "assets" | "home")
 
 ## Studio (topographic patterns, gradients, effects, motion)
 - Isoline.studio.state() returns the full settings object
@@ -45,6 +45,7 @@ Effects with a center (rays, lens, dof, swirl, bulge, ripple) take x and y from 
 - Isoline.components.tokens() returns type, color, spacing, radius, elevation and motion tokens
 - Isoline.components.css() returns them as CSS variables
 - Isoline.components.brief("design" | "dev") returns the brief with the design rules
+- Isoline.assets.state() / set({ name, style, seed, layout, font, weight, case, track, color, kit }) read and change the logo; styles() lists the mark styles; svg() and png(scale) export it
 - Isoline.components.libraries() lists the UI library directory with links
 - Isoline.components.remix(["#..."]) rolls a new kit look (fonts, scale, radius, depth) in those colors
 
@@ -80,6 +81,7 @@ Follow the rules in Isoline.components.brief("design"). The user edits them in C
     guide: () => GUIDE,
     go: (r) => root.Shell.go(r),
     studio: root.Studio,
+    assets: root.Assets,
     palettes: { get: () => root.Palettes.colors(), set: (h) => root.Palettes.load(h), generate: (m) => root.Palettes.generate(m), vary: () => root.Palettes.vary(), lock: (i, on) => root.Palettes.lock(i, on), modes: () => root.Palettes.modes(), saved: () => root.Palettes.saved() },
     components: { tokens: () => root.Components.tokens(), css: () => root.Components.cssVars(), brief: (k) => root.Components.brief(k), libraries: () => root.Components.libraries(), remix: (h) => { root.Components.remix(h); return root.Components.state(); } },
     // Colors from scripts can be any hex form (#000, 000, #ABCDEF) or a CSS color; they're normalized first.

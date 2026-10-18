@@ -6,9 +6,9 @@
   "use strict";
   const $ = (id) => document.getElementById(id);
   const keyOf = (e) => (/^Key[A-Z]$/.test(e.code) ? e.code[3].toLowerCase() : /^Digit\d$/.test(e.code) ? e.code[5] : (e.key || "").toLowerCase());
-  const ORDER = { home: 0, studio: 1, palettes: 2, components: 3 };
+  const ORDER = { home: 0, studio: 1, palettes: 2, components: 3, assets: 4 };
   const reduce = matchMedia("(prefers-reduced-motion: reduce)");
-  const parse = (h) => (h.startsWith("#/palettes") ? "palettes" : h.startsWith("#/studio") ? "studio" : h.startsWith("#/components") ? "components" : "home");
+  const parse = (h) => (h.startsWith("#/palettes") ? "palettes" : h.startsWith("#/studio") ? "studio" : h.startsWith("#/components") ? "components" : h.startsWith("#/assets") ? "assets" : "home");
   const hashFor = (r) => (r === "home" ? "#/" : "#/" + r);
   let route = null;
 
@@ -44,6 +44,7 @@
     if (r === "components" && slot && size.parentElement !== slot) slot.appendChild(size);
     else if (r !== "components" && size.parentElement !== top) top.insertBefore(size, top.querySelector(".cp-top"));
     if (r === "components") root.Components?.onShow();
+    if (r === "assets") root.Assets?.onShow();
     root.syncSize?.();
   }
   // want is where the latest navigation is headed. A transition shows its page a frame or more after it
@@ -97,6 +98,7 @@
     const pal = root.Palettes?.colors() || [], w = root.Palettes?.weights?.() || [];
     $("homePalette").innerHTML = pal.map((c, i) => `<i style="background:${c};flex-grow:${w[i] || 1}"></i>`).join("");
     root.Components?.preview($("homeComponents"));
+    root.Assets?.preview($("homeAssets"));
     if (fresh && !reduce.matches) $("homeComponents").animate(root.Lite?.on ? [{ opacity: 0.2 }, { opacity: 1 }] : [{ opacity: 0.2, filter: "blur(6px)" }, { opacity: 1, filter: "none" }], { duration: 450, easing: "ease-out" });
     // The Studio decides first whether its saved design is safe to draw on this device.
     await root.studioBoot;
@@ -263,6 +265,7 @@
       await root.Studio?.surprise?.(); if (!live()) return;
       root.Studio?.usePalette?.(pal);
       await root.Components?.remix?.(pal);
+      root.Assets?.remix?.();
     }, "Rolling a new look", root.rollLimit?.("home") || 0);
     if (ok) { homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(homeLook()); if (homeHist.length > 30) homeHist.shift(); homeAt = homeHist.length - 1; }
     syncHomeHist();
@@ -307,7 +310,7 @@
     if (remixing) return;
     $("looksMenu").hidden = true; root.syncScrim?.();
     noteLook(); syncHomeHist(true);
-    await homeChange(async () => { root.Palettes?.load(l.pal); root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); }, "Opening the look");
+    await homeChange(async () => { root.Palettes?.load(l.pal); root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); root.Assets?.setLook?.(l.logo); }, "Opening the look");
     homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(homeLook()); homeAt = homeHist.length - 1; syncHomeHist();
   }
   const download = (data, name) => root.downloadBlob?.(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), name, "Look saved");
@@ -330,7 +333,7 @@
     try {
       const d = JSON.parse(await f.text()), items = (d.kind === "looks" ? d.items : [d]).filter(validLook);
       if (!items.length) throw new Error("no looks");
-      for (const l of items) looks.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: String(l.name || "Imported look").slice(0, 60), at: Date.now(), thumb: typeof l.thumb === "string" && l.thumb.startsWith("data:image/") ? l.thumb : "", pal: l.pal, studio: l.studio, kit: l.kit });
+      for (const l of items) looks.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: String(l.name || "Imported look").slice(0, 60), at: Date.now(), thumb: typeof l.thumb === "string" && l.thumb.startsWith("data:image/") ? l.thumb : "", pal: l.pal, studio: l.studio, kit: l.kit, ...(l.logo && typeof l.logo === "object" ? { logo: l.logo } : {}) });
       if (saveLooks()) { renderLooks(); root.toastMsg?.(items.length === 1 ? `Imported ${items[0].name || "a look"}` : `Imported ${items.length} looks`); }
     } catch (err) { root.toastMsg?.("That file has no Isoline looks in it"); }
   };
@@ -354,7 +357,7 @@
   }
   // ---------- home undo and redo ----------
   let homeHist = [], homeAt = -1;
-  const homeLook = () => ({ pal: root.Palettes?.colors(), studio: root.Studio?.state(), kit: root.Components?.look?.() });
+  const homeLook = () => ({ pal: root.Palettes?.colors(), studio: root.Studio?.state(), kit: root.Components?.look?.(), logo: root.Assets?.look?.() });
   // The look on screen joins the history when it has changed since its step (a design edited in the
   // Studio, say), so undo comes back to it rather than skipping to the look from before the edit.
   function noteLook() {
@@ -377,7 +380,7 @@
       for (let at = -1; at !== homeAt; ) {
         at = homeAt;
         const l = homeHist[at];
-        await homeChange(async () => { if (l.pal) root.Palettes?.load(l.pal); if (l.studio) root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); }, "Going back to that look");
+        await homeChange(async () => { if (l.pal) root.Palettes?.load(l.pal); if (l.studio) root.Studio?.apply(l.studio); await root.Components?.setLook?.(l.kit); root.Assets?.setLook?.(l.logo); }, "Going back to that look");
       }
     } finally { stepping = false; }
   }
@@ -424,7 +427,7 @@
     busy.lastChild.textContent = label; busy.hidden = false;
     const shown = performance.now();
     await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
-    const ghosts = ["homeStudio", "homePalette", "homeComponents"].map((id) => ghostOver($(id)));
+    const ghosts = ["homeStudio", "homePalette", "homeComponents", "homeAssets"].map((id) => ghostOver($(id)));
     let landed = false, late = false, lateT = 0;
     try {
       const run = (async () => {
@@ -443,7 +446,7 @@
       if (late) {
         changeTok++; homeSeq++;
         root.rollRejected?.(busy.querySelector("i")); busy.lastChild.textContent = "Took too long, skipped"; rollAgain = false;
-        root.Palettes?.load(before.pal); root.Studio?.apply(before.studio); await root.Components?.setLook?.(before.kit);
+        root.Palettes?.load(before.pal); root.Studio?.apply(before.studio); await root.Components?.setLook?.(before.kit); root.Assets?.setLook?.(before.logo);
         paintHome(false);
         // The skipped roll's kit may still finish after this and paint over it, so the old one goes back once more.
         run.finally(() => { if (live()) root.Components?.setLook?.(before.kit)?.then?.(() => root.Components?.preview($("homeComponents"))); });
@@ -494,7 +497,7 @@
   // A bare tool route carries nothing to open, so only reloads, back/forward and links holding a design
   // or a palette land straight in a tool.
   const nav = performance.getEntriesByType?.("navigation")[0]?.type;
-  if (nav === "navigate" && /^#\/(studio|palettes|components)\/?$/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
+  if (nav === "navigate" && /^#\/(studio|palettes|components|assets)\/?$/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
   visited.add(parse(location.hash));
   show(parse(location.hash));
   // First load: the page stays out of sight until its fonts are in (or a moment has passed), then the
