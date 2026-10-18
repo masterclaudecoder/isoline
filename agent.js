@@ -45,7 +45,8 @@ Effects with a center (rays, lens, dof, swirl, bulge, ripple) take x and y from 
 - Isoline.components.tokens() returns type, color, spacing, radius, elevation and motion tokens
 - Isoline.components.css() returns them as CSS variables
 - Isoline.components.brief("design" | "dev") returns the brief with the design rules
-- Isoline.assets.state() / set({ name, style, seed, layout, font, weight, case, track, color, kit }) read and change the logo; styles() lists the mark styles; svg() and png(scale) export it
+- Isoline.assets.state() / set({ name, layout, font, weight, case, track, color, kit, mark }) read and change the logo. The mark is built from parts: { frame, fill, body, dens, twist, weight, turn, solid, accent, spot, reach, seed } (values 0 to 1, turn in degrees); parts() lists the shapes, patterns and accents
+- Isoline.assets.roll("frame" | "body" | "accent" | "seed") rolls one part, roll() all of them; svg() and png(scale) export the logo
 - Isoline.components.libraries() lists the UI library directory with links
 - Isoline.components.remix(["#..."]) rolls a new kit look (fonts, scale, radius, depth) in those colors
 

@@ -276,9 +276,9 @@
       { el: "#settingsBtn", t: "Settings", p: "Theme, accent, safe values and the tutorials." },
     ],
     assets: [
-      { el: "#asOpts", t: "Your logo", p: "Name it, then pick a mark. Every style is drawn fresh, so no two logos are alike." },
+      { el: "#asOpts", t: "Your logo", p: "Name it, then build a mark from a shape, a pattern and an accent. Each has its own settings, and the die rolls just that part." },
       { el: "#asStage .as-tiles", t: "Everywhere it goes", p: "See it on dark, on your accent, over your Studio design and as an app icon." },
-      { el: "#asShuffle", t: "Shuffle", p: "R gives a new take on the style, Shift R a new style. Export SVG or PNG from here." },
+      { el: "#asShuffle", t: "Shuffle", p: "R rolls a whole new mark, Shift R draws the same parts again. Export SVG or PNG from here." },
       { el: ".as-kit", t: "In your kit", p: "Switch this on and the Components preview wears your logo." },
     ],
     palettes: [

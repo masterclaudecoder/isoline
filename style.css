@@ -2472,11 +2472,18 @@ html.lite .glass.glass-live > *, html.lite .glass.glass-live .bar-btn, html.lite
 .as-row2 { margin-bottom: 8px; }
 .as-case { margin-bottom: 14px; }
 .as-kit { margin: 16px -10px 0; }
-.as-styles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-.as-style { display: grid; gap: 4px; justify-items: center; padding: 8px 4px 6px; border: 0; border-radius: 12px; background: var(--panel); box-shadow: var(--raised); font-size: 11.5px; font-weight: 600; color: var(--ink-2); }
-.as-style svg { width: 100%; max-width: 46px; aspect-ratio: 1; }
-.as-style.on { box-shadow: var(--raised), 0 0 0 1.5px var(--accent); color: var(--ink); }
-.as-style:hover { background: var(--well); }
+.as-head { margin: 20px 0 10px; }
+.as-head .ib.xs { color: var(--muted); }
+.as-head .ib.xs:hover { color: var(--accent); background: var(--well); }
+.as-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.as-chip { display: grid; gap: 4px; justify-items: center; padding: 8px 4px 6px; border: 0; border-radius: 12px; background: var(--panel); box-shadow: var(--raised); font-size: 11.5px; font-weight: 600; color: var(--ink-2); min-width: 0; }
+.as-chip svg { width: 100%; max-width: 44px; aspect-ratio: 1; }
+.as-chip span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.as-chip.on { box-shadow: var(--raised), 0 0 0 1.5px var(--accent); color: var(--ink); }
+.as-chip:hover { background: var(--well); }
+.as-fill.off { opacity: .4; pointer-events: none; }
+.as-sliders { margin: 6px 0 10px; }
+.as-solid { margin-bottom: 4px; }
 .as-stage { position: relative; min-width: 0; min-height: 0; border-radius: 18px; background: var(--well); box-shadow: var(--sunken); overflow: hidden; }
 .as-scroll { height: 100%; overflow-y: auto; padding: 18px 18px 84px; display: grid; gap: 10px; align-content: start; }
 .as-hero { display: grid; place-items: center; min-height: clamp(220px, 38vh, 420px); border-radius: 14px; box-shadow: inset 0 0 0 1px var(--hair); font-size: clamp(28px, 4.6vw, 72px); padding: 24px; overflow: hidden; }
