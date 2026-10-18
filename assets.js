@@ -109,7 +109,7 @@
     if (m.c.form === "star" && m.c.points > 0.7) n += 0.2;
     return +n.toFixed(1);
   }
-  const busyLabel = (n) => (n <= 1.6 ? ["Simple", "One idea, reads at any size"] : n <= 2.6 ? ["Balanced", "A clear form with one supporting idea"] : n <= 3.3 ? ["Detailed", "Several ideas; check it still reads small"] : ["Busy", "Likely too much to read at small sizes. Try removing a step"]);
+  const busyLabel = (n) => (n <= 1.05 ? ["Bare", "A single shape or letter. Add a composition, container or finish so it's your own"] : n <= 1.6 ? ["Simple", "One clear idea, reads at any size"] : n <= 2.6 ? ["Balanced", "A clear form with one supporting idea"] : n <= 3.3 ? ["Detailed", "Several ideas; check it still reads small"] : ["Busy", "Likely too much to read at small sizes. Try removing a step"]);
 
   // ---------- state ----------
   const KEY = "isoline.logo";
@@ -218,7 +218,7 @@
   const swOf = (m) => 2.6 + m.weight * 5.4;
   function build(m, f) {
     const g = T.mulberry32(m.seed * 7919 + 11), c = m.c, st = m.s, a = m.a, w = m.w;
-    const sw = swOf(m), hw = 1.2 + m.gap * 4;
+    const sw0 = swOf(m), hw0 = 1.2 + m.gap * 4;
     const contOn = w.shape !== "none", badge = contOn && w.hold === "badge", frame = contOn && w.hold === "frame";
     const base = badge ? "BGC" : "INK", contCol = m.accent === "container" ? "ACC" : "INK", halo = badge ? contCol : "BGC";
     const formCol = m.accent === "form" ? "ACC" : base, aroCol = m.accent === "around" ? "ACC" : base;
@@ -226,68 +226,78 @@
     const formLine = st.style === "line", aroLine = st.style !== "solid";
     const letter = { ch: applyCase(initial(L.name), f.case === "lower" ? "lower" : "upper"), font: f.font, weight: f.weight };
     const opt = { points: c.points, round: c.round };
-    const look = (color, line, haloOn, fill = "plain") => ({ sw, color, halo: haloOn ? halo : "", hw, fill, detail: st.detail, seed: m.seed, letter });
-    let rc = lerp(18, 40, c.size), cx = 50, cy = 50, back = "", front = "", ext = rc, cut = "";
-    const ps = (s) => lerp(5, 16, s);
-    if (a.kind === "ring") {
-      const R = rc + hw + sw * 0.5 + 2 + a.dist * 12;
-      front += `<circle cx="50" cy="50" r="${f1(R)}" fill="none" stroke="${aroCol}" stroke-width="${f1(sw)}"/>`;
-      ext = R + sw / 2;
-    } else if (a.kind === "echo") {
-      // Repetition reads as rhythm only with clear space between the copies.
-      const n = 1 + Math.round(a.count * 3), step = sw + hw + 2 + a.dist * 6;
-      const form = c.form === "letter" ? "circle" : c.form;
-      for (let k = n; k >= 1; k--) {
-        const s = (rc + k * step) / rc;
-        back += `<path d="${formD(form, rc, opt)}" transform="translate(50 50) rotate(${c.turn}) scale(${f1(s * 1000) / 1000})" fill="none" stroke="${aroCol}" stroke-width="${f1(sw / s)}" stroke-linejoin="round"/>`;
+    // The layout, with line widths and gaps given in final, on-screen board units: it's drawn inside a
+    // group that's scaled to fit, so they're divided by that scale to come out the same on every mark.
+    const lay = (k) => {
+      const sw = sw0 / k, hw = hw0 / k;
+      const look = (color, line, haloOn, fill = "plain") => ({ sw, color, halo: haloOn ? halo : "", hw, fill, detail: st.detail, seed: m.seed, letter });
+      let rc = lerp(18, 40, c.size), cx = 50, cy = 50, back = "", front = "", ext = rc, cut = "";
+      const ps = (s) => lerp(5, 16, s);
+      if (a.kind === "ring") {
+        const R = rc + hw + sw * 0.5 + 2 + a.dist * 12;
+        front += `<circle cx="50" cy="50" r="${f1(R)}" fill="none" stroke="${aroCol}" stroke-width="${f1(sw)}"/>`;
+        ext = R + sw / 2;
+      } else if (a.kind === "echo") {
+        // Repetition reads as rhythm only with clear space between the copies.
+        const n = 1 + Math.round(a.count * 3), step = sw + hw + 2 + a.dist * 6;
+        const form = c.form === "letter" ? "circle" : c.form;
+        for (let k = n; k >= 1; k--) {
+          const s = (rc + k * step) / rc;
+          back += `<path d="${formD(form, rc, opt)}" transform="translate(50 50) rotate(${c.turn}) scale(${f1(s * 1000) / 1000})" fill="none" stroke="${aroCol}" stroke-width="${f1(sw / s)}" stroke-linejoin="round"/>`;
+        }
+        ext = rc + n * step + sw;
+      } else if (a.kind === "orbit") {
+        const rx = rc * lerp(1.35, 1.9, a.dist), ry = rx * lerp(0.2, 0.42, a.size), tilt = a.spin - 25;
+        const arc = (sweep) => `M${P(50 - rx, 50)}A${f1(rx)} ${f1(ry)} 0 0 ${sweep} ${P(50 + rx, 50)}`;
+        back += `<path d="${arc(1)}" transform="rotate(${tilt} 50 50)" fill="none" stroke="${aroCol}" stroke-width="${f1(sw)}" stroke-linecap="round"/>`;
+        front += `<g transform="rotate(${tilt} 50 50)"><path d="${arc(0)}" fill="none" stroke="${halo}" stroke-width="${f1(sw + hw * 2)}" stroke-linecap="round"/><path d="${arc(0)}" fill="none" stroke="${aroCol}" stroke-width="${f1(sw)}" stroke-linecap="round"/>`;
+        if (a.count > 0.5) { const t = rad(lerp(25, 155, g())); front += paintForm(a.piece, 50 + rx * Math.cos(t), 50 + ry * Math.sin(t), lerp(4.5, 8, a.size), 0, false, opt, look(aroCol, false, true)); }
+        front += "</g>";
+        ext = rx + sw;
+      } else if (a.kind === "radial") {
+        // Fewer, larger pieces read better than many small ones; size shrinks only as far as needed.
+        const n = 4 + Math.round(a.count * 8), R0 = rc + hw + 2 + a.dist * 12, s = Math.min(ps(a.size), (Math.PI * (R0 + 6)) / n * 0.42), R = R0 + s;
+        for (let i = 0; i < n; i++) { const t = a.spin - 90 + (360 / n) * i; front += paintForm(a.piece, 50 + R * Math.cos(rad(t)), 50 + R * Math.sin(rad(t)), s, t + 90, aroLine, opt, look(aroCol, aroLine, true)); }
+        ext = R + s;
+      } else if (a.kind === "overlap") {
+        const d = rc * lerp(0.45, 0.95, a.dist), t = rad(a.spin - 30), dx = d * Math.cos(t), dy = d * Math.sin(t);
+        cx = 50 - dx / 2; cy = 50 - dy / 2;
+        back += paintForm(c.form, 50 + dx / 2, 50 + dy / 2, rc, c.turn, aroLine, opt, look(aroCol, aroLine, false));
+        ext = rc + d / 2;
+      } else if (a.kind === "bite") {
+        // Negative space: a piece cut out of the form at its edge, with the piece itself set just inside.
+        const s = rc * lerp(0.3, 0.55, a.size), R = rc * lerp(0.55, 0.95, a.dist), t = rad(a.spin - 45), px = 50 + R * Math.cos(t), py = 50 + R * Math.sin(t);
+        cut = `<path d="${formD(a.piece, s + hw, opt)}" transform="translate(${f1(px)} ${f1(py)}) rotate(${a.spin})" fill="#000"/>`;
+        if (a.count > 0.5) front += paintForm(a.piece, px, py, s * 0.55, a.spin, aroLine, opt, look(aroCol, aroLine, false));
+      } else if (a.kind === "initial") {
+        // A monogram cut into the form: the letter is a real gap, sized to sit well inside.
+        const fs = rc * lerp(0.95, 1.35, a.size);
+        cut = `<text x="50" y="${f1(50 + fs * 0.04)}" text-anchor="middle" dominant-baseline="central" font-family="'${esc(letter.font)}', system-ui, sans-serif" font-weight="${Math.max(600, letter.weight)}" font-size="${f1(fs)}" fill="#000">${esc(letter.ch)}</text>`;
+      } else if (a.kind === "satellite") {
+        // Close enough to belong to the form, large enough to read as a second shape, not a speck.
+        const s = Math.max(rc * 0.28, lerp(6.5, 13, a.size)), R = rc + hw + s * 0.9 + a.dist * 6, t = rad(a.spin - 45);
+        // Solid whatever the style: a small outline reads as a speck, a small solid as a deliberate dot.
+        front += paintForm(a.piece, 50 + R * Math.cos(t), 50 + R * Math.sin(t), s, a.spin, false, opt, look(aroCol, false, true));
+        ext = Math.max(rc, R + s);
       }
-      ext = rc + n * step + sw;
-    } else if (a.kind === "orbit") {
-      const rx = rc * lerp(1.35, 1.9, a.dist), ry = rx * lerp(0.2, 0.42, a.size), tilt = a.spin - 25;
-      const arc = (sweep) => `M${P(50 - rx, 50)}A${f1(rx)} ${f1(ry)} 0 0 ${sweep} ${P(50 + rx, 50)}`;
-      back += `<path d="${arc(1)}" transform="rotate(${tilt} 50 50)" fill="none" stroke="${aroCol}" stroke-width="${f1(sw)}" stroke-linecap="round"/>`;
-      front += `<g transform="rotate(${tilt} 50 50)"><path d="${arc(0)}" fill="none" stroke="${halo}" stroke-width="${f1(sw + hw * 2)}" stroke-linecap="round"/><path d="${arc(0)}" fill="none" stroke="${aroCol}" stroke-width="${f1(sw)}" stroke-linecap="round"/>`;
-      if (a.count > 0.5) { const t = rad(lerp(25, 155, g())); front += paintForm(a.piece, 50 + rx * Math.cos(t), 50 + ry * Math.sin(t), lerp(4.5, 8, a.size), 0, false, opt, look(aroCol, false, true)); }
-      front += "</g>";
-      ext = rx + sw;
-    } else if (a.kind === "radial") {
-      // Fewer, larger pieces read better than many small ones; size shrinks only as far as needed.
-      const n = 4 + Math.round(a.count * 8), R0 = rc + hw + 2 + a.dist * 12, s = Math.min(ps(a.size), (Math.PI * (R0 + 6)) / n * 0.42), R = R0 + s;
-      for (let i = 0; i < n; i++) { const t = a.spin - 90 + (360 / n) * i; front += paintForm(a.piece, 50 + R * Math.cos(rad(t)), 50 + R * Math.sin(rad(t)), s, t + 90, aroLine, opt, look(aroCol, aroLine, true)); }
-      ext = R + s;
-    } else if (a.kind === "overlap") {
-      const d = rc * lerp(0.45, 0.95, a.dist), t = rad(a.spin - 30), dx = d * Math.cos(t), dy = d * Math.sin(t);
-      cx = 50 - dx / 2; cy = 50 - dy / 2;
-      back += paintForm(c.form, 50 + dx / 2, 50 + dy / 2, rc, c.turn, aroLine, opt, look(aroCol, aroLine, false));
-      ext = rc + d / 2;
-    } else if (a.kind === "bite") {
-      // Negative space: a piece cut out of the form at its edge, with the piece itself set just inside.
-      const s = rc * lerp(0.3, 0.55, a.size), R = rc * lerp(0.55, 0.95, a.dist), t = rad(a.spin - 45), px = 50 + R * Math.cos(t), py = 50 + R * Math.sin(t);
-      cut = `<path d="${formD(a.piece, s + hw, opt)}" transform="translate(${f1(px)} ${f1(py)}) rotate(${a.spin})" fill="#000"/>`;
-      if (a.count > 0.5) front += paintForm(a.piece, px, py, s * 0.55, a.spin, aroLine, opt, look(aroCol, aroLine, false));
-    } else if (a.kind === "initial") {
-      // A monogram cut into the form: the letter is a real gap, sized to sit well inside.
-      const fs = rc * lerp(0.95, 1.35, a.size);
-      cut = `<text x="50" y="${f1(50 + fs * 0.04)}" text-anchor="middle" dominant-baseline="central" font-family="'${esc(letter.font)}', system-ui, sans-serif" font-weight="${Math.max(600, letter.weight)}" font-size="${f1(fs)}" fill="#000">${esc(letter.ch)}</text>`;
-    } else if (a.kind === "satellite") {
-      // Close enough to belong to the form, large enough to read as a second shape, not a speck.
-      const s = Math.max(rc * 0.28, lerp(6.5, 13, a.size)), R = rc + hw + s * 0.9 + a.dist * 6, t = rad(a.spin - 45);
-      // Solid whatever the style: a small outline reads as a speck, a small solid as a deliberate dot.
-      front += paintForm(a.piece, 50 + R * Math.cos(t), 50 + R * Math.sin(t), s, a.spin, false, opt, look(aroCol, false, true));
-      ext = Math.max(rc, R + s);
-    }
-    // A letter stays upright and solid: turned, it reads as another glyph, and outlined, it goes weak.
-    const isLetter = c.form === "letter";
-    let form = paintForm(c.form, cx, cy, rc, isLetter ? 0 : c.turn, formLine && !isLetter, opt, look(formCol, formLine, a.kind === "overlap", isLetter ? "plain" : st.fill));
-    if (cut) { const id = uid(); form = `<defs><mask id="${id}" maskUnits="userSpaceOnUse" x="-10" y="-10" width="120" height="120"><rect x="-10" y="-10" width="120" height="120" fill="#fff"/>${cut}</mask></defs><g mask="url(#${id})">${form}</g>`; }
-    // Everything is scaled to fit the board, then stepped in to sit inside a frame or badge with room.
-    const fit = Math.min(1, 46 / Math.max(ext, 1)) * (frame ? 0.74 : badge ? 0.78 : 1);
+      // A letter stays upright and solid: turned, it reads as another glyph, and outlined, it goes weak.
+      const isLetter = c.form === "letter";
+      let form = paintForm(c.form, cx, cy, rc, isLetter ? 0 : c.turn, formLine && !isLetter, opt, look(formCol, formLine, a.kind === "overlap", isLetter ? "plain" : st.fill));
+      if (cut) { const id = uid(); form = `<defs><mask id="${id}" maskUnits="userSpaceOnUse" x="-10" y="-10" width="120" height="120"><rect x="-10" y="-10" width="120" height="120" fill="#fff"/>${cut}</mask></defs><g mask="url(#${id})">${form}</g>`; }
+      return { back, form, front, ext };
+    };
+    // Every mark fills the same area: laid out once to measure it, then again with the lines corrected
+    // for the scale that measurement gives.
+    const hold = frame ? 0.74 : badge ? 0.78 : 1;
+    let L1 = lay(1), fit = (46 / Math.max(L1.ext, 1)) * hold;
+    L1 = lay(fit); fit = (46 / Math.max(L1.ext, 1)) * hold;
+    const { back, form, front } = L1, sw = sw0, hw = hw0;
     const body = `<g transform="translate(50 50) scale(${f1(fit * 1000) / 1000}) translate(-50 -50)">${back}${form}${front}</g>`;
     let out = body;
     if (contOn) {
       const cd = CONT_D[w.shape];
       if (badge) out = `<path d="${cd}" transform="translate(50 50)" fill="${contCol}"/>` + body;
-      else if (frame) out = body + `<path d="${cd}" transform="translate(50 50) scale(.95)" fill="none" stroke="${contCol}" stroke-width="${f1(Math.max(3, sw * 0.85))}" stroke-linejoin="round"/>`;
+      else if (frame) out = body + `<path d="${cd}" transform="translate(50 50) scale(.95)" fill="none" stroke="${contCol}" stroke-width="${f1(sw)}" stroke-linejoin="round"/>`;
     }
     return finish(out, m, hw);
   }
@@ -336,6 +346,7 @@
   // form inside a badge with lines all around it, or two ideas competing for the edge.
   // Turns that suit each form; anything else looks like a mistake rather than a choice.
   const TURN_OK = { triangle: [0, 0, 90, 180, 270], half: [0, 0, 180], quarter: [0, 90, 180, 270], lens: [0, 0, 45, 90], star: [0], cross: [0, 0, 45], diamond: [0], square: [0, 0, 45] };
+  const FAMILY = { circle: "round", squircle: "square", rounded: "square", square: "square", hexagon: "hex", diamond: "diamond" };
   const CONVEX = new Set(["circle", "square", "hexagon", "diamond", "triangle", "half", "lens"]);
   const has = (list, v) => list.includes(v);
   // What reads well together, learned from rolling many marks and looking at what failed. Each rule
@@ -344,17 +355,26 @@
   const RULES = {
     fill: (m) => m.s.fill === "plain" || (CONVEX.has(m.c.form) && m.c.size >= 0.5 && has(["none", "ring", "satellite"], m.a.kind) && m.f.kind !== "shadow" && m.f.kind !== "split" && (m.s.style !== "line" || m.s.fill === "rings")),
     overlap: (m) => m.a.kind !== "overlap" || (m.s.style !== "line" && has(["circle", "square", "diamond", "hexagon", "lens", "half"], m.c.form) && m.f.kind === "none"),
-    bite: (m) => m.a.kind !== "bite" || (m.s.style !== "line" && !has(["letter", "cross"], m.c.form) && has(["circle", "square", "triangle", "diamond", "quarter", "lens"], m.a.piece)),
+    bite: (m) => m.a.kind !== "bite" || (m.s.style !== "line" && !has(["letter", "cross", "star"], m.c.form) && has(["circle", "square", "triangle", "diamond", "quarter", "lens"], m.a.piece)),
     radial: (m) => m.a.kind !== "radial" || (has(["circle", "lens", "square", "diamond"], m.a.piece) && m.f.kind === "none" && !has(["half", "quarter"], m.c.form)),
     echo: (m) => m.a.kind !== "echo" || (has(["circle", "square", "hexagon", "diamond", "triangle", "letter"], m.c.form) && m.f.kind !== "shadow" && m.f.kind !== "split"),
-    orbit: (m) => m.a.kind !== "orbit" || (has(["circle", "hexagon", "star", "diamond"], m.c.form) && m.s.style !== "line" && m.f.kind === "none" && m.w.hold !== "frame"),
-    satellite: (m) => m.a.kind !== "satellite" || (has(["circle", "square", "diamond"], m.a.piece) && (m.c.form !== "letter" || m.a.piece === "circle")),
+    orbit: (m) => m.a.kind !== "orbit" || (m.c.form === "circle" && m.a.piece === "circle" && m.s.style !== "line" && m.f.kind === "none" && m.w.hold !== "frame"),
+    // A satellite is a dot, and it needs to look meant: in the accent, or held with the form.
+    satellite: (m) => m.a.kind !== "satellite" || (m.a.piece === "circle" && (m.accent === "around" || m.w.shape !== "none")),
+    // A plain ring round a plain circle is a target, not a mark.
+    ring: (m) => m.a.kind !== "ring" || m.c.form !== "circle" || m.s.fill !== "plain",
     initial: (m) => m.a.kind !== "initial" || (has(["circle", "square", "hexagon", "diamond"], m.c.form) && m.c.size >= 0.45 && m.s.style !== "line" && m.s.fill === "plain" && has(["none", "slice"], m.f.kind)),
     halves: (m) => !has(["half", "quarter"], m.c.form) || has(["none", "ring", "satellite", "bite"], m.a.kind),
     shadow: (m) => m.f.kind !== "shadow" || (m.a.kind === "none" && m.w.shape === "none" && m.s.style === "solid"),
     split: (m) => m.f.kind !== "split" || (has(["none", "bite"], m.a.kind) && m.w.shape === "none"),
     slice: (m) => m.f.kind !== "slice" || (has(["none", "bite", "initial"], m.a.kind) && m.s.style !== "line" && m.s.fill === "plain" && m.c.form !== "letter" && (m.w.shape === "none" || m.w.hold === "badge")),
     accent: (m) => m.accent !== "container" || m.w.shape !== "none",
+    // A lone shape or a lone letter isn't a mark anyone can own: it needs a second idea, and a letter
+    // needs something that holds it.
+    // A container alone doesn't make a plain circle or square distinctive (it reads as a button or a
+    // target), nor does a form inside a container of its own shape.
+    container: (m) => m.w.shape === "none" || m.a.kind !== "none" || m.s.fill !== "plain" || (!has(["circle", "square"], m.c.form) && FAMILY[m.c.form] !== FAMILY[m.w.shape]),
+    substance: (m) => (m.a.kind !== "none" || m.w.shape !== "none" || m.s.fill !== "plain") && (m.c.form !== "letter" || m.w.shape !== "none" || has(["ring", "echo", "satellite"], m.a.kind)),
   };
   const sensible = (m) => Object.values(RULES).every((r) => r(m));
   function rollPart(m, part) {
@@ -364,7 +384,7 @@
       const o = JSON.parse(JSON.stringify(m));
       // The last step's die rolls its finish and its accent together.
       for (const k of part ? (part === "x" ? ["f"] : [part]) : ["c", "s", "a", "w", "f"]) if (ROLL[k]) o[k] = ROLL[k]();
-      if (!part || part === "x") { o.accent = pickW({ none: 0.6, form: 2.5, around: o.a.kind === "none" ? 0 : 2, container: o.w.shape !== "none" ? 1.2 : 0 }); o.weight = rnd(0.3, 0.65); o.gap = rnd(0.25, 0.65); }
+      if (!part || part === "x") { o.accent = pickW({ none: 0.6, form: 2.5, around: o.a.kind === "none" ? 0 : 2, container: o.w.shape !== "none" ? 1.2 : 0 }); o.weight = rnd(0.38, 0.52); o.gap = rnd(0.3, 0.55); }
       if (!part || part === "seed") o.seed = newSeed();
       const n = norm(o), broken = Object.values(RULES).filter((r) => !r(n)).length, over = Math.max(0, busy(n) - budget);
       if (!broken && !over) return n;
