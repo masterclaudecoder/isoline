@@ -1,7 +1,8 @@
-// Assets: a logo maker. A mark is put together in steps, the way a Studio design is: a center shape
-// and how it's painted, something around or beside it, a wrap that holds the whole, a finish cut into
-// it, and which part takes the accent. Every step works with every other, so the same center can be
-// a badge, a planet, a seal or a monogram. Shuffle rolls any step or all of them.
+// Assets: a logo maker. A mark is put together in steps, the way a Studio design is: a form, the style
+// every part shares, a composition around it, a container and a finish. The steps follow what makes
+// marks last: plain geometry, one visual language, two or three elements at most, negative space used
+// on purpose, and lines and gaps that still read at 16 px. Any step works with any other, Shuffle
+// stays within that budget, and a meter says when a mark is getting busy.
 // The name is set in the kit's font and colors (or the palette's). The logo can stand in for the
 // made-up Margin logo in the Components preview, and the home page's roll rolls it too.
 (function (root) {
@@ -18,70 +19,96 @@
 
   // ---------- the steps and their choices ----------
   // [id, name, what it is]
-  const SHAPES = [
-    ["circle", "Circle", "A plain circle"], ["poly", "Polygon", "Three to eight sides, with rounded corners"], ["star", "Star", "Points around a center"],
-    ["petal", "Petal", "Two curves meeting at both ends"], ["blob", "Blob", "A soft, uneven round"], ["half", "Half", "Half a circle"],
-    ["drop", "Drop", "A teardrop"], ["cross", "Cross", "A plus sign"], ["leaf", "Leaf", "Two curves meeting at opposite corners"],
-    ["arch", "Arch", "Round on top, flat below"], ["letter", "Letter", "Your name's first letter"],
+  const FORMS = [
+    ["circle", "Circle", "Complete, calm, the safest form"], ["square", "Square", "Stable and solid, with rounded corners"], ["triangle", "Triangle", "Direction and energy"],
+    ["diamond", "Diamond", "A square on its point, sharper"], ["hexagon", "Hexagon", "Structure, like a cell or a nut"], ["star", "Star", "Points around a center"],
+    ["lens", "Lens", "Two arcs meeting at both ends"], ["half", "Half", "Half a circle, a sunrise"], ["quarter", "Quarter", "A quarter circle, a corner turned"],
+    ["cross", "Cross", "A plus sign"], ["letter", "Letter", "Your name's first letter"],
   ];
-  const PIECES = SHAPES.filter((s) => s[0] !== "letter");
-  const PAINTS = [["solid", "Solid", "Filled in"], ["outline", "Outline", "Drawn as a line"], ["lines", "Lines", "Hatched with parallel lines"], ["dots", "Dots", "Filled with a grid of dots"], ["rings", "Rings", "Nested copies of itself"], ["topo", "Topo", "Filled with contour rings"]];
-  const AROUND = [
-    ["none", "None", "The center on its own"], ["ring", "Ring", "A ring around the center"], ["echo", "Echo", "Copies of the center, growing outward"],
-    ["orbit", "Orbit", "A tilted ring passing behind and in front"], ["repeat", "Repeat", "Pieces spaced all the way around"], ["satellite", "Satellite", "One piece beside the center"],
-    ["offset", "Offset", "A second center overlapping the first"], ["pair", "Pair", "The center and a piece side by side"],
+  const PIECES = FORMS.filter((s) => s[0] !== "letter" && s[0] !== "cross");
+  const STYLES = [["solid", "Solid", "Every part filled in"], ["line", "Line", "Every part drawn as a line of one weight"], ["mixed", "Mixed", "A solid form, with lines around it"]];
+  const FILLS = [["plain", "Plain", "No texture"], ["hatch", "Hatch", "Parallel lines"], ["dots", "Dots", "A grid of dots"], ["contour", "Contour", "Contour rings, like a map"], ["rings", "Rings", "Nested copies of the form"]];
+  const COMPOSE = [
+    ["none", "None", "The form on its own"], ["ring", "Ring", "Enclosed by a ring"], ["echo", "Echo", "The form repeated outward, a rhythm"],
+    ["orbit", "Orbit", "A tilted ring passing behind and in front"], ["radial", "Radial", "Pieces spaced evenly around it"], ["overlap", "Overlap", "Two forms overlapping"],
+    ["bite", "Bite", "A piece cut out of the form, negative space"], ["satellite", "Satellite", "One small piece beside it"],
   ];
-  const USES_PIECE = new Set(["repeat", "satellite", "pair", "orbit"]);
-  const WRAPS = [
-    ["none", "None", "Nothing around the mark"], ["circle", "Circle", "A round badge"], ["rounded", "Rounded", "A rounded square"], ["squircle", "Squircle", "A soft square, like an app icon"],
-    ["hex", "Hexagon", "Six sides"], ["diamond", "Diamond", "A square on its point"], ["shield", "Shield", "A crest"], ["arch", "Arch", "Round on top, flat below"], ["pill", "Pill", "A tall capsule"],
-  ];
-  const WRAP_MODES = [["cut", "Cut", "The mark cut to the wrap's outline"], ["frame", "Frame", "The wrap drawn as a line around the mark"], ["badge", "Badge", "A solid wrap with the mark knocked out of it"]];
-  const FINISHES = [
-    ["none", "None", "No finish"], ["slice", "Slice", "A cut straight through"], ["stripes", "Stripes", "Lines cut across one side"],
-    ["notch", "Notch", "A wedge taken out"], ["split", "Split", "One side in the accent"], ["shadow", "Shadow", "An offset copy behind, in the accent"],
-  ];
-  const ACCENTS = [["none", "None", "One color"], ["center", "Center", "The center in the accent"], ["around", "Around", "Everything around the center in the accent"], ["one", "One piece", "A single piece in the accent"], ["wrap", "Wrap", "The wrap in the accent (with a frame or badge)"]];
+  const USES_PIECE = new Set(["radial", "bite", "satellite", "orbit"]);
+  const CONTAINERS = [["none", "None", "Nothing around the mark"], ["circle", "Circle", "A round badge"], ["rounded", "Rounded", "A rounded square"], ["squircle", "Squircle", "A soft square, like an app icon"], ["hexagon", "Hexagon", "Six sides"], ["diamond", "Diamond", "A square on its point"]];
+  const HOLDS = [["cut", "Cut", "The mark cut to the container's outline"], ["frame", "Frame", "The container drawn as a line around the mark"], ["badge", "Badge", "A solid container with the mark knocked out of it"]];
+  const FINISHES = [["none", "None", "No finish"], ["slice", "Slice", "A clean cut straight through"], ["split", "Split", "One side in the accent"], ["shadow", "Shadow", "An offset copy behind, in the accent"]];
+  const ACCENTS = [["none", "None", "One color"], ["form", "Form", "The form in the accent"], ["around", "Around", "The composition in the accent"], ["container", "Container", "The container in the accent (with a frame or badge)"]];
 
   const MDEF = {
-    c: { shape: "circle", paint: "topo", size: 0.55, sides: 0.4, depth: 0.5, round: 0.35, turn: 0, detail: 0.5 },
-    a: { kind: "none", piece: "circle", paint: "solid", count: 0.4, dist: 0.5, size: 0.4, spin: 0 },
-    w: { shape: "circle", mode: "cut" },
-    f: { kind: "none", amount: 0.4, angle: 0.15 },
-    accent: "center", weight: 0.45, gap: 0.45, seed: 7,
+    c: { form: "circle", size: 0.6, turn: 0, points: 0.4, round: 0.4 },
+    s: { style: "solid", fill: "contour", detail: 0.45 },
+    a: { kind: "none", piece: "circle", count: 0.4, dist: 0.5, size: 0.4, spin: 0 },
+    w: { shape: "none", hold: "frame" },
+    f: { kind: "none", angle: 0.15 },
+    accent: "form", weight: 0.45, gap: 0.45, seed: 7,
   };
-  const ENUM = { "c.shape": SHAPES, "c.paint": PAINTS, "a.kind": AROUND, "a.piece": PIECES, "a.paint": PAINTS, "w.shape": WRAPS, "w.mode": WRAP_MODES, "f.kind": FINISHES, accent: ACCENTS };
+  const ENUM = { "c.form": FORMS, "s.style": STYLES, "s.fill": FILLS, "a.kind": COMPOSE, "a.piece": PIECES, "w.shape": CONTAINERS, "w.hold": HOLDS, "f.kind": FINISHES, accent: ACCENTS };
   const DEG = new Set(["c.turn", "a.spin"]);
+  // Names from the second prototype, so its marks open close to how they looked.
+  const ALIAS = {
+    "c.form": { poly: "hexagon", petal: "lens", blob: "circle", drop: "circle", leaf: "lens", arch: "half" },
+    "a.piece": { poly: "hexagon", petal: "lens", blob: "circle", drop: "circle", leaf: "lens", arch: "half", cross: "diamond" },
+    "a.kind": { repeat: "radial", offset: "overlap", pair: "overlap" },
+    "w.shape": { hex: "hexagon", shield: "rounded", arch: "rounded", pill: "rounded" },
+    "f.kind": { stripes: "none", notch: "none" }, accent: { center: "form", one: "around", wrap: "container" },
+  };
   // A mark from anywhere (storage, a saved look, a script) made safe to draw.
   function norm(m) {
     const o = JSON.parse(JSON.stringify(MDEF));
     if (!m || typeof m !== "object") return o;
-    for (const sec of ["c", "a", "w", "f"]) {
+    // The second prototype kept form and paint together and called the container a wrap.
+    if (m.c && m.c.shape && !m.c.form) {
+      m = JSON.parse(JSON.stringify(m));
+      m.c.form = m.c.shape;
+      const p = m.c.paint;
+      m.s = { style: p === "outline" || p === "rings" ? "line" : "solid", fill: ({ lines: "hatch", dots: "dots", rings: "rings", topo: "contour" })[p] || "plain", detail: m.c.detail ?? 0.45 };
+      m.c.points = m.c.sides;
+      if (m.w) m.w.hold = m.w.mode;
+      if (m.f?.amount != null && m.f.kind === "slice") m.f.angle = m.f.angle ?? 0.15;
+    }
+    for (const sec of ["c", "s", "a", "w", "f"]) {
       const src = m[sec]; if (!src || typeof src !== "object") continue;
       for (const k of Object.keys(o[sec])) {
-        const v = src[k], key = sec + "." + k;
-        if (ENUM[key]) { if (ENUM[key].some((x) => x[0] === v)) o[sec][k] = v; }
+        const key = sec + "." + k; let v = src[k];
+        if (ENUM[key]) { v = ALIAS[key]?.[v] ?? v; if (ENUM[key].some((x) => x[0] === v)) o[sec][k] = v; }
         else if (Number.isFinite(v)) o[sec][k] = DEG.has(key) ? ((Math.round(v) % 360) + 360) % 360 : clamp(v, 0, 1);
       }
     }
-    if (ACCENTS.some((x) => x[0] === m.accent)) o.accent = m.accent;
+    const acc = ALIAS.accent[m.accent] ?? m.accent;
+    if (ACCENTS.some((x) => x[0] === acc)) o.accent = acc;
     for (const k of ["weight", "gap"]) if (Number.isFinite(m[k])) o[k] = clamp(m[k], 0, 1);
     if (Number.isFinite(m.seed)) o.seed = Math.round(m.seed);
     return o;
   }
-  // Marks from the earlier prototypes (one pattern in a frame) open as the nearest steps.
+  // Marks from the first prototype (one fixed style) open as the nearest steps.
   function fromOld(m) {
     const b = m.body || ({ contour: "rings", lens: "lens", orbit: "orbit", strata: "waves", bloom: "bloom", monogram: "letter" })[m.style] || "rings";
     const map = {
-      rings: { c: { shape: "circle", paint: "topo" } }, lens: { c: { shape: "circle", paint: "lines" } }, waves: { c: { shape: "arch", paint: "lines" } },
-      bloom: { c: { shape: "circle", paint: "solid", size: 0.2 }, a: { kind: "repeat", piece: "petal", count: 0.3 } }, orbit: { c: { shape: "circle", paint: "solid", size: 0.45 }, a: { kind: "orbit" } },
-      dots: { c: { shape: "circle", paint: "dots" } }, rays: { c: { shape: "circle", paint: "solid", size: 0.2 }, a: { kind: "repeat", piece: "petal", count: 0.8, size: 0.2 } },
-      arcs: { c: { shape: "half", paint: "rings" } }, bars: { c: { shape: "poly", paint: "lines" } }, spiral: { c: { shape: "circle", paint: "rings" } }, letter: { c: { shape: "letter", paint: "solid" }, a: { kind: "ring" } },
+      rings: { s: { fill: "contour" } }, lens: { s: { fill: "hatch" } }, waves: { c: { form: "half" }, s: { fill: "hatch" } }, dots: { s: { fill: "dots" } },
+      bloom: { c: { size: 0.3 }, s: { fill: "plain" }, a: { kind: "radial", piece: "lens", count: 0.3 } }, orbit: { c: { size: 0.45 }, s: { fill: "plain" }, a: { kind: "orbit" } },
+      letter: { c: { form: "letter" }, s: { fill: "plain" }, a: { kind: "ring" } },
     }[b] || {};
-    const frame = { circle: "circle", square: "rounded", arch: "arch", pill: "pill", hex: "hex", leaf: "circle" }[m.frame];
-    return norm({ ...MDEF, c: { ...MDEF.c, ...map.c }, a: { ...MDEF.a, ...map.a }, w: { shape: frame || "none", mode: m.fill === "solid" ? "badge" : m.fill === "outline" ? "frame" : "cut" }, accent: map.a ? "around" : "center", seed: m.seed });
+    return norm({ ...MDEF, c: { ...MDEF.c, ...map.c }, s: { ...MDEF.s, ...map.s }, a: { ...MDEF.a, ...map.a }, seed: m.seed });
   }
-  const isNew = (m) => m && typeof m === "object" && m.c && typeof m.c === "object";
+  const isStepped = (m) => m && typeof m === "object" && m.c && typeof m.c === "object";
+
+  // ---------- how busy a mark is ----------
+  // Lasting marks usually hold one to three elements. Each step adds to a running count, which the
+  // meter shows and Shuffle keeps under.
+  const COST = { kind: { none: 0, ring: 0.5, echo: 1, orbit: 1, radial: 1, overlap: 0.7, bite: 0.5, satellite: 0.4 }, fill: { plain: 0, hatch: 0.8, dots: 0.8, contour: 1, rings: 0.7 }, hold: { cut: 0.2, frame: 0.5, badge: 0.4 }, finish: { none: 0, slice: 0.4, split: 0.5, shadow: 0.6 } };
+  function busy(m) {
+    let n = 1 + COST.kind[m.a.kind] + COST.fill[m.s.fill] + (m.w.shape === "none" ? 0 : COST.hold[m.w.hold]) + COST.finish[m.f.kind];
+    if (m.a.kind === "radial" && m.a.count > 0.6) n += 0.3;
+    if (m.a.kind === "echo" && m.a.count > 0.6) n += 0.3;
+    if (m.c.form === "star" && m.c.points > 0.7) n += 0.2;
+    return +n.toFixed(1);
+  }
+  const busyLabel = (n) => (n <= 1.6 ? ["Simple", "One idea, reads at any size"] : n <= 2.6 ? ["Balanced", "A clear form with one supporting idea"] : n <= 3.3 ? ["Detailed", "Several ideas; check it still reads small"] : ["Busy", "Likely too much to read at small sizes. Try removing a step"]);
 
   // ---------- state ----------
   const KEY = "isoline.logo";
@@ -90,18 +117,18 @@
     let s = {};
     try { s = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) {}
     const o = { ...DEF, ...s };
-    o.mark = isNew(s.mark) ? norm(s.mark) : s.mark || s.style ? fromOld({ ...(s.mark || {}), style: s.style, seed: s.seed ?? s.mark?.seed }) : norm(MDEF);
+    o.mark = isStepped(s.mark) ? norm(s.mark) : s.mark || s.style ? fromOld({ ...(s.mark || {}), style: s.style, seed: s.seed ?? s.mark?.seed }) : norm(MDEF);
     delete o.style; delete o.seed;
     return o;
   })();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(L)); } catch (e) {} };
   const newSeed = () => 1 + Math.floor(Math.random() * 99999);
 
-  // ---------- shapes ----------
-  // Every shape is drawn around the origin and placed with a transform, so the same outline can be
-  // filled, stroked, used as a clip or copied at another size. Marks live on a 100 x 100 board.
-  // Colors are slots filled in wherever the mark is shown: INK, ACC (the accent) and BGC (the surface
-  // behind, for gaps and cut-outs).
+  // ---------- forms ----------
+  // Every form is drawn around the origin and placed with a transform, so the same outline can be
+  // filled, stroked, used as a clip or a cut-out, or copied at another size. Marks live on a 100 x 100
+  // board. Colors are slots filled in where the mark is shown: INK, ACC (the accent) and BGC (the
+  // surface behind, for gaps).
   function roundPoly(pts, round) {
     const t = clamp(round, 0, 1) * 0.5, n = pts.length;
     if (t < 0.01) return "M" + pts.map(([x, y]) => P(x, y)).join("L") + "Z";
@@ -112,40 +139,28 @@
     }
     return d + "Z";
   }
-  const around = (n, rf, a0 = -90) => Array.from({ length: n }, (_, i) => { const a = rad(a0 + (360 / n) * i), r = typeof rf === "function" ? rf(i) : rf; return [r * Math.cos(a), r * Math.sin(a)]; });
+  const ring = (n, rf, a0 = -90) => Array.from({ length: n }, (_, i) => { const a = rad(a0 + (360 / n) * i), r = typeof rf === "function" ? rf(i) : rf; return [r * Math.cos(a), r * Math.sin(a)]; });
   const circleD = (r) => `M${f1(-r)} 0a${f1(r)} ${f1(r)} 0 1 0 ${f1(2 * r)} 0a${f1(r)} ${f1(r)} 0 1 0 ${f1(-2 * r)} 0Z`;
-  // A closed curve through points (Catmull-Rom as cubic Béziers).
-  function smoothClosed(pts) {
-    const n = pts.length; let d = `M${P(...pts[0])}`;
-    for (let i = 0; i < n; i++) {
-      const p0 = pts[(i + n - 1) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
-      d += `C${P(p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6)} ${P(p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6)} ${P(...p2)}`;
-    }
-    return d + "Z";
-  }
-  // o: sides, depth, round (0 to 1), seed. Returns a path around the origin with radius about r.
-  function shapeD(kind, r, o) {
-    const sides = 3 + Math.round(o.sides * 5);
+  // o: points, round (0 to 1). Each form is sized to look as large as a circle of radius r (optical
+  // size), and sits where it looks centered, not where its box is.
+  function formD(kind, r, o) {
     switch (kind) {
-      case "poly": return roundPoly(around(sides, r), o.round);
-      case "star": { const n = 4 + Math.round(o.sides * 6), inner = r * lerp(0.78, 0.32, o.depth); return roundPoly(around(n * 2, (i) => (i % 2 ? inner : r)), o.round * 0.7); }
-      case "petal": { const w = r * lerp(0.35, 1.05, o.depth); return `M0 ${f1(-r)}Q${f1(w)} 0 0 ${f1(r)}Q${f1(-w)} 0 0 ${f1(-r)}Z`; }
-      case "blob": { const g = T.mulberry32(o.seed * 13 + 5); return smoothClosed(around(7, () => r * (1 + (g() - 0.5) * lerp(0.15, 0.7, o.depth)))); }
-      case "half": return `M${f1(-r)} ${f1(r * 0.3)}A${f1(r)} ${f1(r)} 0 0 1 ${f1(r)} ${f1(r * 0.3)}Z`;
-      case "drop": return `M0 ${f1(-r)}C${f1(r * 0.95)} ${f1(-r * 0.15)} ${f1(r * 0.8)} ${f1(r * 0.85)} 0 ${f1(r * 0.85)}C${f1(-r * 0.8)} ${f1(r * 0.85)} ${f1(-r * 0.95)} ${f1(-r * 0.15)} 0 ${f1(-r)}Z`;
-      case "cross": { const a = r * lerp(0.16, 0.42, o.depth); return roundPoly([[-a, -r], [a, -r], [a, -a], [r, -a], [r, a], [a, a], [a, r], [-a, r], [-a, a], [-r, a], [-r, -a], [-a, -a]], o.round * 0.6); }
-      case "leaf": { const k = r * 0.8, b = lerp(0.1, 0.75, o.depth) * r; return `M${f1(-k)} ${f1(k)}C${f1(-k)} ${f1(-b)} ${f1(b)} ${f1(-k)} ${f1(k)} ${f1(-k)}C${f1(k)} ${f1(b)} ${f1(-b)} ${f1(k)} ${f1(-k)} ${f1(k)}Z`; }
-      case "arch": { const w = r * 0.78; return `M${f1(-w)} ${f1(r)}V${f1(-r + w)}A${f1(w)} ${f1(w)} 0 0 1 ${f1(w)} ${f1(-r + w)}V${f1(r)}Z`; }
+      case "square": { const s = r * 0.9; return roundPoly([[-s, -s], [s, -s], [s, s], [-s, s]], o.round * 0.8); }
+      case "triangle": { const pts = ring(3, r * 1.12).map(([x, y]) => [x, y + r * 0.14]); return roundPoly(pts, o.round * 0.5); }
+      case "diamond": return roundPoly(ring(4, r * 1.08), o.round * 0.5);
+      case "hexagon": return roundPoly(ring(6, r * 1.03, -90), o.round * 0.4);
+      case "star": { const n = 4 + Math.round(o.points * 4), inner = r * 1.08 * lerp(0.62, 0.42, o.points); return roundPoly(ring(n * 2, (i) => (i % 2 ? inner : r * 1.1)), o.round * 0.45); }
+      case "lens": { const w = r * 0.62; return `M0 ${f1(-r * 1.05)}Q${f1(w * 2)} 0 0 ${f1(r * 1.05)}Q${f1(-w * 2)} 0 0 ${f1(-r * 1.05)}Z`; }
+      case "half": { const k = r * 1.1; return `M${f1(-k)} ${f1(k * 0.32)}A${f1(k)} ${f1(k)} 0 0 1 ${f1(k)} ${f1(k * 0.32)}Z`; }
+      case "quarter": { const k = r * 1.45, o0 = -k * 0.42; return `M${f1(o0)} ${f1(o0)}H${f1(o0 + k)}A${f1(k)} ${f1(k)} 0 0 1 ${f1(o0)} ${f1(o0 + k)}Z`; }
+      case "cross": { const a = r * 0.34; return roundPoly([[-a, -r], [a, -r], [a, -a], [r, -a], [r, a], [a, a], [a, r], [-a, r], [-a, a], [-r, a], [-r, -a], [-a, -a]], o.round * 0.5); }
       default: return circleD(r);
     }
   }
-  const WRAP_D = {
-    circle: circleD(47), rounded: roundPoly([[-46, -46], [46, -46], [46, 46], [-46, 46]], 0.55), squircle: roundPoly([[-47, -47], [47, -47], [47, 47], [-47, 47]], 0.92),
-    hex: roundPoly(around(6, 48), 0.2), diamond: roundPoly(around(4, 49), 0.25), shield: `M0 -47C14 -40 28 -40 42 -42C44 4 30 32 0 47C-30 32 -44 4 -42 -42C-28 -40 -14 -40 0 -47Z`,
-    arch: "M-40 47V-7A40 40 0 0 1 40 -7V47Z", pill: "M-27 -20A27 27 0 0 1 27 -20V20A27 27 0 0 1 -27 20Z",
+  const CONT_D = {
+    circle: circleD(47), rounded: roundPoly([[-46, -46], [46, -46], [46, 46], [-46, 46]], 0.5), squircle: roundPoly([[-47, -47], [47, -47], [47, 47], [-47, 47]], 0.92),
+    hexagon: roundPoly(ring(6, 48.5), 0.18), diamond: roundPoly(ring(4, 49.5), 0.22),
   };
-  // The pill's ends need the full radius; drawn as a rounded rectangle instead of the shorthand above.
-  WRAP_D.pill = roundPoly([[-27, -47], [27, -47], [27, 47], [-27, 47]], 1);
 
   // ---------- painting ----------
   let uidN = 0;
@@ -156,132 +171,136 @@
     levels: 6, gap: 10, bias: 0, weight: 1, swell: 0, swellSize: 100, taper: 0, indexEvery: 0, indexWeight: 1,
     smooth: 0.5, res: 2, minLen: 0, line: "#1c1c1e", line2: "#1c1c1e", gradient: false, bg: "#fff", transparent: true, opacity: 1, mode: "lines",
   };
-  // One shape, placed (x, y, size r, turn) and painted. Textures are cut to the shape's outline.
-  // g: { sw (line width), detail, color, halo (gap color or ""), hw (gap width), seed, letter }
-  function paintShape(kind, x, y, r, turn, paint, o, g) {
+  // One form, placed (x, y, size r, turn) and painted as a line or solid, with a texture inside if
+  // asked. g: { sw, color, halo (gap color or ""), hw (gap width), fill, detail, seed, letter }
+  function paintForm(kind, x, y, r, turn, line, o, g) {
     const tf = `translate(${f1(x)} ${f1(y)}) rotate(${f1(turn)})`;
-    const isText = kind === "letter";
-    const fs = f1(r * 1.55);
-    const node = (attrs, extraTf = "") => isText
-      ? `<text transform="${tf}${extraTf}" x="0" y="${f1(r * 0.06)}" text-anchor="middle" dominant-baseline="central" font-family="'${esc(g.letter.font)}', system-ui, sans-serif" font-weight="${g.letter.weight}" font-size="${fs}" ${attrs}>${esc(g.letter.ch)}</text>`
-      : `<path d="${shapeD(kind, r, o)}" transform="${tf}${extraTf}" ${attrs}/>`;
-    const sw = f1(Math.min(g.sw, r * 0.5));
+    const node = (attrs, extraTf = "") => kind === "letter"
+      ? `<text transform="${tf}${extraTf}" x="0" y="${f1(r * 0.06)}" text-anchor="middle" dominant-baseline="central" font-family="'${esc(g.letter.font)}', system-ui, sans-serif" font-weight="${g.letter.weight}" font-size="${f1(r * 1.6)}" ${attrs}>${esc(g.letter.ch)}</text>`
+      : `<path d="${formD(kind, r, o)}" transform="${tf}${extraTf}" ${attrs}/>`;
+    // Lines never get thicker than a third of the form, so small pieces keep their shape.
+    const sw = f1(Math.min(g.sw, Math.max(1.8, r * 0.34)));
+    const fill = g.fill || "plain";
     let out = "";
-    // A gap in the surface color under the shape, so it reads apart from whatever it overlaps.
-    if (g.halo && g.hw > 0.2) out += node(paint === "outline" || paint === "rings" ? `fill="none" stroke="${g.halo}" stroke-width="${f1(+sw + g.hw * 2)}" stroke-linejoin="round"` : `fill="${g.halo}" stroke="${g.halo}" stroke-width="${f1(g.hw * 2)}" stroke-linejoin="round"`);
-    const col = g.color;
-    if (paint === "solid") return out + node(`fill="${col}"`);
-    if (paint === "outline") return out + node(`fill="none" stroke="${col}" stroke-width="${sw}" stroke-linejoin="round"`);
-    if (paint === "rings") {
-      const n = Math.round(lerp(2, 6, g.detail));
+    // A gap in the surface color under the form, so it reads apart from whatever it overlaps.
+    if (g.halo && g.hw > 0.2) out += node(line ? `fill="none" stroke="${g.halo}" stroke-width="${f1(+sw + g.hw * 2)}" stroke-linejoin="round"` : `fill="${g.halo}" stroke="${g.halo}" stroke-width="${f1(g.hw * 2)}" stroke-linejoin="round"`);
+    const col = g.color, edge = line ? node(`fill="none" stroke="${col}" stroke-width="${sw}" stroke-linejoin="round"`) : "";
+    if (fill === "plain") return out + (line ? edge : node(`fill="${col}"`));
+    if (fill === "rings") {
+      // Nested copies, each a constant line width, spaced so they never run together.
+      const n = clamp(Math.round(lerp(2, 5, g.detail) * clamp(r / 30, 0.6, 1.2)), 2, 5);
       for (let k = n; k >= 1; k--) { const s = k / n; out += node(`fill="none" stroke="${col}" stroke-width="${f1(sw / s)}" stroke-linejoin="round"`, ` scale(${f1(s * 100) / 100})`); }
+      if (!line) out += node(`fill="${col}"`, ` scale(${f1(50 / n) / 100})`);
       return out;
     }
-    const id = uid(), clip = `<clipPath id="${id}">${node("")}</clipPath>`;
+    // Texture inside: never finer than about 5 board units, so it doesn't turn to grey when small.
+    const id = uid(), clip = `<clipPath id="${id}">${node("")}</clipPath>`, s = lerp(10, 5.2, g.detail) * clamp(r / 32, 0.75, 1.15), R = r * 1.6;
     let tex = "";
-    const s = lerp(9, 3.4, g.detail) * clamp(r / 30, 0.55, 1.2), R = r * 1.5;
-    if (paint === "lines") {
-      const a = rad(turn + 45 + g.seed % 4 * 45), nx = Math.cos(a), ny = Math.sin(a);
-      for (let k = -Math.ceil(R / s); k <= Math.ceil(R / s); k++) { const cx = x + -ny * k * s, cy = y + nx * k * s; tex += `<path d="M${P(cx - nx * R, cy - ny * R)}L${P(cx + nx * R, cy + ny * R)}"/>`; }
-      tex = `<g stroke="${col}" stroke-width="${f1(s * 0.48)}" stroke-linecap="round">${tex}</g>`;
-    } else if (paint === "dots") {
-      for (let i = -Math.ceil(R / s); i <= Math.ceil(R / s); i++) for (let j = -Math.ceil(R / s); j <= Math.ceil(R / s); j++) tex += `<circle cx="${f1(x + i * s)}" cy="${f1(y + j * s + (i % 2 ? s / 2 : 0))}" r="${f1(s * 0.32)}"/>`;
+    if (fill === "hatch") {
+      const a = rad(45 + (g.seed % 2) * 90), nx = Math.cos(a), ny = Math.sin(a);
+      for (let k = -Math.ceil(R / s); k <= Math.ceil(R / s); k++) { const cx = x - ny * k * s, cy = y + nx * k * s; tex += `<path d="M${P(cx - nx * R, cy - ny * R)}L${P(cx + nx * R, cy + ny * R)}"/>`; }
+      tex = `<g stroke="${col}" stroke-width="${f1(s * 0.46)}" stroke-linecap="round">${tex}</g>`;
+    } else if (fill === "dots") {
+      for (let i = -Math.ceil(R / s); i <= Math.ceil(R / s); i++) for (let j = -Math.ceil(R / s); j <= Math.ceil(R / s); j++) tex += `<circle cx="${f1(x + i * s)}" cy="${f1(y + j * s + (i % 2 ? s / 2 : 0))}" r="${f1(s * 0.3)}"/>`;
       tex = `<g fill="${col}">${tex}</g>`;
     } else {
-      // Topo: contour rings drawn by the Studio's engine, peaked at the shape's middle.
+      // Contour rings drawn by the Studio's engine, peaked near the form's middle.
       const gr = T.mulberry32(g.seed * 31 + 7);
-      tex = (T.buildSVG({ ...BASE, pattern: "rings", seed: 1 + Math.floor(gr() * 9999), warp: 0.06 + gr() * 0.1, gap: lerp(9, 3.6, g.detail) * clamp(r / 30, 0.6, 1.2), weight: Math.max(1.2, +sw * 0.75), smooth: 0.7, points: [{ x: clamp(x / 100 + (gr() - 0.5) * 0.06, 0, 1), y: clamp(1 - y / 100 + (gr() - 0.5) * 0.06, 0, 1), r: 1, s: 1 }], minLen: 6, w: 100, h: 100 }, { closedOnly: true }).svg.match(/<path[^>]*\/>/g) || []).join("").replace(/#1c1c1e/g, col);
+      tex = (T.buildSVG({ ...BASE, pattern: "rings", seed: 1 + Math.floor(gr() * 9999), warp: 0.05 + gr() * 0.08, gap: s, weight: Math.max(1.8, s * 0.4), smooth: 0.7, points: [{ x: clamp(x / 100 + (gr() - 0.5) * 0.06, 0, 1), y: clamp(1 - y / 100 + (gr() - 0.5) * 0.06, 0, 1), r: 1, s: 1 }], minLen: 8, w: 100, h: 100 }, { closedOnly: true }).svg.match(/<path[^>]*\/>/g) || []).join("").replace(/#1c1c1e/g, col);
     }
-    return out + `<defs>${clip}</defs><g clip-path="url(#${id})">${tex}</g>`;
+    return out + `<defs>${clip}</defs><g clip-path="url(#${id})">${tex}</g>` + edge;
   }
 
   // ---------- putting a mark together ----------
-  const swOf = (m) => 1.6 + m.weight * 6.4;
+  // Lines run from 2.6 to 8 board units: at 32 px the thinnest is still close to a pixel.
+  const swOf = (m) => 2.6 + m.weight * 5.4;
   function build(m, f) {
-    const g = T.mulberry32(m.seed * 7919 + 11), c = m.c, a = m.a, w = m.w;
-    const sw = swOf(m), hw = m.gap * 4.5;
-    const wrapOn = w.shape !== "none", badge = wrapOn && w.mode === "badge", frame = wrapOn && w.mode === "frame";
-    const base = badge ? "BGC" : "INK", wrapCol = m.accent === "wrap" ? "ACC" : "INK", halo = badge ? wrapCol : "BGC";
-    const cenCol = m.accent === "center" ? "ACC" : base, aroCol = m.accent === "around" ? "ACC" : base, oneCol = m.accent === "one" ? "ACC" : aroCol;
+    const g = T.mulberry32(m.seed * 7919 + 11), c = m.c, st = m.s, a = m.a, w = m.w;
+    const sw = swOf(m), hw = 1.2 + m.gap * 4;
+    const contOn = w.shape !== "none", badge = contOn && w.hold === "badge", frame = contOn && w.hold === "frame";
+    const base = badge ? "BGC" : "INK", contCol = m.accent === "container" ? "ACC" : "INK", halo = badge ? contCol : "BGC";
+    const formCol = m.accent === "form" ? "ACC" : base, aroCol = m.accent === "around" ? "ACC" : base;
+    // One visual language: the form and everything around it share a style.
+    const formLine = st.style === "line", aroLine = st.style !== "solid";
     const letter = { ch: applyCase(initial(L.name), f.case === "lower" ? "lower" : "upper"), font: f.font, weight: f.weight };
-    const opt = (s) => ({ sides: s.sides ?? 0.4, depth: s.depth ?? 0.5, round: s.round ?? 0.35, seed: m.seed });
-    const style = (color, haloOn) => ({ sw, detail: c.detail, color, halo: haloOn ? halo : "", hw, seed: m.seed, letter });
-    let rc = lerp(14, 40, c.size), cx = 50, cy = 50, back = "", front = "", ext = rc;
-    const pr = (s) => lerp(4, 20, s);
-    // What goes around (or beside) the center.
+    const opt = { points: c.points, round: c.round };
+    const look = (color, line, haloOn, fill = "plain") => ({ sw, color, halo: haloOn ? halo : "", hw, fill, detail: st.detail, seed: m.seed, letter });
+    let rc = lerp(18, 40, c.size), cx = 50, cy = 50, back = "", front = "", ext = rc, cut = "";
+    const ps = (s) => lerp(5, 16, s);
     if (a.kind === "ring") {
-      const R = rc + hw + 3 + a.dist * 16, thick = a.paint === "solid" ? sw * 1.8 : sw;
-      front += `<circle cx="50" cy="50" r="${f1(R)}" fill="none" stroke="${oneCol}" stroke-width="${f1(thick)}"/>`;
-      ext = R + thick / 2;
+      const R = rc + hw + sw * 0.5 + 2 + a.dist * 12;
+      front += `<circle cx="50" cy="50" r="${f1(R)}" fill="none" stroke="${aroCol}" stroke-width="${f1(sw)}"/>`;
+      ext = R + sw / 2;
     } else if (a.kind === "echo") {
-      const n = 1 + Math.round(a.count * 4), step = 4 + a.dist * 9 + sw * 0.5;
+      // Repetition reads as rhythm only with clear space between the copies.
+      const n = 1 + Math.round(a.count * 3), step = sw + hw + 2 + a.dist * 6;
+      const form = c.form === "letter" ? "circle" : c.form;
       for (let k = n; k >= 1; k--) {
         const s = (rc + k * step) / rc;
-        back += `<path d="${shapeD(c.shape === "letter" ? "circle" : c.shape, rc, opt(c))}" transform="translate(50 50) rotate(${c.turn + k * a.spin * 0.25}) scale(${f1(s * 100) / 100})" fill="none" stroke="${k === n ? oneCol : aroCol}" stroke-width="${f1(sw / s)}" stroke-linejoin="round"/>`;
+        back += `<path d="${formD(form, rc, opt)}" transform="translate(50 50) rotate(${c.turn + k * a.spin * 0.2}) scale(${f1(s * 1000) / 1000})" fill="none" stroke="${aroCol}" stroke-width="${f1(sw / s)}" stroke-linejoin="round"/>`;
       }
       ext = rc + n * step + sw;
     } else if (a.kind === "orbit") {
-      const rx = rc * lerp(1.3, 2, a.dist), ry = rx * lerp(0.16, 0.5, a.size), tilt = a.spin - 25, ow = f1(sw * 0.85);
+      const rx = rc * lerp(1.35, 1.9, a.dist), ry = rx * lerp(0.2, 0.42, a.size), tilt = a.spin - 25;
       const arc = (sweep) => `M${P(50 - rx, 50)}A${f1(rx)} ${f1(ry)} 0 0 ${sweep} ${P(50 + rx, 50)}`;
-      back += `<path d="${arc(1)}" transform="rotate(${tilt} 50 50)" fill="none" stroke="${aroCol}" stroke-width="${ow}" stroke-linecap="round"/>`;
-      front += `<g transform="rotate(${tilt} 50 50)"><path d="${arc(0)}" fill="none" stroke="${halo}" stroke-width="${f1(+ow + hw * 2)}" stroke-linecap="round"/><path d="${arc(0)}" fill="none" stroke="${aroCol}" stroke-width="${ow}" stroke-linecap="round"/>`;
-      if (a.count > 0.35) { const t = rad(lerp(20, 160, g())); front += paintShape(a.piece, 50 + rx * Math.cos(t), 50 + ry * Math.sin(t), lerp(4, 10, a.count), 0, a.paint === "outline" ? "outline" : "solid", opt(a), style(oneCol, true)); }
+      back += `<path d="${arc(1)}" transform="rotate(${tilt} 50 50)" fill="none" stroke="${aroCol}" stroke-width="${f1(sw)}" stroke-linecap="round"/>`;
+      front += `<g transform="rotate(${tilt} 50 50)"><path d="${arc(0)}" fill="none" stroke="${halo}" stroke-width="${f1(sw + hw * 2)}" stroke-linecap="round"/><path d="${arc(0)}" fill="none" stroke="${aroCol}" stroke-width="${f1(sw)}" stroke-linecap="round"/>`;
+      if (a.count > 0.5) { const t = rad(lerp(25, 155, g())); front += paintForm(a.piece, 50 + rx * Math.cos(t), 50 + ry * Math.sin(t), lerp(4.5, 8, a.size), 0, false, opt, look(aroCol, false, true)); }
       front += "</g>";
       ext = rx + sw;
-    } else if (a.kind === "repeat") {
-      const n = 3 + Math.round(a.count * 13), s = pr(a.size) * clamp(8 / n, 0.45, 1.1), R = rc + hw + 2 + a.dist * 16 + s;
-      for (let i = 0; i < n; i++) { const t = a.spin - 90 + (360 / n) * i; front += paintShape(a.piece, 50 + R * Math.cos(rad(t)), 50 + R * Math.sin(rad(t)), s, t + 90, a.paint, opt(a), style(i === 0 ? oneCol : aroCol, true)); }
+    } else if (a.kind === "radial") {
+      // Fewer, larger pieces read better than many small ones; size shrinks only as far as needed.
+      const n = 4 + Math.round(a.count * 8), R0 = rc + hw + 2 + a.dist * 12, s = Math.min(ps(a.size), (Math.PI * (R0 + 6)) / n * 0.42), R = R0 + s;
+      for (let i = 0; i < n; i++) { const t = a.spin - 90 + (360 / n) * i; front += paintForm(a.piece, 50 + R * Math.cos(rad(t)), 50 + R * Math.sin(rad(t)), s, t + 90, aroLine, opt, look(aroCol, aroLine, true)); }
       ext = R + s;
-    } else if (a.kind === "satellite") {
-      const s = pr(a.size) * 0.8, R = rc + a.dist * 14 + s * 0.4, t = rad(a.spin - 45);
-      front += paintShape(a.piece, 50 + R * Math.cos(t), 50 + R * Math.sin(t), s, a.spin, a.paint, opt(a), style(oneCol, true));
-      ext = R + s;
-    } else if (a.kind === "offset") {
-      const d = rc * lerp(0.25, 1, a.dist), t = rad(a.spin - 30), dx = d * Math.cos(t), dy = d * Math.sin(t);
+    } else if (a.kind === "overlap") {
+      const d = rc * lerp(0.45, 0.95, a.dist), t = rad(a.spin - 30), dx = d * Math.cos(t), dy = d * Math.sin(t);
       cx = 50 - dx / 2; cy = 50 - dy / 2;
-      back += paintShape(c.shape, 50 + dx / 2, 50 + dy / 2, rc, c.turn, a.paint, opt(c), style(oneCol, false));
+      back += paintForm(c.form, 50 + dx / 2, 50 + dy / 2, rc, c.turn, aroLine, opt, look(aroCol, aroLine, false));
       ext = rc + d / 2;
-    } else if (a.kind === "pair") {
-      const s = rc * lerp(0.45, 1, a.size), gap = lerp(2, 14, a.dist) + hw;
-      const span = rc + gap + s * 2 + rc;
-      cx = 50 - span / 2 + rc;
-      front += paintShape(a.piece, cx + rc + gap + s, 50, s, a.spin, a.paint, opt(a), style(oneCol, true));
-      ext = span / 2 + 2;
+    } else if (a.kind === "bite") {
+      // Negative space: a piece cut out of the form at its edge, with the piece itself set just inside.
+      const s = rc * lerp(0.3, 0.55, a.size), R = rc * lerp(0.55, 0.95, a.dist), t = rad(a.spin - 45), px = 50 + R * Math.cos(t), py = 50 + R * Math.sin(t);
+      cut = `<path d="${formD(a.piece, s + hw, opt)}" transform="translate(${f1(px)} ${f1(py)}) rotate(${a.spin})" fill="#000"/>`;
+      if (a.count > 0.5) front += paintForm(a.piece, px, py, s * 0.55, a.spin, aroLine, opt, look(aroCol, aroLine, false));
+    } else if (a.kind === "satellite") {
+      // Close enough to belong to the form, large enough to read as a second shape, not a speck.
+      const s = Math.max(rc * 0.28, lerp(6.5, 13, a.size)), R = rc + hw + s * 0.9 + a.dist * 6, t = rad(a.spin - 45);
+      front += paintForm(a.piece, 50 + R * Math.cos(t), 50 + R * Math.sin(t), s, a.spin, formLine, opt, look(aroCol, formLine, true));
+      ext = Math.max(rc, R + s);
     }
-    const center = paintShape(c.shape, cx, cy, rc, c.turn, c.paint, opt(c), style(cenCol, a.kind === "offset"));
-    // Everything is scaled to fit the board, then stepped in to sit inside a frame or badge.
-    const fit = Math.min(1, 46 / Math.max(ext, 1)) * (frame || badge ? 0.78 : 1);
-    let body = `<g transform="translate(50 50) scale(${f1(fit * 1000) / 1000}) translate(-50 -50)">${back}${center}${front}</g>`;
-    let out = "";
-    if (wrapOn) {
-      const wd = WRAP_D[w.shape];
-      if (badge) out = `<path d="${wd}" transform="translate(50 50)" fill="${wrapCol}"/>` + body;
-      else if (frame) out = body + `<path d="${wd}" transform="translate(50 50) scale(.96)" fill="none" stroke="${wrapCol}" stroke-width="${f1(Math.max(2.4, sw * 0.8))}" stroke-linejoin="round"/>`;
-      else { const id = uid(); out = `<defs><clipPath id="${id}"><path d="${wd}" transform="translate(50 50)"/></clipPath></defs><g clip-path="url(#${id})">${body}</g>`; }
-    } else out = body;
-    return finish(out, m);
+    let form = paintForm(c.form, cx, cy, rc, c.turn, formLine, opt, look(formCol, formLine, a.kind === "overlap", st.fill));
+    if (cut) { const id = uid(); form = `<defs><mask id="${id}" maskUnits="userSpaceOnUse" x="-10" y="-10" width="120" height="120"><rect x="-10" y="-10" width="120" height="120" fill="#fff"/>${cut}</mask></defs><g mask="url(#${id})">${form}</g>`; }
+    // Everything is scaled to fit the board, then stepped in to sit inside a frame or badge with room.
+    // A cut grows the mark past the container's edge so the container crops it.
+    const fit = Math.min(1, 46 / Math.max(ext, 1)) * (frame ? 0.74 : badge ? 0.78 : contOn ? 1.32 : 1);
+    const body = `<g transform="translate(50 50) scale(${f1(fit * 1000) / 1000}) translate(-50 -50)">${back}${form}${front}</g>`;
+    let out = body;
+    if (contOn) {
+      const cd = CONT_D[w.shape];
+      if (badge) out = `<path d="${cd}" transform="translate(50 50)" fill="${contCol}"/>` + body;
+      else if (frame) out = body + `<path d="${cd}" transform="translate(50 50) scale(.95)" fill="none" stroke="${contCol}" stroke-width="${f1(Math.max(3, sw * 0.85))}" stroke-linejoin="round"/>`;
+      else { const id = uid(); out = `<defs><clipPath id="${id}"><path d="${cd}" transform="translate(50 50)"/></clipPath></defs><g clip-path="url(#${id})">${body}</g>`; }
+    }
+    return finish(out, m, hw);
   }
-  // The finish cuts into the whole mark (with a mask, so it stays a real gap on any background) or
-  // adds an accent copy.
-  function finish(art, m) {
-    const k = m.f.kind, amt = m.f.amount, ang = m.f.angle * 180;
+  // The finish: a cut (a mask, so it stays a real gap on any background) or an accent copy.
+  const reid = (s, k) => s.replace(/id="(lg\w+)"/g, `id="$1${k}"`).replace(/url\(#(lg\w+)\)/g, `url(#$1${k})`);
+  function finish(art, m, hw) {
+    const k = m.f.kind, ang = m.f.angle * 180;
     if (k === "none") return art;
-    if (k === "shadow") { const d = lerp(2.5, 8, amt), t = rad(ang + 45); return `<g transform="translate(${f1(d * Math.cos(t))} ${f1(d * Math.sin(t))})">${art.replace(/INK/g, "ACC").replace(/id="(lg\w+)"/g, 'id="$1s"').replace(/url\(#(lg\w+)\)/g, "url(#$1s)")}</g>${art}`; }
+    if (k === "shadow") { const d = 3 + hw, t = rad(ang + 45); return `<g transform="translate(${f1(d * Math.cos(t))} ${f1(d * Math.sin(t))})">${reid(art.replace(/INK/g, "ACC"), "s")}</g>${art}`; }
     if (k === "split") {
-      const id = uid(), half = `<path d="M-100 0H100V100H-100Z" transform="translate(50 50) rotate(${f1(ang)})"/>`;
-      return art + `<defs><clipPath id="${id}">${half}</clipPath></defs><g clip-path="url(#${id})">${art.replace(/INK/g, "ACC").replace(/id="(lg\w+)"/g, 'id="$1h"').replace(/url\(#(lg\w+)\)/g, "url(#$1h)")}</g>`;
+      const id = uid();
+      return art + `<defs><clipPath id="${id}"><path d="M-100 0H100V100H-100Z" transform="translate(50 50) rotate(${f1(ang)})"/></clipPath></defs><g clip-path="url(#${id})">${reid(art.replace(/INK/g, "ACC"), "h")}</g>`;
     }
-    let cut = "";
-    if (k === "slice") { const wdt = lerp(2, 9, amt); cut = `<path d="M-80 0H80" transform="translate(50 50) rotate(${f1(ang - 30)})" stroke="#000" stroke-width="${f1(wdt)}"/>`; }
-    else if (k === "stripes") { const n = 2 + Math.round(amt * 4), gp = 34 / n; for (let i = 0; i < n; i++) cut += `<path d="M-80 ${f1(8 + i * gp + gp / 2)}H80" stroke="#000" stroke-width="${f1(gp * 0.42)}"/>`; cut = `<g transform="translate(50 50) rotate(${f1(ang)})">${cut}</g>`; }
-    else if (k === "notch") { const half = lerp(14, 50, amt), a0 = ang - 90; cut = `<path d="M50 50L${P(50 + 80 * Math.cos(rad(a0 - half)), 50 + 80 * Math.sin(rad(a0 - half)))}L${P(50 + 80 * Math.cos(rad(a0 + half)), 50 + 80 * Math.sin(rad(a0 + half)))}Z" fill="#000"/>`; }
     const id = uid();
-    return `<defs><mask id="${id}" maskUnits="userSpaceOnUse" x="-10" y="-10" width="120" height="120"><rect x="-10" y="-10" width="120" height="120" fill="#fff"/>${cut}</mask></defs><g mask="url(#${id})">${art}</g>`;
+    return `<defs><mask id="${id}" maskUnits="userSpaceOnUse" x="-10" y="-10" width="120" height="120"><rect x="-10" y="-10" width="120" height="120" fill="#fff"/><path d="M-80 0H80" transform="translate(50 50) rotate(${f1(ang - 30)})" stroke="#000" stroke-width="${f1(2.5 + hw)}"/></mask></defs><g mask="url(#${id})">${art}</g>`;
   }
   // Marks are kept by everything that shapes them, so repaints are free.
   const markCache = new Map();
   function markSVG(m, f) {
-    const k = JSON.stringify(m) + (m.c.shape === "letter" ? `|${initial(L.name)}|${f.font}|${f.weight}|${f.case}` : "");
+    const k = JSON.stringify(m) + (m.c.form === "letter" ? `|${initial(L.name)}|${f.font}|${f.weight}|${f.case}` : "");
     if (!markCache.has(k)) { if (markCache.size > 600) markCache.clear(); markCache.set(k, build(m, f)); }
     return markCache.get(k);
   }
@@ -294,16 +313,38 @@
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   const pickW = (w) => { const e = Object.entries(w), t = e.reduce((s, [, v]) => s + v, 0); let x = Math.random() * t; for (const [k, v] of e) if ((x -= v) < 0) return k; return e[0][0]; };
   const rnd = (a, b) => +(a + Math.random() * (b - a)).toFixed(2);
-  // A new take on one step (or all of them), keeping the rest, in ranges that read well when small.
+  const ROLL = {
+    c: () => ({ form: pickW({ circle: 3, square: 2, triangle: 1.5, diamond: 1, hexagon: 1.5, star: 1, lens: 1, half: 1.2, quarter: 1, cross: 0.7, letter: 2 }), size: rnd(0.45, 0.8), turn: Math.random() < 0.7 ? 0 : Math.round(Math.random() * 8) * 45, points: rnd(0, 0.7), round: rnd(0.15, 0.6) }),
+    s: () => ({ style: pickW({ solid: 4, line: 3, mixed: 2 }), fill: pickW({ plain: 6, hatch: 1, dots: 0.6, contour: 1.2, rings: 1 }), detail: rnd(0.25, 0.7) }),
+    a: () => ({ kind: pickW({ none: 2.5, ring: 1.5, echo: 1.2, orbit: 1.2, radial: 1.5, overlap: 1, bite: 1.5, satellite: 1.2 }), piece: pickW({ circle: 4, square: 1, triangle: 1, diamond: 1, hexagon: 0.5, star: 0.6, lens: 1.2, half: 0.6, quarter: 0.6 }), count: rnd(0.1, 0.8), dist: rnd(0.1, 0.7), size: rnd(0.25, 0.75), spin: Math.round(Math.random() * 8) * 45 }),
+    w: () => ({ shape: pickW({ none: 4, circle: 2, rounded: 1.5, squircle: 1.5, hexagon: 0.8, diamond: 0.5 }), hold: pickW({ cut: 1, frame: 2, badge: 2.5 }) }),
+    f: () => ({ kind: pickW({ none: 6, slice: 1, split: 1, shadow: 0.8 }), angle: rnd(0, 1) }),
+  };
+  // A new take on one step (or all of them), keeping the rest. Rolls stay within the element budget,
+  // and a few pairings that never read well are rolled again: texture inside a small form, a textured
+  // form inside a badge with lines all around it, or two ideas competing for the edge.
+  function sensible(m) {
+    if (m.s.fill !== "plain" && (m.c.size < 0.5 || m.c.form === "letter" || m.a.kind === "radial")) return false;
+    if (m.a.kind === "echo" && m.w.shape !== "none" && m.w.hold === "frame") return false;
+    if (m.a.kind === "bite" && m.c.form === "letter") return false;
+    if (m.f.kind !== "none" && m.a.kind !== "none" && m.s.fill !== "plain") return false;
+    if (m.accent === "container" && (m.w.shape === "none" || m.w.hold === "cut")) return false;
+    return true;
+  }
   function rollPart(m, part) {
-    const o = JSON.parse(JSON.stringify(m));
-    if (!part || part === "c") o.c = { shape: pickW({ circle: 3, poly: 3, star: 2, petal: 1.5, blob: 1.5, half: 1, drop: 1, cross: 1, leaf: 1, arch: 1, letter: 2 }), paint: pickW({ solid: 4, outline: 2, lines: 1.5, dots: 1, rings: 1.5, topo: 1.5 }), size: rnd(0.3, 0.75), sides: rnd(0, 1), depth: rnd(0.15, 0.85), round: rnd(0.1, 0.7), turn: Math.random() < 0.5 ? 0 : Math.round(Math.random() * 24) * 15, detail: rnd(0.3, 0.8) };
-    if (!part || part === "a") o.a = { kind: pickW({ none: 2, ring: 1.5, echo: 1.5, orbit: 1.5, repeat: 2, satellite: 1.5, offset: 1, pair: 1 }), piece: pick(PIECES)[0], paint: pickW({ solid: 3, outline: 2, lines: 0.5, rings: 0.5 }), count: rnd(0.1, 0.9), dist: rnd(0.1, 0.8), size: rnd(0.2, 0.8), spin: Math.round(Math.random() * 24) * 15 };
-    if (!part || part === "w") o.w = { shape: pickW({ none: 4, circle: 2, rounded: 1.5, squircle: 1, hex: 1, diamond: 0.6, shield: 0.6, arch: 0.6, pill: 0.6 }), mode: pickW({ cut: 1.5, frame: 2, badge: 2 }) };
-    if (!part || part === "f") o.f = { kind: pickW({ none: 5, slice: 1, stripes: 1, notch: 1, split: 1, shadow: 0.8 }), amount: rnd(0.2, 0.8), angle: rnd(0, 1) };
-    if (!part || part === "x") { const wrapAcc = o.w.shape !== "none" && o.w.mode !== "cut"; o.accent = pickW({ none: 1, center: 2.5, around: o.a.kind === "none" ? 0 : 2.5, one: o.a.kind === "none" ? 0 : 2.5, wrap: wrapAcc ? 1.5 : 0 }); o.weight = rnd(0.25, 0.65); o.gap = rnd(0.2, 0.7); }
-    if (!part || part === "seed") o.seed = newSeed();
-    return norm(o);
+    const budget = part ? 3.3 : pickW({ 1.8: 3, 2.6: 4, 3.3: 2 });
+    let best = null;
+    for (let i = 0; i < 30; i++) {
+      const o = JSON.parse(JSON.stringify(m));
+      // The last step's die rolls its finish and its accent together.
+      for (const k of part ? (part === "x" ? ["f"] : [part]) : ["c", "s", "a", "w", "f"]) if (ROLL[k]) o[k] = ROLL[k]();
+      if (!part || part === "x") { o.accent = pickW({ none: 0.6, form: 2.5, around: o.a.kind === "none" ? 0 : 2, container: o.w.shape !== "none" && o.w.hold !== "cut" ? 1.2 : 0 }); o.weight = rnd(0.3, 0.65); o.gap = rnd(0.25, 0.65); }
+      if (!part || part === "seed") o.seed = newSeed();
+      const n = norm(o);
+      if (sensible(n) && busy(n) <= budget) return n;
+      if (!best || busy(n) < busy(best)) best = n;
+    }
+    return best;
   }
 
   // ---------- type and color ----------
@@ -402,7 +443,7 @@
     else if (layout === "mark") { w = H; h = H; body = mark; }
     else { w = tw; h = fs * 1.3; body = txt(0, h / 2, "start"); }
     const W = Math.ceil(w + pad * 2), Hh = Math.ceil(h + pad * 2);
-    const css = layout === "mark" && L.mark.c.shape !== "letter" ? "" : await embedFont(f.font, f.weight);
+    const css = layout === "mark" && L.mark.c.form !== "letter" ? "" : await embedFont(f.font, f.weight);
     return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}">${css ? `<style>${css}</style>` : ""}${withBg ? `<rect width="100%" height="100%" fill="${c.bg}"/>` : ""}<g transform="translate(${pad} ${pad})">${body}</g></svg>`;
   }
   async function exportPNG(scale = 4) {
@@ -466,14 +507,19 @@
   function chips(host, path, list, label, cols = 4) {
     if (label) host.insertAdjacentHTML("beforeend", `<div class="as-lbl">${label}</div>`);
     const g = document.createElement("div"); g.className = "as-chips"; g.style.setProperty("--cols", cols); host.appendChild(g);
-    g.onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; setK(path, b.dataset.v); syncAll(); changed(); };
+    g.onclick = (e) => {
+      const b = e.target.closest("[data-v]"); if (!b) return;
+      // A container picked from none starts as a frame, the hold that shows it.
+      if (path === "w.shape" && L.mark.w.shape === "none" && L.mark.w.hold === "cut") setK("w.hold", "frame");
+      setK(path, b.dataset.v); syncAll(); changed();
+    };
     chipSets.push({ g, path, list });
     return g;
   }
   function buildPage() {
     built = true;
     const page = $("assetsPage");
-    page.innerHTML = `<aside class="options as-panel" aria-label="Logo settings"><h2 class="col-title">Logo</h2><p class="lede">Build a mark step by step, then set your project's name beside it.</p><div id="asOpts"></div></aside>
+    page.innerHTML = `<aside class="options as-panel" aria-label="Logo settings"><h2 class="col-title">Logo</h2><p class="lede">Build a mark step by step, then set your project's name beside it. The meter on the preview says when it's getting busy.</p><div id="asOpts"></div></aside>
       <section class="as-stage" aria-label="Logo preview"><div class="as-scroll" id="asStage"></div>
         <div class="as-bar glass" role="toolbar" aria-label="Logo"><button class="bar-btn surprise" id="asShuffle" title="A new mark, every step rolled">Shuffle<kbd>R</kbd></button><button class="bar-btn" id="asVary" title="The same steps, drawn again">Variation<kbd><svg class="ic kbd-ic"><use href="#i-shift"/></svg>R</kbd></button><span class="bar-sep"></span><button class="bar-btn" id="asSvg">SVG</button><button class="bar-btn" id="asPng">PNG</button><button class="bar-btn" id="asCopy">Copy SVG</button></div></section>`;
     const o = $("asOpts");
@@ -481,38 +527,36 @@
     const nm = $("asName"); nm.value = L.name;
     nm.oninput = () => { L.name = nm.value; save(); render(); clearTimeout(nm._t); nm._t = setTimeout(() => { syncKit(); homePreview(); }, 250); };
 
-    let s = step(o, 1, "Center", "c", "A new center");
-    chips(s, "c.shape", SHAPES);
-    chips(s, "c.paint", PAINTS, "Paint", 3).classList.add("sm");
-    slider(s, "Size", "c.size", "How large the center is");
-    slider(s, "Corners", "c.sides", "Sides of a polygon, points of a star");
-    slider(s, "Form", "c.depth", "How deep a star's points, how wide a petal, how uneven a blob");
+    let s = step(o, 1, "Form", "c", "A new form");
+    chips(s, "c.form", FORMS);
+    slider(s, "Size", "c.size", "How large the form is beside what's around it");
+    slider(s, "Points", "c.points", "How many points a star has");
     slider(s, "Round", "c.round", "Rounds the corners");
-    slider(s, "Turn", "c.turn", "Turns the center", true);
-    slider(s, "Detail", "c.detail", "How fine the lines, dots and rings inside it are");
+    slider(s, "Turn", "c.turn", "Turns the form", true);
 
-    s = step(o, 2, "Around", "a", "Something new around the center");
-    chips(s, "a.kind", AROUND);
-    chips(s, "a.piece", PIECES, "Piece").classList.add("as-piece");
-    chips(s, "a.paint", PAINTS, "Paint", 3).classList.add("sm");
-    slider(s, "Count", "a.count", "How many pieces or echoes");
-    slider(s, "Distance", "a.dist", "How far from the center");
-    slider(s, "Size", "a.size", "How large each piece is (for an orbit, how open the ring is)");
-    slider(s, "Spin", "a.spin", "Turns everything around the center", true);
+    s = step(o, 2, "Style", "s", "A new style");
+    seg(s, STYLES, () => L.mark.s.style, (v) => setK("s.style", v), "as-style");
+    chips(s, "s.fill", FILLS, "Inside the form", 5).classList.add("sm");
+    slider(s, "Detail", "s.detail", "How fine the texture inside is. It never gets finer than reads at small sizes");
 
-    s = step(o, 3, "Wrap", "w", "A new wrap");
-    chips(s, "w.shape", WRAPS);
-    seg(s, WRAP_MODES, () => L.mark.w.mode, (v) => setK("w.mode", v), "as-mode");
+    s = step(o, 3, "Compose", "a", "A new composition");
+    chips(s, "a.kind", COMPOSE);
+    chips(s, "a.piece", PIECES, "Piece", 5).classList.add("as-piece", "sm");
+    slider(s, "Count", "a.count", "How many pieces or echoes (for a bite, whether the piece sits in the gap)");
+    slider(s, "Distance", "a.dist", "How far from the form");
+    slider(s, "Size", "a.size", "How large the piece is (for an orbit, how open the ring is)");
+    slider(s, "Spin", "a.spin", "Where around the form it sits", true);
 
-    s = step(o, 4, "Finish", "f", "A new finish");
-    chips(s, "f.kind", FINISHES, "", 3);
-    slider(s, "Amount", "f.amount", "How wide the cut, how many stripes, how deep the notch");
+    s = step(o, 4, "Container", "w", "A new container");
+    chips(s, "w.shape", CONTAINERS, "", 3);
+    seg(s, HOLDS, () => L.mark.w.hold, (v) => setK("w.hold", v), "as-mode");
+
+    s = step(o, 5, "Finish and accent", "x", "A new accent and line weight");
+    chips(s, "f.kind", FINISHES).classList.add("sm");
     slider(s, "Angle", "f.angle", "Which way the finish runs");
-
-    s = step(o, 5, "Accent and lines", "x", "A new accent and line weight");
-    seg(s, ACCENTS.slice(0, 3), () => L.mark.accent, (v) => setK("accent", v));
-    seg(s, ACCENTS.slice(3), () => L.mark.accent, (v) => setK("accent", v), "as-acc2");
-    slider(s, "Weight", "weight", "Line thickness everywhere");
+    s.insertAdjacentHTML("beforeend", `<div class="as-lbl">Accent</div>`);
+    seg(s, ACCENTS, () => L.mark.accent, (v) => setK("accent", v), "as-acc");
+    slider(s, "Weight", "weight", "One line weight for every part");
     slider(s, "Gap", "gap", "The space kept between parts that overlap");
 
     o.insertAdjacentHTML("beforeend", `<h3 class="sub">Layout</h3>`);
@@ -543,10 +587,10 @@
   }
   // Settings a choice doesn't use fade back, so it's clear what moves what.
   const USED = {
-    "c.sides": (m) => m.c.shape === "poly" || m.c.shape === "star", "c.depth": (m) => ["star", "petal", "blob", "cross", "leaf"].includes(m.c.shape),
-    "c.round": (m) => ["poly", "star", "cross"].includes(m.c.shape), "c.detail": (m) => ["lines", "dots", "rings", "topo"].includes(m.c.paint),
-    "a.count": (m) => ["echo", "orbit", "repeat"].includes(m.a.kind), "a.dist": (m) => m.a.kind !== "none", "a.size": (m) => ["orbit", "repeat", "satellite", "pair"].includes(m.a.kind), "a.spin": (m) => m.a.kind !== "none" && m.a.kind !== "ring",
-    "f.amount": (m) => !["none", "split"].includes(m.f.kind), "f.angle": (m) => m.f.kind !== "none",
+    "c.points": (m) => m.c.form === "star", "c.round": (m) => ["square", "triangle", "diamond", "hexagon", "star", "cross"].includes(m.c.form),
+    "s.detail": (m) => m.s.fill !== "plain",
+    "a.count": (m) => ["echo", "orbit", "radial", "bite"].includes(m.a.kind), "a.dist": (m) => m.a.kind !== "none", "a.size": (m) => ["orbit", "radial", "satellite", "bite"].includes(m.a.kind), "a.spin": (m) => m.a.kind !== "none" && m.a.kind !== "ring",
+    "f.angle": (m) => m.f.kind !== "none",
   };
   function renderChips() {
     const f = face(), c = colors(), m = L.mark;
@@ -555,32 +599,35 @@
       g.innerHTML = list.map(([v, name, tip]) => {
         const t = JSON.parse(JSON.stringify(m)), ks = path.split(".");
         let o = t; for (const k of ks.slice(0, -1)) o = o[k]; o[ks[ks.length - 1]] = v;
-        // A piece or its paint shows even while the arrangement doesn't use one.
-        if (path.startsWith("a.") && path !== "a.kind" && t.a.kind === "none") t.a.kind = "satellite";
+        // A piece shows even while the composition doesn't use one.
         if (path === "a.piece" && !USES_PIECE.has(t.a.kind)) t.a.kind = "satellite";
+        if (path === "w.shape" && m.w.shape === "none" && t.w.hold === "cut") t.w.hold = "frame";
         return `<button class="as-chip${cur === v ? " on" : ""}" data-v="${v}" data-tip="${esc(tip)}">${markOnly(norm(t), c, f)}<span>${name}</span></button>`;
       }).join("");
     }
     for (const row of $("asOpts").querySelectorAll(".ctrl[data-k]")) row.classList.toggle("off", USED[row.dataset.k] ? !USED[row.dataset.k](m) : false);
     $("asOpts").querySelector(".as-piece").classList.toggle("off", !USES_PIECE.has(m.a.kind));
     $("asOpts").querySelector(".as-mode").classList.toggle("off", m.w.shape === "none");
+    $("asOpts").querySelector(".as-acc button[data-v=container]").disabled = m.w.shape === "none" || m.w.hold === "cut";
   }
   function renderFonts() {
     const sel = $("asFont"), t = kitTokens(), kitF = t?.font.heading || "Instrument Sans";
     sel.innerHTML = `<option value="kit">Kit font (${esc(kitF)})</option>` + FONTS.map((f) => `<option value="${esc(f)}">${esc(f)}</option>`).join("");
     sel.value = L.font === "kit" || FONTS.includes(L.font) ? L.font : "kit";
   }
-  // Alternatives under the previews: one step changed in each of the first five, then three rolled whole.
-  function rollVars() { vars = [rollPart(L.mark, "c"), rollPart(L.mark, "a"), rollPart(L.mark, "w"), rollPart(L.mark, "f"), rollPart(L.mark, "x"), rollPart(L.mark), rollPart(L.mark), rollPart(L.mark)]; }
+  // Alternatives under the previews: one step changed in each of the first six, then two rolled whole.
+  function rollVars() { vars = [rollPart(L.mark, "c"), rollPart(L.mark, "s"), rollPart(L.mark, "a"), rollPart(L.mark, "w"), rollPart(L.mark, "f"), rollPart(L.mark, "x"), rollPart(L.mark), rollPart(L.mark)]; }
   function render() {
     if (!built || root.Shell?.route !== "assets") return;
     const c = colors(), d = onDark(c), a = onAccent(c), f = face();
     renderChips();
     if (!vars.length) rollVars();
     const icon = (n, cc) => `<span class="as-icon" style="--n:${n}px;background:${cc.bg}">${markOnly(L.mark, cc, f)}</span>`;
-    const what = ["New center", "New surround", "New wrap", "New finish", "New accent", "All new", "All new", "All new"];
+    const what = ["New form", "New style", "New composition", "New container", "New finish", "New accent", "All new", "All new"];
+    const n = busy(L.mark), [label, note] = busyLabel(n);
     $("asStage").innerHTML = `
-      <div class="as-hero" style="background:${c.bg}">${logoHTML(c)}</div>
+      <div class="as-hero" style="background:${c.bg}">${logoHTML(c)}
+        <div class="as-meter" data-tip="${esc(note)}. Lasting marks usually hold one to three elements"><span class="as-small" style="background:${c.bg}">${markOnly(L.mark, c, f)}</span><span class="as-bar-m"><i style="width:${Math.min(100, (n / 4) * 100)}%"></i></span><b>${label}</b></div></div>
       <div class="as-tiles">
         <div class="as-tile" style="background:${d.bg}">${logoHTML(d)}</div>
         <div class="as-tile" style="background:${a.bg}">${logoHTML(a)}</div>
@@ -637,7 +684,7 @@
   function setLook(l) {
     if (!l || typeof l !== "object") return;
     // Looks saved by the earlier prototypes carry a style or a single pattern instead of steps.
-    if (isNew(l.mark)) L.mark = norm(l.mark); else if (l.mark || l.style) L.mark = fromOld({ ...(l.mark || {}), style: l.style, seed: l.seed ?? l.mark?.seed });
+    if (isStepped(l.mark)) L.mark = norm(l.mark); else if (l.mark || l.style) L.mark = fromOld({ ...(l.mark || {}), style: l.style, seed: l.seed ?? l.mark?.seed });
     if (["side", "stack", "mark", "name"].includes(l.layout)) L.layout = l.layout;
     save(); rollVars(); syncAll(); render(); syncKit(); homePreview();
   }
@@ -647,8 +694,9 @@
     onShow, preview: homePreview, look, setLook, remix, kitBrand, kitKey,
     // For agents and scripts.
     state: () => JSON.parse(JSON.stringify(L)),
-    set: (p) => { const { mark, ...rest } = p || {}; Object.assign(L, rest); if (mark) L.mark = norm({ ...L.mark, ...mark, c: { ...L.mark.c, ...mark.c }, a: { ...L.mark.a, ...mark.a }, w: { ...L.mark.w, ...mark.w }, f: { ...L.mark.f, ...mark.f } }); syncAll(); changed(); return JSON.parse(JSON.stringify(L)); },
-    steps: () => ({ center: SHAPES, paints: PAINTS, around: AROUND, pieces: PIECES, wraps: WRAPS, wrapModes: WRAP_MODES, finishes: FINISHES, accents: ACCENTS }),
+    set: (p) => { const { mark, ...rest } = p || {}; Object.assign(L, rest); if (mark) L.mark = norm({ ...L.mark, ...mark, c: { ...L.mark.c, ...mark.c }, s: { ...L.mark.s, ...mark.s }, a: { ...L.mark.a, ...mark.a }, w: { ...L.mark.w, ...mark.w }, f: { ...L.mark.f, ...mark.f } }); syncAll(); changed(); return JSON.parse(JSON.stringify(L)); },
+    steps: () => ({ forms: FORMS, styles: STYLES, fills: FILLS, compose: COMPOSE, pieces: PIECES, containers: CONTAINERS, holds: HOLDS, finishes: FINISHES, accents: ACCENTS }),
+    busy: () => busy(L.mark),
     roll: (part) => { L.mark = rollPart(L.mark, part); syncAll(); changed(); return JSON.parse(JSON.stringify(L.mark)); },
     svg: () => exportSVG(), png: (scale) => exportPNG(scale),
   };

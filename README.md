@@ -58,7 +58,7 @@ A token builder (type, color, spacing, radius, elevation, motion) previewed on r
 <td valign="top">
 
 ### Assets
-A logo maker. The mark is built in steps that combine freely: a center shape and how it's painted, something around or beside it, a wrap, a finish cut into it, and which part takes the accent. Your project's name is set in the kit's font and colors. Preview it on dark, on your accent, over your design and as an app icon, then export SVG or PNG. It can stand in for the kit's logo in Components.
+A logo maker. The mark is built in steps that combine freely (a form, the style every part shares, a composition, a container and a finish), following what makes marks last: plain geometry, one visual language, two or three elements, negative space, and lines that still read at 16 px. A meter says when a mark is getting busy. Your project's name is set in the kit's font and colors. Preview it on dark, on your accent, over your design and as an app icon, then export SVG or PNG. It can stand in for the kit's logo in Components.
 
 </td>
 <td><img src="docs/assets.jpg" alt="The logo maker"></td>

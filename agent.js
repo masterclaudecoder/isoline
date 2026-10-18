@@ -45,8 +45,8 @@ Effects with a center (rays, lens, dof, swirl, bulge, ripple) take x and y from 
 - Isoline.components.tokens() returns type, color, spacing, radius, elevation and motion tokens
 - Isoline.components.css() returns them as CSS variables
 - Isoline.components.brief("design" | "dev") returns the brief with the design rules
-- Isoline.assets.state() / set({ name, layout, font, weight, case, track, color, kit, mark }) read and change the logo. The mark is built in steps: { c: center { shape, paint, size, sides, depth, round, turn, detail }, a: around { kind, piece, paint, count, dist, size, spin }, w: wrap { shape, mode }, f: finish { kind, amount, angle }, accent, weight, gap, seed } (numbers 0 to 1, turn and spin in degrees); steps() lists every choice
-- Isoline.assets.roll("c" | "a" | "w" | "f" | "x" | "seed") rolls one step (x is accent and lines), roll() all of them; svg() and png(scale) export the logo
+- Isoline.assets.state() / set({ name, layout, font, weight, case, track, color, kit, mark }) read and change the logo. The mark is built in steps: { c: form { form, size, turn, points, round }, s: style { style, fill, detail }, a: compose { kind, piece, count, dist, size, spin }, w: container { shape, hold }, f: finish { kind, angle }, accent, weight, gap, seed } (numbers 0 to 1, turn and spin in degrees); steps() lists every choice and busy() how many elements the mark holds (under 2.6 reads well small)
+- Isoline.assets.roll("c" | "s" | "a" | "w" | "x" | "seed") rolls one step (x is the finish and accent), roll() all of them within the element budget; svg() and png(scale) export the logo
 - Isoline.components.libraries() lists the UI library directory with links
 - Isoline.components.remix(["#..."]) rolls a new kit look (fonts, scale, radius, depth) in those colors
 

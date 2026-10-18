@@ -2484,7 +2484,14 @@ html.lite .glass.glass-live > *, html.lite .glass.glass-live .bar-btn, html.lite
 .as-step .as-head { margin: 14px 0 10px; }
 .as-n { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 7px; border-radius: 50%; background: var(--well); box-shadow: var(--sunken); font-size: 10.5px; color: var(--muted); vertical-align: 1px; }
 .as-lbl { font-size: 12px; font-weight: 600; color: var(--muted); margin: 4px 0 6px; }
-.as-acc2 { margin: 6px 0 12px; }
+.as-acc, .as-style { margin-bottom: 12px; }
+.as-hero { position: relative; }
+.as-meter { position: absolute; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 5px; border-radius: 99px; background: var(--panel); box-shadow: var(--raised); font-size: 12px; line-height: 1; }
+.as-meter b { font-weight: 600; color: var(--ink-2); }
+.as-small { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--hair); }
+.as-small svg { width: 16px; height: 16px; }
+.as-bar-m { width: 46px; height: 5px; border-radius: 99px; background: var(--well); box-shadow: var(--sunken); overflow: hidden; }
+.as-bar-m i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #3aa66b, #d9a521 60%, #d9532b); background-size: 46px 100%; }
 .as-mode { margin-top: 2px; }
 .as-chip { display: grid; gap: 4px; justify-items: center; padding: 8px 4px 6px; border: 0; border-radius: 12px; background: var(--panel); box-shadow: var(--raised); font-size: 11.5px; font-weight: 600; color: var(--ink-2); min-width: 0; }
 .as-chip svg { width: 100%; max-width: 44px; aspect-ratio: 1; }

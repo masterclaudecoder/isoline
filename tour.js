@@ -276,7 +276,7 @@
       { el: "#settingsBtn", t: "Settings", p: "Theme, accent, safe values and the tutorials." },
     ],
     assets: [
-      { el: "#asOpts", t: "Your logo", p: "Name it, then build the mark in steps: a center, something around it, a wrap, a finish and an accent. Any step works with any other, and each die rolls just its step." },
+      { el: "#asOpts", t: "Your logo", p: "Name it, then build the mark in steps: a form, its style, a composition, a container and a finish. Each die rolls just its step, and the meter on the preview says when it's getting busy." },
       { el: "#asStage .as-tiles", t: "Everywhere it goes", p: "See it on dark, on your accent, over your Studio design and as an app icon." },
       { el: "#asShuffle", t: "Shuffle", p: "R rolls a whole new mark, Shift R draws the same steps again. Export SVG or PNG from here." },
       { el: ".as-kit", t: "In your kit", p: "Switch this on and the Components preview wears your logo." },
