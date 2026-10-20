@@ -654,6 +654,8 @@
     const t = document.createElement("div");
     t.className = "tile fx obj"; t.dataset.obj = o.id;
     t.innerHTML = `<span class="grip" aria-label="Drag to reorder. Lower ones draw on top">${ic("grip")}</span><button class="tile-main" data-slot="obj:${o.id}"><span class="tile-th" data-th="obj:${o.id}"></span><span class="tile-text"><b></b><small></small></span></button><button class="ib xs" data-remove-obj="${o.id}" aria-label="Remove" title="Remove">${ic("x")}</button>`;
+    // Until its picture is drawn, a new tile shows the design's colors rather than an empty grey box.
+    try { t.querySelector(".tile-th").style.setProperty("--ph", phOf(S)); } catch (e) {}
     return t;
   }
   function renderObjTiles() {
@@ -723,6 +725,8 @@
     const t = document.createElement("div");
     t.className = "tile fx"; t.dataset.fx = id;
     t.innerHTML = `<span class="grip" aria-label="Drag to reorder ${FXI[id].name}">${ic("grip")}</span><button class="tile-main" data-slot="fx:${id}"><span class="tile-th" data-th="fx:${id}"></span><span class="tile-text"><b>${FXI[id].name}</b><small></small></span></button><button class="ib xs" data-remove="${id}" aria-label="Remove ${FXI[id].name}" title="Remove">${ic("x")}</button>`;
+    // Until its picture is drawn, a new tile shows the design's colors rather than an empty grey box.
+    try { t.querySelector(".tile-th").style.setProperty("--ph", phOf(S)); } catch (e) {}
     return t;
   }
   // Tiles that arrived in this render, and where every tile sat before it (relative to its slot, since

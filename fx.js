@@ -413,8 +413,12 @@ void main() {
   float s = 0.0, wsum = 0.0;
   for (int i = -64; i <= 64; i++) {
     if (i < -r || i > r) continue;
-    ivec2 q = clamp(c + ivec2(uDir2) * i, ivec2(0), uIn - 1);
-    float w = exp(-float(i * i) / (2.0 * uSigma * uSigma)); s += w * texelFetch(uTex, q, 0).r; wsum += w;
+    // Past the edge the field is point-reflected (2·edge − mirror), as the SVG smoothing does, so a
+    // straight field stays straight to the edge instead of bending where it was clamped.
+    ivec2 q = c + ivec2(uDir2) * i, e = clamp(q, ivec2(0), uIn - 1);
+    float v = texelFetch(uTex, e, 0).r;
+    if (q != e) v = 2.0 * v - texelFetch(uTex, clamp(2 * e - q, ivec2(0), uIn - 1), 0).r;
+    float w = exp(-float(i * i) / (2.0 * uSigma * uSigma)); s += w * v; wsum += w;
   }
   o = vec4(s / wsum, 0.0, 0.0, 1.0);
 }`,
@@ -1173,15 +1177,21 @@ void main() {
 }`,
 
     glyphs: `uniform sampler2D uAtlas; uniform float uCell; uniform float uCount; uniform float uMono; uniform float uGamma; uniform float uChange; uniform float uBack; uniform vec3 uInk; uniform vec3 uPaper; uniform float uTime;
-// Glyph field: every cell holds a random character whose opacity follows the brightness underneath, like
-// a screen of text lit from behind. Shuffle swaps each cell's character a whole number of times per
-// loop, every cell at its own moment, so the field flickers and still loops.
+// Glyph field: every cell holds a character whose opacity follows the brightness underneath, like a
+// screen of text lit from behind. The character is read from what's under the cell (its brightness and
+// hue, stepped), so a still picture keeps its letters and they change where the picture changes. Shuffle
+// swaps them a whole number of times per loop, so the field still loops; when each cell swaps follows a
+// slow noise field, so changes sweep across in drifting fronts and clusters rather than as even static.
 void main() {
   vec2 d = dp(), g2 = d / uCell, cell = floor(g2);
   vec4 c = tex(toUv((cell + 0.5) * uCell));
   float v = pow(clamp(luma(c.rgb), 0.0, 1.0), uGamma);
-  float h = hash(cell + uSeed * 0.731), slot = uChange > 0.5 ? floor(fract(uTime + h) * uChange) : 0.0;
-  float idx = min(floor(hash(cell * 1.618 + vec2(slot * 7.31, slot * 3.17) + uSeed * 0.37) * uCount), uCount - 1.0);
+  float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b)), hue = 0.0;
+  if (mx - mn > 0.08) hue = mx == c.r ? mod((c.g - c.b) / (mx - mn), 6.0) : mx == c.g ? (c.b - c.r) / (mx - mn) + 2.0 : (c.r - c.g) / (mx - mn) + 4.0;
+  vec2 look = vec2(floor(luma(c.rgb) * 7.0), floor(hue * 1.5));
+  float wave = fbm(cell * 0.06 + uSeed * 0.13) * 2.2 + hash(cell + uSeed * 0.731) * 0.18;
+  float slot = uChange > 0.5 ? floor(fract(uTime + wave) * uChange) : 0.0;
+  float idx = min(floor(hash(cell * 1.618 + look * vec2(5.17, 11.3) + vec2(slot * 7.31, slot * 3.17) + uSeed * 0.37) * uCount), uCount - 1.0);
   vec2 l = fract(g2);
   vec2 sc = vec2(1.0 / uCount, 1.0);
   float a = textureGrad(uAtlas, vec2((idx + l.x) / uCount, l.y), dFdx(g2) * sc, dFdy(g2) * sc).r * v;
