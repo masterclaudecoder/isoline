@@ -1380,6 +1380,98 @@ void main() {
   o = vec4(tex(vUv + off).r, c.g, tex(vUv - off).b, c.a);
 }`,
 
+    // Cells of the picture that fall away at random where its tone runs out, each a slightly different tint,
+    // over the paper with a faint dot grid where cells are gone.
+    dissolve: `uniform float uCell; uniform float uShape; uniform float uAmt; uniform float uEdge; uniform float uTint; uniform float uDots; uniform float uLight; uniform float uGap; uniform vec3 uInk; uniform vec3 uPaper;
+void main() {
+  vec2 d = dp(), cell = floor(d / uCell), l = fract(d / uCell) - 0.5;
+  // Of five points in the cell, the one with the most of the kept tone, so thin lines aren't missed.
+  vec4 c = vec4(0.0); float t = -1.0;
+  for (int i = 0; i < 5; i++) {
+    vec2 q = i == 0 ? vec2(0.5) : vec2(i == 1 || i == 3 ? 0.25 : 0.75, i < 3 ? 0.25 : 0.75);
+    vec4 s = tex(toUv((cell + q) * uCell)); float v = uLight > 0.5 ? luma(s.rgb) : 1.0 - luma(s.rgb);
+    if (v > t) { t = v; c = s; }
+  }
+  float h = hash(cell + uSeed * 0.71);
+  float on = step(h, smoothstep(uAmt - uEdge, uAmt + uEdge, t));
+  float r = 0.5 - uGap * 0.5, aa = 1.0 / uCell;
+  float sd = uShape < 0.5 ? max(abs(l.x), abs(l.y)) - r : uShape < 1.5 ? length(l) - r : sdBox(l, vec2(r), r * 0.45);
+  float m = on * (1.0 - smoothstep(-aa, aa, sd));
+  vec3 col = c.rgb * (1.0 + (hash(cell * 1.37 + uSeed) - 0.5) * 2.0 * uTint) + (hash(cell * 2.91 + uSeed) - 0.5) * uTint * 0.25;
+  if (uShape > 1.5) col *= 1.0 + 0.5 * (l.y - l.x) * smoothstep(-0.18, 0.0, sd);
+  float dot0 = (1.0 - smoothstep(0.06 - aa, 0.06 + aa, length(l))) * uDots;
+  vec3 bg = mix(uPaper, uInk, dot0 * 0.35);
+  o = vec4(mix(bg, clamp(col, 0.0, 1.0), m), 1.0);
+}`,
+
+    // Thin-film color: tone (or slope) sets the film's thickness, and each channel interferes at its own
+    // wavelength, so the picture runs through soap-bubble and oil-slick bands.
+    irid: `uniform float uBands; uniform float uShift; uniform float uMix; uniform float uPearl; uniform float uSlope; uniform float uAnim; uniform float uTime;
+void main() {
+  vec4 c = tex(vUv); float l = luma(c.rgb);
+  vec2 e = toUv(vec2(2.0));
+  float gx = luma(tex(vUv + vec2(e.x, 0.0)).rgb) - luma(tex(vUv - vec2(e.x, 0.0)).rgb), gy = luma(tex(vUv + vec2(0.0, e.y)).rgb) - luma(tex(vUv - vec2(0.0, e.y)).rgb);
+  float th = mix(l, clamp(length(vec2(gx, gy)) * 4.0 + l * 0.35, 0.0, 1.0), uSlope) * uBands + uShift + uAnim * uTime;
+  vec3 film = 0.5 + 0.5 * cos(6.2831853 * (th * vec3(1.0, 1.25, 1.42) + vec3(0.0, 0.1, 0.2)));
+  vec3 r = mix(film * (0.3 + 0.85 * l), mix(film, vec3(1.0), 0.45), uPearl);
+  o = vec4(mix(c.rgb, clamp(r, 0.0, 1.0), uMix), c.a);
+}`,
+
+    // An LED board: fixed dots on black whose brightness follows the picture, with a soft glow between them.
+    led: `uniform float uPitch; uniform float uSize; uniform float uGlow; uniform float uOff; uniform float uShape;
+vec3 dotAt(vec2 cell, vec2 d) {
+  vec3 c = tex(toUv((cell + 0.5) * uPitch)).rgb;
+  vec2 l = d / uPitch - cell - 0.5; float r = uSize * 0.5, aa = 1.0 / uPitch;
+  if (uShape > 1.5) {
+    float k = floor(clamp((l.x + 0.5) * 3.0, 0.0, 2.99)); vec2 q = vec2(fract((l.x + 0.5) * 3.0) - 0.5, l.y * 1.0 / 1.5);
+    vec3 ch = k < 0.5 ? vec3(c.r, 0.0, 0.0) : k < 1.5 ? vec3(0.0, c.g, 0.0) : vec3(0.0, 0.0, c.b);
+    return max(ch, vec3(uOff) * vec3(k < 0.5, k > 0.5 && k < 1.5, k > 1.5)) * 2.4 * (1.0 - smoothstep(-aa * 3.0, aa * 3.0, max(abs(q.x) - uSize * 0.42, abs(q.y) - uSize * 0.32)));
+  }
+  float sd = uShape < 0.5 ? length(l) - r : max(abs(l.x), abs(l.y)) - r * 0.89;
+  return max(c, vec3(uOff)) * (1.0 - smoothstep(-aa, aa, sd));
+}
+void main() {
+  vec2 d = dp(), cell = floor(d / uPitch);
+  vec3 col = dotAt(cell, d), g = vec3(0.0);
+  if (uGlow > 0.0) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+    vec2 q = cell + vec2(float(x), float(y)); vec2 l = d / uPitch - q - 0.5;
+    g += tex(toUv((q + 0.5) * uPitch)).rgb * exp(-dot(l, l) / (0.25 * uSize * uSize + 0.05));
+  }
+  o = vec4(clamp(vec3(0.012) + col + g * uGlow * 0.32, 0.0, 1.0), 1.0);
+}`,
+
+    // Streaks dragged out of the picture in strips: each strip gets its own length, some don't move at all.
+    smear: `uniform float uLen; uniform float uAngle; uniform float uBand; uniform float uAmt; uniform float uJit; uniform float uThr;
+void main() {
+  vec2 d = dp(), dir = vec2(cos(uAngle), sin(uAngle)), nrm = vec2(-dir.y, dir.x);
+  float row = floor(dot(d, nrm) / uBand), h = hash(vec2(row, 3.7) + uSeed);
+  vec4 c = tex(vUv);
+  if (h > uAmt) { o = c; return; }
+  float L = uLen * (1.0 - uJit * hash(vec2(row, 11.1) + uSeed)) + 1.0, j = hash(gl_FragCoord.xy);
+  vec3 acc = vec3(0.0); float ws = 0.0;
+  for (int i = 0; i < 32; i++) {
+    float f = (float(i) + j) / 32.0; vec3 s = tex(toUv(d - dir * f * L)).rgb;
+    float w = (1.0 - f) * (uThr > 0.0 ? smoothstep(uThr - 0.05, uThr + 0.05, luma(s)) : 1.0);
+    acc += s * w; ws += w;
+  }
+  o = vec4(ws > 0.01 ? mix(c.rgb, acc / ws, min(1.0, ws * 0.25)) : c.rgb, c.a);
+}`,
+
+    // Glowing lines at even steps of the picture's tone, over a darkened copy of it.
+    glowlines: `uniform float uLevels; uniform float uWidth; uniform float uGlow; uniform float uDim; uniform float uCore; uniform float uAnim; uniform float uTime;
+float tone(vec2 uv) { vec2 e = toUv(vec2(uWidth * 0.35)); return 0.25 * (luma(tex(uv + vec2(e.x, 0.0)).rgb) + luma(tex(uv - vec2(e.x, 0.0)).rgb) + luma(tex(uv + vec2(0.0, e.y)).rgb) + luma(tex(uv - vec2(0.0, e.y)).rgb)); }
+void main() {
+  vec4 c = tex(vUv);
+  // Distance to the nearest line in design px: the tone's distance to the next level over its slope.
+  float e = max(1.0, uWidth * 0.5), t = tone(vUv), v = t * uLevels + uAnim * uTime;
+  vec2 o2 = toUv(vec2(e));
+  float slope = length(vec2(tone(vUv + vec2(o2.x, 0.0)) - tone(vUv - vec2(o2.x, 0.0)), tone(vUv + vec2(0.0, o2.y)) - tone(vUv - vec2(0.0, o2.y)))) / (2.0 * e) * uLevels;
+  float px = min(fract(v), 1.0 - fract(v)) / max(slope, 1e-5);
+  float g = exp(-px / max(0.5, uWidth)) * uGlow, core = uCore * (1.0 - smoothstep(0.5, 1.5, px * uK));
+  vec3 hot = mix(c.rgb, vec3(1.0), 0.2) * 1.15;
+  o = vec4(clamp(c.rgb * (1.0 - uDim) + hot * g + mix(hot, vec3(1.0), 0.5) * core, 0.0, 1.0), c.a);
+}`,
+
     grain: `uniform float uAmt; uniform float uSize; uniform float uMono; uniform float uSoft; uniform float uAnim; uniform float uTime;
 void main() {
   vec4 c = tex(vUv);
@@ -1395,7 +1487,7 @@ void main() {
   };
 
   // Default pipeline order when effects are added; the app can reorder freely.
-  const ORDER = ["liquify", "wave", "swirl", "bulge", "ripple", "touch", "trail", "sea", "water", "kaleido", "glass", "mesh", "lens", "rays", "chrome", "heatmap", "paper", "cmyk", "blur", "dof", "bloom", "emboss", "gradmap", "posterize", "pixel", "voronoi", "halftone", "linescreen", "riso", "ascii", "glyphs", "dither", "scan", "chroma", "vignette", "grain"];
+  const ORDER = ["liquify", "wave", "smear", "swirl", "bulge", "ripple", "touch", "trail", "sea", "water", "kaleido", "glass", "mesh", "lens", "rays", "chrome", "heatmap", "paper", "cmyk", "blur", "dof", "bloom", "glowlines", "emboss", "irid", "gradmap", "posterize", "pixel", "dissolve", "voronoi", "halftone", "linescreen", "riso", "ascii", "glyphs", "dither", "led", "scan", "chroma", "vignette", "grain"];
   const CHARSETS = { ascii: " .:-=+*#%@", blocks: " ░▒▓█", dots: " ·•●", binary: " 01", lines: " ─═│╬" };
   // Glyph field sets: picked at random per cell, so order doesn't matter and there's no blank.
   const GLYPHSETS = {
@@ -1687,6 +1779,11 @@ void main() {
         case "riso": return { uSize: e.size, uOff: e.offset, uGrain: e.grain, uInkA: hex3(e.inkA), uInkB: hex3(e.inkB), uPaper: hex3(e.paper) };
         case "voronoi": return { uCell: e.cell, uEdge: e.edge };
         case "scan": return { uSpace: e.spacing, uStr: e.strength };
+        case "dissolve": return { uCell: e.cell, uShape: Math.max(0, ["square", "circle", "tile"].indexOf(e.shape)), uAmt: e.amount, uEdge: e.edge, uTint: e.tint, uDots: e.dots, uLight: e.keep === "light" ? 1 : 0, uGap: e.gap, uInk: ink, uPaper: paper };
+        case "irid": return { uBands: e.bands, uShift: e.shift, uMix: e.mix, uPearl: e.pearl, uSlope: e.source === "slope" ? 1 : 0, uAnim: e.anim ? 1 : 0 };
+        case "led": return { uPitch: e.pitch, uSize: e.size, uGlow: e.glow, uOff: e.off, uShape: Math.max(0, ["round", "square", "rgb"].indexOf(e.shape)) };
+        case "smear": return { uLen: e.length, uAngle: rad(e.angle), uBand: e.band, uAmt: e.amount, uJit: e.jitter, uThr: e.threshold };
+        case "glowlines": return { uLevels: e.levels, uWidth: e.width, uGlow: e.glow, uDim: e.dim, uCore: e.core, uAnim: e.anim ? 1 : 0 };
         case "bulge": return { uAmt: e.amount, uRad: e.radius, uC: [e.x, 1 - e.y] };
         case "ripple": return { uAmp: e.amp, uLen: e.length, uDecay: e.decay, uShade: e.shade, uC: [e.x, 1 - e.y], uAnim: e.anim ? Math.round(e.speed || 3) : 0 };
         case "water": return { uAmt: e.amount, uScale: e.scale, uCaustic: e.caustic, uAnim: e.anim ? 1 : 0 };
