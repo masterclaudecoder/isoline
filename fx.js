@@ -2289,6 +2289,8 @@ void main() {
           uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle), uPrism: g.prism ?? 0,
           uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5, uEndless: +job.endless || 0,
           uPath: job.endless ? 0 : Math.max(0, ["orbit", "sway", "glide"].indexOf(job.path || "orbit")), uMDir: [-Math.cos(rad(job.mangle ?? 30)), Math.sin(rad(job.mangle ?? 30))], uGLin: 0,
+          // A program keeps its uniforms between draws, so Paint's stage is cleared for every other generator.
+          uPStage: 0,
         };
         if (g.type === "paint" && floatOK) {
           // Paint flows in passes over a texture with a margin round the frame (see paintSeed in the shader).
