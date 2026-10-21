@@ -1277,6 +1277,9 @@ window.I18N_RU = {
   "Curve": "Изгиб",
   "Jag": "Зубцы",
   "Prism": "Призма",
+  "Design colors": "Цвета дизайна",
+  "Ripple size": "Размер ряби",
+  "Midtones only": "Только полутона",
 };
 
 // The kit preview's demo copy in Russian. It shows when the Builder's Cyrillic switch is on, so the

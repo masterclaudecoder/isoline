@@ -1389,7 +1389,7 @@ void main() {
   o = vec4(mix(c.rgb * uBack, clamp(fg, 0.0, 1.0), a), 1.0);
 }`,
 
-    dither: `uniform float uMat; uniform float uLevels; uniform float uMono; uniform float uPix; uniform vec3 uInk; uniform vec3 uPaper;
+    dither: `uniform float uMat; uniform float uLevels; uniform float uMono; uniform float uPix; uniform vec3 uInk; uniform vec3 uPaper; uniform float uPal; uniform vec3 uCol[8]; uniform int uN; uniform float uGap;
 float b2(vec2 a) { a = floor(mod(a, 2.0)); return fract(dot(a, vec2(0.5, a.y * 0.75))); }
 float b4(vec2 a) { return b2(0.5 * a) * 0.25 + b2(a); }
 float b8(vec2 a) { return b4(0.5 * a) * 0.25 + b2(a); }
@@ -1400,6 +1400,22 @@ void main() {
   vec4 c = tex((d + 0.5) * cell / uRes);
   float th = (uMat < 3.0 ? b2(d) : uMat < 6.0 ? b4(d) : b8(d)) - 0.5;
   float L = max(uLevels - 1.0, 1.0);
+  if (uPal > 0.5) {
+    // Design colors: the palette, darkest first, is a path through color; each cell finds the step of it
+    // closest to its own color and takes one end or the other by the threshold, so blends between two
+    // colors come out as checks and patterns of both.
+    vec3 p1 = uCol[0], p2 = uCol[0]; float f = 0.0, best = 1e9;
+    for (int i = 0; i < 7; i++) {
+      if (i + 1 >= uN) break;
+      vec3 a = uCol[i], dv = uCol[i + 1] - a; float t = clamp(dot(c.rgb - a, dv) / max(dot(dv, dv), 1e-5), 0.0, 1.0);
+      vec3 e = c.rgb - a - dv * t; float dd = dot(e, e);
+      if (dd < best) { best = dd; p1 = a; p2 = uCol[i + 1]; f = t; }
+    }
+    vec3 col = f > th + 0.5 ? p2 : p1;
+    // Gap: the cells shrink to squares with the darkest color showing between them.
+    vec2 g = fract(vUv * uRes / cell) - 0.5; float gp = 0.5 - 0.5 * uGap, aa = 0.5 / cell;
+    o = vec4(mix(uCol[0], col, smoothstep(gp + aa, gp - aa, max(abs(g.x), abs(g.y)))), 1.0); return;
+  }
   if (uMono > 0.5) { float q = floor(clamp(luma(c.rgb) + th / L, 0.0, 1.0) * L + 0.5) / L; o = vec4(mix(uInk, uPaper, q), 1.0); }
   else o = vec4(floor(clamp(c.rgb + th / L, 0.0, 1.0) * L + 0.5) / L, 1.0);
 }`,
@@ -1506,15 +1522,23 @@ void main() { vec4 c = tex(vUv); float L = max(uLevels - 1.0, 1.0); o = vec4(flo
 
     linescreen: `uniform float uSpace; uniform float uAngle; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
 uniform float uFlow; uniform float uFlowSize; uniform float uDash; uniform float uDashLen; uniform float uInv;
+uniform float uRip; uniform float uRipLen; uniform vec2 uRA; uniform vec2 uRB; uniform float uTime;
 // Engrave: parallel lines whose thickness follows the picture's tone. Flow bends them along a smooth
 // noise field, so they stream round like a currency engraving without ever crossing, and dashes break
-// each line into strokes of the given length, every line starting at its own offset.
+// each line into strokes of the given length, every line starting at its own offset. Ripples spread
+// rings from two centers through the lines; where the two sets meet they cross into beads and knots.
+// Moving, the rings travel out one wavelength per loop.
 void main() {
   vec2 nrm = vec2(-sin(uAngle), cos(uAngle)), tng = vec2(nrm.y, -nrm.x), d = dp();
-  float bend = uFlow > 0.0 ? uFlow * (fbm(d / uFlowSize + 3.1) - 0.5) * 2.4 * uFlowSize / uSpace : 0.0;
+  float bend = uFlow > 0.0 ? uFlow * (fbm(d / uFlowSize + 3.1) - 0.5) * 2.4 * uFlowSize / uSpace : 0.0, bead = 0.0;
+  if (uRip > 0.0) {
+    vec2 res = uRes / uK; float ph = 6.2831853 * uTime, k = 6.2831853 / max(uRipLen, 2.0);
+    float w1 = length(d - uRA * res) * k - ph, w2 = length(d - uRB * res) * k - ph;
+    bend += uRip * 0.45 * (sin(w1) + sin(w2)); bead = uRip * 0.3 * cos(w1) * cos(w2);
+  }
   float y = dot(d, nrm) / uSpace + bend, f = fract(y) - 0.5;
   vec4 c = tex(toUv(d - nrm * f * uSpace * (uFlow > 0.0 ? 0.0 : 1.0)));
-  float tone = luma(c.rgb), w = (uInv > 0.5 ? tone : 1.0 - tone) * 0.5, aa = fwidth(y);
+  float tone = luma(c.rgb), w = clamp((uInv > 0.5 ? tone : 1.0 - tone) * 0.5 * (1.0 + bead), 0.0, 0.5), aa = fwidth(y);
   float m = 1.0 - smoothstep(w - aa, w + aa, abs(f));
   if (uDash > 0.0) {
     float x = dot(d, tng) / uDashLen + hash(vec2(floor(y), 4.7)) * 9.0, ax = fwidth(x);
@@ -1605,7 +1629,9 @@ void main() {
 
     // Thin-film color: tone (or slope) sets the film's thickness, and each channel interferes at its own
     // wavelength, so the picture runs through soap-bubble and oil-slick bands.
-    irid: `uniform float uBands; uniform float uShift; uniform float uMix; uniform float uPearl; uniform float uSlope; uniform float uAnim; uniform float uTime;
+    irid: `uniform float uBands; uniform float uShift; uniform float uMix; uniform float uPearl; uniform float uSlope; uniform float uAnim; uniform float uTime; uniform float uMid;
+// Midtones keeps the film to the tones between dark and light, so blacks and whites stay clean and only
+// the soft edges between them turn to rainbow.
 void main() {
   vec4 c = tex(vUv); float l = luma(c.rgb);
   vec2 e = toUv(vec2(2.0));
@@ -1613,7 +1639,7 @@ void main() {
   float th = mix(l, clamp(length(vec2(gx, gy)) * 4.0 + l * 0.35, 0.0, 1.0), uSlope) * uBands + uShift + uAnim * uTime;
   vec3 film = 0.5 + 0.5 * cos(6.2831853 * (th * vec3(1.0, 1.25, 1.42) + vec3(0.0, 0.1, 0.2)));
   vec3 r = mix(film * (0.3 + 0.85 * l), mix(film, vec3(1.0), 0.45), uPearl);
-  o = vec4(mix(c.rgb, clamp(r, 0.0, 1.0), uMix), c.a);
+  o = vec4(mix(c.rgb, clamp(r, 0.0, 1.0), uMix * mix(1.0, pow(clamp(4.0 * l * (1.0 - l), 0.0, 1.0), 2.0), uMid)), c.a);
 }`,
 
     // An LED board: fixed dots on black whose brightness follows the picture, with a soft glow between them.
@@ -2143,7 +2169,7 @@ void main() {
           const set = e.set === "custom" ? [...new Set(e.custom || "")].filter((ch) => ch.trim()).join("") || "#" : GLYPHSETS[e.set] || GLYPHSETS.alnum;
           return { uCell: e.cell, uCount: atlas(set, e.font), uMono: e.mono ? 1 : 0, uGamma: e.contrast ?? 1, uChange: Math.round(e.change ?? 0), uBack: e.back ?? 0, uInk: ink, uPaper: paper };
         }
-        case "dither": return { uMat: e.matrix, uLevels: e.levels, uMono: e.mono ? 1 : 0, uPix: e.pix, uInk: ink, uPaper: paper };
+        case "dither": return { uMat: e.matrix, uLevels: e.levels, uMono: e.mono ? 1 : 0, uPix: e.pix, uInk: ink, uPaper: paper, uPal: e.palette ? 1 : 0, uGap: e.gap || 0 };
         case "chroma": return { uAmt: e.amount };
         case "wave": return { uAmp: e.amp, uLen: e.length, uAngle: rad(e.angle) };
         case "swirl": return { uAmt: e.amount, uRad: e.radius, uC: [e.x, 1 - e.y] };
@@ -2156,7 +2182,7 @@ void main() {
         case "vignette": return { uAmt: e.amount, uSoft: e.softness };
         case "gradmap": return { uC1: hex3(e.c1), uC2: hex3(e.c2), uC3: hex3(e.c3), uMix: e.mix };
         case "posterize": return { uLevels: e.levels };
-        case "linescreen": return { uSpace: e.spacing, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uFlow: e.flow || 0, uFlowSize: e.flowSize || 300, uDash: e.dash || 0, uDashLen: e.dashLen || 24, uInv: e.invert ? 1 : 0 };
+        case "linescreen": return { uSpace: e.spacing, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uFlow: e.flow || 0, uFlowSize: e.flowSize || 300, uDash: e.dash || 0, uDashLen: e.dashLen || 24, uInv: e.invert ? 1 : 0, uRip: e.ripple || 0, uRipLen: e.ripLen || 40, uRA: [e.x ?? 0.15, 1 - (e.y ?? 0.9)], uRB: [e.x2 ?? 0.85, 1 - (e.y2 ?? 0.9)] };
         case "riso": return { uSize: e.size, uOff: e.offset, uGrain: e.grain, uInkA: hex3(e.inkA), uInkB: hex3(e.inkB), uPaper: hex3(e.paper) };
         case "voronoi": return { uCell: e.cell, uEdge: e.edge };
         case "scan": return { uSpace: e.spacing, uStr: e.strength };
@@ -2169,7 +2195,7 @@ void main() {
         case "outline": return { uMd: Math.max(0, ["neon", "ink", "solarize"].indexOf(e.mode)), uThr: e.threshold, uWidth: e.width, uGlow: e.glow, uKeep: e.keep, uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
         case "grid": return { uMd: e.mode === "truchet" ? 1 : 0, uCell: e.cell, uDepth: e.depth, uThr: e.threshold, uStroke: e.stroke, uRad: e.radius, uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
         case "dissolve": return { uCell: e.cell, uShape: Math.max(0, ["square", "circle", "tile"].indexOf(e.shape)), uAmt: e.amount, uEdge: e.edge, uTint: e.tint, uDots: e.dots, uLight: e.keep === "light" ? 1 : 0, uGap: e.gap, uInk: ink, uPaper: paper };
-        case "irid": return { uBands: e.bands, uShift: e.shift, uMix: e.mix, uPearl: e.pearl, uSlope: e.source === "slope" ? 1 : 0, uAnim: e.anim ? 1 : 0 };
+        case "irid": return { uBands: e.bands, uShift: e.shift, uMix: e.mix, uPearl: e.pearl, uSlope: e.source === "slope" ? 1 : 0, uAnim: e.anim ? 1 : 0, uMid: e.mid || 0 };
         case "led": return { uPitch: e.pitch, uSize: e.size, uGlow: e.glow, uOff: e.off, uGamma: e.contrast ?? 1, uByTone: e.bytone ? 1 : 0, uShape: Math.max(0, ["round", "square", "rgb"].indexOf(e.shape)) };
         case "smear": return { uLen: e.length, uAngle: rad(e.angle), uBand: e.band, uAmt: e.amount, uJit: e.jitter, uThr: e.threshold };
         case "glowlines": return { uLevels: e.levels, uWidth: e.width, uGlow: e.glow, uDim: e.dim, uCore: e.core, uAnim: e.anim ? 1 : 0 };
@@ -2317,6 +2343,7 @@ void main() {
         if (!e || !e.on || !SHADERS[id]) continue;
         const out = targets.list[ping];
         const un = effectUniforms(id, e, ink, paper);
+        if (id === "dither" && e.palette) { const pl = [...new Set(job.palette || [])].slice(0, 8); un.uCol = pl.length ? pl.map(hex3) : [ink, paper]; un.uN = un.uCol.length; }
         un.uTime = job.time || 0;
         if (id === "touch") {
           // Click events: positions in design pixels, y up, with their age.
