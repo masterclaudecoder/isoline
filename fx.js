@@ -577,6 +577,16 @@ vec3 ramp(float t) {
   int i = min(int(floor(t)), uN - 2); float f = t - float(i); f = f * f * (3.0 - 2.0 * f);
   return mix(toLab(lin(uCol[i])), toLab(lin(uCol[i + 1])), f);
 }
+// Paint's flow: the curl of two octaves of noise, so it swirls without bunching up. Chaos tightens the
+// finer octave and gives it more weight.
+vec2 paintVel(vec2 q, float ch, vec4 L) {
+  const float e = 0.02;
+  vec2 o1 = q * mix(0.45, 0.55, ch) + L.xy * 0.25, o2 = q * mix(0.95, 1.3, ch) + vec2(7.3, 2.1) + L.zw * 0.25;
+  float n1 = snoise(o1), n2 = snoise(o2);
+  vec2 g1 = vec2(snoise(o1 + vec2(e, 0.0)) - n1, snoise(o1 + vec2(0.0, e)) - n1) / e;
+  vec2 g2 = vec2(snoise(o2 + vec2(e, 0.0)) - n2, snoise(o2 + vec2(0.0, e)) - n2) / e;
+  return vec2(g1.y, -g1.x) + mix(0.3, 0.45, ch) * vec2(g2.y, -g2.x);
+}
 void main() {
   vec2 a = vec2(uRes.x / uRes.y, 1.0);
   vec2 p = vec2(vUv.x, 1.0 - vUv.y);
@@ -630,22 +640,40 @@ void main() {
     o = vec4(clamp(col, 0.0, 1.0), 1.0); return;
   }
   if (uType == 8) {
-    // Paint: marbled ribbons. The plane is folded over itself a few times by waves that the last fold
-    // bends, so straight stripes of the palette curl into swirls, then each stripe is drawn as a ribbon
-    // of one color with soft or crisp edges between them.
+    // Paint: marbled paint. Every point is traced back through a swirling flow (the curl of two octaves
+    // of noise, so it never compresses, like the drag trails' fluid) to where its paint started. The paint
+    // started as layered stripes of the palette, fine streaks inside broad bands, so the flow drags them
+    // into thin, folded veins the way a comb drags ink across a marbling bath.
     float ca = cos(uAngle), sa = sin(uAngle), s = mod(uSeed, 97.0);
-    vec2 q = mat2(ca, -sa, sa, ca) * ((p - 0.5) * a) * uScale * 2.0 + vec2(sin(s * 3.1), cos(s * 1.7)) * 9.0 + drift * 0.5;
-    int nf = int(clamp(uDetail, 1.0, 8.0) + 0.5);
-    for (int i = 0; i < 8; i++) {
-      if (i >= nf) break;
-      float fi = float(i);
-      vec2 ph = vec2(sin(s * 1.3 + fi * 2.1), cos(s * 0.7 + fi * 1.7)) * 3.0 + (mod(fi, 2.0) < 0.5 ? L1 : L2) * 0.6;
-      q += uWarp * 0.45 / (1.0 + fi * 0.35) * vec2(sin(q.y * 1.35 + ph.x + 1.2 * snoise(q * 0.35 + fi)), cos(q.x * 1.2 + ph.y + 1.2 * snoise(q * 0.35 + fi + 7.0)));
+    // Chaos (uWarpScale, 0..1) tightens the flow and lets it run further, from calm swirls to dense marbling.
+    // Its top end stops where the paint still resolves cleanly; past that, mixing finer than a pixel reads as noise.
+    float ch = clamp(uWarpScale, 0.0, 1.0) * 0.7;
+    vec2 q = ((p - 0.5) * a) * uScale * mix(1.0, 1.6, ch) + vec2(sin(s * 3.1), cos(s * 1.7)) * 9.0 + drift * 0.5;
+    int steps = int(clamp(uDetail, 1.0, 8.0) * 4.0 + 0.5);
+    float dt = uWarp * mix(0.35, 0.9, ch) / float(steps);
+    // A second point a pixel away is traced through the same flow: how far apart the two land is how much
+    // paint this pixel covers, so stripes squeezed finer than that can be averaged instead of aliasing.
+    vec2 q2 = q + vec2(0.7071) * uScale * mix(1.0, 1.6, ch) / uRes.y;
+    for (int i = 0; i < 32; i++) {
+      if (i >= steps) break;
+      q -= dt * paintVel(q, ch, vec4(L1, L2)); q2 -= dt * paintVel(q2, ch, vec4(L1, L2));
     }
-    float tri = abs(fract((q.x * 0.5 + q.y * 0.2) * uStretch * 0.5) * 2.0 - 1.0);
-    float N = float(uN - 1), x = tri * N, kk = min(floor(x), N - 1.0), f = x - kk, e = 0.5 * clamp(uSoft, 0.02, 1.0);
-    f = smoothstep(0.5 - e, 0.5 + e, f);
-    o = vec4(srgb(fromLab(ramp((kk + f) / N))), 1.0); return;
+    vec2 dir = vec2(ca, sa);
+    float d = dot(q, dir) * uStretch * 0.35 + 0.35 * snoise(q * 0.8 + 3.3);
+    // Stripes squeezed finer than a pixel or two fade to their average instead of turning to noise.
+    // Veins (uContrast) sets how much two finer layers of streaks show inside the broad bands.
+    float df = d * 3.7 + 0.4 * snoise(q * 1.8), dv = d * 9.3 + 0.6 * snoise(q * 3.1 + 5.0);
+    float d2 = dot(q2, dir) * uStretch * 0.35 + 0.35 * snoise(q2 * 0.8 + 3.3), fp = max(abs(d2 - d), fwidth(d) * 1.4);
+    float aB = smoothstep(0.15, 0.6, fp), aF = smoothstep(0.15, 0.6, fp * 3.7), aV = smoothstep(0.15, 0.6, fp * 9.3);
+    float broad = mix(abs(fract(d) * 2.0 - 1.0), 0.5, aB), fine = mix(abs(fract(df) * 2.0 - 1.0), 0.5, aF), vein = mix(abs(fract(dv) * 2.0 - 1.0), 0.5, aV);
+    float vc = clamp(uContrast, 0.0, 1.0);
+    float tri = clamp(broad * (1.0 - 0.55 * vc) + fine * 0.35 * vc + vein * 0.2 * vc, 0.0, 1.0);
+    float N = float(uN - 1), x = tri * N, kk = min(floor(x), N - 1.0), f = x - kk, h = 0.5 * clamp(uSoft, 0.02, 1.0);
+    f = smoothstep(0.5 - h, 0.5 + h, f);
+    // Where the stripes are already averaged out, the blend stays smooth: snapping an average to the
+    // palette's steps would flip neighboring pixels between two colors and read as noise.
+    float blur = smoothstep(0.15, 0.7, max(aB, aF * vc));
+    o = vec4(srgb(fromLab(ramp(mix((kk + f) / N, tri, blur)))), 1.0); return;
   }
   if (uType == 6) {
     // Aura, after the reactive background of Yandex Music's My Wave: two to four soft blobs of color
@@ -786,7 +814,7 @@ void main() {
   o = vec4(clamp(acc / 4.0, 0.0, 1.0), tex(vUv).a);
 }`,
 
-    mesh: `uniform float uCell; uniform float uStr; uniform float uFrost; uniform float uGrout; uniform float uRim; uniform float uDisp; uniform float uRad;
+    mesh: `uniform float uCell; uniform float uStr; uniform float uFrost; uniform float uGrout; uniform float uRim; uniform float uDisp; uniform float uRad; uniform float uZoom; uniform float uShift; uniform float uBevel; uniform float uFade; uniform float uFadeAng;
 // Glass blocks: a grid of rounded liquid-glass tiles, each magnifying its own patch, separated by a small gap.
 void main() {
   vec2 d = dp(), id = floor(d / uCell), c = (id + 0.5) * uCell, p = d - c;
@@ -795,13 +823,19 @@ void main() {
   float rad = clamp(uRad, 0.0, 0.5) * 2.0 * hb.x;
   float sd = sdBox(p, hb, rad);
   vec2 n = normalize(vec2(sdBox(p + vec2(0.5, 0.0), hb, rad) - sdBox(p - vec2(0.5, 0.0), hb, rad), sdBox(p + vec2(0.0, 0.5), hb, rad) - sdBox(p - vec2(0.0, 0.5), hb, rad)) + 1e-6);
-  vec2 src = c + p * (1.0 - 0.16 * uStr);
+  // Magnify zooms each tile's patch; past 1 it turns upside down, like a drop of water. Offset slides it.
+  vec2 src = c + p * (1.0 - uZoom) + vec2(-0.7071, 0.7071) * uShift * uCell;
   vec3 inside = liquid(toUv(src), sd, n, uCell * 0.2, uStr, uFrost * uCell * 0.09, uRim, uDisp);
+  // Bevel: each tile domes like a pillow, lit from the top left.
+  inside *= 1.0 + uBevel * 0.35 * dot(p / max(hb, vec2(1.0)), vec2(-0.7071, 0.7071));
   vec4 base = tex(vUv);
   float shadow = 0.22 * exp(-max(sdBox(p + vec2(0.0, uCell * 0.02), hb, rad), 0.0) / (uCell * 0.05));
   vec3 outside = base.rgb * (1.0 - shadow);
   float aa = 0.75 / uK;
-  o = vec4(mix(outside, inside, smoothstep(aa, -aa, sd)), base.a);
+  // Fade: tiles thin out toward the fade angle (0° right, 90° up), a whole tile at a time.
+  vec2 fd = vec2(cos(uFadeAng), sin(uFadeAng)), cu = toUv(c) - 0.5;
+  float keep = mix(1.0, smoothstep(0.55, -0.55, dot(cu * vec2(uRes.x / uRes.y, 1.0), fd)), uFade);
+  o = vec4(mix(base.rgb, mix(outside, inside, smoothstep(aa, -aa, sd)), keep), base.a);
 }`,
 
     bulge: `uniform float uAmt; uniform float uRad; uniform vec2 uC;
@@ -1776,7 +1810,7 @@ void main() {
       switch (id) {
         case "liquify": return { uAmt: e.amount, uScale: e.scale };
         case "glass": return { uWidth: e.width, uAngle: rad(e.angle), uStr: e.strength, uFrost: e.frost ?? 0.2, uLight: e.light ?? 0.5 };
-        case "mesh": return { uCell: e.cell, uStr: e.strength, uFrost: e.frost ?? 0.3, uGrout: e.grout ?? 1, uRim: e.rim ?? 0.6, uDisp: e.disp ?? 0.5, uRad: e.radius ?? 0.25 };
+        case "mesh": return { uCell: e.cell, uStr: e.strength, uFrost: e.frost ?? 0.3, uGrout: e.grout ?? 1, uRim: e.rim ?? 0.6, uDisp: e.disp ?? 0.5, uRad: e.radius ?? 0.25, uZoom: e.zoom ?? 0.16 * e.strength, uShift: e.shift || 0, uBevel: e.bevel || 0, uFade: e.fade || 0, uFadeAng: rad(e.fadeAngle ?? 45) };
         case "pixel": return { uSize: e.size, uBevel: e.bevel };
         case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)), uHex: e.grid === "hex" ? 1 : 0, uTurn: e.turn ? 1 : 0, uTone: e.tone ? 1 : 0, uEven: e.even ? 1 : 0, uMerge: e.merge === false ? 0 : 1, uClassic: e.classic ? 1 : 0 };
         case "ascii": {

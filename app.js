@@ -24,7 +24,7 @@
     ["water", "Caustic web", "Distort", { amount: 1, scale: 320, caustic: 0.33, anim: false }, [{ k: "amount", label: "Refraction", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 1.6] }, { k: "scale", label: "Size", min: 40, max: 1200, step: 5, log: true, fmt: px, rand: [180, 520] }, { k: "caustic", label: "Caustics", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 1] }, { sw: "anim", label: "Animate" }]],
     ["kaleido", "Kaleidoscope", "Distort", { segments: 6, rotate: 0, zoom: 1 }, [{ k: "segments", label: "Segments", min: 2, max: 16, step: 1, hard: [2, 64], rand: [4, 10] }, { k: "rotate", label: "Rotate", min: 0, max: 360, step: 1, fmt: deg }, { k: "zoom", label: "Zoom", min: 0.3, max: 3, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.7, 1.6] }]],
     ["glass", "Fluted glass", "Glass", { width: 44, angle: 90, strength: 0.9, frost: 0.2, light: 0.4 }, [{ k: "width", label: "Rib width", min: 4, max: 300, step: 1, log: true, fmt: px, rand: [24, 90] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }, { k: "strength", label: "Refraction", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.4] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.5] }, { k: "light", label: "Highlight", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.3, 0.7] }]],
-    ["mesh", "Glass blocks", "Glass", { cell: 120, radius: 0, strength: 0.7, frost: 0.25, grout: 1, rim: 0.6, disp: 0.5 }, [{ k: "cell", label: "Block size", min: 12, max: 400, step: 1, log: true, fmt: px, rand: [70, 180] }, { k: "radius", label: "Corner radius", min: 0, max: 0.5, step: 0.01, fmt: pct, pct: true, rand: [0.12, 0.35] }, { k: "strength", label: "Refraction", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.1, 0.5] }, { k: "grout", label: "Gap", min: 0, max: 4, step: 0.05, fmt: f2, rand: [0.5, 1.5] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
+    ["mesh", "Glass blocks", "Glass", { cell: 120, radius: 0, strength: 0.7, frost: 0.25, grout: 1, rim: 0.6, disp: 0.5, zoom: 0.11, shift: 0, bevel: 0, fade: 0, fadeAngle: 45 }, [{ k: "cell", label: "Block size", min: 12, max: 400, step: 1, log: true, fmt: px, rand: [70, 180] }, { k: "radius", label: "Corner radius", min: 0, max: 0.5, step: 0.01, fmt: pct, pct: true, rand: [0.12, 0.35] }, { k: "strength", label: "Refraction", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.4, 1.1] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.1, 0.5] }, { k: "grout", label: "Gap", min: 0, max: 4, step: 0.05, fmt: f2, rand: [0.5, 1.5] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }, { k: "zoom", label: "Magnify", min: -1, max: 2, step: 0.01, fmt: pct, pct: true, rand: [0, 0.4] }, { k: "shift", label: "Offset", min: -1, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0] }, { k: "bevel", label: "Bevel", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0, 0.8] }, { k: "fade", label: "Fade", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0] }, { k: "fadeAngle", label: "Fade angle", min: 0, max: 360, step: 1, fmt: deg, when: (e) => e.fade > 0 }]],
     ["lens", "Liquid glass", "Glass", { shape: "pill", size: 0.42, x: 0.5, y: 0.5, refraction: 0.9, frost: 0.2, rim: 0.6, disp: 0.5 }, [{ seg: "shape", options: [["circle", "Circle"], ["pill", "Pill"], ["square", "Square"]] }, { k: "size", label: "Size", min: 0.1, max: 1.2, step: 0.01, fmt: f2, rand: [0.3, 0.6] }, { k: "x", label: "Center X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.65] }, { k: "y", label: "Center Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.65] }, { k: "refraction", label: "Refraction", min: 0, max: 2.5, step: 0.01, fmt: f2, rand: [0.6, 1.3] }, { k: "frost", label: "Frost", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0, 0.4] }, { k: "rim", label: "Highlight", min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0.4, 0.8] }, { k: "disp", label: "Dispersion", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.8] }]],
     ["dof", "Depth of field", "Light", { amount: 28, x: 0.5, y: 0.5, focus: 0.12, falloff: 0.35, shape: "point", angle: 0, bokeh: 0.4 }, [{ seg: "shape", options: [["point", "Point"], ["band", "Band"]] }, { k: "amount", label: "Blur", min: 0, max: 160, step: 0.5, fmt: px, rand: [14, 48] }, { k: "x", label: "Focus left to right", min: 0, max: 1, step: 0.005, pct: true, fmt: pct, rand: [0.3, 0.7] }, { k: "y", label: "Focus top to bottom", min: 0, max: 1, step: 0.005, pct: true, fmt: pct, rand: [0.3, 0.7] }, { k: "focus", label: "In focus", min: 0, max: 0.8, step: 0.005, fmt: pct, pct: true, rand: [0.05, 0.25] }, { k: "falloff", label: "Falloff", min: 0.02, max: 1.2, step: 0.01, fmt: f2, rand: [0.2, 0.6] }, { k: "angle", label: "Band angle", min: -90, max: 90, step: 1, fmt: deg, when: (e) => e.shape === "band" }, { k: "bokeh", label: "Bokeh", min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Off"), rand: [0.2, 0.7] }]],
     ["blur", "Progressive blur", "Light", { amount: 32, dir: "bottom", start: 0.35 }, [{ seg: "dir", options: [["top", "Top"], ["bottom", "Bottom"], ["left", "Left"], ["right", "Right"], ["center", "Edges"], ["even", "Even"]] }, { k: "amount", label: "Blur", min: 0, max: 200, step: 0.5, fmt: px, rand: [16, 60] }, { k: "start", label: "Starts at", min: 0, max: 0.95, step: 0.01, fmt: pct, pct: true, rand: [0.25, 0.6] }]],
@@ -74,7 +74,7 @@
     ["conic", "Conic", "Blend around a point"],
     ["aura", "Aura", "A glowing body of light"],
     ["wavegrad", "Wave", "Folding bands of color"],
-    ["paint", "Paint", "Swirled ribbons of color"],
+    ["paint", "Paint", "Marbled swirls of color"],
     ["image", "Image", "Your own picture"],
   ];
   const GEN_LABEL = Object.fromEntries(GENS.map((g) => [g[0], g[1]]));
@@ -256,8 +256,8 @@
   const AURA_BASE = { scale: 1.25, detail: 3, stretch: 1, soft: 1.6, warp: 0.7, contrast: 0.1 };
   // Wave starts from the settings of Framer's Wave Gradient as caddis.app uses it.
   const WAVE_BASE = { scale: 0.9, stretch: 6, warp: 2.1, soft: 0.74, contrast: 0.54, angle: 105 };
-  // Paint starts as five folds of loose ribbons.
-  const PAINT_BASE = { scale: 1.1, warp: 1.5, detail: 5, stretch: 3, soft: 0.45, angle: 30 };
+  // Paint starts as a strong, five-step swirl through medium bands.
+  const PAINT_BASE = { scale: 1, warp: 2.2, detail: 5, stretch: 4, soft: 0.3, contrast: 0.5, warpScale: 0.7, angle: 30 };
   const GEN_BASE = { aura: AURA_BASE, wavegrad: WAVE_BASE, paint: PAINT_BASE };
   const asGradient = (st, type) => { const g = { ...st, source: "gradient", grad: { ...st.grad, type } };
     // Aura glows out of its first color, so it starts from the darkest one, at settings made for it.
@@ -346,7 +346,7 @@
     ["Noise", "Aura", { ...G("aura", "Yandex Neo", { scale: 1.2, detail: 3, warp: 0.55, stretch: 1.2, soft: 1.3, contrast: 0, angle: 20 }), fx: { grain: { amount: 0.05, size: 1.2, soft: true } }, motion: { type: "breathe", dur: 14, amt: 0.6 } }],
     // The background of caddis.app: Framer's Wave Gradient at the settings and colors it uses there.
     ["Gradients", "Caddis", { ...G("wavegrad", ["#ff3624", "#92c198", "#ffae00", "#598dfd"], { angle: 105, scale: 0.9, stretch: 6, warp: 2.1, soft: 0.74, contrast: 0.54 }), seed: 32, fx: { grain: { amount: 0.14, size: 1.2, soft: true } }, motion: { type: "drift", dur: 10, amt: 0.5 } }],
-    ["Gradients", "Marbling", { ...G("paint", ["#16122e", "#3b5bdb", "#f4efe6", "#ff7a45", "#ffd166"], { scale: 1.1, warp: 1.7, detail: 6, stretch: 3.2, soft: 0.35, angle: 30 }), seed: 7, fx: { grain: { amount: 0.06, size: 1.2, soft: true } } }],
+    ["Gradients", "Marbling", { ...G("paint", ["#16122e", "#3b5bdb", "#f4efe6", "#ff7a45", "#ffd166"], { scale: 1, warp: 2.4, detail: 6, stretch: 4, soft: 0.3, contrast: 0.6, warpScale: 0.8, angle: 30 }), seed: 7, fx: { grain: { amount: 0.06, size: 1.2, soft: true } } }],
     ["Noise", "Smoke", { ...G("noise", ["#060608", "#1d1d22", "#5b5b66", "#c9c9d1", "#ffffff"], { noise: "smoke", scale: 1.4, detail: 4, warp: 0.3, stretch: 1.2, contrast: 1.1, angle: 25 }), fx: { glyphs: { cell: 11, set: "alnum", font: "geist", contrast: 1.3, change: 2, back: 0, mono: false } }, motion: { type: "breathe", dur: 10, amt: 0.5 } }],
     ["Noise", "Lagoon", { ...G("aura", ["#02161c", "#05607a", "#0fb5d0", "#3fe3ef", "#b8fbff"], { scale: 2.2, detail: 3, warp: 0.6, stretch: 0.8, soft: 2.4, contrast: 0.25, angle: -30 }), motion: { type: "breathe", dur: 12, amt: 0.6 } }],
     // Alfa-Bank's advertising: flat black shapes floating on their red.
@@ -497,7 +497,7 @@
     "gradmap.mix": "Blends the recolored picture with the original", "posterize.levels": "Steps of tone in each color", "heatmap.glow": "Bloom on the hottest areas",
     "chrome.strength": "How deep the metal surface looks", "chrome.bands": "How many reflections run across it", "riso.offset": "How far the ink layers slip out of register",
     "dither.levels": "Steps of tone before dots take over", "dither.pix": "Size of each dot of the pattern", "pixel.bevel": "Raised edges on each pixel",
-    "voronoi.edge": "Lines between the cells", "touch.life": "How long a ripple lasts", "trail.strength": "How hard a drag pushes the picture",
+    "voronoi.edge": "Lines between the cells", "mesh.zoom": "How much each tile magnifies its patch. Past 100% the patch turns upside down", "mesh.shift": "Slides the picture inside every tile", "mesh.bevel": "Each tile domes like a pillow, lit from the top left", "mesh.fade": "Tiles thin out across the canvas", "mesh.fadeAngle": "The direction the tiles fade toward", "touch.life": "How long a ripple lasts", "trail.strength": "How hard a drag pushes the picture",
     "trail.swirl": "How much the trail curls", "trail.life": "How long a trail lasts", "glyphs.change": "How often characters change during the loop",
     "glyphs.back": "A dark backdrop behind the characters", "chroma.amount": "How far red and blue slip apart", "paper.crumple": "Creases and folds", "paper.fiber": "Fibres in the paper",
     "dissolve.amount": "Where the solid core ends: tones past it stay whole", "dissolve.edge": "How far past the core cells scatter before they're gone", "dissolve.tint": "How much each cell's color varies",
@@ -626,7 +626,7 @@
       if (g === "noise") return [NOISE_LABEL[gr.noise], `Scale ${sc(gr.scale)}, seed ${S.seed}`];
       if (g === "aura") return ["Aura", `Size ${sc(gr.scale)}, ${gr.detail} layers`];
       if (g === "wavegrad") return ["Wave", `Twist ${f2(gr.warp)}, blend ${Math.round(gr.contrast * 100)}%`];
-      if (g === "paint") return ["Paint", `${gr.detail} folds, swirl ${f2(gr.warp)}`];
+      if (g === "paint") return ["Paint", `${gr.detail} steps, swirl ${f2(gr.warp)}`];
       if (g === "image") return IMG ? ["Image", `${IMG.el.naturalWidth}×${IMG.el.naturalHeight}px`] : ["Image", "No picture yet"];
       if (g === "flow") return ["Flow field", `Scale ${sc(gr.scale)}, seed ${S.seed}`];
       if (g === "mesh") return ["Mesh", `${gr.colors.length} points, softness ${f2(gr.soft)}`];
@@ -1017,9 +1017,11 @@
     { label: "Angle", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("wavegrad", "paint") },
     { label: "Scale", ...bindKey(gr, "scale"), min: 0.2, max: 5, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.6, 1.8], when: isG("paint") },
     { label: "Swirl", ...bindKey(gr, "warp"), min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.8, 2.4], when: isG("paint") },
-    { label: "Folds", ...bindKey(gr, "detail"), min: 1, max: 8, step: 1, rand: [3, 7], when: isG("paint") },
-    { label: "Ribbons", ...bindKey(gr, "stretch"), min: 0.5, max: 12, step: 0.05, log: true, fmt: f2, rand: [1.5, 5], when: isG("paint") },
+    { label: "Flow steps", ...bindKey(gr, "detail"), min: 1, max: 8, step: 1, rand: [3, 7], when: isG("paint") },
+    { label: "Bands", ...bindKey(gr, "stretch"), min: 0.5, max: 12, step: 0.05, log: true, fmt: f2, rand: [1.5, 5], when: isG("paint") },
     { label: "Softness", ...bindKey(gr, "soft"), min: 0.02, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.15, 0.8], when: isG("paint") },
+    { label: "Chaos", ...bindKey(gr, "warpScale"), min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 1], when: isG("paint") },
+    { label: "Veins", ...bindKey(gr, "contrast"), min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.2, 0.9], when: isG("paint") },
     { label: "Frequency", ...bindKey(gr, "scale"), min: 0.1, max: 6, step: 0.01, fmt: f2, rand: [0.5, 2], when: isG("wavegrad") },
     { label: "Ripples", ...bindKey(gr, "stretch"), min: 0.1, max: 8, step: 0.05, fmt: f2, rand: [2, 7], when: isG("wavegrad") },
     { label: "Twist", ...bindKey(gr, "warp"), min: 0, max: 4, step: 0.01, fmt: f2, rand: [1.2, 2.8], when: isG("wavegrad") },
