@@ -629,6 +629,24 @@ void main() {
     col = mix(col, col * col + 0.5 * sqrt(col), 0.3);
     o = vec4(clamp(col, 0.0, 1.0), 1.0); return;
   }
+  if (uType == 8) {
+    // Paint: marbled ribbons. The plane is folded over itself a few times by waves that the last fold
+    // bends, so straight stripes of the palette curl into swirls, then each stripe is drawn as a ribbon
+    // of one color with soft or crisp edges between them.
+    float ca = cos(uAngle), sa = sin(uAngle), s = mod(uSeed, 97.0);
+    vec2 q = mat2(ca, -sa, sa, ca) * ((p - 0.5) * a) * uScale * 2.0 + vec2(sin(s * 3.1), cos(s * 1.7)) * 9.0 + drift * 0.5;
+    int nf = int(clamp(uDetail, 1.0, 8.0) + 0.5);
+    for (int i = 0; i < 8; i++) {
+      if (i >= nf) break;
+      float fi = float(i);
+      vec2 ph = vec2(sin(s * 1.3 + fi * 2.1), cos(s * 0.7 + fi * 1.7)) * 3.0 + (mod(fi, 2.0) < 0.5 ? L1 : L2) * 0.6;
+      q += uWarp * 0.45 / (1.0 + fi * 0.35) * vec2(sin(q.y * 1.35 + ph.x + 1.2 * snoise(q * 0.35 + fi)), cos(q.x * 1.2 + ph.y + 1.2 * snoise(q * 0.35 + fi + 7.0)));
+    }
+    float tri = abs(fract((q.x * 0.5 + q.y * 0.2) * uStretch * 0.5) * 2.0 - 1.0);
+    float N = float(uN - 1), x = tri * N, kk = min(floor(x), N - 1.0), f = x - kk, e = 0.5 * clamp(uSoft, 0.02, 1.0);
+    f = smoothstep(0.5 - e, 0.5 + e, f);
+    o = vec4(srgb(fromLab(ramp((kk + f) / N))), 1.0); return;
+  }
   if (uType == 6) {
     // Aura, after the reactive background of Yandex Music's My Wave: two to four soft blobs of color
     // stacked over a dark ground, each smaller, lighter and a little off-centre from the one behind it.
@@ -1393,7 +1411,9 @@ void main() {
     if (v > t) { t = v; c = s; }
   }
   float h = hash(cell + uSeed * 0.71);
-  float on = step(h, smoothstep(uAmt - uEdge, uAmt + uEdge, t));
+  // Solid where the kept tone reaches the threshold; below it, a band of Edge width where cells thin out,
+  // densest next to the core.
+  float on = t >= uAmt ? 1.0 : step(h, pow(clamp((t - uAmt + uEdge) / max(uEdge, 1e-3), 0.0, 1.0), 2.0));
   float r = 0.5 - uGap * 0.5, aa = 1.0 / uCell;
   float sd = uShape < 0.5 ? max(abs(l.x), abs(l.y)) - r : uShape < 1.5 ? length(l) - r : sdBox(l, vec2(r), r * 0.45);
   float m = on * (1.0 - smoothstep(-aa, aa, sd));
@@ -1418,10 +1438,12 @@ void main() {
 }`,
 
     // An LED board: fixed dots on black whose brightness follows the picture, with a soft glow between them.
-    led: `uniform float uPitch; uniform float uSize; uniform float uGlow; uniform float uOff; uniform float uShape;
+    led: `uniform float uPitch; uniform float uSize; uniform float uGlow; uniform float uOff; uniform float uShape; uniform float uGamma; uniform float uByTone;
+// Lit color of a cell: the picture with its contrast raised, so lit dots read bright against unlit ones.
+vec3 lit(vec2 cell) { vec3 c = tex(toUv((cell + 0.5) * uPitch)).rgb; return pow(c, vec3(uGamma)) * (0.9 + 0.5 * uGamma); }
 vec3 dotAt(vec2 cell, vec2 d) {
-  vec3 c = tex(toUv((cell + 0.5) * uPitch)).rgb;
-  vec2 l = d / uPitch - cell - 0.5; float r = uSize * 0.5, aa = 1.0 / uPitch;
+  vec3 c = lit(cell);
+  vec2 l = d / uPitch - cell - 0.5; float r = uSize * 0.5 * mix(1.0, sqrt(clamp(luma(c), 0.04, 1.0)), uByTone), aa = 1.0 / uPitch;
   if (uShape > 1.5) {
     float k = floor(clamp((l.x + 0.5) * 3.0, 0.0, 2.99)); vec2 q = vec2(fract((l.x + 0.5) * 3.0) - 0.5, l.y * 1.0 / 1.5);
     vec3 ch = k < 0.5 ? vec3(c.r, 0.0, 0.0) : k < 1.5 ? vec3(0.0, c.g, 0.0) : vec3(0.0, 0.0, c.b);
@@ -1435,7 +1457,7 @@ void main() {
   vec3 col = dotAt(cell, d), g = vec3(0.0);
   if (uGlow > 0.0) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
     vec2 q = cell + vec2(float(x), float(y)); vec2 l = d / uPitch - q - 0.5;
-    g += tex(toUv((q + 0.5) * uPitch)).rgb * exp(-dot(l, l) / (0.25 * uSize * uSize + 0.05));
+    g += lit(q) * exp(-dot(l, l) / (0.25 * uSize * uSize + 0.05));
   }
   o = vec4(clamp(vec3(0.012) + col + g * uGlow * 0.32, 0.0, 1.0), 1.0);
 }`,
@@ -1467,8 +1489,11 @@ void main() {
   vec2 o2 = toUv(vec2(e));
   float slope = length(vec2(tone(vUv + vec2(o2.x, 0.0)) - tone(vUv - vec2(o2.x, 0.0)), tone(vUv + vec2(0.0, o2.y)) - tone(vUv - vec2(0.0, o2.y)))) / (2.0 * e) * uLevels;
   float px = min(fract(v), 1.0 - fract(v)) / max(slope, 1e-5);
-  float g = exp(-px / max(0.5, uWidth)) * uGlow, core = uCore * (1.0 - smoothstep(0.5, 1.5, px * uK));
-  vec3 hot = mix(c.rgb, vec3(1.0), 0.2) * 1.15;
+  // A wide halo and a tighter body, like light bleeding out of a tube.
+  float w = max(0.5, uWidth), g = (exp(-px / w) * 0.55 + exp(-px / (w * 0.3)) * 0.75) * uGlow, core = uCore * (1.0 - smoothstep(0.5, 1.5, px * uK));
+  // The line's color is the picture's own hue at full strength, so it glows rather than greys out.
+  float mx = max(c.r, max(c.g, c.b));
+  vec3 hot = mix(c.rgb / max(mx, 0.08), vec3(1.0), 0.12) * 1.1;
   o = vec4(clamp(c.rgb * (1.0 - uDim) + hot * g + mix(hot, vec3(1.0), 0.5) * core, 0.0, 1.0), c.a);
 }`,
 
@@ -1781,7 +1806,7 @@ void main() {
         case "scan": return { uSpace: e.spacing, uStr: e.strength };
         case "dissolve": return { uCell: e.cell, uShape: Math.max(0, ["square", "circle", "tile"].indexOf(e.shape)), uAmt: e.amount, uEdge: e.edge, uTint: e.tint, uDots: e.dots, uLight: e.keep === "light" ? 1 : 0, uGap: e.gap, uInk: ink, uPaper: paper };
         case "irid": return { uBands: e.bands, uShift: e.shift, uMix: e.mix, uPearl: e.pearl, uSlope: e.source === "slope" ? 1 : 0, uAnim: e.anim ? 1 : 0 };
-        case "led": return { uPitch: e.pitch, uSize: e.size, uGlow: e.glow, uOff: e.off, uShape: Math.max(0, ["round", "square", "rgb"].indexOf(e.shape)) };
+        case "led": return { uPitch: e.pitch, uSize: e.size, uGlow: e.glow, uOff: e.off, uGamma: e.contrast ?? 1, uByTone: e.bytone ? 1 : 0, uShape: Math.max(0, ["round", "square", "rgb"].indexOf(e.shape)) };
         case "smear": return { uLen: e.length, uAngle: rad(e.angle), uBand: e.band, uAmt: e.amount, uJit: e.jitter, uThr: e.threshold };
         case "glowlines": return { uLevels: e.levels, uWidth: e.width, uGlow: e.glow, uDim: e.dim, uCore: e.core, uAnim: e.anim ? 1 : 0 };
         case "bulge": return { uAmt: e.amount, uRad: e.radius, uC: [e.x, 1 - e.y] };
@@ -1868,7 +1893,7 @@ void main() {
       if (job.grad) {
         const g = job.grad, n = Math.min(8, g.colors.length);
         draw("gradient", srcTex, targets.list[0].f, {
-          uType: ["mesh", "linear", "radial", "conic", "flow", "noise", "aura", "wavegrad"].indexOf(g.type), uN: n,
+          uType: ["mesh", "linear", "radial", "conic", "flow", "noise", "aura", "wavegrad", "paint"].indexOf(g.type), uN: n,
           uScale: g.scale ?? 1.2, uDetail: g.detail ?? 3, uStretch: g.stretch ?? 1, uContrast: g.contrast ?? 1,
           uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring", "aura", "smoke"].indexOf(g.noise || "clouds"),
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),

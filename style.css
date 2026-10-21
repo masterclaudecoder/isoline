@@ -1861,8 +1861,8 @@ a.btn { text-decoration: none; color: inherit; }
 /* Whatever opens a panel sits right under its title, without a separator above it. */
 /* A segmented control leading a panel keeps its own inner padding, or its pill would touch the track's top. */
 .panel-sec > .lead:not(.seg), .panel-sec > .lead > :is(h3.sub, .sub-head, .grp):first-child { border-top: 0 !important; padding-top: 0 !important; }
-/* Key letters sit on the same center line as the shift arrow: the text box is trimmed to the capitals. */
-@supports (text-box: trim-both cap alphabetic) { kbd { text-box: trim-both cap alphabetic; padding: 4.5px 5px; } kbd .kbd-ic { width: 9px; height: 9px; } }
+/* Key letters and the shift arrow share one center line. No text-box trim: browsers trim an inline-flex key differently, and some left the letter riding high.
+   Instrument Sans centers capitals in its line box on its own, so plain padding keeps them centered. */
 /* While the frame glides to a new size, the picture inside is cropped to it rather than squeezed. */
 .art-fx, .art-ghost canvas { object-fit: cover; }
 html.intro .page:not([hidden]) .pt-col { animation: intro-rise .6s var(--ease) both; animation-delay: calc(var(--k, 0) * 45ms + .08s); }

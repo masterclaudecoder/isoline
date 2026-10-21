@@ -29,7 +29,7 @@
     ["dof", "Depth of field", "Light", { amount: 28, x: 0.5, y: 0.5, focus: 0.12, falloff: 0.35, shape: "point", angle: 0, bokeh: 0.4 }, [{ seg: "shape", options: [["point", "Point"], ["band", "Band"]] }, { k: "amount", label: "Blur", min: 0, max: 160, step: 0.5, fmt: px, rand: [14, 48] }, { k: "x", label: "Focus left to right", min: 0, max: 1, step: 0.005, pct: true, fmt: pct, rand: [0.3, 0.7] }, { k: "y", label: "Focus top to bottom", min: 0, max: 1, step: 0.005, pct: true, fmt: pct, rand: [0.3, 0.7] }, { k: "focus", label: "In focus", min: 0, max: 0.8, step: 0.005, fmt: pct, pct: true, rand: [0.05, 0.25] }, { k: "falloff", label: "Falloff", min: 0.02, max: 1.2, step: 0.01, fmt: f2, rand: [0.2, 0.6] }, { k: "angle", label: "Band angle", min: -90, max: 90, step: 1, fmt: deg, when: (e) => e.shape === "band" }, { k: "bokeh", label: "Bokeh", min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Off"), rand: [0.2, 0.7] }]],
     ["blur", "Progressive blur", "Light", { amount: 32, dir: "bottom", start: 0.35 }, [{ seg: "dir", options: [["top", "Top"], ["bottom", "Bottom"], ["left", "Left"], ["right", "Right"], ["center", "Edges"], ["even", "Even"]] }, { k: "amount", label: "Blur", min: 0, max: 200, step: 0.5, fmt: px, rand: [16, 60] }, { k: "start", label: "Starts at", min: 0, max: 0.95, step: 0.01, fmt: pct, pct: true, rand: [0.25, 0.6] }]],
     ["bloom", "Glow", "Light", { threshold: 0.55, radius: 30, intensity: 0.9 }, [{ k: "threshold", label: "Threshold", min: 0, max: 0.95, step: 0.01, fmt: f2, rand: [0.35, 0.75] }, { k: "radius", label: "Radius", min: 2, max: 200, step: 1, log: true, fmt: px, rand: [16, 50] }, { k: "intensity", label: "Intensity", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.2] }]],
-    ["glowlines", "Glow lines", "Light", { levels: 6, width: 10, glow: 1, dim: 0.55, core: 0.6, anim: false }, [{ k: "levels", label: "Lines", min: 1, max: 30, step: 1, rand: [3, 9] }, { k: "width", label: "Glow", min: 1, max: 80, step: 0.5, log: true, fmt: px, rand: [5, 22] }, { k: "glow", label: "Brightness", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.7, 1.6] }, { k: "dim", label: "Darken", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.4, 0.85] }, { k: "core", label: "Core line", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.8] }, { sw: "anim", label: "Animate" }]],
+    ["glowlines", "Glow lines", "Light", { levels: 4, width: 22, glow: 1.2, dim: 0.72, core: 0.5, anim: false }, [{ k: "levels", label: "Lines", min: 1, max: 30, step: 1, rand: [3, 9] }, { k: "width", label: "Glow", min: 1, max: 120, step: 0.5, log: true, fmt: px, rand: [10, 40] }, { k: "glow", label: "Brightness", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.7, 1.6] }, { k: "dim", label: "Darken", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.4, 0.85] }, { k: "core", label: "Core line", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.8] }, { sw: "anim", label: "Animate" }]],
     ["emboss", "Relief", "Light", { strength: 1.2, angle: 135, depth: 2 }, [{ k: "strength", label: "Strength", min: 0, max: 5, step: 0.01, fmt: f2, rand: [0.8, 2.2] }, { k: "angle", label: "Light angle", min: 0, max: 360, step: 1, fmt: deg }, { k: "depth", label: "Depth", min: 0.5, max: 16, step: 0.5, fmt: px, rand: [1.5, 4] }]],
     ["rays", "God rays", "Light", { length: 0.5, threshold: 0.5, intensity: 1.6, x: 0.5, y: 0.15 }, [{ k: "length", label: "Length", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.7] }, { k: "threshold", label: "Threshold", min: 0, max: 0.95, step: 0.01, fmt: f2, rand: [0.4, 0.7] }, { k: "intensity", label: "Intensity", min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.8, 1.6] }, { k: "x", label: "Light X", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.2, 0.8] }, { k: "y", label: "Light Y", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.4] }]],
     ["vignette", "Vignette", "Light", { amount: 0.4, softness: 0.5 }, [{ k: "amount", label: "Amount", min: 0, max: 1, step: 0.01, fmt: f2, rand: [0.2, 0.55] }, { k: "softness", label: "Softness", min: 0, max: 1, step: 0.01, fmt: f2 }]],
@@ -43,9 +43,9 @@
     ["linescreen", "Engrave", "Print", { spacing: 7, angle: 30, mono: true }, [{ k: "spacing", label: "Line spacing", min: 3, max: 60, step: 0.5, log: true, fmt: px, rand: [5, 12] }, { k: "angle", label: "Angle", min: 0, max: 180, step: 1, fmt: deg }, { sw: "mono", label: "Ink only" }]],
     ["riso", "Risograph", "Print", { size: 7, offset: 4, grain: 0.3, inkA: "#ff48b0", inkB: "#0078bf", paper: "#f3efe6" }, [{ color: "inkA", label: "Ink 1" }, { color: "inkB", label: "Ink 2" }, { color: "paper", label: "Paper" }, { k: "size", label: "Dot size", min: 3, max: 40, step: 0.5, log: true, fmt: px, rand: [5, 10] }, { k: "offset", label: "Misregister", min: 0, max: 30, step: 0.5, fmt: px, rand: [1, 6] }, { k: "grain", label: "Grain", min: 0, max: 1, step: 0.01, fmt: f2 }]],
     ["dither", "Dither", "Print", { matrix: 4, levels: 2, mono: true, pix: 2 }, [{ seg: "matrix", options: [[2, "2×2"], [4, "4×4"], [8, "8×8"]] }, { k: "levels", label: "Levels", min: 2, max: 8, step: 1, hard: [2, 32] }, { k: "pix", label: "Pixel", min: 1, max: 16, step: 1, fmt: px, rand: [2, 4], hard: [1, 128] }, { sw: "mono", label: "Ink only" }]],
-    ["led", "LED board", "Stylize", { pitch: 9, size: 0.7, glow: 0.5, off: 0.06, shape: "round" }, [{ seg: "shape", options: [["round", "Round"], ["square", "Square"], ["rgb", "RGB"]] }, { k: "pitch", label: "Pitch", min: 3, max: 60, step: 0.5, log: true, fmt: px, rand: [6, 16] }, { k: "size", label: "Dot size", min: 0.2, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.55, 0.9] }, { k: "glow", label: "Glow", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 1] }, { k: "off", label: "Unlit dots", min: 0, max: 0.3, step: 0.01, fmt: f2, rand: [0.02, 0.12] }]],
+    ["led", "LED board", "Stylize", { pitch: 9, size: 0.72, glow: 0.7, off: 0.05, contrast: 1.6, bytone: false, shape: "round" }, [{ seg: "shape", options: [["round", "Round"], ["square", "Square"], ["rgb", "RGB"]] }, { k: "pitch", label: "Pitch", min: 3, max: 60, step: 0.5, log: true, fmt: px, rand: [6, 16] }, { k: "size", label: "Dot size", min: 0.2, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.55, 0.9] }, { k: "glow", label: "Glow", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 1] }, { k: "contrast", label: "Contrast", min: 0.5, max: 4, step: 0.01, log: true, fmt: f2, rand: [1.2, 2.4] }, { k: "off", label: "Unlit dots", min: 0, max: 0.3, step: 0.01, fmt: f2, rand: [0.02, 0.12] }, { sw: "bytone", label: "Size by tone" }]],
     ["pixel", "Pixels", "Stylize", { size: 16, bevel: 0.5 }, [{ k: "size", label: "Size", min: 2, max: 160, step: 1, log: true, fmt: px, rand: [10, 36] }, { k: "bevel", label: "Bevel", min: 0, max: 1, step: 0.01, fmt: f2 }]],
-    ["dissolve", "Pixel dissolve", "Stylize", { cell: 22, shape: "square", amount: 0.45, edge: 0.25, gap: 0.08, tint: 0.12, dots: 0.4, keep: "dark" }, [{ seg: "shape", options: [["square", "Square"], ["circle", "Circle"], ["tile", "Tile"]] }, { seg: "keep", options: [["dark", "Keep dark"], ["light", "Keep light"]] }, { k: "cell", label: "Cell", min: 4, max: 160, step: 1, log: true, fmt: px, rand: [12, 40] }, { k: "amount", label: "Dissolve", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.25, 0.65] }, { k: "edge", label: "Edge", min: 0, max: 0.5, step: 0.01, fmt: f2, rand: [0.1, 0.4] }, { k: "gap", label: "Gap", min: 0, max: 0.6, step: 0.01, fmt: pct, pct: true, rand: [0, 0.2] }, { k: "tint", label: "Tint spread", min: 0, max: 0.5, step: 0.01, fmt: f2, rand: [0, 0.25] }, { k: "dots", label: "Dot grid", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.6] }]],
+    ["dissolve", "Pixel dissolve", "Stylize", { cell: 22, shape: "square", amount: 0.45, edge: 0.2, gap: 0.08, tint: 0.12, dots: 0.4, keep: "dark" }, [{ seg: "shape", options: [["square", "Square"], ["circle", "Circle"], ["tile", "Tile"]] }, { seg: "keep", options: [["dark", "Keep dark"], ["light", "Keep light"]] }, { k: "cell", label: "Cell", min: 4, max: 160, step: 1, log: true, fmt: px, rand: [12, 40] }, { k: "amount", label: "Core", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.3, 0.6] }, { k: "edge", label: "Edge", min: 0, max: 0.6, step: 0.01, fmt: f2, rand: [0.1, 0.35] }, { k: "gap", label: "Gap", min: 0, max: 0.6, step: 0.01, fmt: pct, pct: true, rand: [0, 0.2] }, { k: "tint", label: "Tint spread", min: 0, max: 0.5, step: 0.01, fmt: f2, rand: [0, 0.25] }, { k: "dots", label: "Dot grid", min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.6] }]],
     ["voronoi", "Crystallize", "Stylize", { cell: 42, edge: 0.06 }, [{ k: "cell", label: "Cell", min: 6, max: 300, step: 1, log: true, fmt: px, rand: [24, 80] }, { k: "edge", label: "Edges", min: 0, max: 0.5, step: 0.01, fmt: f2 }]],
     ["ascii", "ASCII", "Stylize", { cell: 14, set: "ascii", custom: "", font: "geist", mono: true, invert: false }, [{ seg: "set", options: [["ascii", "ASCII"], ["blocks", "Blocks"], ["dots", "Dots"], ["binary", "01"], ["custom", "Custom"]] }, FONT_SEG, { text: "custom", label: "Characters", when: (e) => e.set === "custom" }, { k: "cell", label: "Cell", min: 4, max: 80, step: 1, log: true, fmt: px, rand: [10, 20] }, { sw: "mono", label: "Ink only" }, { sw: "invert", label: "Invert" }]],
     ["touch", "Click ripples", "Interactive", { amp: 14, length: 46, speed: 420, life: 2.2, shade: 1 }, [{ k: "amp", label: "Strength", min: 0, max: 60, step: 0.5, fmt: px, rand: [6, 24] }, { k: "length", label: "Wavelength", min: 8, max: 300, step: 1, log: true, fmt: px, rand: [24, 90] }, { k: "speed", label: "Speed", min: 40, max: 2000, step: 10, log: true, fmt: (v) => v + " px/s", rand: [200, 800] }, { k: "life", label: "Lasts", min: 0.3, max: 8, step: 0.1, fmt: (v) => f2(v) + "s", rand: [1.2, 3.5] }, { k: "shade", label: "Light", min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.5, 1.5] }]],
@@ -74,6 +74,7 @@
     ["conic", "Conic", "Blend around a point"],
     ["aura", "Aura", "A glowing body of light"],
     ["wavegrad", "Wave", "Folding bands of color"],
+    ["paint", "Paint", "Swirled ribbons of color"],
     ["image", "Image", "Your own picture"],
   ];
   const GEN_LABEL = Object.fromEntries(GENS.map((g) => [g[0], g[1]]));
@@ -255,11 +256,14 @@
   const AURA_BASE = { scale: 1.25, detail: 3, stretch: 1, soft: 1.6, warp: 0.7, contrast: 0.1 };
   // Wave starts from the settings of Framer's Wave Gradient as caddis.app uses it.
   const WAVE_BASE = { scale: 0.9, stretch: 6, warp: 2.1, soft: 0.74, contrast: 0.54, angle: 105 };
-  const GEN_BASE = { aura: AURA_BASE, wavegrad: WAVE_BASE };
+  // Paint starts as five folds of loose ribbons.
+  const PAINT_BASE = { scale: 1.1, warp: 1.5, detail: 5, stretch: 3, soft: 0.45, angle: 30 };
+  const GEN_BASE = { aura: AURA_BASE, wavegrad: WAVE_BASE, paint: PAINT_BASE };
   const asGradient = (st, type) => { const g = { ...st, source: "gradient", grad: { ...st.grad, type } };
     // Aura glows out of its first color, so it starts from the darkest one, at settings made for it.
     if (type === "aura" && st.grad?.type !== "aura") Object.assign(g.grad, AURA_BASE, { colors: [...st.grad.colors].sort((x, y) => lum(x) - lum(y)) });
     if (type === "wavegrad" && st.grad?.type !== "wavegrad") Object.assign(g.grad, WAVE_BASE);
+    if (type === "paint" && st.grad?.type !== "paint") Object.assign(g.grad, PAINT_BASE);
     // Leaving one of those, the others get their own defaults back: its settings mean other things there.
     const from = GEN_BASE[st.grad?.type];
     if (from && type !== st.grad?.type) for (const k of Object.keys(from)) g.grad[k] = DEFAULTS.grad[k];
@@ -342,6 +346,7 @@
     ["Noise", "Aura", { ...G("aura", "Yandex Neo", { scale: 1.2, detail: 3, warp: 0.55, stretch: 1.2, soft: 1.3, contrast: 0, angle: 20 }), fx: { grain: { amount: 0.05, size: 1.2, soft: true } }, motion: { type: "breathe", dur: 14, amt: 0.6 } }],
     // The background of caddis.app: Framer's Wave Gradient at the settings and colors it uses there.
     ["Gradients", "Caddis", { ...G("wavegrad", ["#ff3624", "#92c198", "#ffae00", "#598dfd"], { angle: 105, scale: 0.9, stretch: 6, warp: 2.1, soft: 0.74, contrast: 0.54 }), seed: 32, fx: { grain: { amount: 0.14, size: 1.2, soft: true } }, motion: { type: "drift", dur: 10, amt: 0.5 } }],
+    ["Gradients", "Marbling", { ...G("paint", ["#16122e", "#3b5bdb", "#f4efe6", "#ff7a45", "#ffd166"], { scale: 1.1, warp: 1.7, detail: 6, stretch: 3.2, soft: 0.35, angle: 30 }), seed: 7, fx: { grain: { amount: 0.06, size: 1.2, soft: true } } }],
     ["Noise", "Smoke", { ...G("noise", ["#060608", "#1d1d22", "#5b5b66", "#c9c9d1", "#ffffff"], { noise: "smoke", scale: 1.4, detail: 4, warp: 0.3, stretch: 1.2, contrast: 1.1, angle: 25 }), fx: { glyphs: { cell: 11, set: "alnum", font: "geist", contrast: 1.3, change: 2, back: 0, mono: false } }, motion: { type: "breathe", dur: 10, amt: 0.5 } }],
     ["Noise", "Lagoon", { ...G("aura", ["#02161c", "#05607a", "#0fb5d0", "#3fe3ef", "#b8fbff"], { scale: 2.2, detail: 3, warp: 0.6, stretch: 0.8, soft: 2.4, contrast: 0.25, angle: -30 }), motion: { type: "breathe", dur: 12, amt: 0.6 } }],
     // Alfa-Bank's advertising: flat black shapes floating on their red.
@@ -495,7 +500,7 @@
     "voronoi.edge": "Lines between the cells", "touch.life": "How long a ripple lasts", "trail.strength": "How hard a drag pushes the picture",
     "trail.swirl": "How much the trail curls", "trail.life": "How long a trail lasts", "glyphs.change": "How often characters change during the loop",
     "glyphs.back": "A dark backdrop behind the characters", "chroma.amount": "How far red and blue slip apart", "paper.crumple": "Creases and folds", "paper.fiber": "Fibres in the paper",
-    "dissolve.amount": "How much of the picture falls away", "dissolve.edge": "How ragged the edge where cells drop out", "dissolve.tint": "How much each cell's color varies",
+    "dissolve.amount": "Where the solid core ends: tones past it stay whole", "dissolve.edge": "How far past the core cells scatter before they're gone", "dissolve.tint": "How much each cell's color varies",
     "dissolve.dots": "A faint dot grid where cells are gone", "irid.bands": "How many color bands run across the tones", "irid.pearl": "A soft, milky sheen", "led.off": "How bright the dots stay where the picture is dark",
     "smear.amount": "Share of strips that smear", "smear.jitter": "How much strip lengths differ", "smear.threshold": "Only parts brighter than this smear", "glowlines.dim": "How dark the picture under the lines gets", "glowlines.core": "A sharp line in the middle of each glow",
   };
@@ -621,6 +626,7 @@
       if (g === "noise") return [NOISE_LABEL[gr.noise], `Scale ${sc(gr.scale)}, seed ${S.seed}`];
       if (g === "aura") return ["Aura", `Size ${sc(gr.scale)}, ${gr.detail} layers`];
       if (g === "wavegrad") return ["Wave", `Twist ${f2(gr.warp)}, blend ${Math.round(gr.contrast * 100)}%`];
+      if (g === "paint") return ["Paint", `${gr.detail} folds, swirl ${f2(gr.warp)}`];
       if (g === "image") return IMG ? ["Image", `${IMG.el.naturalWidth}×${IMG.el.naturalHeight}px`] : ["Image", "No picture yet"];
       if (g === "flow") return ["Flow field", `Scale ${sc(gr.scale)}, seed ${S.seed}`];
       if (g === "mesh") return ["Mesh", `${gr.colors.length} points, softness ${f2(gr.soft)}`];
@@ -1008,7 +1014,12 @@
     { label: "Outline", ...bindKey(gr, "contrast"), min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.3], when: isG("aura") },
     { label: "Color turn", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("aura") },
     // Wave: the wave's angle and frequencies, how far it twists the field, its softness and how much shows.
-    { label: "Angle", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("wavegrad") },
+    { label: "Angle", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("wavegrad", "paint") },
+    { label: "Scale", ...bindKey(gr, "scale"), min: 0.2, max: 5, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.6, 1.8], when: isG("paint") },
+    { label: "Swirl", ...bindKey(gr, "warp"), min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.8, 2.4], when: isG("paint") },
+    { label: "Folds", ...bindKey(gr, "detail"), min: 1, max: 8, step: 1, rand: [3, 7], when: isG("paint") },
+    { label: "Ribbons", ...bindKey(gr, "stretch"), min: 0.5, max: 12, step: 0.05, log: true, fmt: f2, rand: [1.5, 5], when: isG("paint") },
+    { label: "Softness", ...bindKey(gr, "soft"), min: 0.02, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.15, 0.8], when: isG("paint") },
     { label: "Frequency", ...bindKey(gr, "scale"), min: 0.1, max: 6, step: 0.01, fmt: f2, rand: [0.5, 2], when: isG("wavegrad") },
     { label: "Ripples", ...bindKey(gr, "stretch"), min: 0.1, max: 8, step: 0.05, fmt: f2, rand: [2, 7], when: isG("wavegrad") },
     { label: "Twist", ...bindKey(gr, "warp"), min: 0, max: 4, step: 0.01, fmt: f2, rand: [1.2, 2.8], when: isG("wavegrad") },
@@ -1016,7 +1027,7 @@
     { label: "Blend", ...bindKey(gr, "contrast"), min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.35, 0.8], when: isG("wavegrad") },
     { label: "Detail", ...bindKey(gr, "detail"), min: 1, max: 8, step: 1, rand: [2, 4], when: isG("flow", "noise"), na: () => (gen() === "noise" && ["cells", "veins", "neuro", "ring"].includes(S.grad.noise) ? `${NOISE_LABEL[S.grad.noise]} has no detail setting` : "") },
     { label: "Softness", ...bindKey(gr, "soft"), min: 0.5, max: 4, step: 0.05, fmt: f2, rand: [1.3, 2.2], when: isG("mesh") },
-    { label: "Warp", ...bindKey(gr, "warp"), min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 0.8], when: () => !["image", "aura", "wavegrad"].includes(gen()) },
+    { label: "Warp", ...bindKey(gr, "warp"), min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 0.8], when: () => !["image", "aura", "wavegrad", "paint"].includes(gen()) },
     { label: "Warp size", ...bindKey(gr, "warpScale"), min: 0.2, max: 8, step: 0.05, log: true, fmt: (v) => f2(v) + "×", rand: [1, 2.5], when: () => isG("mesh", "linear", "radial", "conic")() && S.grad.warp > 0 },
     { label: "Stretch", ...bindKey(gr, "stretch"), min: 0.3, max: 5, step: 0.05, log: true, fmt: (v) => f2(v) + "×", rand: [1, 2.4], when: isG("flow", "noise") },
     { label: "Angle", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("linear", "conic", "flow", "noise"), na: () => (gen() === "noise" && S.grad.noise === "ring" ? "A smoke ring looks the same at any angle" : "") },
@@ -1435,7 +1446,7 @@
       if (activePoints()) S.points = S.points.map((p) => ({ ...p, x: +clamp(p.x + rnd(-0.06, 0.06), 0.05, 0.95).toFixed(3), y: +clamp(p.y + rnd(-0.06, 0.06), 0.05, 0.95).toFixed(3) }));
     } else {
       if (gen() === "mesh") S.grad.points = S.grad.points.map((p) => ({ x: +clamp(p.x + rnd(-0.08, 0.08), 0.02, 0.98).toFixed(3), y: +clamp(p.y + rnd(-0.08, 0.08), 0.02, 0.98).toFixed(3) }));
-      if (["flow", "noise", "aura", "wavegrad", "linear", "conic"].includes(gen())) S.grad.angle = Math.round(S.grad.angle + rnd(-12, 12));
+      if (["flow", "noise", "aura", "wavegrad", "paint", "linear", "conic"].includes(gen())) S.grad.angle = Math.round(S.grad.angle + rnd(-12, 12));
     }
     if (P.safe) safeFix();
   }
