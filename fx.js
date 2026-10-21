@@ -1362,7 +1362,7 @@ void main() {
   o = vec4(mix(uPaper, uMono > 0.5 ? uInk : c.rgb, g), 1.0);
 }`,
 
-    glyphs: `uniform sampler2D uAtlas; uniform float uCell; uniform float uCount; uniform float uMono; uniform float uGamma; uniform float uChange; uniform float uBack; uniform vec3 uInk; uniform vec3 uPaper; uniform float uTime;
+    glyphs: `uniform sampler2D uAtlas; uniform sampler2D uTex2; uniform float uMem; uniform float uCell; uniform float uCount; uniform float uMono; uniform float uGamma; uniform float uChange; uniform float uBack; uniform vec3 uInk; uniform vec3 uPaper; uniform float uTime;
 // Glyph field: every cell holds a character whose opacity follows the brightness underneath, like a
 // screen of text lit from behind. The character is read from what's under the cell (its brightness and
 // hue, stepped), so a still picture keeps its letters and they change where the picture changes. Shuffle
@@ -1375,6 +1375,8 @@ void main() {
   float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b)), hue = 0.0;
   if (mx - mn > 0.08) hue = mx == c.r ? mod((c.g - c.b) / (mx - mn), 6.0) : mx == c.g ? (c.b - c.r) / (mx - mn) + 2.0 : (c.r - c.g) / (mx - mn) + 4.0;
   vec2 look = vec2(floor(luma(c.rgb) * 7.0), floor(hue * 1.5));
+  // With Keep on, the letter follows a per-cell count of color changes (glyphMem), so it never returns.
+  if (uMem > 0.5) look = vec2(floor(texelFetch(uTex2, ivec2(cell), 0).b * 255.0 + 0.5), 0.5);
   float wave = fbm(cell * 0.06 + uSeed * 0.13) * 2.2 + hash(cell + uSeed * 0.731) * 0.18;
   float slot = uChange > 0.5 ? floor(fract(uTime + wave) * uChange) : 0.0;
   float idx = min(floor(hash(cell * 1.618 + look * vec2(5.17, 11.3) + vec2(slot * 7.31, slot * 3.17) + uSeed * 0.37) * uCount), uCount - 1.0);
@@ -1385,6 +1387,24 @@ void main() {
   // In color, each glyph takes the hue underneath at full strength; its opacity carries the brightness.
   vec3 fg = mix(c.rgb, c.rgb / max(max(c.r, max(c.g, c.b)), 0.06), 0.75);
   o = vec4(mix(c.rgb * uBack, clamp(fg, 0.0, 1.0), a), 1.0);
+}`,
+
+    // Glyph field memory, one texel per cell: the color it last changed at and how many times it changed.
+    // A cell counts a change only once its color has moved clearly away, so edges don't flicker.
+    glyphMem: `uniform sampler2D uTex2; uniform float uCell; uniform vec2 uFull;
+vec3 lh(vec3 c) {
+  float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b)), hue = 0.0;
+  if (mx - mn > 0.08) hue = mx == c.r ? mod((c.g - c.b) / (mx - mn), 6.0) : mx == c.g ? (c.b - c.r) / (mx - mn) + 2.0 : (c.r - c.g) / (mx - mn) + 4.0;
+  return vec3(clamp(luma(c), 0.0, 1.0), mx - mn > 0.08 ? 0.1 + 0.9 * hue / 6.0 : 0.0, 0.0);
+}
+void main() {
+  vec2 cell = floor(gl_FragCoord.xy);
+  vec3 now = lh(tex((cell + 0.5) * uCell * uK / uFull).rgb);
+  vec4 s = texelFetch(uTex2, ivec2(cell), 0);
+  if (s.a < 0.5) { o = vec4(now.xy, 0.0, 1.0); return; }
+  float dh = abs(now.y - s.g) / 0.9 * 6.0;
+  bool moved = abs(now.x - s.r) > 0.14 || (now.y > 0.0) != (s.g > 0.0) || (now.y > 0.0 && min(dh, 6.0 - dh) > 0.7);
+  o = moved ? vec4(now.xy, mod(floor(s.b * 255.0 + 0.5) + 1.0, 256.0) / 255.0, 1.0) : s;
 }`,
 
     dither: `uniform float uMat; uniform float uLevels; uniform float uMono; uniform float uPix; uniform vec3 uInk; uniform vec3 uPaper; uniform float uPal; uniform vec3 uCol[8]; uniform int uN; uniform float uGap;
@@ -2062,7 +2082,8 @@ void main() {
       gl.bindTexture(gl.TEXTURE_2D, t);
       const filt = fmt === "half" || fmt === "rgba" ? gl.LINEAR : gl.NEAREST;
       for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, filt], [gl.TEXTURE_MAG_FILTER, filt], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
-      if (fmt === "rgba") gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+      if (fmt === "u8") gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      else if (fmt === "rgba") gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
       else if (fmt === "half") { if (floatLinear) gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, w, h, 0, gl.RED, gl.FLOAT, null); else gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, w, h, 0, gl.RED, gl.HALF_FLOAT, null); }
       else gl.texImage2D(gl.TEXTURE_2D, 0, fmt === "rg" ? gl.RG32F : gl.R32F, w, h, 0, fmt === "rg" ? gl.RG : gl.RED, gl.FLOAT, null);
       const f = gl.createFramebuffer();
@@ -2162,11 +2183,11 @@ void main() {
         case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)), uHex: e.grid === "hex" ? 1 : 0, uTurn: e.turn ? 1 : 0, uTone: e.tone ? 1 : 0, uEven: e.even ? 1 : 0, uMerge: e.merge === false ? 0 : 1, uClassic: e.classic ? 1 : 0 };
         case "ascii": {
           const set = e.set === "custom" ? " " + (e.custom || "#") : CHARSETS[e.set] || CHARSETS.ascii;
-          return { uCell: e.cell, uCount: atlas(set, e.font), uMono: e.mono ? 1 : 0, uInvert: e.invert ? 1 : 0, uInk: ink, uPaper: paper };
+          return { uCell: e.cell, uMem: e.keep === false ? 0 : 1, uCount: atlas(set, e.font), uMono: e.mono ? 1 : 0, uInvert: e.invert ? 1 : 0, uInk: ink, uPaper: paper };
         }
         case "glyphs": {
           const set = e.set === "custom" ? [...new Set(e.custom || "")].filter((ch) => ch.trim()).join("") || "#" : GLYPHSETS[e.set] || GLYPHSETS.alnum;
-          return { uCell: e.cell, uCount: atlas(set, e.font), uMono: e.mono ? 1 : 0, uGamma: e.contrast ?? 1, uChange: Math.round(e.change ?? 0), uBack: e.back ?? 0, uInk: ink, uPaper: paper };
+          return { uCell: e.cell, uMem: e.keep === false ? 0 : 1, uCount: atlas(set, e.font), uMono: e.mono ? 1 : 0, uGamma: e.contrast ?? 1, uChange: Math.round(e.change ?? 0), uBack: e.back ?? 0, uInk: ink, uPaper: paper };
         }
         case "dither": return { uMat: e.matrix, uLevels: e.levels, uMono: e.mono ? 1 : 0, uPix: e.pix, uInk: ink, uPaper: paper, uPal: e.palette ? 1 : 0, uGap: e.gap || 0 };
         case "chroma": return { uAmt: e.amount };
@@ -2361,6 +2382,12 @@ void main() {
           if (!job.pointer || !floatOK) continue;
           un.uTex2 = fluidStep(job, e, w, h).t;
         }
+        if (id === "glyphs" && un.uMem) {
+          // Sized in cells of the design, so a lower-resolution preview frame keeps the same memory.
+          const cw = Math.ceil(w / k / e.cell), ch = Math.ceil(h / k / e.cell), prev = floatTarget(memFlip ? "gmA" : "gmB", cw, ch, "u8"), next = floatTarget(memFlip ? "gmB" : "gmA", cw, ch, "u8");
+          draw("glyphMem", input, next.f, { uTex2: prev.t, uCell: e.cell, uFull: [w, h] }, cw, ch, k, 0);
+          un.uTex2 = next.t; memFlip = !memFlip;
+        }
         if (id === "blur" || id === "dof") un.uTex2 = mipOf(input, w, h, k);
         if (id === "chrome" && floatOK) {
           const a = floatTarget("chA", w, h, "half"), b = floatTarget("chB", w, h, "half"), sg = Math.max(0.8, (e.soft || 8) * k * 0.7);
@@ -2377,7 +2404,7 @@ void main() {
     }
 
     // A copy of the picture so far with a full mip chain, for blurs wide enough to need prefiltering.
-    let mipT = null;
+    let mipT = null, memFlip = false;
     function mipOf(src, w, h, k) {
       if (!mipT || mipT.w !== w || mipT.h !== h) {
         if (mipT) { gl.deleteTexture(mipT.t); gl.deleteFramebuffer(mipT.f); }

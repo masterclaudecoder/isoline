@@ -998,6 +998,8 @@ window.I18N_RU = {
   "Dot size": "Размер точек",
   "Random turn": "Случайный поворот",
   "Ink only": "Только краска",
+  "Keep new letters": "Не возвращать буквы",
+  "A letter that changes with its color stays changed. Off, it returns when the color does, so loops join up": "Буква, сменившаяся вместе с цветом, остаётся новой. Если выключить, она вернётся вместе с цветом, и цикл замкнётся без скачка",
   "Size by tone": "Размер по тону",
   "One-way triangles": "Треугольники в одну сторону",
   "Even sizes": "Равные размеры",
