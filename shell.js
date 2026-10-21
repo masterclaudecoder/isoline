@@ -241,6 +241,8 @@
   {
     const b = $("brand");
     b.draggable = false;
+    // The outline is made on first use; keyboard focus uses it too (see .brand:focus-visible).
+    b.addEventListener("focus", () => ring());
     b.addEventListener("pointerdown", (e) => {
       eatClick = false;
       if (route !== "home" || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || auto) return;

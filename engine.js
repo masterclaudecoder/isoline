@@ -184,8 +184,29 @@
   }
 
   // ---------- marching squares -> polylines ----------
+  // Cells sorted into buckets by the values they span, built once per field, so each level only visits
+  // the cells it can cross instead of the whole grid (a straight-line design has a hundred or more levels).
+  const BUCKETS = 1024;
+  function cellIndex(field) {
+    if (field._idx) return field._idx;
+    const { f, nx, cols, rows, min, max } = field, bw = (max - min) / BUCKETS || 1;
+    const bi = (v) => Math.max(0, Math.min(BUCKETS - 1, Math.floor((v - min) / bw)));
+    const n = cols * rows, b0 = new Int16Array(n), b1 = new Int16Array(n), count = new Int32Array(BUCKETS + 1);
+    for (let j = 0, c = 0; j < rows; j++) for (let i = 0; i < cols; i++, c++) {
+      const a = f[j * nx + i], b = f[j * nx + i + 1], d = f[(j + 1) * nx + i], e = f[(j + 1) * nx + i + 1];
+      const lo = Math.min(a, b, d, e), hi = Math.max(a, b, d, e);
+      if (hi < min || lo > max || lo === hi) { b0[c] = 1; b1[c] = 0; continue; }
+      b0[c] = bi(lo); b1[c] = bi(hi);
+      for (let k = b0[c]; k <= b1[c]; k++) count[k + 1]++;
+    }
+    for (let k = 0; k < BUCKETS; k++) count[k + 1] += count[k];
+    const cells = new Int32Array(count[BUCKETS]), at = count.slice(0, BUCKETS);
+    for (let c = 0; c < n; c++) for (let k = b0[c]; k <= b1[c]; k++) cells[at[k]++] = c;
+    return (field._idx = { cells, start: count, bi });
+  }
   function contour(field, t) {
     const { f, nx, cols, rows, sx, sy, ox = 0, oy = 0 } = field;
+    const idx = cellIndex(field), bk = idx.bi(t);
     const pts = new Map(), adj = new Map();
     const lerp = (a, b) => (b === a ? 0.5 : (t - a) / (b - a));
     const hKey = (i, j) => (j * nx + i) * 2, vKey = (i, j) => (j * nx + i) * 2 + 1;
@@ -193,8 +214,9 @@
       let la = adj.get(a); if (!la) adj.set(a, (la = [])); la.push(b);
       let lb = adj.get(b); if (!lb) adj.set(b, (lb = [])); lb.push(a);
     };
-    for (let j = 0; j < rows; j++) {
-      for (let i = 0; i < cols; i++) {
+    for (let q = idx.start[bk], qe = idx.start[bk + 1]; q < qe; q++) {
+      {
+        const cell = idx.cells[q], j = (cell / cols) | 0, i = cell - j * cols;
         const tl = f[j * nx + i], tr = f[j * nx + i + 1], br = f[(j + 1) * nx + i + 1], bl = f[(j + 1) * nx + i];
         const c = (tl > t ? 8 : 0) | (tr > t ? 4 : 0) | (br > t ? 2 : 0) | (bl > t ? 1 : 0);
         if (c === 0 || c === 15) continue;
@@ -321,6 +343,23 @@
   }
 
   const n1 = (v) => Math.round(v * 10) / 10;
+  // One Catmull-Rom span p1 to p2 as a cubic Bézier. Each handle is held to a third of the span: where a
+  // short span sits next to a long straight run (simplified lines), the plain tangent reached hundreds of
+  // pixels and bulged the line into a loop.
+  // A point where the line turns sharply (a contour meeting the canvas edge, say) stays a corner: the
+  // span leaves it straight instead of swinging round it.
+  const sharp = (a, b, c) => {
+    const ux = b[0] - a[0], uy = b[1] - a[1], vx = c[0] - b[0], vy = c[1] - b[1], l = Math.hypot(ux, uy) * Math.hypot(vx, vy);
+    return l > 0 && (ux * vx + uy * vy) / l < 0.5;
+  };
+  function bez(p0, p1, p2, p3) {
+    const L = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / 3;
+    const h = (ax, ay) => { const l = Math.hypot(ax, ay) / 6; return l > L ? L / l / 6 : 1 / 6; };
+    if (sharp(p0, p1, p2)) p0 = [2 * p1[0] - p2[0], 2 * p1[1] - p2[1]];
+    if (sharp(p1, p2, p3)) p3 = [2 * p2[0] - p1[0], 2 * p2[1] - p1[1]];
+    const ax = p2[0] - p0[0], ay = p2[1] - p0[1], bx = p3[0] - p1[0], by = p3[1] - p1[1], ka = h(ax, ay), kb = h(bx, by);
+    return `C${n1(p1[0] + ax * ka)} ${n1(p1[1] + ay * ka)} ${n1(p2[0] - bx * kb)} ${n1(p2[1] - by * kb)} ${n1(p2[0])} ${n1(p2[1])}`;
+  }
   // Catmull-Rom through the points, written as cubic Béziers.
   function toPath(p, closed) {
     const n = p.length;
@@ -331,7 +370,7 @@
     const at = (i) => (closed ? p[(i + n) % n] : p[Math.max(0, Math.min(n - 1, i))]);
     for (let i = 0; i < segs; i++) {
       const p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
-      d += `C${n1(p1[0] + (p2[0] - p0[0]) / 6)} ${n1(p1[1] + (p2[1] - p0[1]) / 6)} ${n1(p2[0] - (p3[0] - p1[0]) / 6)} ${n1(p2[1] - (p3[1] - p1[1]) / 6)} ${n1(p2[0])} ${n1(p2[1])}`;
+      d += bez(p0, p1, p2, p3);
     }
     return d + (closed ? "Z" : "");
   }
@@ -347,7 +386,9 @@
   // Smooth a closed region outline but keep the stretches that run along the canvas edge exact.
   function regionLine(p, sigma, w, h, eps) {
     const out = (q) => q[0] < 0.01 || q[1] < 0.01 || q[0] > w - 0.01 || q[1] > h - 0.01;
-    const clampPt = (q) => [Math.min(w, Math.max(0, q[0])), Math.min(h, Math.max(0, q[1]))];
+    // Points within a pixel of the edge go onto it, so runs along the edge are found and drawn straight.
+    const snap = (v, m) => (v < 1 ? 0 : v > m - 1 ? m : v);
+    const clampPt = (q) => [snap(q[0], w), snap(q[1], h)];
     let q = p;
     if (sigma > 0.3) {
       const ds = Math.max(0.6, Math.min(4, sigma / 5));
@@ -374,7 +415,7 @@
       if (edge(p1, p2)) { d += `L${n1(p2[0])} ${n1(p2[1])}`; continue; }
       // Next to an edge run, aim the tangent along the edge instead of across it.
       const a0 = edge(p0, p1) ? p1 : p0, a3 = edge(p2, p3) ? p2 : p3;
-      d += `C${n1(p1[0] + (p2[0] - a0[0]) / 6)} ${n1(p1[1] + (p2[1] - a0[1]) / 6)} ${n1(p2[0] - (a3[0] - p1[0]) / 6)} ${n1(p2[1] - (a3[1] - p1[1]) / 6)} ${n1(p2[0])} ${n1(p2[1])}`;
+      d += bez(a0, p1, p2, a3);
     }
     return d + "Z";
   }

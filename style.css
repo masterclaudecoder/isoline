@@ -1861,8 +1861,8 @@ a.btn { text-decoration: none; color: inherit; }
 /* Whatever opens a panel sits right under its title, without a separator above it. */
 /* A segmented control leading a panel keeps its own inner padding, or its pill would touch the track's top. */
 .panel-sec > .lead:not(.seg), .panel-sec > .lead > :is(h3.sub, .sub-head, .grp):first-child { border-top: 0 !important; padding-top: 0 !important; }
-/* Key letters sit on the same center line as the shift arrow: the text box is trimmed to the capitals. */
-@supports (text-box: trim-both cap alphabetic) { kbd { text-box: trim-both cap alphabetic; padding: 4.5px 5px; } kbd .kbd-ic { width: 9px; height: 9px; } }
+/* Key letters and the shift arrow share one center line. No text-box trim: browsers trim an inline-flex key differently, and some left the letter riding high.
+   Instrument Sans centers capitals in its line box on its own, so plain padding keeps them centered. */
 /* While the frame glides to a new size, the picture inside is cropped to it rather than squeezed. */
 .art-fx, .art-ghost canvas { object-fit: cover; }
 html.intro .page:not([hidden]) .pt-col { animation: intro-rise .6s var(--ease) both; animation-delay: calc(var(--k, 0) * 45ms + .08s); }
@@ -1999,8 +1999,14 @@ body.scrimmed .scrim { opacity: 1; }
 .fx-stack.folded .stack-sum small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fx-stack.folded .tile.add { order: 2; margin-left: 0; }
 /* With something already in the list, adding another is a slim row rather than a full card. */
+/* The add button shrinks once the slot has tiles, and grows back when the last one goes: eased, not snapped. */
+.slot-fx { interpolate-size: allow-keywords; }
+.slot-fx .tile.add { transition: border-color .2s, padding .3s var(--ease), width .3s var(--ease), height .3s var(--ease); }
+.slot-fx .tile.add .tile-plus { transition: width .3s var(--ease), height .3s var(--ease); }
+.slot-fx .tile.add b { transition: font-size .3s var(--ease); }
+.slot-fx .tile.add small { display: block; max-height: 1.5em; overflow: hidden; transition: max-height .3s var(--ease), opacity .2s; }
 .slot-fx:not(.folded):has(.tile.fx) .tile.add .tile-plus { height: 26px; }
-.slot-fx:not(.folded):has(.tile.fx) .tile.add small { display: none; }
+.slot-fx:not(.folded):has(.tile.fx) .tile.add small { max-height: 0; opacity: 0; }
 .slot-fx:not(.folded):has(.tile.fx) .tile.add b { font-size: 13px; }
 
 /* ---------- loading screen ---------- */
@@ -2398,6 +2404,9 @@ html.lite .glass.glass-live > *, html.lite .glass.glass-live .bar-btn, html.lite
 .brand-ring { position: absolute; left: -9px; top: -6px; width: calc(100% + 18px); height: calc(100% + 12px); overflow: visible; pointer-events: none; }
 .brand-ring rect { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 0; opacity: 0; }
 @media (max-width: 360px) { .brand-ring { left: -6px; width: calc(100% + 12px); } }
+/* Keyboard focus shows the same outline instead of a second, browser-drawn ring inside it. */
+.top > .brand:focus-visible { outline: none; }
+.top > .brand:focus-visible .brand-ring rect { opacity: 1 !important; stroke-dashoffset: 0 !important; }
 .brand-shine {
   position: absolute; inset: 0 auto 0 0; width: max-content; display: flex; align-items: center; gap: 9px; pointer-events: none; opacity: 0;
   color: var(--accent);
