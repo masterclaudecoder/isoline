@@ -211,7 +211,7 @@
     grad: { type: "flow", colors: ramp("Prism"), points: [{ x: 0.18, y: 0.22 }, { x: 0.8, y: 0.2 }, { x: 0.72, y: 0.8 }, { x: 0.2, y: 0.84 }, { x: 0.48, y: 0.5 }], angle: -25, warp: 0.5, warpScale: 1.6, soft: 1.6, scale: 0.45, detail: 2, stretch: 1.8, contrast: 1, noise: "clouds", image: "" },
     fx: clone(FX_DEFAULTS), fxOrder: [], objects: [], ink: "#1b1b1b", paper: "#f1ede4",
     fmt: "svg", pngScale: 2,
-    motion: { type: "still", dur: 6, amt: 0.5, mode: "loop", dir: 1, ease: "linear", bez: [0.42, 0, 0.58, 1], seed: 0 }, vid: { size: 1080, fps: 30, loops: 1 }, gif: { size: 480, fps: 20, webp: false },
+    motion: { type: "still", dur: 6, amt: 0.5, mode: "loop", dir: 1, ease: "linear", bez: [0.42, 0, 0.58, 1], seed: 0, path: "glide", angle: 30 }, vid: { size: 1080, fps: 30, loops: 1 }, gif: { size: 480, fps: 20, webp: false },
   };
   const STORE = "isoline-v4", PREFS = "isoline-prefs-v4";
   function withDefaults(src) {
@@ -1713,12 +1713,25 @@
     if (!m || m.type === "still") return st;
     const off = seedFrac(m.seed), o = { ...st, _t: endless(m) ? t + off : (t + off) % 1 }, tw = 2 * Math.PI * t, a = m.amt, a0 = off * 2 * Math.PI;
     if (st.source === "contours") {
-      if (m.type === "drift") { const R = a * st.scale * 0.5; o.driftX = R * Math.cos(tw + a0); o.driftY = R * Math.sin(tw + a0); o.driftR = R; }
+      // The path the read point takes: round a circle (orbit), back and forth along the direction (sway), or
+      // on along it (glide). Glide can't come back, so it also gives the state a loop's travel behind, and
+      // the field fades from one to the other over the loop (glideW), landing on its first frame.
+      const path = endless(m) ? "orbit" : m.path || "orbit", th = ((m.angle ?? 30) * Math.PI) / 180, dx = -Math.cos(th), dy = Math.sin(th);
+      const lin = (o._t % 1 + 1) % 1, P = (ph, l = lin) => (path === "sway" ? [dx * Math.sin(tw + a0 + ph), dy * Math.sin(tw + a0 + ph)] : path === "glide" ? [dx * 2 * l, dy * 2 * l] : [Math.cos(tw + a0 + ph), Math.sin(tw + a0 + ph)]);
+      const glide = path === "glide" && ["drift", "breathe", "pulse"].includes(m.type);
+      if (glide) o.glideW = lin;
+      if (m.type === "drift") {
+        const R = a * st.scale * 0.5, [x, y] = P(0); o.driftX = R * x; o.driftY = R * y; o.driftR = glide ? 2 * R : R;
+        if (glide) { const [x2, y2] = P(0, lin - 1); o.driftX2 = R * x2; o.driftY2 = R * y2; }
+      }
       // Cycling inks need a whole cycle of steps per loop, or the colors would jump at the seam.
       else if (m.type === "flow") { const cyc = st.mids?.length && !st.gradient && st.mode !== "layers" && st.mode !== "shaded" ? st.mids.length + 2 : 1; o.phase = t * cyc * Math.max(1, Math.round(a * 4)); }
       // Breathe reads the warp from points travelling round a loop, so the shape morphs forward the
       // whole time and only meets its first frame again at the end, with a slow swell on top.
-      else if (m.type === "pulse") { const beat = Math.pow(0.5 - 0.5 * Math.cos(tw * 4), 3); o.loopX = 0.5 * a * Math.cos(tw + a0); o.loopY = 0.5 * a * Math.sin(tw + a0); o.scale = st.scale * (1 + 0.08 * a * beat); }
+      else if (m.type === "pulse") {
+        const beat = Math.pow(0.5 - 0.5 * Math.cos(tw * 4), 3), [x, y] = P(0); o.loopX = 0.5 * a * x; o.loopY = 0.5 * a * y; o.scale = st.scale * (1 + 0.08 * a * beat);
+        if (glide) { const [x2, y2] = P(0, lin - 1); o.loopX2 = 0.5 * a * x2; o.loopY2 = 0.5 * a * y2; }
+      }
       // The read point moves at a constant speed and nothing else swells, so the morph keeps an even pace.
       // Endless: two more turns at irrational rates ride on the circle, so the path never closes and no
       // stretch of the morph ever repeats.
@@ -1731,7 +1744,10 @@
         o.loopY = R * (Math.sin(tw + a0) + 0.5 * Math.sin(tw * 0.618 + 0.7) + 0.3 * Math.sin(tw * 0.414 + 0.4)) + dr * 0.6;
         o.warp = Math.max(st.warp, 0.4 * a);
       }
-      else { o.loopX = 0.45 * a * Math.cos(tw + a0); o.loopY = 0.45 * a * Math.sin(tw + a0); o.warp = Math.max(st.warp, 0.4 * a); }
+      else {
+        const [x, y] = P(0); o.loopX = 0.45 * a * x; o.loopY = 0.45 * a * y; o.warp = Math.max(st.warp, 0.4 * a);
+        if (glide) { const [x2, y2] = P(0, lin - 1); o.loopX2 = 0.45 * a * x2; o.loopY2 = 0.45 * a * y2; }
+      }
     }
     return o;
   }
@@ -1742,6 +1758,15 @@
     { label: "Amplitude", ...bindKey(() => S.motion, "amt"), min: 0.05, max: 1, step: 0.01, fmt: f2, rand: [0.3, 0.7], when: moving },
     { label: "Seed", ...bindKey(() => S.motion, "seed"), min: 0, max: 9999, step: 1, fmt: (v) => (v ? String(v) : "Off"), rand: [1, 9999], when: moving },
   ].forEach((c) => makeSlider($("motionCtrls"), { group: "motion", ...c }));
+  // Path: how Drift, Flow and Pulse travel. Endless Flow keeps its own wandering circle.
+  {
+    const pathed = () => ["drift", "breathe", "pulse"].includes(S.motion.type) && !endless();
+    const host = document.createElement("div"); $("motionCtrls").appendChild(host);
+    host.innerHTML = `<span class="label">Path</span><div class="seg sm"><button data-v="glide" data-tip="Travels on in one direction">Glide</button><button data-v="sway" data-tip="Goes back and forth along a line">Sway</button><button data-v="orbit" data-tip="Goes round in a circle">Orbit</button></div>`;
+    makeSeg(host.lastElementChild, () => S.motion.path || "orbit", (v) => (S.motion.path = v));
+    makeSlider($("motionCtrls"), { group: "motion", label: "Angle", ...bindKey(() => S.motion, "angle"), min: 0, max: 360, step: 1, fmt: deg, rand: [0, 360], when: () => pathed() && S.motion.path !== "orbit" });
+    syncers.push(() => (host.hidden = !pathed()));
+  }
   makeSeg($("motionMode"), () => S.motion.mode, (v) => (S.motion.mode = v));
   // Endless Flow: never loops, so only Once makes sense; Loop and Ping-pong step aside while it's on.
   {
@@ -2972,7 +2997,7 @@
     });
   }
   const isImg = (st) => st.source === "gradient" && st.grad.type === "image";
-  const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image: isImg(st) ? imageCanvas(st, w, h) : image, grad: st.source === "gradient" && !isImg(st) ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper, time: st._t || 0, motion: st._t != null ? st.motion.type : "still", motionAmt: st.motion?.amt, endless: st._t != null ? (unbound(st.motion) ? 2 : endless(st.motion) ? 1 : 0) : 0, objects: objectsFor(st), palette: paletteOf(st) });
+  const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image: isImg(st) ? imageCanvas(st, w, h) : image, grad: st.source === "gradient" && !isImg(st) ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper, time: st._t || 0, motion: st._t != null ? st.motion.type : "still", motionAmt: st.motion?.amt, endless: st._t != null ? (unbound(st.motion) ? 2 : endless(st.motion) ? 1 : 0) : 0, path: st.motion?.path, mangle: st.motion?.angle, objects: objectsFor(st), palette: paletteOf(st) });
   // Objects read the design's colors darkest first, so shading runs from shadow to highlight.
   const paletteOf = (st) => (st.source === "gradient" ? st.grad.colors : [st.bg, st.line, ...(st.mids || []), st.line2]).slice().sort((a, b) => lum(a) - lum(b));
   function objectsFor(st) {
@@ -3690,7 +3715,7 @@
       const sf = moving ? motionState(st, motionT(raw, st.motion)) : st;
       const spec = contours ? Topo.gpuSpec(sf, Math.max(sf.res || 1, 1.6 / Math.max(0.05, (W / st.w)))) : null;
       FX.render({ w: W, h: H, k: W / st.w, seed: st.seed, image, grad: st.source === "gradient" && !image ? sf.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper,
-        time: sf._t || (animFx && !moving ? (now / 8) % 1 : 0), motion: sf._t != null ? st.motion.type : "still", motionAmt: st.motion && st.motion.amt, endless: sf._t != null ? (unbound(st.motion) ? 2 : endless(st.motion) ? 1 : 0) : 0, objects, palette: D.palette, contours: spec, pointer: pointer(now) });
+        time: sf._t || (animFx && !moving ? (now / 8) % 1 : 0), motion: sf._t != null ? st.motion.type : "still", motionAmt: st.motion && st.motion.amt, endless: sf._t != null ? (unbound(st.motion) ? 2 : endless(st.motion) ? 1 : 0) : 0, path: st.motion && st.motion.path, mangle: st.motion && st.motion.angle, objects, palette: D.palette, contours: spec, pointer: pointer(now) });
     }
     let raf = 0;
     const live = () => moving || animFx || IX.touch.length || (fxOn("trail") && performance.now() / 1000 - lastT < ((st.fx.trail && st.fx.trail.life) || 1.6) + 0.6);

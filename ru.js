@@ -594,7 +594,7 @@ window.I18N_RU = {
   "From the end back to the start": "От конца к началу",
   "Seconds before the motion repeats": "Секунд до повтора движения",
   "The field swells on four soft beats per loop": "Поле раздувается на четыре мягких такта за цикл",
-  "The pattern glides round in a loop": "Узор скользит по кругу",
+  "The pattern moves along its path and loops back": "Узор движется по пути и возвращается в начало",
   "The shape keeps morphing and flows back into itself": "Форма меняется и плавно замыкается в цикл",
   "loop, linear": "цикл, линейно",
   "Timing": "Тайминг",
@@ -1261,6 +1261,12 @@ window.I18N_RU = {
   "{n}× sheets, wave {n}": "Листы {n}×, волна {n}",
   "Flow size": "Размер потока", "Dashes": "Штрихи", "Dash length": "Длина штриха", "Thick in light": "Толще на светлом",
   "How far the lines bend and stream round": "Насколько линии изгибаются и закручиваются", "How much of each line is gap between strokes": "Какая доля линии уходит в промежутки между штрихами",
+  "Path": "Путь",
+  "Glide": "Полёт",
+  "Sway": "Качание",
+  "Travels on in one direction": "Движется дальше в одном направлении",
+  "Goes back and forth along a line": "Ходит туда и обратно по линии",
+  "Goes round in a circle": "Ходит по кругу",
 };
 
 // The kit preview's demo copy in Russian. It shows when the Builder's Cyrillic switch is on, so the

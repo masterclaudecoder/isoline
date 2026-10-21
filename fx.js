@@ -405,6 +405,19 @@ void main() {
   o = vec4(lo - pad, hi + pad, 0.0, 1.0);
 }`,
 
+    // Glide: the field a loop's travel behind fades into the current one, so the loop lands on its first frame.
+    fmix: `
+// Two unrelated noise fields averaged are flatter than either, so noise patterns are stretched back out about
+// the middle of their range (uDes) and the lines keep their spacing through the fade. Straight-line patterns
+// are the same plane shifted, and a plain mix is already right for them.
+uniform sampler2D uTex2; uniform sampler2D uDes; uniform float uW; uniform float uLin;
+void main() {
+  ivec2 c = ivec2(floor(gl_FragCoord.xy)); float v = mix(texelFetch(uTex, c, 0).r, texelFetch(uTex2, c, 0).r, uW);
+  vec2 r = texelFetch(uDes, ivec2(0), 0).rg; float mid = 0.5 * (r.x + r.y);
+  if (uLin < 0.5) v = mid + (v - mid) / sqrt((1.0 - uW) * (1.0 - uW) + uW * uW);
+  o = vec4(v, 0.0, 0.0, 1.0);
+}`,
+
     // Separable Gaussian on the field grid: the GPU stand-in for smoothing each contour line.
     fblur: `
 uniform vec2 uDir2; uniform float uSigma; uniform ivec2 uIn;
@@ -538,6 +551,11 @@ uniform float uWarp; uniform float uWarpScale; uniform float uSoft; uniform floa
 uniform float uScale; uniform float uDetail; uniform float uStretch; uniform float uContrast; uniform int uNoise;
 // Motion (all loop over uTime 0..1): 1 drift, 2 color flow, 3 breathe, 4 pulse.
 uniform float uTime; uniform int uMotion; uniform float uMotAmt; uniform float uEndless;
+// Path (uPath): 0 orbit, the read points circling; 1 sway, back and forth along uMDir; 2 glide, travelling
+// on along uMDir. Glide never turns back, so main draws the frame twice, a loop's travel apart, and fades
+// from one to the other over the loop: each frame is where the first was headed, and the last is the first.
+uniform int uPath; uniform vec2 uMDir; float gLin = 0.0;
+vec2 mloop(float tw, float ph) { return uPath == 1 ? uMDir * sin(tw + ph) : uPath == 2 ? uMDir * gLin * 2.0 : vec2(cos(tw + ph), sin(tw + ph)); }
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec3 permute(vec3 x) { return mod289(((x * 34.0) + 1.0) * x); }
@@ -631,7 +649,7 @@ vec3 paintSeed(vec2 q) {
   float N = float(uN - 1), x = tri * N, kk = min(floor(x), N - 1.0), f = x - kk, h = max(0.5 * clamp(uSoft, 0.02, 1.0), fwidth(x) * 0.75);
   return ramp((kk + smoothstep(0.5 - h, 0.5 + h, f)) / N);
 }
-void main() {
+void gradMain() {
   if (uPStage > 0) {
     vec2 uv = vec2(vUv.x, 1.0 - vUv.y), p = uPStage == 3 ? uv : uPDom.xy + uv * uPDom.zw;
     if (uPStage == 1) { o = vec4(paintSeed(paintQ(p)), 1.0); return; }
@@ -651,7 +669,7 @@ void main() {
   vec2 a = vec2(uRes.x / uRes.y, 1.0);
   vec2 p = vec2(vUv.x, 1.0 - vUv.y);
   float tw = 6.2831853 * uTime;
-  vec2 drift = uMotion == 1 ? uMotAmt * vec2(cos(tw), sin(tw)) : vec2(0.0);
+  vec2 drift = uMotion == 1 ? uMotAmt * mloop(tw, 0.0) : vec2(0.0);
   // Breathe: the warp is read from points travelling round two loops (whole turns only), so the field
   // morphs forward the whole time and lands back on its first frame without reversing.
   bool br = uMotion == 3;
@@ -662,9 +680,9 @@ void main() {
   // Its extra turns are slower than the main one so they never cancel it (no stalls); Unbound (2) also
   // travels steadily on through the noise, faster than it circles.
   float en = min(uEndless, 1.0), ub = uEndless > 1.5 ? 1.3 * tw : 0.0;
-  vec2 L1 = lm * 1.5 * uMotAmt * (vec2(cos(tw), sin(tw)) + en * (0.5 * vec2(cos(tw * 0.618 + 1.3), sin(tw * 0.618 + 0.7)) + 0.3 * vec2(cos(tw * 0.414 + 2.1), sin(tw * 0.414 + 0.4))) + ub * vec2(0.8, 0.6));
+  vec2 L1 = lm * 1.5 * uMotAmt * (mloop(tw, 0.0) + en * (0.5 * vec2(cos(tw * 0.618 + 1.3), sin(tw * 0.618 + 0.7)) + 0.3 * vec2(cos(tw * 0.414 + 2.1), sin(tw * 0.414 + 0.4))) + ub * vec2(0.8, 0.6));
   // Both read points travel at a constant speed, so the morph never hurries through part of the loop.
-  vec2 L2 = lm * 1.5 * uMotAmt * (vec2(sin(tw + 1.3), -cos(tw + 1.3)) + en * (0.5 * vec2(sin(tw * 0.618 + 0.4), -cos(tw * 0.618 + 2.1)) + 0.3 * vec2(sin(tw * 0.414 + 1.1), -cos(tw * 0.414 + 0.3))) + ub * vec2(-0.6, 0.8));
+  vec2 L2 = lm * 1.5 * uMotAmt * (mloop(tw, -0.2708) + en * (0.5 * vec2(sin(tw * 0.618 + 0.4), -cos(tw * 0.618 + 2.1)) + 0.3 * vec2(sin(tw * 0.414 + 1.1), -cos(tw * 0.414 + 0.3))) + ub * vec2(-0.6, 0.8));
   p = 0.5 + (p - 0.5) * (1.0 - 0.07 * uMotAmt * beat);
   if (uType == 7) {
     // Wave, after Framer's Wave Gradient shader (the background of caddis.app): four colors in two soft
@@ -674,7 +692,7 @@ void main() {
     // wave travels a whole number of periods per loop.
     float s = mod(uSeed, 100.0), wt = uMotion != 0 ? tw * max(1.0, floor(uMotAmt * 2.0 + 0.5)) : 0.0;
     vec2 tuv = p - 0.5;
-    float deg = 0.5 + 0.5 * snoise(vec2(tuv.x * tuv.y, 0.0) + vec2(sin(s * 4.37), cos(s * 5.91)) * 10.0 + (uMotion != 0 ? 0.25 * uMotAmt * vec2(cos(tw), sin(tw)) : vec2(0.0)));
+    float deg = 0.5 + 0.5 * snoise(vec2(tuv.x * tuv.y, 0.0) + vec2(sin(s * 4.37), cos(s * 5.91)) * 10.0 + (uMotion != 0 ? 0.25 * uMotAmt * mloop(tw, 0.0) : vec2(0.0)));
     float rr = radians((deg - 0.5) * 720.0 + 180.0);
     tuv.y /= a.x; tuv = mat2(cos(rr), sin(rr), -sin(rr), cos(rr)) * tuv; tuv.y *= a.x;
     vec2 w = (2.0 * p - 1.0) * a / (a.x + 1.0) * 2.0;
@@ -763,7 +781,7 @@ void main() {
     // and an optional faint rim traces each blob, as the real one shows when music plays.
     float ca = cos(uAngle), sa = sin(uAngle);
     vec2 c = (p - 0.5) * a;
-    if (uMotion == 1) { float r0 = tw; c = mat2(cos(r0), -sin(r0), sin(r0), cos(r0)) * c; }
+    if (uMotion == 1) { if (uPath == 0) { float r0 = tw; c = mat2(cos(r0), -sin(r0), sin(r0), cos(r0)) * c; } else c -= drift * 0.35; }
     float R = 0.42 * clamp(uScale, 0.1, 6.0) * (1.0 + 0.1 * uMotAmt * beat) * (uMotion == 2 ? 1.0 + 0.07 * uMotAmt * sin(tw) : 1.0);
     int NL = int(clamp(uDetail, 1.0, 4.0) + 0.5);
     float edge = 0.1 + 0.16 * clamp(uSoft, 0.3, 5.0);
@@ -851,7 +869,7 @@ void main() {
     lab = ramp(clamp((v - 0.5) * uContrast + 0.5, 0.0, 1.0));
   } else if (uType == 0) {
     vec3 acc = vec3(0.0); float ws = 0.0;
-    for (int i = 0; i < 8; i++) { if (i >= uN) break; vec2 orb = uMotion == 1 ? 0.22 * uMotAmt * vec2(cos(tw * (1.0 + mod(float(i), 2.0)) + float(i) * 2.1), sin(tw * (1.0 + mod(float(i) + 1.0, 2.0)) + float(i) * 1.3)) : br ? 0.16 * uMotAmt * vec2(sin(tw + float(i) * 2.1), cos(tw + float(i) * 2.1)) : vec2(0.0); vec2 d = (p - uPt[i] - orb) * a; float w = 1.0 / pow(dot(d, d) + 0.0004, uSoft); acc += toLab(lin(uCol[i])) * w; ws += w; }
+    for (int i = 0; i < 8; i++) { if (i >= uN) break; vec2 orb = uMotion == 1 ? (uPath == 0 ? 0.22 * uMotAmt * vec2(cos(tw * (1.0 + mod(float(i), 2.0)) + float(i) * 2.1), sin(tw * (1.0 + mod(float(i) + 1.0, 2.0)) + float(i) * 1.3)) : 0.22 * uMotAmt * mloop(tw, float(i) * 2.1)) : br ? 0.16 * uMotAmt * (uPath == 0 ? vec2(sin(tw + float(i) * 2.1), cos(tw + float(i) * 2.1)) : mloop(tw, float(i) * 2.1)) : vec2(0.0); vec2 d = (p - uPt[i] - orb) * a; float w = 1.0 / pow(dot(d, d) + 0.0004, uSoft); acc += toLab(lin(uCol[i])) * w; ws += w; }
     lab = acc / ws;
   } else {
     vec2 c = (p - 0.5) * a; float t;
@@ -865,6 +883,12 @@ void main() {
     lab = ramp(t);
   }
   o = vec4(srgb(fromLab(lab)), 1.0);
+}
+void main() {
+  if (uPath == 2 && (uMotion == 1 || uMotion >= 3) && uPStage == 0) {
+    gLin = uTime; gradMain(); vec4 a = o;
+    gLin = uTime - 1.0; gradMain(); o = mix(a, o, smoothstep(0.0, 1.0, uTime));
+  } else gradMain();
 }`,
 
     liquify: `uniform float uAmt; uniform float uScale;
@@ -1833,7 +1857,7 @@ void main() {
   const rad = (d) => (d * Math.PI) / 180;
 
   const OBJ_KINDS = ["sphere", "torus", "cube", "capsule", "blob", "image", "pyramid", "diamond"];
-  const INTS = new Set(["uPStage", "uKind", "uMat", "uProj", "uHasTex", "uType", "uN", "uNoise", "uMotion", "uPattern", "uOct", "uNPts", "uUser", "uNFeat", "uFirst", "uMode", "uNInk", "uHasH"]);
+  const INTS = new Set(["uPStage", "uPath", "uKind", "uMat", "uProj", "uHasTex", "uType", "uN", "uNoise", "uMotion", "uPattern", "uOct", "uNPts", "uUser", "uNFeat", "uFirst", "uMode", "uNInk", "uHasH"]);
   function createFX(canvas) {
     const gl = canvas.getContext("webgl2", { premultipliedAlpha: false, preserveDrawingBuffer: true, antialias: false, alpha: true });
     if (!gl) return null;
@@ -2035,9 +2059,9 @@ void main() {
       // leftover fraction of a cell is applied when the lines are drawn. One spare row and column covers it.
       const fs = { uTex2: permTex, uPattern: c.pattern, uSc: c.sc, uOct: c.oct, uP: c.P, uBump: c.bump, uLiq: c.liquify, uLiqScale: c.liqScale,
         uWarpA: c.warp, uLoop: c.loop, uDir: c.dir, uPts: c.pts, uNPts: c.pts.length, uUser: c.user, uFeat: c.feats.length ? c.feats : [[0, 0, 1, 0]], uNFeat: c.feats.length };
-      const snap = [Math.floor(c.drift[0] / c.sx) * c.sx, Math.floor(c.drift[1] / c.sy) * c.sy], shift = [(c.drift[0] - snap[0]) / c.sx, (c.drift[1] - snap[1]) / c.sy];
-      const nx = c.nx + 1, ny = c.ny + 1, fld = floatTarget("field", nx, ny);
-      draw("field", null, fld.f, { ...fs, uDrift: snap, uCell: [c.sx, c.sy] }, nx, ny, 1, 0);
+      // Glide reads two fields a loop's travel apart, which can't share one snap, so it reads them as they are.
+      const glide = c.glideW != null, snap = glide ? c.drift : [Math.floor(c.drift[0] / c.sx) * c.sx, Math.floor(c.drift[1] / c.sy) * c.sy], shift = [(c.drift[0] - snap[0]) / c.sx, (c.drift[1] - snap[1]) / c.sy];
+      const nx = c.nx + 1, ny = c.ny + 1;
       // The level range comes from the same coarse grid the CPU samples (the canvas plus a wide margin, at
       // points round the motion's loop; see rangeSpec in the engine), not from what this frame shows, so
       // levels never jump as the field morphs or a peak crosses the edge. It only changes with the design,
@@ -2062,6 +2086,14 @@ void main() {
         draw("frange", parts.t, keep.f, { uIn: [R.loops.length, 1], uPad: R.pad }, 1, 1, 1, 0);
       }
       const mm = keep;
+      let fld = floatTarget("field", nx, ny);
+      draw("field", null, fld.f, { ...fs, uDrift: snap, uCell: [c.sx, c.sy] }, nx, ny, 1, 0);
+      if (glide) {
+        const f2 = floatTarget("field2", nx, ny), fm = floatTarget("fieldMix", nx, ny), t = c.glideW;
+        draw("field", null, f2.f, { ...fs, uLoop: c.loop2, uDrift: c.drift2, uCell: [c.sx, c.sy] }, nx, ny, 1, 0);
+        draw("fmix", fld.t, fm.f, { uTex2: f2.t, uDes: mm.t, uW: t * t * (3 - 2 * t), uLin: c.lin ? 1 : 0 }, nx, ny, 1, 0);
+        fld = fm;
+      }
       let fieldTex = fld.t;
       const sg = c.sigma / Math.max(c.sx, c.sy);
       if (sg > 0.3) {
@@ -2213,6 +2245,7 @@ void main() {
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
           uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle),
           uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5, uEndless: +job.endless || 0,
+          uPath: job.endless ? 0 : Math.max(0, ["orbit", "sway", "glide"].indexOf(job.path || "orbit")), uMDir: [-Math.cos(rad(job.mangle ?? 30)), Math.sin(rad(job.mangle ?? 30))],
         };
         if (g.type === "paint" && floatOK) {
           // Paint flows in passes over a texture with a margin round the frame (see paintSeed in the shader).

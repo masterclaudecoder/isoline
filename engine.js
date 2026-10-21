@@ -67,7 +67,10 @@
     // Unbound travels on forever; the noise looks alike everywhere, so points further along its way stand
     // in for the rest.
     const along = m.unbound ? [3, 7, 12].map((d) => [0.8 * d * R + R, 0.6 * d * R]) : [];
-    const loops = R > 0 ? (m.endless && m.type === "breathe" ? [...ring(1.8 * R, 0), ...ring(0.6 * R, Math.PI / 6), ...along] : ring(R, 0)) : [[0, 0]];
+    // Sway and glide read along a line through the direction instead (glide twice as far, both ways).
+    const path = m.endless && m.type === "breathe" ? "orbit" : m.path || "orbit", th = ((m.angle ?? 30) * Math.PI) / 180, L = path === "glide" ? 2 * R : R;
+    const line = Array.from({ length: 7 }, (_, i) => [-Math.cos(th) * L * (i / 3 - 1), Math.sin(th) * L * (i / 3 - 1)]);
+    const loops = R > 0 ? (m.endless && m.type === "breathe" ? [...ring(1.8 * R, 0), ...ring(0.6 * R, Math.PI / 6), ...along] : path === "orbit" ? ring(R, 0) : line) : [[0, 0]];
     return { M, mx, my, cx: W / (mx - 1), cy: H / (my - 1), loops, pad: m.unbound && m.endless && m.type === "breathe" ? 0.06 : 0.03 };
   }
   function buildField(s, w, h, res) {
@@ -179,6 +182,14 @@
       mm = [lo - pad, hi + pad];
       if (rangeCache.size > 24) rangeCache.clear();
       rangeCache.set(key, mm);
+    }
+    if (s.glideW != null) {
+      // Glide: the field a loop's travel behind fades into this one (see motionState). Noise patterns are
+      // stretched back out about the middle of the range, as averaging two of them flattens it (as fmix does).
+      const t = s.glideW, wb = t * t * (3 - 2 * t), dx2 = (s.driftX2 ?? s.driftX ?? 0) * k, dy2 = (s.driftY2 ?? s.driftY ?? 0) * k;
+      const mid = 0.5 * (mm[0] + mm[1]), g = LINEAR.has(s.pattern) ? 1 : 1 / Math.hypot(1 - wb, wb);
+      lx = s.loopX2 ?? s.loopX ?? 0; ly = s.loopY2 ?? s.loopY ?? 0;
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const n = j * nx + i; f[n] = mid + (f[n] + wb * (valAt(i * sx + dx2, j * sy + dy2) - f[n]) - mid) * g; }
     }
     return { f, nx, ny, cols, rows, sx, sy, min: mm[0], max: mm[1] };
   }
@@ -496,7 +507,7 @@
       perm: permFor(s.seed), pattern: PATTERNS.findIndex((p) => p.id === s.pattern),
       pts: src, user: pts.length ? 1 : 0, feats,
       sc, oct: s.octaves, P: Math.max(0.3, s.falloff), bump: s.bump, liquify: s.liquify || 0, liqScale: Math.max(4, sc * (s.liqScale || 1)),
-      warp: s.warp || 0, loop: [s.loopX || 0, s.loopY || 0], drift: [s.driftX || 0, s.driftY || 0], driftR: s.driftR || 0, dir: [Math.cos(ang), Math.sin(ang)],
+      warp: s.warp || 0, loop: [s.loopX || 0, s.loopY || 0], drift: [s.driftX || 0, s.driftY || 0], loop2: [s.loopX2 ?? s.loopX ?? 0, s.loopY2 ?? s.loopY ?? 0], drift2: [s.driftX2 ?? s.driftX ?? 0, s.driftY2 ?? s.driftY ?? 0], glideW: s.glideW, driftR: s.driftR || 0, dir: [Math.cos(ang), Math.sin(ang)],
       sigma: Math.pow(s.smooth, 1.5) * 48,
       lin: LINEAR.has(s.pattern), gap: Math.max(0.5, s.gap), phase: s.phase || 0, levels: s.levels, g: Math.pow(2, s.bias),
       mode: ["lines", "bands", "layers", "shaded"].indexOf(s.mode || "lines"), band: Math.max(0.02, Math.min(0.98, s.band ?? 0.5)),
