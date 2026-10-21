@@ -110,6 +110,8 @@ vec3 fromLab(vec3 c) {
 
   const SHADERS = {
     copy: `void main() { o = tex(vUv); }`,
+    // Glide's fade from the frame a loop's travel behind into this one (see uGLin in the gradient).
+    gmix: `uniform sampler2D uTex2; uniform float uW; void main() { o = mix(texture(uTex, vUv), texture(uTex2, vUv), uW); }`,
 
     // Contour field, a port of engine.js buildField: one texel per grid point, in design pixels.
     field: `
@@ -556,10 +558,11 @@ uniform float uScale; uniform float uDetail; uniform float uStretch; uniform flo
 // Motion (all loop over uTime 0..1): 1 drift, 2 color flow, 3 breathe, 4 pulse.
 uniform float uTime; uniform int uMotion; uniform float uMotAmt; uniform float uEndless;
 // Path (uPath): 0 orbit, the read points circling; 1 sway, back and forth along uMDir; 2 glide, travelling
-// on along uMDir. Glide never turns back, so main draws the frame twice, a loop's travel apart, and fades
-// from one to the other over the loop: each frame is where the first was headed, and the last is the first.
-uniform int uPath; uniform vec2 uMDir; float gLin = 0.0;
-vec2 mloop(float tw, float ph) { return uPath == 1 ? uMDir * sin(tw + ph) : uPath == 2 ? uMDir * gLin * 2.0 : vec2(cos(tw + ph), sin(tw + ph)); }
+// on along uMDir (uGLin, how far along). Glide never turns back, so render draws the frame twice, a loop's
+// travel apart, and fades from one to the other over the loop: each frame is where the first was headed,
+// and the last is the first. (Drawing both here would double the shader, and its compile time with it.)
+uniform int uPath; uniform vec2 uMDir; uniform float uGLin;
+vec2 mloop(float tw, float ph) { return uPath == 1 ? uMDir * sin(tw + ph) : uPath == 2 ? uMDir * uGLin * 2.0 : vec2(cos(tw + ph), sin(tw + ph)); }
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
 vec3 permute(vec3 x) { return mod289(((x * 34.0) + 1.0) * x); }
@@ -908,12 +911,7 @@ void gradMain() {
   }
   o = vec4(srgb(fromLab(lab)), 1.0);
 }
-void main() {
-  if (uPath == 2 && (uMotion == 1 || uMotion >= 3) && uPStage == 0) {
-    gLin = uTime; gradMain(); vec4 a = o;
-    gLin = uTime - 1.0; gradMain(); o = mix(a, o, smoothstep(0.0, 1.0, uTime));
-  } else gradMain();
-}`,
+void main() { gradMain(); }`,
 
     liquify: `uniform float uAmt; uniform float uScale;
 void main() {
@@ -2290,12 +2288,12 @@ void main() {
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
           uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle), uPrism: g.prism ?? 0,
           uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5, uEndless: +job.endless || 0,
-          uPath: job.endless ? 0 : Math.max(0, ["orbit", "sway", "glide"].indexOf(job.path || "orbit")), uMDir: [-Math.cos(rad(job.mangle ?? 30)), Math.sin(rad(job.mangle ?? 30))],
+          uPath: job.endless ? 0 : Math.max(0, ["orbit", "sway", "glide"].indexOf(job.path || "orbit")), uMDir: [-Math.cos(rad(job.mangle ?? 30)), Math.sin(rad(job.mangle ?? 30))], uGLin: 0,
         };
         if (g.type === "paint" && floatOK) {
           // Paint flows in passes over a texture with a margin round the frame (see paintSeed in the shader).
           const m = 0.3, dw = Math.round(w * (1 + 2 * m)), dh = Math.round(h * (1 + 2 * m)), dom = [-m, -m, 1 + 2 * m, 1 + 2 * m];
-          const A = floatTarget("paintA", dw, dh, "rgba"), B = floatTarget("paintB", dw, dh, "rgba"), pu = { ...gu, uPDom: dom, uPAsp: w / h };
+          const A = floatTarget("paintA", dw, dh, "rgba"), B = floatTarget("paintB", dw, dh, "rgba"), pu = { ...gu, uPDom: dom, uPAsp: w / h, uPath: gu.uPath === 2 ? 0 : gu.uPath }; // Paint can't fade between two runs, so glide goes round.
           const steps = Math.round(Math.min(8, Math.max(1, g.detail ?? 5)) * 4), passes = Math.ceil(steps / 2);
           draw("gradient", srcTex, A.f, { ...pu, uPStage: 1 }, dw, dh, k, job.seed);
           let src = A, dst = B, done = 0;
@@ -2304,7 +2302,12 @@ void main() {
             draw("gradient", src.t, last ? targets.list[0].f : dst.f, { ...pu, uPStage: last ? 3 : 2, uPSub: sub }, last ? w : dw, last ? h : dh, k, job.seed);
             done += sub; [src, dst] = [dst, src];
           }
-        } else draw("gradient", srcTex, targets.list[0].f, gu, w, h, k, job.seed);
+        } else if (gu.uPath === 2 && [1, 3, 4].includes(gu.uMotion) && floatOK) {
+          const B = floatTarget("glideB", w, h, "rgba"), t = gu.uTime;
+          draw("gradient", srcTex, targets.list[1].f, { ...gu, uGLin: t }, w, h, k, job.seed);
+          draw("gradient", srcTex, B.f, { ...gu, uGLin: t - 1 }, w, h, k, job.seed);
+          draw("gmix", targets.list[1].t, targets.list[0].f, { uTex2: B.t, uW: t * t * (3 - 2 * t) }, w, h, k, job.seed);
+        } else draw("gradient", srcTex, targets.list[0].f, { ...gu, uGLin: 0 }, w, h, k, job.seed);
         input = targets.list[0].t; ping = 1;
       } else if (job.contours) {
         contourPass(job.contours, targets.list[0].f, w, h);
