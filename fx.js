@@ -587,7 +587,67 @@ vec2 paintVel(vec2 q, float ch, vec4 L) {
   vec2 g2 = vec2(snoise(o2 + vec2(e, 0.0)) - n2, snoise(o2 + vec2(0.0, e)) - n2) / e;
   return vec2(g1.y, -g1.x) + mix(0.3, 0.45, ch) * vec2(g2.y, -g2.x);
 }
+// Paint on the GPU path runs as a few passes, the way the drag trails move their smoke. Stage 1 lays
+// the paint down as broad stripes in a texture a little larger than the frame (uPDom: its corner and
+// size in frame units). Each later stage traces every pixel back a few steps through the flow and reads
+// the paint there from the last pass, with smooth texture filtering, so paint squeezed finer than a
+// pixel blends into its neighbours instead of breaking into noise. Stage 3 writes the frame itself.
+uniform int uPStage; uniform vec4 uPDom; uniform float uPSub; uniform float uPAsp;
+float paintCh() { return clamp(uWarpScale, 0.0, 1.0) * 0.7; }
+float paintZoom() { return uScale * mix(1.0, 1.6, paintCh()); }
+vec2 paintOff() { float s = mod(uSeed, 97.0); return vec2(sin(s * 3.1), cos(s * 1.7)) * 9.0; }
+vec2 paintQ(vec2 p) { return (p - 0.5) * vec2(uPAsp, 1.0) * paintZoom() + paintOff(); }
+vec2 paintP(vec2 q) { return (q - paintOff()) / (vec2(uPAsp, 1.0) * paintZoom()) + 0.5; }
+// The flow eases to a stop across the margin, like the wall of a marbling bath, so no paint ever has to
+// arrive from beyond the texture.
+// It fades the flow's stream function rather than its speed, so the flow stays free of sources and sinks
+// and paint never piles up against the wall.
+float paintPsi(vec2 q, float ch) {
+  float s1 = mix(0.45, 0.55, ch), s2 = mix(0.95, 1.3, ch);
+  vec2 p = paintP(q), out2 = max(max(-p, p - 1.0), 0.0);
+  return (snoise(q * s1) / s1 + mix(0.3, 0.45, ch) * snoise(q * s2 + vec2(7.3, 2.1)) / s2) * smoothstep(-uPDom.x, 0.0, max(out2.x, out2.y));
+}
+vec2 paintFlow(vec2 q, float ch) {
+  const float e = 0.01;
+  float c = paintPsi(q, ch);
+  return vec2(paintPsi(q + vec2(0.0, e), ch) - c, -(paintPsi(q + vec2(e, 0.0), ch) - c)) / e;
+}
+vec2 paintBack(vec2 q, float n) {
+  float ch = paintCh(), dt = uWarp * mix(0.35, 0.9, ch) / floor(clamp(uDetail, 1.0, 8.0) * 4.0 + 0.5);
+  for (int i = 0; i < 32; i++) {
+    if (float(i) >= n) break;
+    vec2 m = q - 0.5 * dt * paintFlow(q, ch);
+    q -= dt * paintFlow(m, ch);
+  }
+  return q;
+}
+// The paint as first laid down: broad bands of the palette with finer streaks inside them, in Lab.
+// Moving, the bands slide a whole number of stripes per loop, so the paint flows along its veins.
+vec3 paintSeed(vec2 q) {
+  float ca = cos(uAngle), sa = sin(uAngle), mv = uMotion != 0 ? uTime * max(1.0, floor(uMotAmt * 2.0 + 0.5)) : 0.0;
+  float d = dot(q, vec2(ca, sa)) * uStretch * 0.35 + 0.35 * snoise(q * 0.8 + 3.3) + mv;
+  float df = d * 4.0 + 0.4 * snoise(q * 1.8), dv = d * 9.0 + 0.6 * snoise(q * 3.1 + 5.0), vc = clamp(uContrast, 0.0, 1.0);
+  float tri = clamp(abs(fract(d) * 2.0 - 1.0) * (1.0 - 0.55 * vc) + abs(fract(df) * 2.0 - 1.0) * 0.35 * vc + abs(fract(dv) * 2.0 - 1.0) * 0.2 * vc, 0.0, 1.0);
+  float N = float(uN - 1), x = tri * N, kk = min(floor(x), N - 1.0), f = x - kk, h = max(0.5 * clamp(uSoft, 0.02, 1.0), fwidth(x) * 0.75);
+  return ramp((kk + smoothstep(0.5 - h, 0.5 + h, f)) / N);
+}
 void main() {
+  if (uPStage > 0) {
+    vec2 uv = vec2(vUv.x, 1.0 - vUv.y), p = uPStage == 3 ? uv : uPDom.xy + uv * uPDom.zw;
+    if (uPStage == 1) { o = vec4(paintSeed(paintQ(p)), 1.0); return; }
+    vec2 q = paintBack(paintQ(p), uPSub), pb = paintP(q), tu = (pb - uPDom.xy) / uPDom.zw;
+    // Where the flow squeezes several texels of the last pass into this pixel, average over that patch, so
+    // fine streaks blend instead of beating against the pixel grid.
+    vec2 ts = vec2(textureSize(uTex, 0)), tv = vec2(tu.x, 1.0 - tu.y), jx = dFdx(tv), jy = dFdy(tv);
+    float nx = clamp(ceil(length(jx * ts)), 1.0, 4.0), ny = clamp(ceil(length(jy * ts)), 1.0, 4.0);
+    vec3 lab = vec3(0.0);
+    for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) {
+      if (float(i) >= nx || float(j) >= ny) continue;
+      lab += texture(uTex, clamp(tv + jx * ((float(i) + 0.5) / nx - 0.5) + jy * ((float(j) + 0.5) / ny - 0.5), 0.0, 1.0)).rgb;
+    }
+    lab /= nx * ny;
+    o = uPStage == 3 ? vec4(srgb(fromLab(lab)), 1.0) : vec4(lab, 1.0); return;
+  }
   vec2 a = vec2(uRes.x / uRes.y, 1.0);
   vec2 p = vec2(vUv.x, 1.0 - vUv.y);
   float tw = 6.2831853 * uTime;
@@ -1595,10 +1655,10 @@ void main() {
 
     // Ridge lines: stacked lines lifted by the picture's brightness, each filled below so it hides the
     // lines behind it, like a ridge plot.
-    ridge: `uniform float uSpace; uniform float uHeight; uniform float uWidth; uniform float uNoise; uniform float uFill; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
-float lift(float x, float i) { float l = luma(tex(toUv(vec2(x, i * uSpace))).rgb); return l * (1.0 + uNoise * (fbm(vec2(x * 0.03, i * 1.73)) - 0.5) * 2.0); }
+    ridge: `uniform float uSpace; uniform float uHeight; uniform float uWidth; uniform float uRNoise; uniform float uFill; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
+float lift(float x, float i) { float l = luma(tex(toUv(vec2(x, i * uSpace))).rgb); return l * (1.0 + uRNoise * (fbm(vec2(x * 0.03, i * 1.73)) - 0.5) * 2.0); }
 void main() {
-  vec2 d = dp(); float hm = uHeight * (1.0 + uNoise), w = uWidth * 0.5, aa = 0.75 / uK;
+  vec2 d = dp(); float hm = uHeight * (1.0 + uRNoise), w = uWidth * 0.5, aa = 0.75 / uK;
   vec3 col = uPaper; float i = floor((d.y - hm) / uSpace) - 1.0;
   for (int k = 0; k < 160; k++) {
     float cv = i * uSpace + uHeight * lift(d.x, i);
@@ -1742,20 +1802,6 @@ void main() {
 
     // Beam: a glowing outline (ring, arch, rounded square or star) with a white-hot core and a spectral
     // fringe, optionally repeated inward.
-    beam: `uniform float uShape; uniform float uSize; uniform float uThick; uniform float uGlow; uniform float uRepeat; uniform float uGap; uniform float uChroma; uniform float uInt; uniform float uRot; uniform vec3 uCol; uniform vec2 uC;
-void main() {
-  vec4 c = tex(vUv); vec2 ds = uRes / uK, q = dp() - uC * ds; float R = uSize * min(ds.x, ds.y) * 0.5;
-  q = mat2(cos(uRot), -sin(uRot), sin(uRot), cos(uRot)) * q;
-  float sd = uShape < 0.5 ? length(q) - R : uShape < 1.5 ? (q.y > 0.0 ? length(q) - R : abs(q.x) - R) : uShape < 2.5 ? sdBox(q, vec2(R), R * 0.3) : sdStar(q, R, 0.45);
-  vec3 acc = vec3(0.0);
-  for (int k = 0; k < 8; k++) {
-    if (float(k) >= uRepeat) break;
-    float x = abs(sd + float(k) * uGap), f = pow(0.72, float(k));
-    vec3 gw = uGlow * (1.0 + uChroma * vec3(0.45, 0.0, -0.35));
-    acc += f * (uCol * exp(-x / max(gw, vec3(0.5))) + vec3(1.0) * exp(-x / max(uThick, 0.3)) * 0.9);
-  }
-  o = vec4(clamp(c.rgb + acc * uInt, 0.0, 1.0), c.a);
-}`,
 
     grain: `uniform float uAmt; uniform float uSize; uniform float uMono; uniform float uSoft; uniform float uAnim; uniform float uTime;
 void main() {
@@ -1772,7 +1818,7 @@ void main() {
   };
 
   // Default pipeline order when effects are added; the app can reorder freely.
-  const ORDER = ["liquify", "wave", "smear", "pixsort", "glitch", "swirl", "bulge", "ripple", "touch", "trail", "sea", "water", "kaleido", "glass", "mesh", "lens", "rays", "chrome", "heatmap", "paper", "cmyk", "blur", "dof", "feedback", "bloom", "streaks", "glowlines", "beam", "emboss", "irid", "gradmap", "posterize", "pixel", "dissolve", "grid", "voronoi", "halftone", "linescreen", "riso", "guilloche", "ridge", "outline", "ascii", "glyphs", "dither", "led", "scan", "chroma", "vignette", "grain"];
+  const ORDER = ["liquify", "wave", "smear", "pixsort", "glitch", "swirl", "bulge", "ripple", "touch", "trail", "sea", "water", "kaleido", "glass", "mesh", "lens", "rays", "chrome", "heatmap", "paper", "cmyk", "blur", "dof", "feedback", "bloom", "streaks", "glowlines", "emboss", "irid", "gradmap", "posterize", "pixel", "dissolve", "grid", "voronoi", "halftone", "linescreen", "riso", "guilloche", "ridge", "outline", "ascii", "glyphs", "dither", "led", "scan", "chroma", "vignette", "grain"];
   const CHARSETS = { ascii: " .:-=+*#%@", blocks: " ░▒▓█", dots: " ·•●", binary: " 01", lines: " ─═│╬" };
   // Glyph field sets: picked at random per cell, so order doesn't matter and there's no blank.
   const GLYPHSETS = {
@@ -1787,7 +1833,7 @@ void main() {
   const rad = (d) => (d * Math.PI) / 180;
 
   const OBJ_KINDS = ["sphere", "torus", "cube", "capsule", "blob", "image", "pyramid", "diamond"];
-  const INTS = new Set(["uKind", "uMat", "uProj", "uHasTex", "uType", "uN", "uNoise", "uMotion", "uPattern", "uOct", "uNPts", "uUser", "uNFeat", "uFirst", "uMode", "uNInk", "uHasH"]);
+  const INTS = new Set(["uPStage", "uKind", "uMat", "uProj", "uHasTex", "uType", "uN", "uNoise", "uMotion", "uPattern", "uOct", "uNPts", "uUser", "uNFeat", "uFirst", "uMode", "uNInk", "uHasH"]);
   function createFX(canvas) {
     const gl = canvas.getContext("webgl2", { premultipliedAlpha: false, preserveDrawingBuffer: true, antialias: false, alpha: true });
     if (!gl) return null;
@@ -2065,14 +2111,13 @@ void main() {
         case "voronoi": return { uCell: e.cell, uEdge: e.edge };
         case "scan": return { uSpace: e.spacing, uStr: e.strength };
         case "guilloche": return { uMd: Math.max(0, ["rings", "rosette", "waves"].indexOf(e.mode)), uSpace: e.spacing, uWidth: e.width, uCount: e.count, uTone: e.tone, uOver: e.over, uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uC: [e.x ?? 0.5, 1 - (e.y ?? 0.5)] };
-        case "ridge": return { uSpace: e.spacing, uHeight: e.height, uWidth: e.width, uNoise: e.noise, uFill: e.fill, uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
+        case "ridge": return { uSpace: e.spacing, uHeight: e.height, uWidth: e.width, uRNoise: e.noise, uFill: e.fill, uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
         case "feedback": return { uCopies: e.copies, uZoom: e.zoom, uRot: rad(e.rotate), uDecay: e.decay, uHue: rad(e.hue), uAnim: e.anim ? 1 : 0, uAdd: e.blend === "add" ? 1 : 0, uC: [e.x ?? 0.5, 1 - (e.y ?? 0.5)] };
         case "glitch": return { uSlices: e.slices, uShift: e.shift, uProb: e.amount, uBlock: e.block, uBlockAmt: e.blocks, uSplit: e.split, uSpeed: Math.round(e.speed || 0) };
         case "pixsort": return { uMd: e.mode === "stretch" ? 1 : 0, uThr: e.threshold, uLen: e.length, uAngle: rad(e.angle), uPos: e.pos, uBands: e.bands };
         case "streaks": return { uThr: e.threshold, uLen: e.length, uAngle: rad(e.angle), uPoints: e.points, uInt: e.intensity, uChroma: e.chroma };
         case "outline": return { uMd: Math.max(0, ["neon", "ink", "solarize"].indexOf(e.mode)), uThr: e.threshold, uWidth: e.width, uGlow: e.glow, uKeep: e.keep, uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
         case "grid": return { uMd: e.mode === "truchet" ? 1 : 0, uCell: e.cell, uDepth: e.depth, uThr: e.threshold, uStroke: e.stroke, uRad: e.radius, uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
-        case "beam": return { uShape: Math.max(0, ["ring", "arch", "square", "star"].indexOf(e.shape)), uSize: e.size, uThick: e.core, uGlow: e.glow, uRepeat: e.repeat, uGap: e.gap, uChroma: e.chroma, uInt: e.intensity, uRot: rad(e.rotate), uCol: hex3(e.color), uC: [e.x ?? 0.5, 1 - (e.y ?? 0.5)] };
         case "dissolve": return { uCell: e.cell, uShape: Math.max(0, ["square", "circle", "tile"].indexOf(e.shape)), uAmt: e.amount, uEdge: e.edge, uTint: e.tint, uDots: e.dots, uLight: e.keep === "light" ? 1 : 0, uGap: e.gap, uInk: ink, uPaper: paper };
         case "irid": return { uBands: e.bands, uShift: e.shift, uMix: e.mix, uPearl: e.pearl, uSlope: e.source === "slope" ? 1 : 0, uAnim: e.anim ? 1 : 0 };
         case "led": return { uPitch: e.pitch, uSize: e.size, uGlow: e.glow, uOff: e.off, uGamma: e.contrast ?? 1, uByTone: e.bytone ? 1 : 0, uShape: Math.max(0, ["round", "square", "rgb"].indexOf(e.shape)) };
@@ -2161,14 +2206,27 @@ void main() {
       let input, ping = 0;
       if (job.grad) {
         const g = job.grad, n = Math.min(8, g.colors.length);
-        draw("gradient", srcTex, targets.list[0].f, {
+        const gu = {
           uType: ["mesh", "linear", "radial", "conic", "flow", "noise", "aura", "wavegrad", "paint", "folds"].indexOf(g.type), uN: n,
           uScale: g.scale ?? 1.2, uDetail: g.detail ?? 3, uStretch: g.stretch ?? 1, uContrast: g.contrast ?? 1,
           uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring", "aura", "smoke"].indexOf(g.noise || "clouds"),
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
           uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle),
           uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5, uEndless: +job.endless || 0,
-        }, w, h, k, job.seed);
+        };
+        if (g.type === "paint" && floatOK) {
+          // Paint flows in passes over a texture with a margin round the frame (see paintSeed in the shader).
+          const m = 0.3, dw = Math.round(w * (1 + 2 * m)), dh = Math.round(h * (1 + 2 * m)), dom = [-m, -m, 1 + 2 * m, 1 + 2 * m];
+          const A = floatTarget("paintA", dw, dh, "rgba"), B = floatTarget("paintB", dw, dh, "rgba"), pu = { ...gu, uPDom: dom, uPAsp: w / h };
+          const steps = Math.round(Math.min(8, Math.max(1, g.detail ?? 5)) * 4), passes = Math.ceil(steps / 2);
+          draw("gradient", srcTex, A.f, { ...pu, uPStage: 1 }, dw, dh, k, job.seed);
+          let src = A, dst = B, done = 0;
+          for (let i = 0; i < passes; i++) {
+            const sub = Math.round((steps * (i + 1)) / passes) - done, last = i === passes - 1;
+            draw("gradient", src.t, last ? targets.list[0].f : dst.f, { ...pu, uPStage: last ? 3 : 2, uPSub: sub }, last ? w : dw, last ? h : dh, k, job.seed);
+            done += sub; [src, dst] = [dst, src];
+          }
+        } else draw("gradient", srcTex, targets.list[0].f, gu, w, h, k, job.seed);
         input = targets.list[0].t; ping = 1;
       } else if (job.contours) {
         contourPass(job.contours, targets.list[0].f, w, h);
