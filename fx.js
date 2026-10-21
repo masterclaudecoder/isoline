@@ -1531,6 +1531,189 @@ void main() {
   o = vec4(clamp(c.rgb * (1.0 - uDim) + hot * g + mix(hot, vec3(1.0), 0.5) * core, 0.0, 1.0), c.a);
 }`,
 
+    // Banknote line work: rings around several centers, a rosette, or crossing waves, each family drawn as
+    // fine lines whose phase the picture's tone bends, so the picture shows through as engraving.
+    guilloche: `uniform float uMd; uniform float uSpace; uniform float uWidth; uniform float uCount; uniform float uTone; uniform float uOver; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper; uniform vec2 uC;
+float lineOf(float f, float w) { float px = min(fract(f), 1.0 - fract(f)) / max(fwidth(f), 1e-4); return 1.0 - smoothstep(w - 0.75, w + 0.75, px); }
+void main() {
+  vec4 c = tex(vUv); vec2 d = dp(), ds = uRes / uK, ctr = uC * ds; float m = min(ds.x, ds.y), tone = luma(c.rgb) * uTone * 2.0, w = uWidth * uK * 0.5, L = 0.0;
+  if (uMd < 0.5) {
+    for (int i = 0; i < 6; i++) { if (float(i) >= uCount) break; float a = 6.2831853 * float(i) / uCount + 0.4; vec2 e = ctr + vec2(cos(a), sin(a)) * m * 0.22 * step(1.5, uCount); L = max(L, lineOf(length(d - e) / uSpace + tone, w)); }
+  } else if (uMd < 1.5) {
+    vec2 q = d - ctr; float r = length(q), th = atan(q.y, q.x), amp = uSpace * 3.0;
+    L = max(lineOf((r + amp * sin(uCount * th + r / uSpace * 0.15)) / uSpace + tone, w), lineOf((r + amp * sin(uCount * th - r / uSpace * 0.15 + 1.0)) / uSpace + tone, w));
+  } else {
+    float k = 6.2831853 * uCount / ds.x, amp = uSpace * 4.0;
+    L = max(lineOf((d.y + amp * sin(d.x * k + d.y * 0.004)) / uSpace + tone, w), lineOf((d.y + amp * sin(d.x * k + 3.14159 + d.y * 0.004)) / uSpace + tone, w));
+  }
+  vec3 ink = uMono > 0.5 ? uInk : c.rgb * 0.8, bg = mix(uPaper, c.rgb, uOver);
+  o = vec4(mix(bg, ink, L), c.a);
+}`,
+
+    // Ridge lines: stacked lines lifted by the picture's brightness, each filled below so it hides the
+    // lines behind it, like a ridge plot.
+    ridge: `uniform float uSpace; uniform float uHeight; uniform float uWidth; uniform float uNoise; uniform float uFill; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
+float lift(float x, float i) { float l = luma(tex(toUv(vec2(x, i * uSpace))).rgb); return l * (1.0 + uNoise * (fbm(vec2(x * 0.03, i * 1.73)) - 0.5) * 2.0); }
+void main() {
+  vec2 d = dp(); float hm = uHeight * (1.0 + uNoise), w = uWidth * 0.5, aa = 0.75 / uK;
+  vec3 col = uPaper; float i = floor((d.y - hm) / uSpace) - 1.0;
+  for (int k = 0; k < 160; k++) {
+    float cv = i * uSpace + uHeight * lift(d.x, i);
+    if (cv + w + aa >= d.y || i * uSpace > d.y) {
+      vec3 pc = tex(toUv(vec2(d.x, i * uSpace))).rgb, ink = uMono > 0.5 ? uInk : pc;
+      col = mix(mix(uPaper, pc * 0.35 + uPaper * 0.2, uFill), ink, 1.0 - smoothstep(w - aa, w + aa, abs(d.y - cv)));
+      break;
+    }
+    i += 1.0;
+  }
+  o = vec4(col, 1.0);
+}`,
+
+    // Echo: copies of the picture, each smaller and turned a little further around a center, fading as
+    // they go, so it trails off into a spiral. Animated, the copies slide one step along per loop.
+    feedback: `uniform float uCopies; uniform float uZoom; uniform float uRot; uniform float uDecay; uniform float uHue; uniform float uAnim; uniform float uTime; uniform vec2 uC; uniform float uAdd;
+vec3 hueRot(vec3 c, float a) { vec3 k = vec3(0.57735); float ca = cos(a); return c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - ca); }
+void main() {
+  vec4 c = tex(vUv); vec2 ds = uRes / uK, d = dp(), ctr = uC * ds; float t = uAnim > 0.5 ? fract(uTime) : 0.0;
+  vec3 acc = c.rgb;
+  for (int i = 1; i <= 24; i++) {
+    float k = float(i); if (k > uCopies) break; float kt = k + t, a = uRot * kt;
+    vec2 q = ctr + mat2(cos(a), -sin(a), sin(a), cos(a)) * (d - ctr) * pow(uZoom, kt), uv = q / ds;
+    if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) continue;
+    // Copies fade out at their own edges rather than ending in a hard rectangle.
+    vec2 ed = min(uv, 1.0 - uv); float soft = smoothstep(0.0, 0.08, min(ed.x, ed.y));
+    float wgt = soft * pow(uDecay, kt) * (i == 1 ? max(t, 1.0 - uAnim) : 1.0) * (k == floor(uCopies) ? 1.0 - t : 1.0);
+    vec3 s = hueRot(tex(uv).rgb, uHue * kt) * wgt;
+    acc = uAdd > 0.5 ? acc + s * 0.5 : max(acc, s);
+  }
+  o = vec4(clamp(acc, 0.0, 1.0), c.a);
+}`,
+
+    // Glitch: strips of the picture torn sideways and blocks knocked out of place, with red and blue
+    // pulled apart where it breaks. Speed re-rolls the damage a whole number of times per loop.
+    glitch: `uniform float uSlices; uniform float uShift; uniform float uProb; uniform float uBlock; uniform float uBlockAmt; uniform float uSplit; uniform float uSpeed; uniform float uTime;
+void main() {
+  vec2 ds = uRes / uK, d = dp(); float fr = uSpeed > 0.0 ? floor(fract(uTime) * uSpeed) : 0.0, sd = uSeed * 0.37 + fr * 13.1;
+  float sh = ds.y / max(uSlices, 1.0), row = floor(d.y / sh + hash(vec2(floor(d.y / (sh * 3.0)), sd)) * 0.999);
+  vec2 off = vec2(0.0);
+  if (hash(vec2(row, sd + 1.7)) < uProb) off.x = (hash(vec2(row, sd + 4.1)) - 0.5) * 2.0 * uShift;
+  vec2 cell = floor(d / uBlock);
+  if (uBlockAmt > 0.0 && hash(cell + sd * 1.3) < uProb * 0.4) off += (vec2(hash(cell + 7.7 + sd), hash(cell + 3.3 + sd)) - 0.5) * uBlock * 2.0 * uBlockAmt;
+  float br = length(off) > 0.5 ? 1.0 : 0.0; vec2 sp = vec2(uSplit * br + uSplit * 0.15, 0.0);
+  vec4 c = tex(toUv(d - off));
+  o = vec4(tex(toUv(d - off + sp)).r, c.g, tex(toUv(d - off - sp)).b, c.a);
+}`,
+
+    // Pixel sort: runs of pixels brighter than the threshold are redrawn as a smooth run from one end's
+    // color to the other's, so bright areas melt into streaks. Stretch drags one line across instead.
+    pixsort: `uniform float uMd; uniform float uThr; uniform float uLen; uniform float uAngle; uniform float uPos; uniform float uBands;
+void main() {
+  vec2 d = dp(), dir = vec2(cos(uAngle), sin(uAngle)), nrm = vec2(-dir.y, dir.x), ds = uRes / uK; vec4 c = tex(vUv);
+  if (uMd > 0.5) {
+    vec2 ctr = ds * 0.5; float u = dot(d - ctr, dir), v = dot(d - ctr, nrm), lim = (uPos - 0.5) * length(ds);
+    if (u > lim) { if (uBands > 0.5) v = (floor(v / uBands) + 0.5) * uBands; c = tex(toUv(ctr + dir * lim + nrm * v)); }
+    o = c; return;
+  }
+  if (luma(c.rgb) < uThr) { o = c; return; }
+  float st = uLen / 48.0, a = 0.0, b = 0.0;
+  for (int i = 1; i <= 48; i++) { if (luma(tex(toUv(d - dir * st * float(i))).rgb) < uThr) break; a = st * float(i); }
+  for (int i = 1; i <= 48; i++) { if (luma(tex(toUv(d + dir * st * float(i))).rgb) < uThr) break; b = st * float(i); }
+  // Each end is then found to a fraction of a pixel, so neighboring runs don't step and ripple.
+  float ha = st * 0.5, hb = st * 0.5;
+  for (int i = 0; i < 5; i++) {
+    if (a < uLen && luma(tex(toUv(d - dir * (a + ha))).rgb) >= uThr) a += ha;
+    if (b < uLen && luma(tex(toUv(d + dir * (b + hb))).rgb) >= uThr) b += hb;
+    ha *= 0.5; hb *= 0.5;
+  }
+  vec3 c0 = tex(toUv(d - dir * a)).rgb, c1 = tex(toUv(d + dir * b)).rgb;
+  if (luma(c0) > luma(c1)) { vec3 tt = c0; c0 = c1; c1 = tt; }
+  o = vec4(mix(c0, c1, smoothstep(0.0, 1.0, a / max(a + b, 1e-3))), c.a);
+}`,
+
+    // Light streaks: bright parts of the picture smeared along 2 to 8 spokes, red and blue reaching a
+    // little different lengths, so highlights flare into glints and stars.
+    streaks: `uniform float uThr; uniform float uLen; uniform float uAngle; uniform float uPoints; uniform float uInt; uniform float uChroma;
+vec3 bright(vec2 uv) { vec3 c = tex(uv).rgb; return max(c - uThr, 0.0) / max(1.0 - uThr, 0.05); }
+void main() {
+  vec4 c = tex(vUv); vec3 acc = vec3(0.0); float nd = max(1.0, floor(uPoints * 0.5 + 0.5)), ws = 0.0;
+  for (int j = 0; j < 4; j++) {
+    if (float(j) >= nd) break; float a = uAngle + 3.14159265 * float(j) / nd; vec2 dir = vec2(cos(a), sin(a));
+    for (int k = 1; k <= 24; k++) {
+      float f = float(k) / 24.0, w = (1.0 - f) * (1.0 - f), s = f * uLen;
+      for (int sg = -1; sg <= 1; sg += 2) {
+        vec2 o2 = dir * float(sg);
+        acc += w * vec3(bright(vUv + toUv(o2 * s * (1.0 + uChroma * 0.2))).r, bright(vUv + toUv(o2 * s)).g, bright(vUv + toUv(o2 * s * (1.0 - uChroma * 0.2))).b);
+        ws += w;
+      }
+    }
+  }
+  o = vec4(clamp(c.rgb + acc / max(ws, 1.0) * uInt * 6.0 * nd, 0.0, 1.0), c.a);
+}`,
+
+    // Outline: the picture's edges as glowing neon on dark, as ink lines on paper, or the picture solarized
+    // (tones past the threshold flipped).
+    outline: `uniform float uMd; uniform float uThr; uniform float uWidth; uniform float uGlow; uniform float uKeep; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
+float sob(vec2 uv, float r) {
+  vec2 e = toUv(vec2(r));
+  float tl = luma(tex(uv + vec2(-e.x, e.y)).rgb), t = luma(tex(uv + vec2(0.0, e.y)).rgb), tr = luma(tex(uv + e).rgb);
+  float l = luma(tex(uv - vec2(e.x, 0.0)).rgb), rr = luma(tex(uv + vec2(e.x, 0.0)).rgb);
+  float bl = luma(tex(uv - e).rgb), b = luma(tex(uv - vec2(0.0, e.y)).rgb), br = luma(tex(uv + vec2(e.x, -e.y)).rgb);
+  return length(vec2(tr + 2.0 * rr + br - tl - 2.0 * l - bl, tl + 2.0 * t + tr - bl - 2.0 * b - br));
+}
+void main() {
+  vec4 c = tex(vUv);
+  if (uMd > 1.5) { o = vec4(mix(c.rgb, 1.0 - c.rgb, smoothstep(uThr - 0.08, uThr + 0.08, luma(c.rgb))), c.a); return; }
+  float e = smoothstep(uThr, uThr + 0.15, sob(vUv, uWidth)), g = smoothstep(uThr * 0.5, uThr + 0.3, sob(vUv, uWidth * 4.0)) * uGlow;
+  float mx = max(c.r, max(c.g, c.b)); vec3 hue = uMono > 0.5 ? uInk : c.rgb / max(mx, 0.08);
+  if (uMd < 0.5) o = vec4(clamp(c.rgb * uKeep * 0.6 + hue * (e + g * 0.5) + vec3(e * 0.25), 0.0, 1.0), c.a);
+  else o = vec4(mix(mix(uPaper, c.rgb, uKeep), uMono > 0.5 ? uInk : c.rgb * 0.55, clamp(e + g * 0.3, 0.0, 1.0)), c.a);
+}`,
+
+    // Grid: tiles that split into four wherever the picture changes inside them, each filled with its
+    // color and outlined; or Truchet, quarter arcs per cell that thicken where the picture is dark.
+    grid: `uniform float uMd; uniform float uCell; uniform float uDepth; uniform float uThr; uniform float uStroke; uniform float uRad; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
+void main() {
+  vec2 d = dp(); vec4 c0 = tex(vUv); float aa = 0.75 / uK;
+  if (uMd > 0.5) {
+    vec2 id = floor(d / uCell), l = d / uCell - id; float S = uCell;
+    if (hash(id + uSeed * 0.71) < 0.5) l.x = 1.0 - l.x;
+    float r = min(abs(length(l) - 0.5), abs(length(l - 1.0) - 0.5)) * S;
+    vec3 pc = tex(toUv((id + 0.5) * S)).rgb; float w = uStroke * (0.25 + 1.5 * (1.0 - luma(pc)));
+    o = vec4(mix(uPaper, uMono > 0.5 ? uInk : pc, 1.0 - smoothstep(w * 0.5 - aa, w * 0.5 + aa, r)), 1.0); return;
+  }
+  float S = uCell; vec2 id = floor(d / S);
+  for (int i = 0; i < 6; i++) {
+    if (float(i) >= uDepth) break;
+    id = floor(d / S); vec2 b = id * S;
+    float l1 = luma(tex(toUv(b + S * vec2(0.25))).rgb), l2 = luma(tex(toUv(b + S * vec2(0.75, 0.25))).rgb), l3 = luma(tex(toUv(b + S * vec2(0.25, 0.75))).rgb), l4 = luma(tex(toUv(b + S * vec2(0.75))).rgb);
+    if (max(max(l1, l2), max(l3, l4)) - min(min(l1, l2), min(l3, l4)) < uThr || S < 6.0) break;
+    S *= 0.5;
+  }
+  id = floor(d / S); vec2 ctr = (id + 0.5) * S, p = d - ctr;
+  vec3 fill = (tex(toUv(ctr)).rgb * 2.0 + tex(toUv(ctr + S * 0.25)).rgb + tex(toUv(ctr - S * 0.25)).rgb) * 0.25;
+  float hb = S * 0.5 - uStroke * 0.5, sd = sdBox(p, vec2(hb), clamp(uRad, 0.0, 0.5) * hb * 2.0);
+  vec3 line = uMono > 0.5 ? uInk : fill * 0.55;
+  vec3 col = mix(line, fill, smoothstep(aa, -aa, sd + uStroke * 0.5));
+  o = vec4(mix(uMono > 0.5 ? uPaper : line, col, smoothstep(aa, -aa, sd)), 1.0);
+}`,
+
+    // Beam: a glowing outline (ring, arch, rounded square or star) with a white-hot core and a spectral
+    // fringe, optionally repeated inward.
+    beam: `uniform float uShape; uniform float uSize; uniform float uThick; uniform float uGlow; uniform float uRepeat; uniform float uGap; uniform float uChroma; uniform float uInt; uniform float uRot; uniform vec3 uCol; uniform vec2 uC;
+void main() {
+  vec4 c = tex(vUv); vec2 ds = uRes / uK, q = dp() - uC * ds; float R = uSize * min(ds.x, ds.y) * 0.5;
+  q = mat2(cos(uRot), -sin(uRot), sin(uRot), cos(uRot)) * q;
+  float sd = uShape < 0.5 ? length(q) - R : uShape < 1.5 ? (q.y > 0.0 ? length(q) - R : abs(q.x) - R) : uShape < 2.5 ? sdBox(q, vec2(R), R * 0.3) : sdStar(q, R, 0.45);
+  vec3 acc = vec3(0.0);
+  for (int k = 0; k < 8; k++) {
+    if (float(k) >= uRepeat) break;
+    float x = abs(sd + float(k) * uGap), f = pow(0.72, float(k));
+    vec3 gw = uGlow * (1.0 + uChroma * vec3(0.45, 0.0, -0.35));
+    acc += f * (uCol * exp(-x / max(gw, vec3(0.5))) + vec3(1.0) * exp(-x / max(uThick, 0.3)) * 0.9);
+  }
+  o = vec4(clamp(c.rgb + acc * uInt, 0.0, 1.0), c.a);
+}`,
+
     grain: `uniform float uAmt; uniform float uSize; uniform float uMono; uniform float uSoft; uniform float uAnim; uniform float uTime;
 void main() {
   vec4 c = tex(vUv);
@@ -1546,7 +1729,7 @@ void main() {
   };
 
   // Default pipeline order when effects are added; the app can reorder freely.
-  const ORDER = ["liquify", "wave", "smear", "swirl", "bulge", "ripple", "touch", "trail", "sea", "water", "kaleido", "glass", "mesh", "lens", "rays", "chrome", "heatmap", "paper", "cmyk", "blur", "dof", "bloom", "glowlines", "emboss", "irid", "gradmap", "posterize", "pixel", "dissolve", "voronoi", "halftone", "linescreen", "riso", "ascii", "glyphs", "dither", "led", "scan", "chroma", "vignette", "grain"];
+  const ORDER = ["liquify", "wave", "smear", "pixsort", "glitch", "swirl", "bulge", "ripple", "touch", "trail", "sea", "water", "kaleido", "glass", "mesh", "lens", "rays", "chrome", "heatmap", "paper", "cmyk", "blur", "dof", "feedback", "bloom", "streaks", "glowlines", "beam", "emboss", "irid", "gradmap", "posterize", "pixel", "dissolve", "grid", "voronoi", "halftone", "linescreen", "riso", "guilloche", "ridge", "outline", "ascii", "glyphs", "dither", "led", "scan", "chroma", "vignette", "grain"];
   const CHARSETS = { ascii: " .:-=+*#%@", blocks: " ░▒▓█", dots: " ·•●", binary: " 01", lines: " ─═│╬" };
   // Glyph field sets: picked at random per cell, so order doesn't matter and there's no blank.
   const GLYPHSETS = {
@@ -1838,6 +2021,15 @@ void main() {
         case "riso": return { uSize: e.size, uOff: e.offset, uGrain: e.grain, uInkA: hex3(e.inkA), uInkB: hex3(e.inkB), uPaper: hex3(e.paper) };
         case "voronoi": return { uCell: e.cell, uEdge: e.edge };
         case "scan": return { uSpace: e.spacing, uStr: e.strength };
+        case "guilloche": return { uMd: Math.max(0, ["rings", "rosette", "waves"].indexOf(e.mode)), uSpace: e.spacing, uWidth: e.width, uCount: e.count, uTone: e.tone, uOver: e.over, uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uC: [e.x ?? 0.5, 1 - (e.y ?? 0.5)] };
+        case "ridge": return { uSpace: e.spacing, uHeight: e.height, uWidth: e.width, uNoise: e.noise, uFill: e.fill, uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
+        case "feedback": return { uCopies: e.copies, uZoom: e.zoom, uRot: rad(e.rotate), uDecay: e.decay, uHue: rad(e.hue), uAnim: e.anim ? 1 : 0, uAdd: e.blend === "add" ? 1 : 0, uC: [e.x ?? 0.5, 1 - (e.y ?? 0.5)] };
+        case "glitch": return { uSlices: e.slices, uShift: e.shift, uProb: e.amount, uBlock: e.block, uBlockAmt: e.blocks, uSplit: e.split, uSpeed: Math.round(e.speed || 0) };
+        case "pixsort": return { uMd: e.mode === "stretch" ? 1 : 0, uThr: e.threshold, uLen: e.length, uAngle: rad(e.angle), uPos: e.pos, uBands: e.bands };
+        case "streaks": return { uThr: e.threshold, uLen: e.length, uAngle: rad(e.angle), uPoints: e.points, uInt: e.intensity, uChroma: e.chroma };
+        case "outline": return { uMd: Math.max(0, ["neon", "ink", "solarize"].indexOf(e.mode)), uThr: e.threshold, uWidth: e.width, uGlow: e.glow, uKeep: e.keep, uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
+        case "grid": return { uMd: e.mode === "truchet" ? 1 : 0, uCell: e.cell, uDepth: e.depth, uThr: e.threshold, uStroke: e.stroke, uRad: e.radius, uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
+        case "beam": return { uShape: Math.max(0, ["ring", "arch", "square", "star"].indexOf(e.shape)), uSize: e.size, uThick: e.core, uGlow: e.glow, uRepeat: e.repeat, uGap: e.gap, uChroma: e.chroma, uInt: e.intensity, uRot: rad(e.rotate), uCol: hex3(e.color), uC: [e.x ?? 0.5, 1 - (e.y ?? 0.5)] };
         case "dissolve": return { uCell: e.cell, uShape: Math.max(0, ["square", "circle", "tile"].indexOf(e.shape)), uAmt: e.amount, uEdge: e.edge, uTint: e.tint, uDots: e.dots, uLight: e.keep === "light" ? 1 : 0, uGap: e.gap, uInk: ink, uPaper: paper };
         case "irid": return { uBands: e.bands, uShift: e.shift, uMix: e.mix, uPearl: e.pearl, uSlope: e.source === "slope" ? 1 : 0, uAnim: e.anim ? 1 : 0 };
         case "led": return { uPitch: e.pitch, uSize: e.size, uGlow: e.glow, uOff: e.off, uGamma: e.contrast ?? 1, uByTone: e.bytone ? 1 : 0, uShape: Math.max(0, ["round", "square", "rgb"].indexOf(e.shape)) };

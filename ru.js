@@ -1237,6 +1237,26 @@ window.I18N_RU = {
   "One more after this": "И ещё один после этого",
   "That look would take too long to draw, so it was skipped": "Этот образ рисовался бы слишком долго, поэтому он пропущен",
   "Isoline: patterns, palettes and design tokens": "Isoline: узоры, палитры и дизайн-токены",
+  // ---------- new effects ----------
+  "Glitch": "Глитч", "Strips": "Полосы", "Tear": "Разрыв", "Color split": "Разлёт цвета", "Re-roll": "Перебрасывать",
+  "Pixel sort": "Сортировка пикселей", "Sort": "Сортировка", "Start": "Начало",
+  "Echo": "Эхо", "Lighten": "Светлее", "Additive": "Сложение", "Copies": "Копии",
+  "Light streaks": "Световые лучи", "Color fringe": "Цветная кайма", "Neon shape": "Неоновая фигура", "Arch": "Арка", "Repeats": "Повторы",
+  "Guilloche": "Гильош", "Rosette": "Розетка", "Centers": "Центры", "Petals": "Лепестки",
+  "Ridge lines": "Линии хребтов", "Fill": "Заливка", "Split grid": "Деление сетки", "Truchet": "Трюше", "Splits": "Деления",
+  "Neon": "Неон", "Solarize": "Соляризация",
+  "How much the picture bends the lines": "Насколько изображение изгибает линии",
+  "Shows the picture behind the lines": "Показывает изображение за линиями",
+  "How high bright parts lift each line": "Насколько высоко светлые места поднимают каждую линию",
+  "Shows the picture under each line": "Показывает изображение под каждой линией",
+  "How quickly the copies fade": "Как быстро гаснут копии",
+  "How much smaller each copy is": "Насколько меньше каждая следующая копия",
+  "How many times per loop the damage changes": "Сколько раз за цикл меняются помехи",
+  "Share of strips and blocks that break": "Доля сломанных полос и блоков",
+  "Only runs brighter than this sort": "Сортируются только участки ярче этого",
+  "Only parts brighter than this flare": "Лучи дают только места ярче этого",
+  "How much of the picture stays under the lines": "Сколько изображения остаётся под линиями",
+  "How much change inside a tile makes it split": "Насколько сильная разница внутри плитки её делит",
 };
 
 // The kit preview's demo copy in Russian. It shows when the Builder's Cyrillic switch is on, so the
