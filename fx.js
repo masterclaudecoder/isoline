@@ -1685,7 +1685,7 @@ void main() {
 }`,
 
     // Glowing lines at even steps of the picture's tone, over a darkened copy of it.
-    glowlines: `uniform float uLevels; uniform float uWidth; uniform float uGlow; uniform float uDim; uniform float uCore; uniform float uAnim; uniform float uTime;
+    glowlines: `uniform float uLevels; uniform float uWidth; uniform float uGlow; uniform float uDim; uniform float uCore; uniform float uAnim; uniform float uTime; uniform float uSide;
 float tone(vec2 uv) { vec2 e = toUv(vec2(uWidth * 0.35)); return 0.25 * (luma(tex(uv + vec2(e.x, 0.0)).rgb) + luma(tex(uv - vec2(e.x, 0.0)).rgb) + luma(tex(uv + vec2(0.0, e.y)).rgb) + luma(tex(uv - vec2(0.0, e.y)).rgb)); }
 void main() {
   vec4 c = tex(vUv);
@@ -1693,9 +1693,10 @@ void main() {
   float e = max(1.0, uWidth * 0.5), t = tone(vUv), v = t * uLevels + uAnim * uTime;
   vec2 o2 = toUv(vec2(e));
   float slope = length(vec2(tone(vUv + vec2(o2.x, 0.0)) - tone(vUv - vec2(o2.x, 0.0)), tone(vUv + vec2(0.0, o2.y)) - tone(vUv - vec2(0.0, o2.y)))) / (2.0 * e) * uLevels;
-  float px = min(fract(v), 1.0 - fract(v)) / max(slope, 1e-5);
-  // A wide halo and a tighter body, like light bleeding out of a tube.
-  float w = max(0.5, uWidth), g = (exp(-px / w) * 0.55 + exp(-px / (w * 0.3)) * 0.75) * uGlow, core = uCore * (1.0 - smoothstep(0.5, 1.5, px * uK));
+  float px = min(fract(v), 1.0 - fract(v)) / max(slope, 1e-5), pu = fract(v) / max(slope, 1e-5);
+  // A wide halo and a tighter body, like light bleeding out of a tube. One side throws the halo off one
+  // side of the line only, as light bent through a fold, with a hard edge on the other.
+  float w = max(0.5, uWidth), g = (mix(exp(-px / w), exp(-pu / (w * 1.6)), uSide) * 0.55 + exp(-px / (w * mix(0.3, 0.08, uSide))) * 0.75) * uGlow, core = uCore * (1.0 - smoothstep(0.5, 1.5, px * uK));
   // The line's color is the picture's own hue at full strength, so it glows rather than greys out.
   float mx = max(c.r, max(c.g, c.b));
   vec3 hot = mix(c.rgb / max(mx, 0.08), vec3(1.0), 0.12) * 1.1;
@@ -2198,7 +2199,7 @@ void main() {
         case "irid": return { uBands: e.bands, uShift: e.shift, uMix: e.mix, uPearl: e.pearl, uSlope: e.source === "slope" ? 1 : 0, uAnim: e.anim ? 1 : 0, uMid: e.mid || 0 };
         case "led": return { uPitch: e.pitch, uSize: e.size, uGlow: e.glow, uOff: e.off, uGamma: e.contrast ?? 1, uByTone: e.bytone ? 1 : 0, uShape: Math.max(0, ["round", "square", "rgb"].indexOf(e.shape)) };
         case "smear": return { uLen: e.length, uAngle: rad(e.angle), uBand: e.band, uAmt: e.amount, uJit: e.jitter, uThr: e.threshold };
-        case "glowlines": return { uLevels: e.levels, uWidth: e.width, uGlow: e.glow, uDim: e.dim, uCore: e.core, uAnim: e.anim ? 1 : 0 };
+        case "glowlines": return { uLevels: e.levels, uWidth: e.width, uGlow: e.glow, uDim: e.dim, uCore: e.core, uAnim: e.anim ? 1 : 0, uSide: e.side || 0 };
         case "bulge": return { uAmt: e.amount, uRad: e.radius, uC: [e.x, 1 - e.y] };
         case "ripple": return { uAmp: e.amp, uLen: e.length, uDecay: e.decay, uShade: e.shade, uC: [e.x, 1 - e.y], uAnim: e.anim ? Math.round(e.speed || 3) : 0 };
         case "water": return { uAmt: e.amount, uScale: e.scale, uCaustic: e.caustic, uAnim: e.anim ? 1 : 0 };

@@ -1280,6 +1280,7 @@ window.I18N_RU = {
   "Design colors": "Цвета дизайна",
   "Ripple size": "Размер ряби",
   "Midtones only": "Только полутона",
+  "One side": "С одной стороны",
 };
 
 // The kit preview's demo copy in Russian. It shows when the Builder's Cyrillic switch is on, so the
