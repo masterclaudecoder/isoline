@@ -70,19 +70,23 @@ vec3 frostDisp(vec2 uv, float rad, vec2 disp, int n) {
   }
   return c / float(n);
 }
-// Liquid glass inside a shape. sd < 0 inside (in px), n is the outward normal, bez the bezel width.
-// The bezel samples from further out, so what sits just past the edge wraps into the rim.
-vec3 liquid(vec2 uv, float sd, vec2 n, float bez, float refr, float frost, float rim, float disp) {
-  float x = 1.0 - clamp(-sd / bez, 0.0, 1.0), bend = x * x * x * (1.0 + x);
-  float blur = frost + bend * refr * bez * 0.12;
-  vec2 off = n * bend * refr * bez * 0.8;
-  vec3 c = frostDisp(uv + toUv(off), blur, toUv(off * 0.16 * disp + n * bend * disp * bez * 0.04), blur > 0.5 ? 16 : 1);
-  float l = luma(c);
-  c = clamp(mix(vec3(l), c, 1.12), 0.0, 1.0);
-  c = mix(c, vec3(1.0), 0.05);
-  float facing = pow(abs(dot(n, normalize(vec2(-0.6, 0.8)))), 2.0), hair = max(1.1, 0.9 / uK);
-  c += rim * (0.85 * exp(sd / hair) * (0.2 + 0.8 * facing) + 0.1 * x * x * x * facing);
-  c *= 1.0 - 0.05 * x * x * (1.0 - facing);
+// Glass, shared by Fluted glass, Glass blocks and Liquid glass: the material of the glass objects on a
+// pane lying over the picture. g is the slope of the pane's surface (height per px, rising inward) and sd
+// the distance to its edge (px, < 0 inside). The view ray bends in through the surface, crosses the pane's
+// thickness (px) and lands on the picture behind, so steep edges bend the most and a full dome turns its
+// patch over. Frost blurs what shows through, tint fogs it milky like sea glass, and light sets the shading,
+// the highlight and the hairline on the edges that face it (from the top left).
+float glassSlope(float e, float b) { float x = 1.0 - clamp(e / max(b, 1e-3), 0.0, 1.0); return min(x / sqrt(max(1.0 - x * x, 0.0025)), 4.0); }
+vec3 glassMat(vec2 uv, vec2 g, float sd, float thick, float frost, float tint, float light, int taps) {
+  vec3 n = normalize(vec3(-g, 1.0)), r = refract(vec3(0.0, 0.0, -1.0), n, 1.0 / 1.5);
+  vec2 off = r.xy / max(-r.z, 0.2) * thick;
+  vec3 c = frostDisp(uv + toUv(off), frost, toUv(off * 0.06), frost > 0.5 ? taps : 1);
+  c = mix(c, mix(vec3(luma(c)), c, 0.75) * 0.72 + 0.3, tint);
+  vec3 L = normalize(vec3(-0.55, 0.65, 0.55));
+  float sp = pow(max(dot(reflect(vec3(0.0, 0.0, -1.0), n), L), 0.0), 28.0), fr = pow(1.0 - n.z, 1.5);
+  float face = dot(normalize(n.xy + 1e-6), normalize(L.xy)), hair = max(1.0, 0.9 / uK);
+  c *= 1.0 + light * 0.8 * (dot(n, L) - L.z);
+  c += light * (0.7 * sp + 0.12 * fr + 0.55 * exp(min(sd, 0.0) / hair) * (0.25 + 0.75 * max(face, 0.0)));
   return clamp(c, 0.0, 1.0);
 }
 `;
@@ -899,29 +903,24 @@ void main() {
   o = tex(vUv + toUv(off * uAmt * uScale * 0.5));
 }`,
 
-    glass: `uniform float uWidth; uniform float uAngle; uniform float uStr; uniform float uFrost; uniform float uLight;
-// Each rib is a half-cylinder lens. Four sub-pixel samples across the rib edge remove the stair-stepping;
-// a hairline catches the light on each rib's leading edge, and red and blue split slightly as they bend.
+    glass: `uniform float uWidth; uniform float uAngle; uniform float uRound; uniform float uThick; uniform float uFrost; uniform float uTint; uniform float uLight;
+// Fluted glass: ribs of the shared glass, flat on top and rounded over toward each edge (a half-cylinder
+// at full roundness). Four sub-pixel samples across the rib edge remove the stair-stepping.
 void main() {
   vec2 dir = vec2(cos(uAngle), sin(uAngle)), nrm = vec2(-dir.y, dir.x);
-  int n = uFrost > 0.01 ? 8 : 1;
   vec3 acc = vec3(0.0);
   for (int s = 0; s < 4; s++) {
     vec2 d = dp() + nrm * ((float(s) - 1.5) * 0.25 / uK);
-    float l = fract(dot(d, nrm) / uWidth) - 0.5, bend = sin(l * 3.14159);
-    vec2 uv = vUv + toUv(nrm * bend * uStr * uWidth * 0.5);
-    vec3 c = frostDisp(uv, uFrost * uWidth * 0.3, toUv(nrm * bend * uStr * uWidth * 0.035), n);
-    float edge = (0.5 - abs(l)) * uWidth, hair = max(0.9, 0.9 / uK);
-    c *= 1.0 - 0.07 * uLight * l;
-    c += uLight * 0.22 * exp(-edge / hair) * (l < 0.0 ? 1.0 : 0.25);
-    acc += c;
+    float l = fract(dot(d, nrm) / uWidth) - 0.5, e = (0.5 - abs(l)) * uWidth;
+    vec2 g = -nrm * sign(l) * glassSlope(e, max(0.5 / uK, uRound * 0.5 * uWidth));
+    acc += glassMat(vUv, g, -e, uThick * uWidth * 0.5, uFrost * uWidth * 0.3, uTint, uLight, 8);
   }
-  o = vec4(clamp(acc / 4.0, 0.0, 1.0), tex(vUv).a);
+  o = vec4(acc / 4.0, tex(vUv).a);
 }`,
 
-    mesh: `uniform float uCell; uniform float uStr; uniform float uFrost; uniform float uGrout; uniform float uRim; uniform float uDisp; uniform float uRad; uniform float uZoom; uniform float uShift; uniform float uBevel; uniform float uFade; uniform float uFadeAng; uniform float uHexT;
-// Glass blocks: a grid of rounded liquid-glass tiles, each magnifying its own patch, separated by a small gap.
-// Hex lays the tiles out as a honeycomb of six-sided cells instead.
+    mesh: `uniform float uCell; uniform float uGap; uniform float uRad; uniform float uRound; uniform float uThick; uniform float uFrost; uniform float uTint; uniform float uLight; uniform float uFade; uniform float uFadeAng; uniform float uHexT;
+// Glass blocks: a grid of tiles of the shared glass, each rounded over toward its edges (a pillow at full
+// roundness), separated by a gap. Hex lays the tiles out as a honeycomb of six-sided cells instead.
 float sdHexT(vec2 p, float r) {
   const vec3 k = vec3(-0.866025404, 0.5, 0.577350269);
   p = abs(p); p -= 2.0 * min(dot(k.xy, p), 0.0) * k.xy; p -= vec2(clamp(p.x, -k.z * r, k.z * r), r);
@@ -929,26 +928,26 @@ float sdHexT(vec2 p, float r) {
 }
 float tileSD(vec2 p, vec2 hb, float rad) { return uHexT > 0.5 ? sdHexT(p.yx, hb.x - rad) - rad : sdBox(p, hb, rad); }
 void main() {
-  vec2 d = dp(), id = floor(d / uCell), c = (id + 0.5) * uCell;
+  // Tiles are a whole number of render pixels wide, so every tile and every gap meets the pixel grid the
+  // same way (fractional sizes drew some gaps darker than others), and a gap is never thinner than a pixel.
+  float cell = max(2.0, floor(uCell * uK + 0.5)) / uK;
+  vec2 d = dp(), id = floor(d / cell), c = (id + 0.5) * cell;
   if (uHexT > 0.5) {
-    vec2 rr = vec2(1.0, 1.7320508), q = d / uCell, ha = mod(q, rr) - rr * 0.5, hb2 = mod(q - rr * 0.5, rr) - rr * 0.5;
-    c = d - (dot(ha, ha) < dot(hb2, hb2) ? ha : hb2) * uCell;
+    vec2 rr = vec2(1.0, 1.7320508), q = d / cell, ha = mod(q, rr) - rr * 0.5, hb2 = mod(q - rr * 0.5, rr) - rr * 0.5;
+    c = d - (dot(ha, ha) < dot(hb2, hb2) ? ha : hb2) * cell;
   }
   vec2 p = d - c;
-  float gap = uGrout * uCell * 0.035;
-  vec2 hb = vec2(uCell * 0.5 - gap * 0.5);
+  float gap = uGap > 0.0 ? max(uGap * cell * 0.04, 1.0 / uK) : 0.0;
+  vec2 hb = vec2(cell * 0.5 - gap * 0.5);
   float rad = clamp(uRad, 0.0, 0.5) * (uHexT > 0.5 ? 1.0 : 2.0) * hb.x;
   float sd = tileSD(p, hb, rad);
   vec2 n = normalize(vec2(tileSD(p + vec2(0.5, 0.0), hb, rad) - tileSD(p - vec2(0.5, 0.0), hb, rad), tileSD(p + vec2(0.0, 0.5), hb, rad) - tileSD(p - vec2(0.0, 0.5), hb, rad)) + 1e-6);
-  // Magnify zooms each tile's patch; past 1 it turns upside down, like a drop of water. Offset slides it.
-  vec2 src = c + p * (1.0 - uZoom) + vec2(-0.7071, 0.7071) * uShift * uCell;
-  vec3 inside = liquid(toUv(src), sd, n, uCell * 0.2, uStr, uFrost * uCell * 0.09, uRim, uDisp);
-  // Bevel: each tile domes like a pillow, lit from the top left.
-  inside *= 1.0 + uBevel * 0.35 * dot(p / max(hb, vec2(1.0)), vec2(-0.7071, 0.7071));
+  vec2 g = -n * glassSlope(-sd, max(0.5 / uK, uRound * hb.x));
+  vec3 inside = glassMat(vUv, g, sd, uThick * hb.x, uFrost * cell * 0.15, uTint, uLight, 16);
   vec4 base = tex(vUv);
-  float shadow = 0.22 * exp(-max(tileSD(p + vec2(0.0, uCell * 0.02), hb, rad), 0.0) / (uCell * 0.05));
+  float shadow = 0.22 * exp(-max(tileSD(p + vec2(0.0, cell * 0.02), hb, rad), 0.0) / (cell * 0.05));
   vec3 outside = base.rgb * (1.0 - shadow);
-  float aa = 0.75 / uK;
+  float aa = 0.6 / uK;
   // Fade: tiles thin out toward the fade angle (0° right, 90° up), a whole tile at a time.
   vec2 fd = vec2(cos(uFadeAng), sin(uFadeAng)), cu = toUv(c) - 0.5;
   float keep = mix(1.0, smoothstep(0.55, -0.55, dot(cu * vec2(uRes.x / uRes.y, 1.0), fd)), uFade);
@@ -1408,9 +1407,8 @@ void main() {
   o = tex(toUv(c + r * vec2(cos(a), sin(a))));
 }`,
 
-    lens: `uniform float uShape; uniform float uSize; uniform float uRefr; uniform float uFrost; uniform float uRim; uniform float uDisp; uniform vec2 uC;
-// Liquid glass: a flat pane whose rounded bezel bends what's behind it, with a frosted body,
-// a hairline highlight on the edges facing the light and a soft contact shadow.
+    lens: `uniform float uShape; uniform float uSize; uniform float uRound; uniform float uThick; uniform float uFrost; uniform float uTint; uniform float uLight; uniform vec2 uC;
+// Liquid glass: one pane of the shared glass, rounded over toward its edges, with a soft contact shadow.
 void main() {
   vec2 res = uRes / uK; float m = min(res.x, res.y);
   vec2 p = dp() - uC * res, hb; float rad;
@@ -1419,13 +1417,13 @@ void main() {
   else { hb = vec2(uSize * m * 0.5); rad = uSize * m * 0.16; }
   float sd = sdBox(p, hb, rad);
   vec2 n = normalize(vec2(sdBox(p + vec2(0.5, 0.0), hb, rad) - sdBox(p - vec2(0.5, 0.0), hb, rad), sdBox(p + vec2(0.0, 0.5), hb, rad) - sdBox(p - vec2(0.0, 0.5), hb, rad)) + 1e-6);
-  float bez = min(min(hb.x, hb.y) * 0.6, m * 0.085);
+  float hm = min(hb.x, hb.y);
+  vec2 g = -n * glassSlope(-sd, max(0.5 / uK, uRound * hm));
   vec4 base = tex(vUv);
   float shadow = 0.16 * exp(-max(sdBox(p + vec2(0.0, m * 0.014), hb, rad), 0.0) / (m * 0.03));
-  vec3 outside = base.rgb * (1.0 - shadow);
-  vec3 inside = liquid(vUv, sd, n, bez, uRefr, uFrost * m * 0.03, uRim, uDisp);
+  vec3 inside = glassMat(vUv, g, sd, uThick * hm * 0.5, uFrost * m * 0.03, uTint, uLight, 16);
   float aa = 0.75 / uK;
-  o = vec4(mix(outside, inside, smoothstep(aa, -aa, sd)), base.a);
+  o = vec4(mix(base.rgb * (1.0 - shadow), inside, smoothstep(aa, -aa, sd)), base.a);
 }`,
 
     blur: `uniform float uAmt; uniform float uDir; uniform float uStart; uniform sampler2D uTex2;
@@ -2113,8 +2111,8 @@ void main() {
     function effectUniforms(id, e, ink, paper) {
       switch (id) {
         case "liquify": return { uAmt: e.amount, uScale: e.scale };
-        case "glass": return { uWidth: e.width, uAngle: rad(e.angle), uStr: e.strength, uFrost: e.frost ?? 0.2, uLight: e.light ?? 0.5 };
-        case "mesh": return { uCell: e.cell, uStr: e.strength, uFrost: e.frost ?? 0.3, uGrout: e.grout ?? 1, uRim: e.rim ?? 0.6, uDisp: e.disp ?? 0.5, uRad: e.radius ?? 0.25, uZoom: e.zoom ?? 0.16 * e.strength, uShift: e.shift || 0, uBevel: e.bevel || 0, uFade: e.fade || 0, uFadeAng: rad(e.fadeAngle ?? 45), uHexT: e.layout === "hex" ? 1 : 0 };
+        case "glass": return { uWidth: e.width, uAngle: rad(e.angle), uRound: e.round ?? 1, uThick: e.thick ?? 0.6, uFrost: e.frost ?? 0.2, uTint: e.tint || 0, uLight: e.light ?? 0.5 };
+        case "mesh": return { uCell: e.cell, uGap: e.gap ?? 1, uRad: e.radius ?? 0.25, uRound: e.round ?? 0.4, uThick: e.thick ?? 0.6, uFrost: e.frost ?? 0.3, uTint: e.tint || 0, uLight: e.light ?? 0.6, uFade: e.fade || 0, uFadeAng: rad(e.fadeAngle ?? 45), uHexT: e.layout === "hex" ? 1 : 0 };
         case "pixel": return { uSize: e.size, uBevel: e.bevel };
         case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)), uHex: e.grid === "hex" ? 1 : 0, uTurn: e.turn ? 1 : 0, uTone: e.tone ? 1 : 0, uEven: e.even ? 1 : 0, uMerge: e.merge === false ? 0 : 1, uClassic: e.classic ? 1 : 0 };
         case "ascii": {
@@ -2130,7 +2128,7 @@ void main() {
         case "wave": return { uAmp: e.amp, uLen: e.length, uAngle: rad(e.angle) };
         case "swirl": return { uAmt: e.amount, uRad: e.radius, uC: [e.x, 1 - e.y] };
         case "kaleido": return { uSeg: e.segments, uRot: rad(e.rotate), uZoom: e.zoom };
-        case "lens": return { uShape: ["circle", "pill", "square"].indexOf(e.shape), uSize: e.size, uRefr: e.refraction, uFrost: e.frost, uRim: e.rim, uDisp: e.disp ?? 0.5, uC: [e.x, 1 - e.y] };
+        case "lens": return { uShape: ["circle", "pill", "square"].indexOf(e.shape), uSize: e.size, uRound: e.round ?? 0.6, uThick: e.thick ?? 0.8, uFrost: e.frost, uTint: e.tint || 0, uLight: e.light ?? 0.6, uC: [e.x, 1 - e.y] };
         case "blur": return { uAmt: e.amount, uDir: ["top", "bottom", "left", "right", "center", "even"].indexOf(e.dir), uStart: e.start };
         case "dof": return { uAmt: e.amount, uF: [e.x ?? 0.5, e.y ?? 0.5], uFocus: e.focus ?? 0.12, uFall: e.falloff ?? 0.35, uBand: e.shape === "band" ? 1 : 0, uAngle: rad(e.angle || 0), uBokeh: e.bokeh ?? 0.4 };
         case "bloom": return { uThr: e.threshold, uRad: e.radius, uInt: e.intensity };

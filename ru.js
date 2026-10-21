@@ -1267,6 +1267,13 @@ window.I18N_RU = {
   "Travels on in one direction": "Движется дальше в одном направлении",
   "Goes back and forth along a line": "Ходит туда и обратно по линии",
   "Goes round in a circle": "Ходит по кругу",
+  "Roundness": "Скругление",
+  "How far each block rounds over from its edges. At full it domes like a pillow": "Насколько блок скругляется от краёв. На максимуме он выпуклый, как подушка",
+  "How far each rib rounds over from its edges": "Насколько ребро скругляется от краёв",
+  "How far the pane rounds over from its edges": "Насколько панель скругляется от краёв",
+  "How deep the glass is. Thicker glass bends the picture more": "Глубина стекла. Чем толще стекло, тем сильнее оно преломляет картинку",
+  "How deep the glass is. Thicker glass bends the picture more, and full domes turn their patch over": "Глубина стекла. Чем толще стекло, тем сильнее оно преломляет картинку, а полные купола переворачивают свой участок",
+  "Fogs the glass milky, like sea glass": "Делает стекло молочным, как морское стекло",
 };
 
 // The kit preview's demo copy in Russian. It shows when the Builder's Cyrillic switch is on, so the
