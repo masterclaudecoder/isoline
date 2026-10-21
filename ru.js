@@ -1274,6 +1274,9 @@ window.I18N_RU = {
   "How deep the glass is. Thicker glass bends the picture more": "Глубина стекла. Чем толще стекло, тем сильнее оно преломляет картинку",
   "How deep the glass is. Thicker glass bends the picture more, and full domes turn their patch over": "Глубина стекла. Чем толще стекло, тем сильнее оно преломляет картинку, а полные купола переворачивают свой участок",
   "Fogs the glass milky, like sea glass": "Делает стекло молочным, как морское стекло",
+  "Curve": "Изгиб",
+  "Jag": "Зубцы",
+  "Prism": "Призма",
 };
 
 // The kit preview's demo copy in Russian. It shows when the Builder's Cyrillic switch is on, so the

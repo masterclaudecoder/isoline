@@ -653,6 +653,31 @@ vec3 paintSeed(vec2 q) {
   float N = float(uN - 1), x = tri * N, kk = min(floor(x), N - 1.0), f = x - kk, h = max(0.5 * clamp(uSoft, 0.02, 1.0), fwidth(x) * 0.75);
   return ramp((kk + smoothstep(0.5 - h, 0.5 + h, f)) / N);
 }
+// Folds. Every sheet's front edge sweeps in one shared curve toward a side (curve) and then strays from it
+// on its own wave (wave, wavelength; jag adds finer, sharper wiggles), so neighbours overlap and cross.
+uniform float uPrism; vec2 gL1 = vec2(0.0), gL2 = vec2(0.0);
+float foldCurve(float y) { return uWarpScale * 0.6 * y * y; }
+float foldEdge(float i, float y, float sp, float sd) {
+  float h = hash(vec2(i, sd)), f = 1.2 / max(uStretch, 0.05), w = 0.0, amp = 1.0, q = 1.0;
+  for (int k = 0; k < 6; k++) { if (float(k) >= clamp(uDetail, 1.0, 6.0)) break; w += amp * snoise(vec2(y * f * q * (0.8 + 0.4 * h) + i * 1.7 + gL1.x * 0.4, i * 0.31 + sd + float(k) * 3.1 + gL1.y * 0.4)); amp *= 0.5; q *= 2.3; }
+  return i * sp + foldCurve(y) * (0.85 + 0.3 * h) + sp * (0.5 * (h - 0.5) + uWarp * 0.7 * w);
+}
+// A sheet's tone at x: across its width it bends like a shallow cylinder, so it reflects a strip of light
+// that slides along its length; it shades darker into the shadow of the sheet over it and catches a thin
+// rim on its own front edge (rim). Softness widens the light and the shadow. Prism splits the highlight
+// into red and blue, so it comes out in three tones, one per channel.
+vec3 foldTone(float i, float x, float y, float sp, float sd, float fw) {
+  float u = x - foldEdge(i, y, sp, sd), dn = 1e3;
+  for (int k = 1; k < 5; k++) dn = min(dn, foldEdge(i + float(k), y, sp, sd) - x);
+  float sf = clamp(uSoft, 0.0, 1.0), t = u / (sp * 1.6), h = hash(vec2(i, sd + 7.0));
+  float hp = 0.45 + 0.4 * snoise(vec2(y * 0.5 / max(uStretch, 0.05) + i * 0.37 + gL2.x * 0.5, sd + i * 0.11 + gL2.y * 0.5)), hw = mix(0.06, 0.32, sf), d = uPrism * 0.07;
+  float lit = pow(0.55 + 0.45 * snoise(vec2(y * 0.35 + sd, i * 0.53)), 2.0) * 1.2;
+  float base = (0.1 + 0.3 * h) * mix(1.0, 1.0 - clamp(t, 0.0, 1.0) * 0.7, 0.6 + 0.4 * sf);
+  float shade = 1.0 - 0.85 * exp(-max(dn, 0.0) / (sp * mix(0.12, 0.5, sf)));
+  float rim = clamp(uContrast, 0.0, 1.5) * 0.9 * exp(-max(u, 0.0) / max(fw * 1.5, sp * mix(0.012, 0.3, sf * sf)));
+  vec3 hl = exp(-pow((vec3(t) - hp - vec3(d, 0.0, -d)) / hw, vec3(2.0)));
+  return clamp((base + 0.95 * hl * lit) * shade + rim, 0.0, 1.0);
+}
 void gradMain() {
   if (uPStage > 0) {
     vec2 uv = vec2(vUv.x, 1.0 - vUv.y), p = uPStage == 3 ? uv : uPDom.xy + uv * uPDom.zw;
@@ -688,6 +713,7 @@ void gradMain() {
   // Both read points travel at a constant speed, so the morph never hurries through part of the loop.
   vec2 L2 = lm * 1.5 * uMotAmt * (mloop(tw, -0.2708) + en * (0.5 * vec2(sin(tw * 0.618 + 0.4), -cos(tw * 0.618 + 2.1)) + 0.3 * vec2(sin(tw * 0.414 + 1.1), -cos(tw * 0.414 + 0.3))) + ub * vec2(-0.6, 0.8));
   p = 0.5 + (p - 0.5) * (1.0 - 0.07 * uMotAmt * beat);
+  gL1 = L1; gL2 = L2;
   if (uType == 7) {
     // Wave, after Framer's Wave Gradient shader (the background of caddis.app): four colors in two soft
     // crossing blends, read through a field that a sine wave twists, so broad bands of color fold and
@@ -758,25 +784,19 @@ void gradMain() {
     o = vec4(srgb(fromLab(ramp(mix((kk + f) / N, tri, blur)))), 1.0); return;
   }
   if (uType == 9) {
-    // Folds: sheets of glass or satin laid one over the next. Each sheet darkens toward the one it tucks
-    // under and lights up along its front edge, and the edges wave along their length, so the stack reads
-    // as folded ribbons. Sheets (scale) sets how many, wave and wavelength their bend, softness how
-    // gradually each one lights, and rim how bright the edges catch. Light comes and goes along the sheets.
-    float ca = cos(uAngle), sa = sin(uAngle), s = mod(uSeed, 89.0);
+    // Folds: curved sheets laid one over the next, like ribbons of chrome or glass (see foldTone).
+    float ca = cos(uAngle), sa = sin(uAngle), sd = mod(uSeed, 89.0);
     vec2 r = mat2(ca, -sa, sa, ca) * ((p - 0.5) * a);
-    float v = r.y * uStretch + drift.y * 0.5, n = max(uScale, 0.1) * 5.0;
-    float bend = sin(v * 2.1 + s) * 0.55 + wfbm(vec2(v * 0.7 + s * 1.3, r.x * 0.5) + L1 * 0.3) * 0.8;
-    float d = (r.x + uWarp * 0.3 * bend) * n, f = fract(d), fw = fwidth(d) * 1.5;
-    float sh = mix(3.0, 0.6, clamp(uSoft, 0.0, 1.0)), rc = clamp(uContrast, 0.0, 1.5);
-    float lit = 0.55 + 0.45 * snoise(vec2(v * 0.45 + s, floor(d) * 0.37) + L2 * 0.3);
-    float tone = mix(0.7, 1.0, hash(vec2(floor(d), s)));
-    // One sheet's tone at a point f across it: dark where it tucks under, rising to a bright edge, and a
-    // little of that edge's light spilling onto the sheet behind.
-    float t1 = clamp(pow(f, sh) * lit * tone + rc * smoothstep(1.0 - 0.06, 1.0, f) * lit + rc * 0.25 * exp(-f * 25.0) * lit, 0.0, 1.0);
-    float t0 = clamp(rc * 0.25 * lit, 0.0, 1.0);
-    // Edges are antialiased: right at a sheet's front edge the next sheet's start blends in over a pixel.
-    float t = mix(t1, t0, smoothstep(1.0 - fw, 1.0, f));
-    o = vec4(srgb(fromLab(ramp(t))), 1.0); return;
+    float sp = 0.2 / max(uScale, 0.1), y = r.y + 0.5 * dot(drift, vec2(0.6, 0.8)), x = r.x, fw = fwidth(x);
+    // The topmost sheet is the last one whose front edge lies before x. Edges stray at most a couple of
+    // spacings from the shared curve, so only a few sheets round x can be it.
+    float i0 = floor((x - foldCurve(y)) / sp), top = i0 - 3.0, under = i0 - 4.0;
+    for (int k = 0; k < 6; k++) { float i = i0 + 2.0 - float(k); if (foldEdge(i, y, sp, sd) < x) { top = i; break; } }
+    for (int k = 0; k < 6; k++) { float i = top - 1.0 - float(k); if (foldEdge(i, y, sp, sd) < x) { under = i; break; } }
+    vec3 t = foldTone(top, x, y, sp, sd, fw), tu = foldTone(under, x, y, sp, sd, fw);
+    // The front edge is antialiased over a pixel against the sheet it lies on.
+    t = mix(tu, t, smoothstep(0.0, fw, x - foldEdge(top, y, sp, sd)));
+    o = vec4(srgb(fromLab(ramp(t.r))).r, srgb(fromLab(ramp(t.g))).g, srgb(fromLab(ramp(t.b))).b, 1.0); return;
   }
   if (uType == 6) {
     // Aura, after the reactive background of Yandex Music's My Wave: two to four soft blobs of color
@@ -2241,7 +2261,7 @@ void main() {
           uScale: g.scale ?? 1.2, uDetail: g.detail ?? 3, uStretch: g.stretch ?? 1, uContrast: g.contrast ?? 1,
           uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring", "aura", "smoke"].indexOf(g.noise || "clouds"),
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
-          uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle),
+          uWarp: g.warp, uWarpScale: g.warpScale, uSoft: g.soft, uAngle: rad(g.angle), uPrism: g.prism ?? 0,
           uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5, uEndless: +job.endless || 0,
           uPath: job.endless ? 0 : Math.max(0, ["orbit", "sway", "glide"].indexOf(job.path || "orbit")), uMDir: [-Math.cos(rad(job.mangle ?? 30)), Math.sin(rad(job.mangle ?? 30))],
         };

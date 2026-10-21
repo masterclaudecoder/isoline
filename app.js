@@ -267,7 +267,7 @@
   const WAVE_BASE = { scale: 0.9, stretch: 6, warp: 2.1, soft: 0.74, contrast: 0.54, angle: 105 };
   // Paint starts as a strong, five-step swirl through medium bands.
   const PAINT_BASE = { scale: 1, warp: 2.2, detail: 5, stretch: 4, soft: 0.3, contrast: 0.5, warpScale: 0.7, angle: 30 };
-  const FOLDS_BASE = { scale: 1.6, warp: 1.2, stretch: 1.4, soft: 0.45, contrast: 0.8, angle: 20 };
+  const FOLDS_BASE = { scale: 1.6, warp: 0.6, warpScale: 0.8, stretch: 1.4, detail: 1, soft: 0.45, contrast: 0.8, prism: 0.4, angle: 20 };
   const GEN_BASE = { aura: AURA_BASE, wavegrad: WAVE_BASE, paint: PAINT_BASE, folds: FOLDS_BASE };
   const asGradient = (st, type) => { const g = { ...st, source: "gradient", grad: { ...st.grad, type } };
     // Aura glows out of its first color, so it starts from the darkest one, at settings made for it.
@@ -385,11 +385,11 @@
     ["Effects", "Dot matrix", { ...G("flow", ["#050507", "#1a1d24", "#d8d0c0", "#2b3a55", "#050507"], { scale: 0.3, detail: 2, warp: 0.3, stretch: 3, angle: -35, contrast: 1.1 }), fx: { led: { pitch: 14, size: 0.7, glow: 0.4, off: 0.03, contrast: 1.5, shape: "round" } } }],
     ["Effects", "Green glass", { ...G("flow", ["#1f2a07", "#5d7f12", "#b6dd3a", "#e9ff7a", "#3b5209"], { scale: 0.4, detail: 2, warp: 0.6, stretch: 1.5, angle: 60, contrast: 1 }), fx: { mesh: { cell: 26, radius: 0.12, round: 1, thick: 1.5, frost: 0.3, gap: 0.5, light: 1.2 }, grain: { amount: 0.22, size: 1.4, soft: true } } }],
     ["Effects", "Glass squares", { ...G("aura", ["#f3f4f1", "#c8ecb5", "#5fd248", "#22b022"], { scale: 1.1, detail: 3, warp: 0.3, stretch: 0, soft: 2.5, contrast: 0, angle: 0 }), fx: { mesh: { cell: 190, radius: 0.2, round: 0.12, thick: 0.4, frost: 0.8, tint: 0.3, gap: 1, light: 0.3 } } }],
-    ["Gradients", "Chrome folds", { ...G("folds", ["#000000", "#16171a", "#5a5e66", "#d9dce2", "#ffffff"], { scale: 1, warp: 1.4, stretch: 0.8, soft: 0.55, contrast: 1, angle: 25 }), fx: { chroma: { amount: 3 } } }],
+    ["Gradients", "Chrome folds", { ...G("folds", ["#000000", "#16171a", "#5a5e66", "#d9dce2", "#ffffff"], { scale: 1.2, warp: 0.35, warpScale: 1.2, stretch: 2, detail: 1, soft: 0.35, contrast: 1, prism: 0.9, angle: 15 }) }],
     ["Effects", "Holo swirl", { pattern: "flow", angle: 0, scale: 900, octaves: 2, warp: 0.6, levels: 14, mode: "bands", band: 0.45, smooth: 0.7, line: "#262a40", line2: "#262a40", bg: "#f4f4f6", fx: { blur: { amount: 8, dir: "even", start: 0 }, chroma: { amount: 12 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Effects", "Glyph bloom", { ...G("aura", ["#8fb8e6", "#f4a3a0", "#f0564a", "#ffd6c9"], { scale: 1.6, detail: 3, warp: 0.7, stretch: 0.6, soft: 2, contrast: 0, angle: 0 }), fx: { glyphs: { cell: 16, set: "binary", font: "geist", contrast: 1.6, change: 2, back: 0.65, mono: false } } }],
     ["Effects", "Dimple glow", { ...G("aura", ["#0b0f0d", "#13302a", "#1f7d55", "#3bf08a"], { scale: 1.4, detail: 3, warp: 0.4, stretch: 0.3, soft: 2.6, contrast: 0, angle: 0 }), fx: { mesh: { layout: "hex", cell: 16, radius: 0.5, round: 1, thick: 1.2, frost: 0, gap: 0.2, light: 0.7 } } }],
-    ["Effects", "Halftone ridges", { pattern: "flow", angle: 0, scale: 700, octaves: 3, warp: 0.6, levels: 10, mode: "bands", band: 0.5, smooth: 0.6, line: "#111111", line2: "#111111", bg: "#f5f5f5", ink: "#111111", paper: "#ffffff", fx: { blur: { amount: 18, dir: "even", start: 0 }, halftone: { size: 11, angle: 45, mono: true } } }],
+    ["Effects", "Halftone ridges", { ...G("folds", ["#ffffff", "#ffffff", "#9a9a9a", "#000000"], { scale: 0.9, warp: 0.5, warpScale: 0, stretch: 0.5, detail: 5, soft: 0.6, contrast: 1.2, prism: 0, angle: 90 }), ink: "#111111", paper: "#ffffff", fx: { halftone: { size: 9, angle: 45, mono: true } } }],
     ["Effects", "Pearl liquid", { ...G("paint", ["#f1e4ee", "#c9bcd9", "#fbf6f8", "#a9bcd8", "#e8cad8"], { scale: 0.8, warp: 2, detail: 5, stretch: 2, soft: 0.9, contrast: 0.3, warpScale: 0.4, angle: 30 }), fx: { chrome: { strength: 0.8, bands: 1.6, soft: 12, tint: "#f6e6ef", mix: 0.55 }, irid: { bands: 2, mix: 0.3, pearl: 0.7, source: "slope" } } }],
     ["Effects", "Oil slick", { ...G("paint", ["#000000", "#000000", "#000000", "#000000", "#000000", "#ff3b6b", "#ffd23b", "#3b8bff"], { scale: 0.9, warp: 2.2, detail: 5, stretch: 1.4, soft: 1, contrast: 0.6, warpScale: 0.5, angle: 70 }), fx: { chroma: { amount: 4 } } }],
     ["Gradients", "Ember flow", { ...G("flow", ["#0c2b2c", "#0c2b2c", "#14494a", "#f07a2a", "#ff3b1f", "#0c2b2c"], { scale: 0.35, detail: 2, warp: 0.9, stretch: 1.5, angle: 30, contrast: 1 }), fx: { blur: { amount: 30, dir: "even", start: 0 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
@@ -401,7 +401,7 @@
     ["Gradients", "Mystic swirl", { ...G("paint", ["#1a0508", "#5a0f1c", "#9a1f33", "#0b0b12", "#3fc6e0"], { scale: 1, warp: 2.2, detail: 5, stretch: 2.5, soft: 0.7, contrast: 0.4, warpScale: 0.6, angle: 30 }), fx: { bloom: { threshold: 0.5, radius: 24, intensity: 0.8 } } }],
     ["Noise", "Carnage", { ...G("noise", ["#000000", "#000000", "#e0102a", "#ff2a3d"], { noise: "marble", scale: 2.4, detail: 5, warp: 0.6, stretch: 1, contrast: 1.6, angle: 0 }), fx: { posterize: { levels: 2 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Effects", "Wave traffic", { ...G("linear", ["#8a88b0", "#a09ec6"], { angle: 90 }), ink: "#6c63ff", paper: "#120f2e", fx: { linescreen: { spacing: 22, angle: 0, flow: 0.3, flowSize: 600, dash: 0.45, dashLen: 80, mono: true } } }],
-    ["Gradients", "Glass fold", { ...G("folds", ["#030a1f", "#0b2a6b", "#2f6fe0", "#9cc8ff", "#ffffff"], { scale: 0.6, warp: 1.2, stretch: 0.6, soft: 0.8, contrast: 0.9, angle: -20 }) }],
+    ["Gradients", "Glass fold", { ...G("folds", ["#020818", "#06153d", "#123a8f", "#5f9cf0", "#e8f2ff"], { scale: 0.5, warp: 0.9, warpScale: 0.3, stretch: 1.4, detail: 1, soft: 0.7, contrast: 1, prism: 0, angle: -30 }) }],
     ["Effects", "Halftone wave", { ...G("flow", ["#0a0f2c", "#0a0f2c", "#e0127a", "#ff3fa0", "#0a0f2c"], { scale: 0.4, detail: 2, warp: 0.3, stretch: 2.5, angle: 0, contrast: 1 }), fx: { halftone: { size: 16, angle: 0, mono: false, shape: "square" } } }],
     ["Effects", "Neural pink", { ...G("noise", ["#2a0612", "#e02a6a", "#ff8ab4"], { noise: "clouds", scale: 0.5, detail: 3, warp: 0.6, stretch: 1.4, contrast: 1, angle: 30 }), fx: { glowlines: { levels: 3, width: 20, glow: 1.4, dim: 0.97, core: 0.6 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Effects", "Green smear", { ...G("flow", ["#0a2a0a", "#1e7a1e", "#25b0ff", "#0a2a0a"], { scale: 0.5, detail: 2, warp: 0.5, stretch: 1.4, angle: 20, contrast: 1 }), fx: { smear: { length: 300, angle: 60, band: 8, amount: 0.8, jitter: 0.7, threshold: 0 }, blur: { amount: 10, dir: "even", start: 0 }, grain: { amount: 0.14, size: 1.3, soft: true } } }],
@@ -1066,10 +1066,13 @@
     { label: "Veins", ...bindKey(gr, "contrast"), min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.2, 0.9], when: isG("paint") },
     // Folds: how many sheets, how they bend, how gradually each one lights and how bright its edge is.
     { label: "Sheets", ...bindKey(gr, "scale"), min: 0.3, max: 6, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.8, 3], when: isG("folds") },
-    { label: "Wave", ...bindKey(gr, "warp"), min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.5, 2.4], when: isG("folds") },
+    { label: "Curve", ...bindKey(gr, "warpScale"), min: -2, max: 2, step: 0.01, fmt: f2, rand: [-1.2, 1.2], when: isG("folds") },
+    { label: "Wave", ...bindKey(gr, "warp"), min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.2, 1.2], when: isG("folds") },
     { label: "Wavelength", ...bindKey(gr, "stretch"), min: 0.2, max: 6, step: 0.01, log: true, fmt: f2, rand: [0.6, 2.5], when: isG("folds") },
+    { label: "Jag", ...bindKey(gr, "detail"), min: 1, max: 6, step: 1, rand: [1, 2], when: isG("folds") },
     { label: "Softness", ...bindKey(gr, "soft"), min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.2, 0.8], when: isG("folds") },
     { label: "Rim", ...bindKey(gr, "contrast"), min: 0, max: 1.5, step: 0.01, fmt: pct, pct: true, rand: [0.4, 1.2], when: isG("folds") },
+    { label: "Prism", ...bindKey(gr, "prism"), min: 0, max: 1.5, step: 0.01, fmt: f2, rand: [0, 0.8], when: isG("folds") },
     { label: "Frequency", ...bindKey(gr, "scale"), min: 0.1, max: 6, step: 0.01, fmt: f2, rand: [0.5, 2], when: isG("wavegrad") },
     { label: "Ripples", ...bindKey(gr, "stretch"), min: 0.1, max: 8, step: 0.05, fmt: f2, rand: [2, 7], when: isG("wavegrad") },
     { label: "Twist", ...bindKey(gr, "warp"), min: 0, max: 4, step: 0.01, fmt: f2, rand: [1.2, 2.8], when: isG("wavegrad") },
