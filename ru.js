@@ -1257,6 +1257,10 @@ window.I18N_RU = {
   "Only parts brighter than this flare": "Лучи дают только места ярче этого",
   "How much of the picture stays under the lines": "Сколько изображения остаётся под линиями",
   "How much change inside a tile makes it split": "Насколько сильная разница внутри плитки её делит",
+  "Folds": "Складки", "Sheets of glass with lit edges": "Листы стекла со светлыми краями", "Sheets": "Листы", "Rim": "Кромка",
+  "{n}× sheets, wave {n}": "Листы {n}×, волна {n}",
+  "Flow size": "Размер потока", "Dashes": "Штрихи", "Dash length": "Длина штриха", "Thick in light": "Толще на светлом",
+  "How far the lines bend and stream round": "Насколько линии изгибаются и закручиваются", "How much of each line is gap between strokes": "Какая доля линии уходит в промежутки между штрихами",
 };
 
 // The kit preview's demo copy in Russian. It shows when the Builder's Cyrillic switch is on, so the

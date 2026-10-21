@@ -675,6 +675,27 @@ void main() {
     float blur = smoothstep(0.15, 0.7, max(aB, aF * vc));
     o = vec4(srgb(fromLab(ramp(mix((kk + f) / N, tri, blur)))), 1.0); return;
   }
+  if (uType == 9) {
+    // Folds: sheets of glass or satin laid one over the next. Each sheet darkens toward the one it tucks
+    // under and lights up along its front edge, and the edges wave along their length, so the stack reads
+    // as folded ribbons. Sheets (scale) sets how many, wave and wavelength their bend, softness how
+    // gradually each one lights, and rim how bright the edges catch. Light comes and goes along the sheets.
+    float ca = cos(uAngle), sa = sin(uAngle), s = mod(uSeed, 89.0);
+    vec2 r = mat2(ca, -sa, sa, ca) * ((p - 0.5) * a);
+    float v = r.y * uStretch + drift.y * 0.5, n = max(uScale, 0.1) * 5.0;
+    float bend = sin(v * 2.1 + s) * 0.55 + wfbm(vec2(v * 0.7 + s * 1.3, r.x * 0.5) + L1 * 0.3) * 0.8;
+    float d = (r.x + uWarp * 0.3 * bend) * n, f = fract(d), fw = fwidth(d) * 1.5;
+    float sh = mix(3.0, 0.6, clamp(uSoft, 0.0, 1.0)), rc = clamp(uContrast, 0.0, 1.5);
+    float lit = 0.55 + 0.45 * snoise(vec2(v * 0.45 + s, floor(d) * 0.37) + L2 * 0.3);
+    float tone = mix(0.7, 1.0, hash(vec2(floor(d), s)));
+    // One sheet's tone at a point f across it: dark where it tucks under, rising to a bright edge, and a
+    // little of that edge's light spilling onto the sheet behind.
+    float t1 = clamp(pow(f, sh) * lit * tone + rc * smoothstep(1.0 - 0.06, 1.0, f) * lit + rc * 0.25 * exp(-f * 25.0) * lit, 0.0, 1.0);
+    float t0 = clamp(rc * 0.25 * lit, 0.0, 1.0);
+    // Edges are antialiased: right at a sheet's front edge the next sheet's start blends in over a pixel.
+    float t = mix(t1, t0, smoothstep(1.0 - fw, 1.0, f));
+    o = vec4(srgb(fromLab(ramp(t))), 1.0); return;
+  }
   if (uType == 6) {
     // Aura, after the reactive background of Yandex Music's My Wave: two to four soft blobs of color
     // stacked over a dark ground, each smaller, lighter and a little off-centre from the one behind it.
@@ -814,22 +835,34 @@ void main() {
   o = vec4(clamp(acc / 4.0, 0.0, 1.0), tex(vUv).a);
 }`,
 
-    mesh: `uniform float uCell; uniform float uStr; uniform float uFrost; uniform float uGrout; uniform float uRim; uniform float uDisp; uniform float uRad; uniform float uZoom; uniform float uShift; uniform float uBevel; uniform float uFade; uniform float uFadeAng;
+    mesh: `uniform float uCell; uniform float uStr; uniform float uFrost; uniform float uGrout; uniform float uRim; uniform float uDisp; uniform float uRad; uniform float uZoom; uniform float uShift; uniform float uBevel; uniform float uFade; uniform float uFadeAng; uniform float uHexT;
 // Glass blocks: a grid of rounded liquid-glass tiles, each magnifying its own patch, separated by a small gap.
+// Hex lays the tiles out as a honeycomb of six-sided cells instead.
+float sdHexT(vec2 p, float r) {
+  const vec3 k = vec3(-0.866025404, 0.5, 0.577350269);
+  p = abs(p); p -= 2.0 * min(dot(k.xy, p), 0.0) * k.xy; p -= vec2(clamp(p.x, -k.z * r, k.z * r), r);
+  return length(p) * sign(p.y);
+}
+float tileSD(vec2 p, vec2 hb, float rad) { return uHexT > 0.5 ? sdHexT(p.yx, hb.x - rad) - rad : sdBox(p, hb, rad); }
 void main() {
-  vec2 d = dp(), id = floor(d / uCell), c = (id + 0.5) * uCell, p = d - c;
+  vec2 d = dp(), id = floor(d / uCell), c = (id + 0.5) * uCell;
+  if (uHexT > 0.5) {
+    vec2 rr = vec2(1.0, 1.7320508), q = d / uCell, ha = mod(q, rr) - rr * 0.5, hb2 = mod(q - rr * 0.5, rr) - rr * 0.5;
+    c = d - (dot(ha, ha) < dot(hb2, hb2) ? ha : hb2) * uCell;
+  }
+  vec2 p = d - c;
   float gap = uGrout * uCell * 0.035;
   vec2 hb = vec2(uCell * 0.5 - gap * 0.5);
-  float rad = clamp(uRad, 0.0, 0.5) * 2.0 * hb.x;
-  float sd = sdBox(p, hb, rad);
-  vec2 n = normalize(vec2(sdBox(p + vec2(0.5, 0.0), hb, rad) - sdBox(p - vec2(0.5, 0.0), hb, rad), sdBox(p + vec2(0.0, 0.5), hb, rad) - sdBox(p - vec2(0.0, 0.5), hb, rad)) + 1e-6);
+  float rad = clamp(uRad, 0.0, 0.5) * (uHexT > 0.5 ? 1.0 : 2.0) * hb.x;
+  float sd = tileSD(p, hb, rad);
+  vec2 n = normalize(vec2(tileSD(p + vec2(0.5, 0.0), hb, rad) - tileSD(p - vec2(0.5, 0.0), hb, rad), tileSD(p + vec2(0.0, 0.5), hb, rad) - tileSD(p - vec2(0.0, 0.5), hb, rad)) + 1e-6);
   // Magnify zooms each tile's patch; past 1 it turns upside down, like a drop of water. Offset slides it.
   vec2 src = c + p * (1.0 - uZoom) + vec2(-0.7071, 0.7071) * uShift * uCell;
   vec3 inside = liquid(toUv(src), sd, n, uCell * 0.2, uStr, uFrost * uCell * 0.09, uRim, uDisp);
   // Bevel: each tile domes like a pillow, lit from the top left.
   inside *= 1.0 + uBevel * 0.35 * dot(p / max(hb, vec2(1.0)), vec2(-0.7071, 0.7071));
   vec4 base = tex(vUv);
-  float shadow = 0.22 * exp(-max(sdBox(p + vec2(0.0, uCell * 0.02), hb, rad), 0.0) / (uCell * 0.05));
+  float shadow = 0.22 * exp(-max(tileSD(p + vec2(0.0, uCell * 0.02), hb, rad), 0.0) / (uCell * 0.05));
   vec3 outside = base.rgb * (1.0 - shadow);
   float aa = 0.75 / uK;
   // Fade: tiles thin out toward the fade angle (0° right, 90° up), a whole tile at a time.
@@ -1370,12 +1403,22 @@ void main() {
 void main() { vec4 c = tex(vUv); float L = max(uLevels - 1.0, 1.0); o = vec4(floor(c.rgb * L + 0.5) / L, c.a); }`,
 
     linescreen: `uniform float uSpace; uniform float uAngle; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
+uniform float uFlow; uniform float uFlowSize; uniform float uDash; uniform float uDashLen; uniform float uInv;
+// Engrave: parallel lines whose thickness follows the picture's tone. Flow bends them along a smooth
+// noise field, so they stream round like a currency engraving without ever crossing, and dashes break
+// each line into strokes of the given length, every line starting at its own offset.
 void main() {
-  vec2 nrm = vec2(-sin(uAngle), cos(uAngle)), d = dp();
-  float y = dot(d, nrm) / uSpace, f = fract(y) - 0.5;
-  vec4 c = tex(toUv(d - nrm * f * uSpace));
-  float w = (1.0 - luma(c.rgb)) * 0.5, aa = fwidth(y);
+  vec2 nrm = vec2(-sin(uAngle), cos(uAngle)), tng = vec2(nrm.y, -nrm.x), d = dp();
+  float bend = uFlow > 0.0 ? uFlow * (fbm(d / uFlowSize + 3.1) - 0.5) * 2.4 * uFlowSize / uSpace : 0.0;
+  float y = dot(d, nrm) / uSpace + bend, f = fract(y) - 0.5;
+  vec4 c = tex(toUv(d - nrm * f * uSpace * (uFlow > 0.0 ? 0.0 : 1.0)));
+  float tone = luma(c.rgb), w = (uInv > 0.5 ? tone : 1.0 - tone) * 0.5, aa = fwidth(y);
   float m = 1.0 - smoothstep(w - aa, w + aa, abs(f));
+  if (uDash > 0.0) {
+    float x = dot(d, tng) / uDashLen + hash(vec2(floor(y), 4.7)) * 9.0, ax = fwidth(x);
+    float on = 1.0 - uDash * (0.6 + 0.4 * hash(vec2(floor(y), floor(x))));
+    m *= smoothstep(on + ax, on - ax, fract(x)) * smoothstep(-ax, ax, fract(x));
+  }
   o = vec4(mix(uPaper, uMono > 0.5 ? uInk : c.rgb, m), 1.0);
 }`,
 
@@ -1993,7 +2036,7 @@ void main() {
       switch (id) {
         case "liquify": return { uAmt: e.amount, uScale: e.scale };
         case "glass": return { uWidth: e.width, uAngle: rad(e.angle), uStr: e.strength, uFrost: e.frost ?? 0.2, uLight: e.light ?? 0.5 };
-        case "mesh": return { uCell: e.cell, uStr: e.strength, uFrost: e.frost ?? 0.3, uGrout: e.grout ?? 1, uRim: e.rim ?? 0.6, uDisp: e.disp ?? 0.5, uRad: e.radius ?? 0.25, uZoom: e.zoom ?? 0.16 * e.strength, uShift: e.shift || 0, uBevel: e.bevel || 0, uFade: e.fade || 0, uFadeAng: rad(e.fadeAngle ?? 45) };
+        case "mesh": return { uCell: e.cell, uStr: e.strength, uFrost: e.frost ?? 0.3, uGrout: e.grout ?? 1, uRim: e.rim ?? 0.6, uDisp: e.disp ?? 0.5, uRad: e.radius ?? 0.25, uZoom: e.zoom ?? 0.16 * e.strength, uShift: e.shift || 0, uBevel: e.bevel || 0, uFade: e.fade || 0, uFadeAng: rad(e.fadeAngle ?? 45), uHexT: e.layout === "hex" ? 1 : 0 };
         case "pixel": return { uSize: e.size, uBevel: e.bevel };
         case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)), uHex: e.grid === "hex" ? 1 : 0, uTurn: e.turn ? 1 : 0, uTone: e.tone ? 1 : 0, uEven: e.even ? 1 : 0, uMerge: e.merge === false ? 0 : 1, uClassic: e.classic ? 1 : 0 };
         case "ascii": {
@@ -2017,7 +2060,7 @@ void main() {
         case "vignette": return { uAmt: e.amount, uSoft: e.softness };
         case "gradmap": return { uC1: hex3(e.c1), uC2: hex3(e.c2), uC3: hex3(e.c3), uMix: e.mix };
         case "posterize": return { uLevels: e.levels };
-        case "linescreen": return { uSpace: e.spacing, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper };
+        case "linescreen": return { uSpace: e.spacing, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uFlow: e.flow || 0, uFlowSize: e.flowSize || 300, uDash: e.dash || 0, uDashLen: e.dashLen || 24, uInv: e.invert ? 1 : 0 };
         case "riso": return { uSize: e.size, uOff: e.offset, uGrain: e.grain, uInkA: hex3(e.inkA), uInkB: hex3(e.inkB), uPaper: hex3(e.paper) };
         case "voronoi": return { uCell: e.cell, uEdge: e.edge };
         case "scan": return { uSpace: e.spacing, uStr: e.strength };
@@ -2119,7 +2162,7 @@ void main() {
       if (job.grad) {
         const g = job.grad, n = Math.min(8, g.colors.length);
         draw("gradient", srcTex, targets.list[0].f, {
-          uType: ["mesh", "linear", "radial", "conic", "flow", "noise", "aura", "wavegrad", "paint"].indexOf(g.type), uN: n,
+          uType: ["mesh", "linear", "radial", "conic", "flow", "noise", "aura", "wavegrad", "paint", "folds"].indexOf(g.type), uN: n,
           uScale: g.scale ?? 1.2, uDetail: g.detail ?? 3, uStretch: g.stretch ?? 1, uContrast: g.contrast ?? 1,
           uNoise: ["clouds", "ridges", "billow", "cells", "veins", "marble", "neuro", "ring", "aura", "smoke"].indexOf(g.noise || "clouds"),
           uCol: g.colors.slice(0, 8).map(hex3), uPt: g.points.slice(0, 8).map((p) => [p.x, p.y]),
