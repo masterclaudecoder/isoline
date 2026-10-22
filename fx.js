@@ -531,7 +531,7 @@ vec2 paintVel(vec2 q, float ch, vec4 L) {
   vec2 g2 = vec2(snoise(o2 + vec2(e, 0.0)) - n2, snoise(o2 + vec2(0.0, e)) - n2) / e;
   return vec2(g1.y, -g1.x) + mix(0.3, 0.45, ch) * vec2(g2.y, -g2.x);
 }
-uniform int uPStage; uniform vec4 uPDom; uniform float uPSub; uniform float uPAsp; uniform float uPCell; uniform float uPCellNow;
+uniform int uPStage; uniform vec4 uPDom; uniform float uPSub; uniform float uPAsp; uniform float uPCell;
 float paintCh() { return clamp(uWarpScale, 0.0, 1.0) * 0.7; }
 float paintZoom() { return uScale * mix(1.0, 1.6, paintCh()); }
 vec2 paintOff() { float s = mod(uSeed, 97.0); return vec2(sin(s * 3.1), cos(s * 1.7)) * 9.0; }
@@ -567,27 +567,60 @@ vec3 paintSeed(vec2 q) {
   float N = float(uN - 1), x = tri * N, kk = min(floor(x), N - 1.0), f = x - kk, h = max(0.5 * clamp(uSoft, 0.02, 1.0), fwidth(x) * 0.75);
   return ramp((kk + smoothstep(0.5 - h, 0.5 + h, f)) / N);
 }
-vec4 paintCells(vec2 q, vec3 top) {
+vec3 paintAt(vec2 a) { vec2 p = a / vec2(uPAsp, 1.0) + 0.5, tu = (p - uPDom.xy) / uPDom.zw; return texture(uTex, vec2(tu.x, 1.0 - tu.y)).rgb; }
+vec2 paintDir() { float an = uAngle + 1.5708 + (hash(vec2(uSeed, 1.9)) - 0.5) * 1.2; return vec2(cos(an), sin(an)); }
+float paintGust(vec2 a) {
+  vec2 s = vec2(hash(vec2(uSeed, 3.1)), hash(vec2(uSeed, 7.7))) * 40.0;
+  float n = snoise(a * 1.1 + s) + 0.45 * snoise(a * 2.3 + s.yx), t0 = mix(0.85, -0.1, clamp(uPCell, 0.0, 1.0));
+  return smoothstep(t0, t0 + 1.2, n);
+}
+float paintHoles(vec2 c, float G, vec2 t, float th, float pr, out vec4 info) {
+  vec2 id0 = floor(c / G), n = vec2(-t.y, t.x); float best = 1e3; info = vec4(1.0, 0.0, 0.0, 1.0);
+  for (int j = 0; j < 9; j++) {
+    vec2 id = id0 + vec2(j % 3 - 1, j / 3 - 1), hh = vec2(hash(id + G * 91.0), hash(id + 5.3 + G * 37.0));
+    if (hash(id + 2.7 + G * 13.0) > th * pr) continue;
+    vec2 e = c - (id + 0.5 + (hh - 0.5) * 0.6) * G;
+    float d = length(vec2(dot(e, t) / 1.35, dot(e, n))), r = G * mix(0.15, 0.38, th) * (0.75 + 0.35 * hh.x), ed = d - r;
+    if (ed < best) { best = ed; info = vec4(d / r, hh.y, r, hash(id + 8.8 + G)); }
+  }
+  return best;
+}
+vec3 paintBlow(vec2 uv) {
+  vec2 a = (uv - 0.5) * vec2(uPAsp, 1.0), dir = paintDir();
+  float L = 0.08 + 0.1 * clamp(uPCell, 0.0, 1.0), g = paintGust(a), e = 0.01, px = 1.0 / uRes.y;
+  float dg = (paintGust(a + dir * e) - paintGust(a - dir * e)) / (2.0 * e);
+  vec2 D = dir * L * g;
+  vec3 top = vec3(0.0);
+  for (int i = 0; i < 5; i++) top += paintAt(a - D - dir * L * g * 0.5 * float(i) / 4.0);
+  top /= 5.0;
+  float thin = clamp(smoothstep(0.05, 0.95, g) + max(L * dg, 0.0) * 0.5, 0.0, 1.0);
+  if (thin < 0.01) return top;
   float dk = 1e3; vec3 dark = vec3(0.0);
   for (int i = 0; i < 8; i++) { if (i >= uN) break; vec3 l = toLab(lin(uCol[i])); if (l.x < dk) { dk = l.x; dark = l; } }
-  vec3 low = paintSeed(q * 1.9 + vec2(31.7, 12.9)), deep = paintSeed(q * 3.3 + vec2(4.1, 77.3));
-  float clus = smoothstep(-0.25, 0.45, snoise(q * 0.5 + 11.3) + 0.4 * snoise(q * 1.4 + 2.2)), px = length(fwidth(q)), best = 1e3, rimW = 0.0, core = 0.0, hc = 0.0;
+  float tw = 0.7 * snoise(a * 1.6 + 5.1);
+  vec2 t = vec2(dir.x * cos(tw) - dir.y * sin(tw), dir.x * sin(tw) + dir.y * cos(tw));
+  vec2 c = a - D * 0.5 + 0.01 * vec2(snoise(a * 6.0 + 1.3), snoise(a * 6.0 + 8.1));
+  vec3 col = top; float lace = 0.0;
   for (int lv = 0; lv < 3; lv++) {
-    float G = lv == 0 ? 0.12 : lv == 1 ? 0.055 : 0.026, den = uPCell * clus * (lv == 0 ? 1.0 : lv == 1 ? 1.4 : 1.8);
-    vec2 id0 = floor(q / G);
-    for (int j = 0; j < 9; j++) {
-      vec2 id = id0 + vec2(j % 3 - 1, j / 3 - 1), hh = vec2(hash(id + float(lv) * 17.0), hash(id + 5.3 + float(lv) * 17.0));
-      if (hash(id + 9.1 + float(lv) * 3.0) > den) continue;
-      vec2 c = (id + 0.5 + (hh - 0.5) * 0.7) * G, e = q - c;
-      float r = G * (0.12 + 0.4 * hh.x), d = length(e * vec2(1.0, 1.0 + 0.5 * (hh.y - 0.5))) - r;
-      if (d < best) { best = d; rimW = max(r * 0.22, px); core = r; hc = hh.y; }
-    }
+    float G = lv == 0 ? 0.12 : lv == 1 ? 0.05 : 0.024, need = lv == 0 ? 0.25 : lv == 1 ? 0.0 : 0.45, pr = lv == 0 ? 0.9 : lv == 1 ? 0.45 : 0.8;
+    float th = clamp((thin - need) / (1.0 - need), 0.0, 1.0);
+    if (th <= 0.0) continue;
+    vec4 inf; float ed = paintHoles(c + float(lv) * 7.3, G, t, th, pr, inf);
+    if (ed > G) continue;
+    lace = max(lace, smoothstep(G * 0.12, 0.0, ed) * smoothstep(-px, px, ed));
+    float hole = smoothstep(px, -px, ed);
+    if (hole <= 0.0) continue;
+    int ri = int(floor(inf.w * 7.99)) % uN;
+    vec3 ring = toLab(lin(uCol[0]));
+    for (int i = 0; i < 8; i++) if (i == ri) ring = toLab(lin(uCol[i]));
+    if (distance(ring, top) < 0.15 || distance(ring, dark) < 0.1) ring = mix(top, vec3(1.0, 0.0, 0.0), 0.6);
+    vec3 dome = dark; dome.x += 0.06 * clamp(1.0 - inf.x, 0.0, 1.0);
+    float inner = smoothstep(-px, px, ed + inf.z * 0.32);
+    vec3 fill = inf.y < 0.45 ? mix(ring, dome, inner) : dome;
+    if (inf.y < 0.2) fill = mix(fill, ring, smoothstep(px, -px, ed + inf.z * 0.72));
+    col = mix(col, fill, hole);
   }
-  vec3 hole = mix(low, deep, step(0.6, hc) * smoothstep(px, -px, best + core * 0.55));
-  hole = mix(hole, dark, step(0.85, hc) * smoothstep(px, -px, best + core * 0.8));
-  vec3 lace = mix(dark, top, 0.2);
-  float inner = smoothstep(px, -px, best), rim = smoothstep(px, -px, best - rimW) * clamp(uPCell * 2.0, 0.0, 1.0);
-  return vec4(mix(lace, hole, inner), rim);
+  return mix(col, vec3(min(col.x + 0.12, 1.0), col.yz * 0.85), lace * 0.5);
 }
 uniform float uPrism; vec2 gL1 = vec2(0.0), gL2 = vec2(0.0);
 float foldCurve(float y) { return uWarpScale * 0.6 * y * y; }
@@ -616,6 +649,7 @@ void gradMain() {
   if (uPStage > 0) {
     vec2 uv = vec2(vUv.x, 1.0 - vUv.y), p = uPStage == 3 ? uv : uPDom.xy + uv * uPDom.zw;
     if (uPStage == 1) { o = vec4(paintSeed(paintQ(p)), 1.0); return; }
+    if (uPStage == 4) { o = vec4(srgb(fromLab(paintBlow(uv))), 1.0); return; }
     vec2 q = paintBack(paintQ(p), uPSub), pb = paintP(q), tu = (pb - uPDom.xy) / uPDom.zw;
     vec2 ts = vec2(textureSize(uTex, 0)), tv = vec2(tu.x, 1.0 - tu.y), jx = dFdx(tv), jy = dFdy(tv);
     float nx = clamp(ceil(length(jx * ts)), 1.0, 4.0), ny = clamp(ceil(length(jy * ts)), 1.0, 4.0);
@@ -625,7 +659,6 @@ void gradMain() {
       lab += texture(uTex, clamp(tv + jx * ((float(i) + 0.5) / nx - 0.5) + jy * ((float(j) + 0.5) / ny - 0.5), 0.0, 1.0)).rgb;
     }
     lab /= nx * ny;
-    if (uPCellNow > 0.5 && uPCell > 0.0) { vec4 ce = paintCells(paintQ(p), lab); lab = mix(lab, ce.rgb, ce.a); }
     o = uPStage == 3 ? vec4(srgb(fromLab(lab)), 1.0) : vec4(lab, 1.0); return;
   }
   vec2 a = vec2(uRes.x / uRes.y, 1.0);
@@ -2072,14 +2105,15 @@ void main() {
           const m = 0.3, dw = Math.round(w * (1 + 2 * m)), dh = Math.round(h * (1 + 2 * m)), dom = [-m, -m, 1 + 2 * m, 1 + 2 * m];
           const A = floatTarget("paintA", dw, dh, "rgba"), B = floatTarget("paintB", dw, dh, "rgba"), pu = { ...gu, uPDom: dom, uPAsp: w / h, uPath: gu.uPath === 2 ? 0 : gu.uPath };
           const steps = Math.round(Math.min(8, Math.max(1, g.detail ?? 5)) * 4), passes = Math.ceil(steps / 2);
-          draw("gradient", srcTex, A.f, { ...pu, uPStage: 1, uPCellNow: 0 }, dw, dh, k, job.seed);
-          let src = A, dst = B, done = 0, celled = false;
+          const blow = (g.cells || 0) > 0;
+          draw("gradient", srcTex, A.f, { ...pu, uPStage: 1 }, dw, dh, k, job.seed);
+          let src = A, dst = B, done = 0;
           for (let i = 0; i < passes; i++) {
-            const sub = Math.round((steps * (i + 1)) / passes) - done, last = i === passes - 1;
-            const cellNow = !celled && (done + sub >= steps * 0.9 || last); celled ||= cellNow;
-            draw("gradient", src.t, last ? targets.list[0].f : dst.f, { ...pu, uPStage: last ? 3 : 2, uPSub: sub, uPCellNow: cellNow ? 1 : 0 }, last ? w : dw, last ? h : dh, k, job.seed);
+            const sub = Math.round((steps * (i + 1)) / passes) - done, out = i === passes - 1 && !blow;
+            draw("gradient", src.t, out ? targets.list[0].f : dst.f, { ...pu, uPStage: out ? 3 : 2, uPSub: sub }, out ? w : dw, out ? h : dh, k, job.seed);
             done += sub; [src, dst] = [dst, src];
           }
+          if (blow) draw("gradient", src.t, targets.list[0].f, { ...pu, uPStage: 4 }, w, h, k, job.seed);
         } else if (gu.uPath === 2 && [1, 3, 4].includes(gu.uMotion) && floatOK && (g.type === "flow" || g.type === "noise")) {
           const A = floatTarget("glideA", w, h, "rgba"), B = floatTarget("glideB", w, h, "rgba"), t = gu.uTime;
           draw("gradient", srcTex, A.f, { ...gu, uGLin: t, uGStage: 1 }, w, h, k, job.seed);
