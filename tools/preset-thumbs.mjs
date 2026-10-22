@@ -1,13 +1,8 @@
-// Renders every Studio preset thumbnail with the app's own pipeline and packs them into one sheet,
-// previews/presets.webp plus previews/presets.json, so a first visit doesn't draw 40-odd presets on the
-// device. Run it after changing a preset: serve the repo (python3 -m http.server 8765), then
-// node tools/preset-thumbs.mjs [http://localhost:8765/]. Needs Playwright and a Chromium.
 import { chromium } from "playwright";
 import { writeFileSync } from "node:fs";
 const url = process.argv[2] || "http://localhost:8765/", W = 288, H = 180, COLS = 6;
 const b = await chromium.launch({ executablePath: process.env.CHROMIUM || undefined });
 const pg = await b.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
-// Draw live: no shipped sheet, no kept thumbnails, full detail.
 await pg.route(/previews\/presets\./, (r) => r.abort());
 await pg.addInitScript(() => { localStorage.setItem("isoline.perfMode", "off"); caches.delete("isoline-thumbs"); });
 await pg.goto(url);

@@ -1,5 +1,3 @@
-// Color utilities shared by the studio and the palette tool: conversions between hex, RGB, HSL, HSB and OKLCH,
-// parsing typed colors, nearest color names and WCAG contrast.
 (function (root) {
   "use strict";
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -13,7 +11,6 @@
     return HEX.test(v) ? v : null;
   }
 
-  // HSB (also called HSV) and HSL: hue in degrees, the rest 0..1.
   const hsvToHex = (h, s, v) => { const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); }; return rgbHex(f(5) * 255, f(3) * 255, f(1) * 255); };
   function hexToHsv(hex) {
     const [r, g, b] = rgbOf(hex).map((x) => x / 255), mx = Math.max(r, g, b), d = mx - Math.min(r, g, b);
@@ -27,7 +24,6 @@
     return [h, l === 0 || l === 1 ? 0 : (v - l) / Math.min(l, 1 - l), l];
   }
 
-  // OKLCH: lightness 0..1, chroma about 0..0.37, hue in degrees.
   const toLin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
   const toGam = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055);
   function toOklab(hex) {
@@ -36,7 +32,6 @@
     return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * q, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * q, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * q];
   }
   const toOklch = (hex) => { const [L, a, b] = toOklab(hex); return [L, Math.hypot(a, b), ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360]; };
-  // Out-of-gamut colors keep their lightness and hue and lose chroma until they fit.
   function fromOklch(L, C, H) {
     L = clamp(L, 0, 1);
     const hr = (H * Math.PI) / 180;
@@ -50,7 +45,6 @@
   const fromOklab = ([l, a, b]) => fromOklch(l, Math.hypot(a, b), ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360);
   const mixOklab = (x, y, t) => { const A = toOklab(x), B = toOklab(y); return fromOklab(A.map((v, i) => v + (B[i] - v) * t)); };
 
-  // Formats: each lists its channels with display ranges, conversion both ways and a CSS-style string.
   const r1 = (v) => Math.round(v), r2 = (v) => Math.round(v * 100) / 100, r3 = (v) => Math.round(v * 1000) / 1000;
   const FORMATS = {
     hex: { label: "HEX" },
@@ -60,7 +54,6 @@
     oklch: { label: "OKLCH", ch: [["L", 0, 100, 0.1], ["C", 0, 0.37, 0.001], ["H", 0, 360, 1]], get: (h) => { const [l, c, hh] = toOklch(h); return [l * 100, c, hh]; }, set: ([l, c, h]) => fromOklch(l / 100, c, h), str: (v) => `oklch(${r2(v[0])}% ${r3(v[1])} ${r1(v[2])})` },
   };
   const format = (hex, f) => (f === "hex" || !FORMATS[f] ? hex : FORMATS[f].str(FORMATS[f].get(hex)));
-  // Accepts hex, rgb(), hsl(), hsb()/hsv() and oklch(), with or without commas and percent signs.
   function parse(str) {
     const s = String(str).trim().toLowerCase();
     const hex = parseHex(s);
@@ -76,7 +69,6 @@
     return fromOklch(a.pct || a.v > 1 ? a.v / 100 : a.v, b.pct ? (b.v / 100) * 0.4 : b.v, c.v);
   }
 
-  // Nearest name from the bundled list, by distance in OKLab.
   let names = null;
   function name(hex) {
     if (!root.COLOR_NAMES) return "";

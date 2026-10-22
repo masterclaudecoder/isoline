@@ -1,4 +1,3 @@
-// Logo concepts for Topographic, drawn with the same contour engine the app uses.
 (function (root) {
   "use strict";
   const T = root.Topo;
@@ -11,10 +10,7 @@
   };
   const inner = (svg) => svg.replace(/^<svg[^>]*>/, "").replace(/<\/svg>$/, "");
   const draw = (o, size, opts = {}) => inner(T.buildSVG({ ...base, ...o, w: size[0], h: size[1] }, opts).svg);
-  // Color the n-th contour (0 = first drawn) with the accent.
   const accentNth = (body, n, color = ACCENT) => { let i = -1; return body.replace(/stroke="#1c1c1e"/g, (m) => (++i === n ? `stroke="${color}"` : m)); };
-  // The Isoline mark keeps the line that wraps the point and every other band above it, so it reads at small sizes.
-  // Paths are ranked by where they cross the vertical centre; slivers above `top` are dropped.
   function thinAbove(body, dotY, top) {
     const yAt = (d) => { let best = null; for (const m of d.matchAll(/(-?\d+(?:\.\d+)?)[ ,](-?\d+(?:\.\d+)?)/g)) { const x = +m[1], y = +m[2]; if (!best || Math.abs(x - 60) < Math.abs(best[0] - 60)) best = [x, y]; } return best ? best[1] : 0; };
     const paths = [...body.matchAll(/<path[^>]*d="([^"]*)"[^>]*\/>/g)].map((m) => ({ m: m[0], y: yAt(m[1]) }));
@@ -24,7 +20,6 @@
   }
   const wordStyle = `font-family:'Instrument Sans',system-ui,sans-serif;font-weight:600;font-stretch:88%;letter-spacing:-0.02em`;
 
-  // Organic concentric glyph sized to replace a lowercase "o".
   function ringGlyph(seed, accent) {
     let body = draw({ pattern: "rings", seed, warp: 0.06, scale: 60, gap: 8.6, weight: 4, smooth: 0.7, points: [{ x: 0.5, y: 0.5, r: 1, s: 1 }] }, [60, 60], { closedOnly: true });
     if (accent) body = body.replace(/stroke="#1c1c1e"/g, `stroke="${ACCENT}"`);
@@ -94,12 +89,9 @@
 
   function mount(el, id = "isoline") {
     const c = concepts.find((x) => x.id === id) || concepts[0];
-    // In the app the mark follows the theme: ink takes the text color and the dot's ring the panel color.
     el.innerHTML = c.html().replace(/#1c1c1e/g, "currentColor").replace(/stroke="#fff"/g, 'style="stroke:var(--panel)"');
     el.dataset.logo = c.id;
   }
-  // The tab icon is the Isoline mark on its own: lines in ink (light ink on a dark browser), the dot in
-  // the app's accent.
   let markSVG = "";
   function favicon(accent = ACCENT) {
     if (typeof document === "undefined") return;

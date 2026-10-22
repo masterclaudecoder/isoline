@@ -1,6 +1,3 @@
-// Components: a filterable directory of UI libraries, and a token builder (type, color, spacing, radius,
-// elevation, motion and design rules) with live component and landing-page previews and exports for
-// code and for AI agents.
 (function (root) {
   "use strict";
   const C = root.Color, picker = root.ColorPicker;
@@ -9,15 +6,11 @@
   const ic = (n) => `<svg class="ic" aria-hidden="true"><use href="#i-${n}"/></svg>`;
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-  // ---------- library directory ----------
-  // The list itself lives in libs.js.
   const ANY = "Any";
   const LIBS = root.ISO_LIBS.map(([name, url, desc, fw, cat, pick]) => ({ name, url, desc, fw, cat, pick: !!pick }));
   const FRAMEWORKS = root.ISO_FRAMEWORKS;
   const CATS = ["Picks", ...new Set(LIBS.map((l) => l.cat))];
 
-  // ---------- builder state ----------
-  // Font pairings from Google Fonts: [name, heading, body, heading weight].
   const PAIRS = [
     ["Instrument", "Instrument Sans", "Instrument Sans", 600], ["Inter", "Inter Tight", "Inter", 600], ["Editorial", "Fraunces", "Inter", 600],
     ["Grotesk", "Space Grotesk", "IBM Plex Sans", 600], ["Classic", "Playfair Display", "Source Sans 3", 700], ["DM", "DM Serif Display", "DM Sans", 400],
@@ -27,11 +20,8 @@
     ["Plex", "IBM Plex Sans", "IBM Plex Sans", 600], ["Bookish", "Literata", "Golos Text", 600], ["Garamond", "Cormorant Garamond", "Commissioner", 600],
     ["Rounded", "Nunito", "Nunito", 800], ["Soft", "Rubik", "Rubik", 600],
   ];
-  // Fonts with Cyrillic on Google Fonts. With "Cyrillic supported" on, the pairings and the font list keep to these.
   const CYR = new Set(["Inter", "Inter Tight", "Geist", "Manrope", "Onest", "IBM Plex Sans", "Source Sans 3", "Libre Franklin", "Rubik", "Nunito", "Playfair Display", "Lora", "Merriweather", "Source Serif 4", "Literata", "EB Garamond", "Cormorant Garamond", "Unbounded", "JetBrains Mono", "Geist Mono", "IBM Plex Mono", "Fira Code", "Golos Text", "Commissioner", "Wix Madefor Text", "Geologica"]);
   const pairOK = (p) => !K.cyr || (CYR.has(p[1]) && CYR.has(p[2]));
-  // With Cyrillic on, the kit's demo copy is in Russian (window.KIT_RU in ru.js), so the fonts are seen
-  // setting the text they were picked for. Text the kit changes as you use it is caught as it changes.
   const kitRU = (v) => { const k = v.trim(), r = k && root.KIT_RU?.[k]; return r ? v.replace(k, r) : v; };
   function kitLang(el) {
     if (!el || !K.cyr || !root.KIT_RU) return;
@@ -90,14 +80,10 @@
   try { K = { ...DEF, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch (e) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(K)); } catch (e) {} };
   if (K.view === "landing") K.view = "pages";
-  // A first visit in Russian starts on a pair that sets Cyrillic: Inter Tight over Inter, like the app itself.
   if (freshKit && K.cyr && !pairOK(PAIRS[K.pair] || PAIRS[0])) K.pair = Math.max(0, PAIRS.findIndex(pairOK));
-  // The artwork used to start off, which saved "none" into every kit; switch it on once so the Studio design shows.
   if (!K.artV) { K.art = "studio"; K.artV = 1; save(); }
-  // Rules added in later versions join a saved list once, after the rules already there.
   if ((K.rulesV || 1) < RULES_V) { const have = new Set(K.rules.map((r) => r.t)); for (const t of RULES) if (!have.has(t)) K.rules.push({ t, on: true }); K.rulesV = RULES_V; save(); }
   const fonts = () => { const p = PAIRS[K.pair] || PAIRS[0]; return { head: K.head || p[1], body: K.body || p[2], weight: p[3] }; };
-  // Your own fonts: uploaded files live in IndexedDB and load through the FontFace API.
   const custom = new Set();
   const fontDB = () => new Promise((res) => { try { const r = indexedDB.open("isoline-fonts", 1); r.onupgradeneeded = () => r.result.createObjectStore("fonts", { keyPath: "name" }); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch (e) { res(null); } });
   async function addFont(name, buf, store = true) {
@@ -115,8 +101,6 @@
     l.rel = "stylesheet"; l.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(f).replace(/%20/g, "+")}:wght@400;500;600;700&display=swap`;
     document.head.appendChild(l);
   }
-  // Until you change a color, the kit wears Isoline's own colors: its paper, panels and ink in the
-  // app's current light or dark theme, with the app's accent. dark: null means "same as the app".
   const UI = {
     light: { bg: "#efeeea", surface: "#fbfbf9", text: "#1c1c1e", muted: "#77756f" },
     dark: { bg: "#131312", surface: "#1c1c1a", text: "#edece8", muted: "#8f8d86" },
@@ -124,13 +108,8 @@
   const appDark = () => { const t = document.documentElement.dataset.theme; return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
   const isDark = () => (K.dark == null ? appDark() : K.dark);
   const appAccent = () => C.parseHex(getComputedStyle(document.documentElement).getPropertyValue("--accent").trim()) || "#e8572a";
-  // Colors are named roles, one set for light and one for dark. Text on the accent is worked out.
   const ROLES = [["bg", "Page", "Behind everything"], ["surface", "Surface", "Cards, panels and inputs"], ["text", "Text", "Headings and body copy"], ["muted", "Muted text", "Captions, hints and meta"], ["border", "Border", "Lines and outlines"], ["accent", "Accent", "Buttons, links and selection"]];
   const onOf = (a) => (C.contrast(a, "#ffffff") >= C.contrast(a, "#111111") ? "#ffffff" : "#111111");
-  // From a loose palette. The most colorful color (not too light or dark) becomes the accent. The page,
-  // surface and text are near-neutrals in the palette's hue, so a bright palette doesn't flood the page:
-  // "neutral" keeps them grey, "tinted" leans them toward the hue, "bold" uses the palette's own lightest
-  // and darkest colors. The accent is nudged until it reads on the page.
   const lch = (c) => C.toOklch(c);
   function rolesFrom(cs, dark, tint = "tinted") {
     const byL = cs.slice().sort((a, b) => lch(a)[0] - lch(b)[0]);
@@ -155,17 +134,14 @@
     return { bg, surface, text, muted: C.mixOklab(bg, text, 0.6), border: C.mixOklab(bg, text, dark ? 0.17 : 0.12), accent };
   }
   const fromSource = () => ({ light: rolesFrom(K.src, false, K.tint), dark: rolesFrom(K.src, true, K.tint) });
-  // The strength options preview a small page in each tint, in the current mode.
   root.UI?.tipPreview("tint", (tint) => {
     if (!K.src) return "";
     const r = rolesFrom(K.src, isDark(), tint);
     return `<div class="tp-kit" style="background:${r.bg};color:${r.text}">Aa<i style="width:70px"></i><i style="width:52px;color:${r.muted}"></i><span class="tp-card" style="background:${r.surface};border-color:${r.border}"><i style="width:48px"></i><span class="tp-pill" style="background:${r.accent}"></span></span></div>`;
   });
   const appRoles = (dark) => { const u = UI[dark ? "dark" : "light"]; return { ...u, border: C.mixOklab(u.bg, u.text, 0.1), accent: appAccent() }; };
-  // Older saves kept a loose list of colors; they become role sets once.
   if (!K.rc && Array.isArray(K.colors) && !K.follow) { K.src = K.colors; K.rc = fromSource(); }
   const mode = () => (isDark() ? "dark" : "light");
-  // Editing any role takes the kit off the app's colors, starting from what it showed.
   function unfollow() { if (!K.follow) return; K.rc = { light: appRoles(false), dark: appRoles(true) }; K.follow = false; }
   function roles() {
     const r = K.follow || !K.rc ? appRoles(isDark()) : K.rc[mode()];
@@ -194,7 +170,6 @@
     for (const [k, px] of Object.entries(t.space)) v["--k-s" + k] = px + "px";
     for (const [k, val] of Object.entries(v)) el.style.setProperty(k, val);
     loadFont(t.font.heading); loadFont(t.font.body);
-    // The motion demo moves in exactly the chosen duration and easing, resting between moves.
     const dot = el.querySelector(".k-track i");
     if (dot && !root.UI?.reduce.matches) {
       const d = t.motion.duration, hold = 700, tot = 2 * d + 2 * hold, span = (dot.parentElement.clientWidth || 320) - 28, e = t.motion.easing;
@@ -204,7 +179,6 @@
         dot._anim = dot.animate([{ translate: "0 0", offset: 0 }, { translate: "0 0", offset: hold / tot, easing: e }, { translate: `${span}px 0`, offset: (hold + d) / tot }, { translate: `${span}px 0`, offset: (2 * hold + d) / tot, easing: e }, { translate: "0 0", offset: 1 }], { duration: tot, iterations: Infinity });
       }
     }
-    // Printed values in the specimen.
     const on = K.rules.filter((r) => r.on && r.t.trim());
     const tok = { elevation: `${K.elevation[0].toUpperCase() + K.elevation.slice(1)} shadow`, "motion.name": `${{ linear: "linear", out: "ease out", inout: "ease in and out", spring: "spring" }[K.ease]}, ${K.enter === "none" ? "no entrance" : MOVE_NAME[K.enter].toLowerCase() + " in"}, ${K.exit === "none" ? "no exit" : MOVE_NAME[K.exit].toLowerCase() + " out"}`, artwork: K.art === "studio" ? "Your Studio design, behind the product picture" : "None. Pages use plain backgrounds", "motion.duration": t.motion.duration + "ms", rules: on.length ? on.slice(0, 3).map((r) => `<span>${esc(r.t.trim())}</span>`).join("") + (on.length > 3 ? `<small>and ${on.length - 3} more in the brief</small>` : "") : "<small>No rules on</small>" };
     for (const n of el.querySelectorAll("[data-tok]")) {
@@ -214,9 +188,6 @@
     }
   }
 
-  // ---------- previews ----------
-  // Everything in the preview reads the --k-* variables, so every token change shows up at once.
-  // Icons are drawn on the same 20px grid as the app's own.
   const KI = {
     arrow: '<path d="M4.5 10h11M11 5.5l4.5 4.5-4.5 4.5"/>', check: '<path d="m5 10.5 3 3 7-7"/>', search: '<circle cx="9" cy="9" r="5"/><path d="m16 16-3.4-3.4"/>',
     users: '<circle cx="8" cy="7.5" r="2.8"/><path d="M3 16c.6-2.6 2.6-4 5-4s4.4 1.4 5 4"/><path d="M13.5 5a2.6 2.6 0 0 1 0 5M15 12.4c1.2.5 2 1.6 2.3 3.1"/>',
@@ -229,16 +200,9 @@
     chev: '<path d="m6 8 4 4 4-4"/>', x: '<path d="m5.5 5.5 9 9M14.5 5.5l-9 9"/>', at: '<circle cx="10" cy="10" r="2.6"/><path d="M12.6 10v1.2a2.2 2.2 0 0 0 4.4 0V10a7 7 0 1 0-2.7 5.5"/>', menu: '<path d="M4 6.5h12M4 10h12M4 13.5h12"/>', quote: '<path d="M8 6.5C5.5 7.3 4.5 9 4.5 11.5v2h4v-4H6.3c.2-1.2.9-2 2.2-2.5ZM15 6.5c-2.5.8-3.5 2.5-3.5 5v2h4v-4h-2.2c.2-1.2.9-2 2.2-2.5Z"/>',
   };
   const ki = (n, cls = "") => `<svg class="k-ic ${cls}" viewBox="0 0 20 20" aria-hidden="true">${KI[n]}</svg>`;
-  // A bar chart drawn in the accent, so it follows the palette.
   const bars = (vals, labels, hi = -1, ru) => `<div class="k-bars">${vals.map((v, i) => `<div class="k-bar${i === hi ? " on" : ""}"><i style="height:${v}%"></i>${labels ? `<span${ru ? ` data-ru="${ru[i]}"` : ""}>${labels[i]}</span>` : ""}</div>`).join("")}</div>`;
   const av = (t, i) => `<span class="k-av" style="--i:${i}">${t}</span>`;
-  // The demo product is a document review tool, so the pages can show real content (drafts, comments,
-  // sign-offs) instead of placeholder metrics. Each page is built for one task with one focal point.
-  // The mark: a lowercase m drawn as two arches; its last leg stops short and ends in a note in the accent,
-  // which sits on the same baseline as the other legs. The view box is cropped to the drawing, so the
-  // mark can be sized to the wordmark's capitals and sit on its baseline.
   const LOGO = `<span class="k-brand"><svg class="k-mark" viewBox="0.8 0.8 18.3 21.4" aria-hidden="true"><path class="k-mk-m" d="M2.5 20.5V6a3.5 3.5 0 0 1 7 0v14.5M9.5 20.5V6a3.5 3.5 0 0 1 7 0v6.8"/><circle class="k-mk-n" cx="16.5" cy="19.6" r="2.6"/></svg><span class="k-word">Margin</span></span>`;
-  // On a phone the links fold into a menu behind a full-size burger; it drops down over the page.
   const NAV = (cta = "Try it free") => `<nav class="k-nav">${LOGO}<span class="k-nl">Product</span><span class="k-nl">Pricing</span><span class="k-nl">Changelog</span><span class="k-grow"></span><span class="k-link k-nl">Sign in</span><button class="k-btn k-sm">${cta}</button><button class="k-btn k-ghost k-icon k-burger" title="Menu" aria-label="Menu">${ki("menu", "k-i-open")}${ki("x", "k-i-close")}</button>
       <div class="k-mnav">${["Product", "Pricing", "Changelog", "Sign in"].map((t) => `<span>${t}</span>`).join("")}<button class="k-btn k-lg">${cta}</button></div></nav>`;
   const FOOT = `<footer class="k-foot"><div class="k-foot-top"><div class="k-foot-brand">${LOGO}<p class="k-small">Write, review and sign off without the email chain.</p></div><div class="k-foot-cols">${[["Product", ["Review", "Sign-off", "Publishing", "Changelog"]], ["Company", ["About", "Careers", "Contact"]], ["Help", ["Guides", "Templates", "Status"]]].map(([h, l]) => `<div><b>${h}</b>${l.map((x) => `<span>${x}</span>`).join("")}</div>`).join("")}</div></div><div class="k-foot-base"><span>© 2026 Margin</span><span class="k-grow"></span><span>Privacy</span><span>Terms</span></div></footer>`;
@@ -247,14 +211,11 @@
       <div class="k-cmt">${av("AL", 0)}<div><b>Ada Lovelace</b><span class="k-small">10:51</span><p>Good catch. Added a sentence on renewals.</p></div></div>
       ${open ? `<div class="k-reply"><span>Reply</span><button class="k-btn k-sm" data-k="resolve">Resolve</button></div><div class="k-resolved">${ki("check")}<span>Resolved by you</span><span class="k-link" data-k="reopen">Reopen</span></div>` : ""}
     </div>`;
-  // The product picture: a draft open in the editor, with its comment thread beside the line it's about.
   const EDITOR = `<div class="k-shot"><div class="k-shot-bar"><span>Spring pricing update</span><span class="k-small">Draft 4, edited by Ada</span><span class="k-grow"></span><span class="k-faces">${["AL", "LW", "SK"].map(av).join("")}</span><button class="k-btn k-sm" data-k="signoff">Request sign-off</button></div>
       <div class="k-shot-body">
         <div class="k-doc"><h3 class="k-h3">What's changing in April</h3><p>From 1 April, the Team plan includes unlimited documents and five sign-off requests a month.</p><p><mark>Existing customers keep their current price until their next renewal</mark>, and can switch plans at any time from Settings.</p><p>Business adds single sign-on, audit history and a named contact.</p><p class="k-ghostline"></p><p class="k-ghostline k-short"></p></div>
         <div class="k-margin">${thread()}</div>
       </div></div>`;
-  // The specimen at the top of the sheet shows every token on its own, so each setting on the left has
-  // a direct demonstration. Values are filled in from the tokens (see vars).
   const SPEC = `<section class="k-card k-spec">
       <div class="k-spec-row" data-spec="type"><span class="k-spec-l">Type</span><div class="k-type">${["4xl", "3xl", "2xl", "xl", "lg", "base", "sm"].map((k, i) => `<span class="k-ts"><b class="${i < 4 ? "k-hd" : ""}" style="font-size:var(--k-${k})">Ag</b><small><span>${k}</span><span class="mono" data-tok="size.${k}"></span></small></span>`).join("")}</div></div>
       <div class="k-spec-row" data-spec="color"><span class="k-spec-l">Color</span><div class="k-swatches">${[["bg", "Page"], ["surface", "Surface"], ["text", "Text"], ["muted", "Muted"], ["border", "Border"], ["accent", "Accent"]].map(([k, n]) => `<span class="k-swatch"><i style="background:var(--k-${k === "bg" ? "bg" : k})"></i><small>${n}</small><small class="mono" data-tok="color.${k}"></small></span>`).join("")}</div></div>
@@ -306,9 +267,6 @@
         <div class="k-radios">${["Anyone with the link", "People in Marketing", "Only me"].map((t, n) => `<label class="k-radio"><span class="k-dot${n === 1 ? " on" : ""}"></span>${t}</label>`).join("")}</div></div>
       </section>
     </div>`;
-  // ---------- the home page's product views ----------
-  // Each view is the editor again (the same bar, draft and margin as the picture at the top), with the
-  // margin showing one part of the work: a suggestion, the sign-off, two drafts compared.
   const BAR = () => `<div class="k-shot-bar"><span>Spring pricing update</span><span class="k-small">Draft 4</span><span class="k-grow"></span><span class="k-faces">${["AL", "LW", "SK"].map(av).join("")}</span></div>`;
   const DOC = (body) => `<div class="k-doc"><h3 class="k-h3">What's changing in April</h3>${body}<p class="k-ghostline"></p><p class="k-ghostline k-short"></p></div>`;
   const VIEWS = {
@@ -316,21 +274,14 @@
     signoff: `<div class="k-shot-body">${DOC(`<p>From 1 April, the Team plan includes unlimited documents and five sign-off requests a month.</p><p>Existing customers keep their current price until their next renewal.</p>`)}<div class="k-margin k-mg-top"><b class="k-mg-h">Sign-off</b><p class="k-small">Two of three have signed off. It publishes when Sam does.</p>${[["AL", "Ada Lovelace", "Signed Tuesday", 0, 1], ["LW", "Lin Wei", "Signed today", 1, 1], ["SK", "Sam Kerr", "Asked yesterday", 2, 0]].map(([a, n, w, i, ok]) => `<div class="k-mg-row">${av(a, i)}<div><b>${n}</b><span class="k-small">${w}</span></div>${ok ? `<span class="k-mg-ok">${ki("check")}</span>` : `<span class="k-link" data-k="nudge">Remind</span>`}</div>`).join("")}</div></div>`,
     history: `<div class="k-shot-body">${DOC(`<p>From 1 April, the Team plan includes <del>ten</del> <ins>unlimited</ins> documents and <del>three</del> <ins>five</ins> sign-off requests a month.</p><p><ins>Existing customers keep their current price until their next renewal.</ins></p>`)}<div class="k-margin k-mg-top"><b class="k-mg-h">Comparing two drafts</b>${[["Draft 4", "Today, Ada", 1], ["Draft 3", "Monday, Sam", 1], ["Draft 2", "2 April, Ada", 0], ["Draft 1", "28 March, Lin", 0]].map(([d, w, on]) => `<div class="k-mg-row k-ver${on ? " on" : ""}"><span class="k-check"><span class="k-box${on ? " on" : ""}"></span></span><div><b>${d}</b><span class="k-small">${w}</span></div></div>`).join("")}</div></div>`,
   };
-  // Closing: bring a draft in. The field is a real-looking import that runs when you press it.
   const IMPORT = `<div class="k-import"><div class="k-import-row"><span class="k-input">docs.google.com/document/d/1Xf9…/edit</span><button class="k-btn" data-k="import">Import</button></div><div class="k-import-busy"><div class="k-progress"><i></i></div><span class="k-small">Bringing in the text and 14 comments</span></div><div class="k-import-done"><b>Spring pricing update</b><span class="k-small">Imported with its 14 comments and 3 suggestions.</span><span class="k-row"><button class="k-btn k-sm">Open draft</button><span class="k-link" data-k="import-again">Import another</span></span></div><p class="k-small">Or drop a .docx or Markdown file here.</p></div>`;
   const CLOSE = `<section class="k-close k-close-imp"><div><h2 class="k-h2">Bring the draft you already have</h2><p class="k-p">Paste a Google Doc link or drop a file. Its comments and suggestions come with it.</p><div class="k-row"><button class="k-btn">Start a draft</button><button class="k-btn k-ghost">Talk to us</button></div></div>${IMPORT}</section>`;
   const LEAD_P = `<p class="k-lead">Every comment sits in the margin, next to the line it's about. Settle it in place, then publish the moment everyone signs off.</p>`, GO = `<div class="k-row"><button class="k-btn k-lg">Start a draft</button><span class="k-link k-under" data-k="how">See how review works${ki("arrow")}</span></div><span class="k-small">Free for three editors. No card needed.</span>`, LEAD = LEAD_P + GO;
-  // The headline, copy and buttons stacked on the left, the editor, then three spreads, each a part of
-  // the product on its own backdrop (the artwork, or a tint of the accent) beside what it does.
   const SPREADS = [
     ["suggest", "Suggest the change, don't describe it", "Type over the text and it becomes a suggestion. The author takes it or leaves it with one key, and the draft remembers who changed what.", ["Mention anyone with @. They can reply from their email.", "Every change keeps its author and time."]],
     ["signoff", "It publishes when the last person signs off", "Name who approves a draft. Margin asks them, reminds them once, and publishes to your site, help center or a PDF the moment the last one says yes.", ["Anyone can see who's still to approve.", "Sign-off can follow the order you set."]],
     ["history", "Compare any two drafts, down to the word", "Pick two versions and see exactly what moved between them, who moved it and when.", ["Restore any earlier draft.", "Send the comparison as a PDF."]],
   ];
-  // The hero, in one of two layouts (K.hero). Beside: the copy on the left and the editor beside it on
-  // the artwork, running off the page's edge, so the product is on the first screen. Below: the headline
-  // and buttons on the left, the lead on the right, and the editor across the page under them. On phones
-  // both stack and the picture runs edge to edge under the copy.
   const HERO_SHOT = `<div class="k-shot k-win">${BAR()}<div class="k-shot-body">${DOC(`<p>From 1 April, the Team plan includes unlimited documents and five sign-off requests a month.</p><p><mark>Existing customers keep their current price until their next renewal</mark>, and can switch plans at any time from Settings.</p>`)}<div class="k-margin k-mg-top">${thread()}</div></div></div>`;
   const HERO_PIC = `<section class="k-hero k-hero-pic"><div class="k-hero-copy"><h1 class="k-h1">Review drafts right where they're written</h1>${LEAD}</div><div class="k-hero-frame">${HERO_SHOT}</div></section>`;
   const HERO_BELOW = `<section class="k-hero k-hero-below"><h1 class="k-h1">Review drafts right where they're written</h1>${LEAD_P}<div class="k-hero-go">${GO}</div><div class="k-hero-frame">${HERO_SHOT}</div></section>`;
@@ -384,20 +335,16 @@
   const layoutHTML = (k) => (k === "home" ? HOME() : LAYOUTS[k][1]);
   function previewHTML() { return K.view === "components" ? COMPONENTS : `<div class="k-page k-pg-${K.layout}">${layoutHTML(K.layout)}</div>`; }
   if (K.view !== "components") K.view = "pages";
-  // Home card: the landing page in a browser window, tilted back in space, with the same page on a phone
-  // standing in front of it. Both are drawn at their real widths and scaled to the card.
   const homeRO = new ResizeObserver((en) => { for (const e of en) sizeHome(e.target, e.contentRect.width, e.contentRect.height); });
   const sizeHome = (el, w, h) => { el.style.setProperty("--cw", Math.round(w || 600)); el.style.setProperty("--ch", Math.round(h || 380)); };
   function preview(el) {
     if (!el) return;
-    // Switching Cyrillic off puts the English copy back by drawing the page again.
     const lang = K.cyr ? "ru" : "en";
     if (el.dataset.lang && el.dataset.lang !== lang) { for (const k of el.querySelectorAll(".kit")) k.innerHTML = `<div class="k-page k-pg-home">${HOME()}</div>`; el.dataset.hero = K.hero; }
     if (!el.querySelector(".cps")) {
       const page = `<div class="k-page k-pg-home">${HOME()}</div>`;
       el.innerHTML = `<div class="cps" aria-hidden="true"><div class="cps-win"><div class="cps-bar"><i></i><i></i><i></i><span></span></div><div class="kit k-landing">${page}</div></div><div class="cps-shade"></div><div class="cps-phone"><div class="kit k-landing">${page}</div></div></div>`;
       homeRO.observe(el);
-      // The scene tilts toward the pointer while it's over the card, and eases back when it leaves.
       const card = el.closest(".tool") || el, sc = el.querySelector(".cps");
       if (!root.UI?.reduce.matches && matchMedia("(hover: hover)").matches) {
         card.addEventListener("pointermove", (e) => {
@@ -410,17 +357,14 @@
         card.addEventListener("pointerleave", () => { sc.classList.remove("track"); sc.style.setProperty("--tx", 0); sc.style.setProperty("--ty", 0); });
       }
     }
-    // The card follows the hero layout picked in the Builder.
     const swapped = el.dataset.hero && el.dataset.hero !== K.hero;
     if (swapped) for (const h of el.querySelectorAll(".k-hero")) h.outerHTML = K.hero === "below" ? HERO_BELOW : HERO_PIC;
     el.dataset.hero = K.hero;
     if (swapped || el.dataset.lang !== lang) { el.dataset.lang = lang; for (const k of el.querySelectorAll(".kit")) kitLang(k); }
     for (const k of el.querySelectorAll(".kit")) { vars(k); k.classList.toggle("k-has-art", !!artURL); k.style.setProperty("--k-art", artURL ? `url("${artURL}")` : "none"); }
     vars(el.querySelector(".cps"));
-    // The ResizeObserver keeps the size after this; reading it on every repaint forced a full layout.
     if (!el.style.getPropertyValue("--cw")) sizeHome(el, el.clientWidth, el.clientHeight);
   }
-  // The kit wears the app's colors until you change them, so it follows the app's theme and accent.
   root.addEventListener("theme-change", () => {
     if (!K.follow && K.dark != null) return;
     const kit = $("kit"); if (kit) vars(kit);
@@ -428,16 +372,10 @@
     if (!build.hidden) { renderSlots(); renderStageSegs(); if (K.slot === "color") renderOpts(); }
   });
 
-  // ---------- libraries view ----------
-  // Each library is a window onto its site: its OpenGraph banner, else a screenshot of the page, else a
-  // pane drawn from its icon. Names, descriptions and framework lists of any length fit the same card.
   const hostOf = (u) => new URL(u).host.replace(/^www\./, "");
   const enc = encodeURIComponent;
-  // Previews captured at deploy time (tools/previews.mjs) come first; the 11ty services are a fallback
-  // for copies of the app that run without them, such as the single-file build.
   let local = {};
   const shots = (l) => [...(local[root.ISO_SLUG(l.name)] ? [local[root.ISO_SLUG(l.name)]] : []), `https://v1.opengraph.11ty.dev/${enc(l.url)}/small/`, `https://v1.screenshot.11ty.dev/${enc(l.url)}/opengraph/`];
-  // Next to the page when served from the repo or GitHub Pages; from the published site otherwise.
   const SITE = "https://masterclaudecoder.github.io/isoline/";
   const loadIndex = (base) => fetch(base + "previews/index.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((m) => Object.fromEntries(Object.entries(m || {}).map(([k, v]) => [k, base + v.src])));
   loadIndex("").catch(() => loadIndex(SITE)).then((m) => { local = m; if (Object.keys(local).length && !lib.hidden && $("cpResults").children.length) renderLibs(); }).catch(() => {});
@@ -466,7 +404,6 @@
       <h3 class="sub">Category</h3><div class="cp-list" id="cpCat"></div>
     </aside>
     <div class="cp-results scroll" id="cpResults"></div>`;
-  // Previews step down: banner, then screenshot, then the drawn pane underneath.
   const shotFail = (img) => {
     const l = LIBS.find((x) => x.name === img.closest(".lib")?.dataset.key); const step = +img.dataset.step + 1;
     const list = l ? shots(l) : [];
@@ -485,7 +422,6 @@
     const sec = (title, items, cls = "") => `<section class="lib-sec ${cls}"><h3 class="lib-h" data-key="h:${esc(title)}">${esc(title)}<span class="mono">${items.length}</span></h3><div class="cp-grid">${items.map(libCard).join("")}</div></section>`;
     let html;
     if (!list.length) html = `<div class="cp-empty" data-key="empty"><b>No libraries match</b><p>${K.q ? `Nothing for “${esc(K.q)}”` : "Nothing in this combination"}${K.fw !== "All" ? ` with ${K.fw === ANY ? "any framework" : K.fw}` : ""}.</p><button class="btn sm" id="cpClear">${ic("reset")}Clear filters</button></div>`;
-    // The full directory reads as sections, picks first; a filtered view is one list with picks on top.
     else if (K.cat === "All" && !K.q) html = sec("Picks", list.filter((l) => l.pick), "picks") + CATS.slice(1).map((c) => [c, list.filter((l) => l.cat === c)]).filter(([, v]) => v.length).map(([c, v]) => sec(c, v)).join("");
     else html = sec(K.cat === "All" ? `Results` : K.cat, list.slice().sort((a, b) => b.pick - a.pick), K.cat === "Picks" ? "picks" : "");
     const host = $("cpResults");
@@ -503,7 +439,6 @@
   let qT = 0;
   $("cpQ").addEventListener("input", (e) => { K.q = e.target.value.trim(); save(); clearTimeout(qT); qT = setTimeout(() => renderLibs(true), 90); });
 
-  // ---------- builder view ----------
   const build = $("cpBuild");
   const SLOTS = [["type", "Type", "type"], ["color", "Color", "palette"], ["artwork", "Artwork", "grid"], ["spacing", "Spacing", "space"], ["radius", "Radius", "corner"], ["elevation", "Elevation", "layers"], ["motion", "Motion", "timing"], ["rules", "Design rules", "rules"]];
   build.innerHTML = `
@@ -519,7 +454,6 @@
       <div class="cp-canvas" id="cpCanvas"><div class="kit-frame scroll" id="kitFrame"><div class="kit" id="kit"></div></div></div>
     </section>`;
   $("cpLayout").innerHTML = Object.entries(LAYOUTS).map(([k, [n]]) => `<button data-v="${k}">${n}</button>`).join("");
-  // Tile copy follows the studio's rule: the title names the choice, the subtitle lists its facts.
   const MOVE_NAME = { none: "None", fade: "Fade", rise: "Rise", sink: "Sink", scale: "Scale", blur: "Blur" };
   const EASE_NAME = { linear: "Linear", out: "Ease out", inout: "Ease in and out", spring: "Spring" };
   const ELEV_FACT = { none: "No shadow", hairline: "1px outline", soft: "24px blur, faint", crisp: "6px blur, close", lifted: "40px blur, deep" };
@@ -534,25 +468,13 @@
     motion: () => [EASE_NAME[K.ease], `${K.dur}ms, ${K.enter === "none" ? "no entrance" : MOVE_NAME[K.enter].toLowerCase() + " in"}`],
     rules: () => { const on = K.rules.filter((r) => r.on && r.t.trim()).length, off = K.rules.length - on; return [on ? `${on} ${on === 1 ? "rule" : "rules"}` : "No rules", off ? `${off} switched off` : K.rules.length ? "All on" : "Add your own"]; },
   };
-  // Built once and patched, so selection and text changes transition like the studio's build column.
-  // Every tile shows the same thing: one small card from your kit (a heading, two lines of text and a
-  // button on a surface), drawn with the kit's own variables. What differs is the one property each
-  // token controls, and that is all its hover animates: the heading's size, the colors, the background
-  // the card sits on, the room inside it, its corners, its lift, how it moves, and the rules it follows.
   const CARD = `<span class="tt-c"><b class="tt-h">Ag</b><span class="tt-tx"><i></i><i></i></span><s class="tt-btn"></s></span>`;
   const TOK_TH = Object.fromEntries(SLOTS.map(([id]) => [id, `<span class="tt-scene${id === "artwork" ? " tt-art" : ""}"${id === "artwork" ? ' id="cpArtTile"' : ""}>${CARD}</span>`]));
-  // Hovering plays one short demonstration with the same rhythm on every tile: the property steps down to
-  // a smaller value, up to a larger one, and settles back on yours, with even holds between the beats.
-  // It plays once per hover and always finishes, so the tile rests on the token's own value. Motion runs
-  // with your own duration and easing, since that is the token.
   const BEAT = { duration: 1500, easing: "cubic-bezier(.65,0,.35,1)" };
   const beats = (home, low, high) => [[home, 0], [low, 0.26], [low, 0.4], [high, 0.66], [high, 0.8], [home, 1]].map(([k, offset]) => ({ ...k, offset, easing: BEAT.easing }));
   const cs = (el, p) => getComputedStyle(el)[p];
   const TOK_ANIM = {
-    // Type sizes the heading itself (not a scale), so the lines beside it make way as it grows.
     type: [".tt-h", (el) => { const f = parseFloat(cs(el, "fontSize")) || 12; return beats({ fontSize: f + "px" }, { fontSize: f * 0.7 + "px" }, { fontSize: f * 1.5 + "px" }); }],
-    // Color: the card swaps to the dark scheme, then to another palette, and back. Every frame lists the
-    // same filters, so the browser blends between them instead of jumping.
     color: [".tt-scene", () => beats({ filter: "invert(0) hue-rotate(0deg) saturate(1)" }, { filter: "invert(1) hue-rotate(180deg) saturate(1)" }, { filter: "invert(0) hue-rotate(140deg) saturate(1.3)" })],
     artwork: [".tt-scene", () => beats({ backgroundPosition: "50% 50%" }, { backgroundPosition: "10% 20%" }, { backgroundPosition: "90% 80%" })],
     spacing: [".tt-c", (el) => beats({ paddingInline: cs(el, "paddingLeft"), columnGap: cs(el, "columnGap") }, { paddingInline: "2px", columnGap: "2px" }, { paddingInline: "10px", columnGap: "9px" })],
@@ -563,7 +485,6 @@
       const hold = 300, total = 2 * dur + 2 * hold, f = (ms) => ms / total;
       return { frames: [{ opacity: 1, translate: "0 0", offset: 0, easing: ease }, { opacity: 0, translate: "14px 0", offset: f(dur) }, { opacity: 0, translate: "-14px 0", offset: f(dur + hold), easing: ease }, { opacity: 1, translate: "0 0", offset: f(2 * dur + hold) }, { opacity: 1, translate: "0 0", offset: 1 }], duration: total };
     }],
-    // Rules: each part of the card writes itself in, one after another, like a checklist being followed.
     rules: [".tt-h, .tt-tx i, .tt-btn", () => [{ scale: "1 1", offset: 0 }, { scale: "0 1", offset: 0.2, easing: BEAT.easing }, { scale: "0 1", offset: 0.3, easing: BEAT.easing }, { scale: "1 1", offset: 0.75 }, { scale: "1 1", offset: 1 }]],
   };
   function tokHover(tile) {
@@ -592,7 +513,6 @@
   }
   $("cpSlots").addEventListener("click", (e) => { const t = e.target.closest("[data-s]"); if (t) setSlot(t.dataset.s); });
   function setSlot(id) { if (K.slot === id) return; K.slot = id; save(); renderSlots(); renderOpts(true); $("cpOpts").closest(".options").scrollTo({ top: 0 }); focusSpec(true); }
-  // The specimen row for the open token is marked, and scrolled into view when you change token.
   function focusSpec(scroll) {
     const kit = $("kit"); if (!kit) return;
     for (const r of kit.querySelectorAll(".k-spec-row")) r.classList.toggle("focus", r.dataset.spec === K.slot);
@@ -601,7 +521,6 @@
   }
   $("cpNext").onclick = () => { const i = SLOTS.findIndex((s) => s[0] === K.slot); if (i === SLOTS.length - 1) { $("cpExportBtn")?.click(); return; } setSlot(SLOTS[i + 1][0]); };
 
-  // Option controls
   function slider(host, label, min, max, step, get, set, fmt = String) {
     const row = document.createElement("div"); row.className = "ctrl";
     row.innerHTML = `<div class="label-row"><span class="label">${label}</span><span class="val-static mono"></span></div><input type="range" min="${min}" max="${max}" step="${step}" aria-label="${label}">`;
@@ -612,7 +531,6 @@
   }
   function seg(host, opts, get, set, cls = "") {
     const el = document.createElement("div"); el.className = "seg sm " + cls;
-    // An option can carry a tooltip, and a live preview for it: [value, label, tip, preview].
     el.innerHTML = opts.map(([v, l, t, pv]) => `<button data-v="${v}" class="${String(get()) === String(v) ? "on" : ""}"${t ? ` data-tip="${esc(t)}"` : ""}${pv ? ` data-tip-preview="${pv}"` : ""}>${l}</button>`).join("");
     el.onclick = (e) => { const b = e.target.closest("button[data-v]"); if (!b) return; set(isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v); for (const x of el.querySelectorAll("button")) x.classList.toggle("on", x === b); changed(); };
     host.appendChild(el); return el;
@@ -621,8 +539,6 @@
   const sub = (host, t, first) => host.insertAdjacentHTML("beforeend", `<h3 class="sub${first ? " first" : ""}">${t}</h3>`);
   const subHead = (host, t, right, first) => host.insertAdjacentHTML("beforeend", `<div class="sub-head${first ? " first" : ""}"><h3 class="sub">${t}</h3>${right}</div>`);
 
-  // ---------- fonts ----------
-  // A small catalog from Google Fonts, grouped by kind, so the picker can suggest rather than ask for a name.
   const CATALOG = {
     Sans: ["Inter", "Inter Tight", "Instrument Sans", "Geist", "DM Sans", "Manrope", "Figtree", "Plus Jakarta Sans", "Onest", "IBM Plex Sans", "Source Sans 3", "Libre Franklin", "Archivo", "Work Sans", "Outfit", "Lexend", "Rubik", "Nunito", "Public Sans", "Albert Sans", "Hanken Grotesk", "Schibsted Grotesk", "Golos Text", "Commissioner", "Wix Madefor Text", "Geologica", "Red Hat Display", "Space Grotesk", "Sora", "Bricolage Grotesque", "Epilogue", "Urbanist"],
     Serif: ["Fraunces", "Newsreader", "Playfair Display", "DM Serif Display", "Instrument Serif", "Libre Caslon Text", "Lora", "Merriweather", "Source Serif 4", "Literata", "EB Garamond", "Cormorant Garamond", "Crimson Pro", "Young Serif", "Gloock"],
@@ -630,14 +546,13 @@
     Mono: ["JetBrains Mono", "Geist Mono", "IBM Plex Mono", "Space Mono", "DM Mono", "Fira Code"],
   };
   const kindOf = (f) => (custom.has(f) ? "Yours" : Object.keys(CATALOG).find((k) => CATALOG[k].includes(f)) || "Google Fonts");
-  // Suggestions for one role given the other: the pairings that use it, then fonts of a contrasting kind.
   function suggest(role, other) {
     const fromPairs = PAIRS.filter((p) => p[role === "head" ? 2 : 1] === other).map((p) => p[role === "head" ? 1 : 2]);
     const ok = kindOf(other), contrast = role === "head" ? (ok === "Serif" ? ["Sans", "Display"] : ["Serif", "Display", "Sans"]) : ok === "Sans" ? ["Sans"] : ["Sans", "Serif"];
     const extra = contrast.flatMap((k) => CATALOG[k].slice(0, 4));
     return [...new Set([...fromPairs, ...extra])].filter((f) => f !== other || role === "body").slice(0, 6);
   }
-  let ff = null; // the open font picker
+  let ff = null;
   function fontPicker(anchor, role) {
     closeFF();
     const pop = document.createElement("div");
@@ -681,9 +596,7 @@
   document.addEventListener("pointerdown", (e) => { if (ff && !e.target.closest(".ff, .ff-trigger")) closeFF(); });
   document.addEventListener("scroll", (e) => { if (ff && !ff.pop.contains(e.target)) closeFF(); }, true);
 
-  // A contrast readout: the ratio, then the WCAG level it reaches.
   const level = (r) => (r >= 7 ? ["AAA", "ok"] : r >= 4.5 ? ["AA", "ok"] : r >= 3 ? ["Large text", "warn"] : ["Low", "bad"]);
-  // A folding group of options, remembered open or closed like the Studio's.
   const grp = (host, title, open = true) => { if (!root.UI?.group) return host; const g = root.UI.group(title, { key: "cp-" + title, open }); host.appendChild(g); return g.body; };
   function renderOpts(enter) {
     const o = $("cpOpts");
@@ -732,7 +645,6 @@
       slider(sizeG, "Base size", 13, 20, 1, () => K.base, (v) => (K.base = v), (v) => v + "px");
       slider(sizeG, "Heading tracking", -0.06, 0.04, 0.005, () => K.tracking, (v) => (K.tracking = v), (v) => (+v).toFixed(3) + "em");
     } else if (K.slot === "color") {
-      // Where the colors come from, how strongly the page takes their hue, then every role in detail.
       const pal = root.Palettes;
       const app = appRoles(isDark()), appCs = [app.bg, app.surface, app.text, app.accent];
       const plist = [["isoline", "Isoline", appCs], ...(pal ? [["tool", "Palette tool", pal.colors()], ...pal.saved().map((p, k) => ["s" + k, p.name, p.colors])] : [])];
@@ -756,7 +668,6 @@
       sub(o, "Mode");
       seg(o, [["auto", "Match the app"], ["light", "Light"], ["dark", "Dark"]], () => (K.dark == null ? "auto" : K.dark ? "dark" : "light"), (v) => { K.dark = v === "auto" ? null : v === "dark"; renderStageSegs(); setTimeout(() => renderOpts(), 0); });
       subHead(o, `Roles in ${mode()} mode`, `<span class="val-static mono">${ROLES.length}</span>`);
-      // Each role shows its color, what it is for, and how well the text roles read on what they sit on.
       const list = document.createElement("div"); list.className = "cp-roles";
       list.innerHTML = ROLES.map(([k, name, what]) => `<button class="cp-role" data-role="${k}"><span class="sw"></span><span class="cp-role-t"><b>${name}</b><small>${what}</small></span><span class="cp-role-v"><span class="mono"></span><em class="cp-badge"></em></span></button>`).join("");
       list.onclick = (e) => {
@@ -797,7 +708,6 @@
       const demo = $("cpDemo");
       demo.style.setProperty("--dur", K.dur + "ms"); demo.style.setProperty("--ease", EASE[K.ease]);
       demo.onclick = () => { demo.classList.remove("go"); void demo.offsetWidth; demo.classList.add("go"); };
-      // How things arrive and leave: menus, dialogs, toasts and page sections all use these.
       const inout = grp(o, "Enter and exit");
       const pair = document.createElement("div"); pair.className = "dd-pair"; inout.appendChild(pair);
       const colA = document.createElement("div"), colB = document.createElement("div"); pair.append(colA, colB);
@@ -806,7 +716,6 @@
       sub(colB, "Disappear");
       dd(seg(colB, [["none", "None"], ["fade", "Fade"], ["sink", "Sink"], ["scale", "Scale"], ["blur", "Blur"]], () => K.exit, (v) => { K.exit = v; setTimeout(() => replay(true), 0); }), "Disappear");
       slider(inout, "Stagger", 0, 120, 5, () => K.stagger, (v) => (K.stagger = v), (v) => (v ? v + "ms" : "Off"));
-      // When it plays: once as the page loads, or as each section scrolls into view and back out.
       sub(inout, "Plays");
       seg(inout, [["load", "On load"], ["scroll", "On scroll"]], () => K.trigger, (v) => { K.trigger = v; setTimeout(() => replay(false), 0); });
       inout.insertAdjacentHTML("beforeend", `<button class="btn sm cp-replay" id="cpReplayOpt">${ic("play")}Play out and back in</button>`);
@@ -827,7 +736,6 @@
     }
     if (enter) { o.classList.remove("enter"); void o.offsetWidth; o.classList.add("enter"); }
   }
-  // Type panel patches: the font triggers and the selected pairing follow the current fonts.
   function syncType() {
     const f = fonts(), o = $("cpOpts");
     for (const t of o.querySelectorAll(".ff-trigger")) {
@@ -857,9 +765,6 @@
     $("cpLayout").hidden = K.view !== "pages";
     $("cpHero").hidden = K.view !== "pages" || K.layout !== "home";
   }
-  // ---------- page size ----------
-  // The preview is a page of a real size: the window's own room ("Fit"), or a preset or dragged size,
-  // scaled down to fit when it is bigger than the room. Layouts respond to the page width.
   const canvas = $("cpCanvas"), frame = $("kitFrame");
   $("kit").addEventListener("click", interact);
   const roomOf = () => { const cs = getComputedStyle(canvas); return [Math.floor(canvas.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)), Math.floor(canvas.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom))]; };
@@ -869,12 +774,10 @@
     const kit = $("kit"), [aw, ah] = roomOf(); if (!kit || aw < 40 || ah < 40) return;
     const [w, h] = pageSize();
     zoom = K.fit ? 1 : rzZoom || Math.min(1, aw / w, ah / h);
-    // Picking a size glides the frame there; dragging or resizing the window tracks directly.
     const key = K.fit ? "fit" : K.pw + "x" + K.ph;
     frame.style.transition = !rzZoom && fitKey && key !== fitKey ? "width .42s var(--ease), height .42s var(--ease)" : "";
     fitKey = key;
     frame.style.width = Math.round(w * zoom) + "px"; frame.style.height = Math.round(h * zoom) + "px";
-    // The page is as wide as the frame minus its vertical scrollbar, so it never scrolls sideways.
     const sb = frame.offsetWidth - frame.clientWidth;
     kit.style.width = (sb > 0 ? w - sb / zoom : w) + "px"; kit.style.minHeight = h + "px"; kit.style.setProperty("--z", zoom.toFixed(4));
     if (root.Shell?.route === "components") root.syncSize?.();
@@ -903,9 +806,6 @@
     focusSpec(false);
     applyArt();
   }
-  // ---------- the preview responds ----------
-  // Pages and the sheet behave like the real thing: the phone menu opens, threads resolve, suggestions
-  // are taken or left, sign-off goes round, and tabs, switches, boxes, radios and questions all answer.
   function interact(e) {
     const t = e.target, at = (sel) => t.closest(sel), k = at("[data-k]")?.dataset.k;
     const pulse = (el) => !root.UI?.reduce?.matches && el?.animate([{ transform: "scale(.97)" }, { transform: "none" }], { duration: 260, easing: "cubic-bezier(.3,1.4,.5,1)" });
@@ -953,15 +853,10 @@
     if ((el = at(".k-item"))) { for (const r of el.parentElement.querySelectorAll(".k-item")) r.classList.toggle("on", r === el); return; }
     if ((el = at(".k-btn"))) pulse(el);
   }
-  // ---------- entrances and exits ----------
-  // Page sections and sheet cards arrive in order with the chosen appear motion, and leave with the
-  // disappear one, at the token duration and easing.
   const ENTER = { fade: [{ opacity: 0 }, { opacity: 1 }], rise: [{ opacity: 0, transform: "translateY(16px)" }, { opacity: 1, transform: "none" }], scale: [{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "none" }], blur: [{ opacity: 0, filter: "blur(10px)" }, { opacity: 1, filter: "blur(0)" }] };
   const EXIT = { fade: [{ opacity: 1 }, { opacity: 0 }], sink: [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(12px)" }], scale: [{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.96)" }], blur: [{ opacity: 1, filter: "blur(0)" }, { opacity: 0, filter: "blur(10px)" }] };
   const partsOf = (kit) => [...kit.querySelectorAll(".k-sheet > *, .k-page > *:not(.k-app), .k-app > .k-side, .k-main > *")];
   let playTok = 0;
-  // On scroll, the frame is the viewport: sections play their appear motion as they come into view and
-  // their disappear motion as they leave, both ways, the way the exported scroll timeline does.
   let scrollIO = null;
   function armScroll(kit) {
     scrollIO?.disconnect(); scrollIO = null;
@@ -1002,12 +897,7 @@
     els.forEach((el, i) => { const a = el.animate(ENTER[K.enter], { ...opts(i), fill: "backwards" }); a.id = "kit"; });
   }
   $("cpReplay").onclick = () => replay(true);
-  // ---------- artwork ----------
-  // The studio's current design, captured as a picture for the pages.
-  let artURL = "", artImg = null; // the decoded picture is kept alive so it stays decoded
-  // The backdrop is redrawn only when the Studio design has changed, and encoded off the main thread.
-  // The last few pictures are kept by design, so stepping back and forth through looks swaps them at
-  // once. A call made while the same design is still being drawn waits for that drawing.
+  let artURL = "", artImg = null;
   let artKey = "", artJob = null;
   const artCache = new Map();
   async function refreshArt() {
@@ -1022,10 +912,8 @@
         const c = await root.Studio.snapshot(1600, 1000), b = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.86));
         if (!b) throw new Error("no picture");
         const url = URL.createObjectURL(b);
-        // Decoded before it goes in, so the backdrop never shows empty for a frame while the picture unpacks.
         const img = new Image(); img.src = url; await img.decode().catch(() => {});
         artCache.set(key, { url, img });
-        // The oldest go, a while later: a roll's still copy may still show one.
         for (const [k, v] of artCache) { if (artCache.size <= 8) break; if (v.url === artURL || k === key) continue; artCache.delete(k); setTimeout(URL.revokeObjectURL, 10000, v.url); }
         if (artKey !== key) return;
         artURL = url; artImg = img;
@@ -1041,7 +929,6 @@
   }
   if (K.art === "studio") setTimeout(refreshArt, 1500);
   function paintArtThumb() { for (const th of [$("cpArtTh"), $("cpArtTile")]) if (th) th.style.backgroundImage = artURL ? `url("${artURL}")` : ""; }
-  // Full width: the token columns fold away so the preview gets the whole page.
   function setWide(on) {
     K.wide = on; save();
     build.classList.toggle("wide", on);
@@ -1052,7 +939,6 @@
   setWide(!!K.wide);
   const swapStage = () => { const go = () => { renderStage(); replay(false); }; root.UI ? root.UI.swap(go) : go(); };
   $("cpView").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && K.view !== b.dataset.v) { K.view = b.dataset.v; save(); swapStage(); } };
-  // The home page's hero layout: some kits read better with the picture beside the headline, some below it.
   $("cpHero").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && K.hero !== b.dataset.v) { K.hero = b.dataset.v; save(); swapStage(); } };
   $("cpLayout").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && K.layout !== b.dataset.v) { K.layout = b.dataset.v; save(); swapStage(); } };
   $("cpTheme").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b) { K.dark = b.dataset.v === "dark"; renderStageSegs(); changed(K.slot === "color"); } };
@@ -1065,7 +951,6 @@
     clearTimeout(changeT); changeT = setTimeout(() => root.dispatchEvent(new Event("kit-change")), 150);
   }
 
-  // ---------- exports ----------
   const stack = (f, fallback) => `"${f}", ${fallback}`;
   const fontsLink = () => { const f = fonts(), g = [...new Set([f.head, f.body])].filter((x) => !custom.has(x)); return g.length ? `https://fonts.googleapis.com/css2?${g.map((x) => `family=${x.replace(/ /g, "+")}:wght@400;500;600;700`).join("&")}&display=swap` : "none, your own font files"; };
   function cssVars() {
@@ -1082,13 +967,11 @@
       Object.entries(t.color).map(([k, v]) => `  --color-${k.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase())}: ${v};`).join("\n") +
       `\n  --spacing: ${space(1)}px;\n  --radius-base: ${t.radius.base}px;\n  --radius-button: ${t.radius.button}px;\n  --shadow-base: ${t.shadow};\n  --default-transition-duration: ${t.motion.duration}ms;\n  --default-transition-timing-function: ${t.motion.easing};\n}\n`;
   }
-  // Appear and disappear as keyframes, with a reduced-motion fallback.
   const KF = (frames) => frames.map((f, i) => `  ${i ? "to" : "from"} { ${Object.entries(f).map(([k, v]) => `${k}: ${v === "none" ? "none" : v};`).join(" ")} }`).join("\n");
   function motionCSS() {
     let out = "";
     if (ENTER[K.enter]) out += `\n@keyframes appear {\n${KF(ENTER[K.enter])}\n}\n.appear { animation: appear var(--duration) var(--easing) both; animation-delay: calc(var(--i, 0) * var(--stagger)); }\n`;
     if (EXIT[K.exit]) out += `\n@keyframes disappear {\n${KF(EXIT[K.exit])}\n}\n.disappear { animation: disappear var(--duration) var(--easing) both; }\n`;
-    // On scroll: the same keyframes run on a view timeline, in as a section enters and out as it leaves.
     if (K.trigger === "scroll" && (ENTER[K.enter] || EXIT[K.exit])) {
       const names = [ENTER[K.enter] && "appear", EXIT[K.exit] && "disappear"].filter(Boolean);
       const ranges = [ENTER[K.enter] && "entry 0% entry 60%", EXIT[K.exit] && "exit 40% exit 100%"].filter(Boolean);
@@ -1097,7 +980,6 @@
     return out + (out ? `\n@media (prefers-reduced-motion: reduce) { .appear, .disappear, .on-scroll { animation: none; } }\n` : "");
   }
   const jsonTokens = () => JSON.stringify(tokens(), null, 2);
-  // Briefs for AI agents: one for design work, one for building it.
   function brief(kind = "design") {
     const t = tokens(), r = roles(), rules = K.rules.filter((x) => x.on && x.t.trim()).map((x) => `- ${x.t.trim()}`).join("\n");
     const named = (h) => `${h} (${C.name(h)})`;
@@ -1107,7 +989,6 @@
     if (kind === "dev") out += `\n## Tokens as CSS variables\n\`\`\`css\n${cssVars()}\`\`\`\n\n## Tailwind v4 theme\n\`\`\`css\n${tailwind()}\`\`\`\n` + (libs ? `\n## Suggested libraries${K.fw !== "All" ? " for " + K.fw : ""}\n${libs}\n` : "");
     return out;
   }
-  // Export menu in the top bar.
   const exWrap = document.createElement("div");
   exWrap.className = "menu-wrap"; exWrap.dataset.for = "components";
   exWrap.innerHTML = `<button class="btn primary" id="cpExportBtn" aria-haspopup="true">Export${ic("chev")}</button><div class="pop" id="cpExportMenu" hidden>
@@ -1128,7 +1009,6 @@
     try { await navigator.clipboard.writeText(text); root.toastMsg?.("Copied"); } catch (err) { root.toastMsg?.("Clipboard is blocked here"); }
   };
 
-  // ---------- mode ----------
   function setMode(m) {
     K.mode = m; save();
     lib.hidden = m !== "libraries"; build.hidden = m !== "builder";
@@ -1139,32 +1019,25 @@
   }
   $("cpMode").onclick = (e) => { const b = e.target.closest("button[data-v]"); if (b && b.dataset.v !== K.mode) { for (const x of $("cpMode").querySelectorAll("button")) x.classList.toggle("on", x === b); root.UI ? root.UI.swap(() => setMode(b.dataset.v)) : setMode(b.dataset.v); } };
 
-  // A palette sent back from the palette tool.
   function usePalette(hexes) { K.follow = false; K.src = hexes.slice(); K.srcKey = "tool"; K.rc = fromSource(); K.slot = "color"; K.mode = "builder"; save(); }
   const summary = () => `${K.mode}, ${K.mode === "builder" ? `${K.slot} token, ${K.view === "pages" ? LAYOUTS[K.layout][0] + " page" : "components"}, ${pageSize().join("×")}${K.fit ? " (fit)" : ""}` : `${K.fw} framework, ${K.cat} category`}`;
-  // A new look for the kit in the given colors: fonts, scale, shape, depth and color strength rolled at
-  // random, leaving where you are in the tool alone. The home page's logo uses it.
   function remix(hexes) {
     const pick = (a) => a[Math.floor(Math.random() * a.length)];
     const okPairs = PAIRS.map((p, k) => k).filter((k) => pairOK(PAIRS[k]));
     Object.assign(K, { pair: okPairs[Math.floor(Math.random() * okPairs.length)], head: "", body: "", scale: pick([1.2, 1.25]), radius: pick([0, 4, 6, 8, 12, 16]), pill: Math.random() < 0.25, density: pick([0.9, 1, 1.1]), elevation: pick(Object.keys(SHADOWS)), tint: pick(["neutral", "tinted", "tinted", "bold"]), ease: pick(["out", "inout", "spring"]) });
     if (hexes?.length) { K.follow = false; K.src = hexes.slice(); K.srcKey = "tool"; K.rc = fromSource(); }
     save();
-    // A kit that wears the Studio design picks up the new one too.
     if (K.art === "studio") return refreshArt();
   }
-  // The kit's look on its own (the part remix rolls), so the home page can step back through remixes.
   const LOOK = ["pair", "head", "body", "scale", "radius", "pill", "density", "elevation", "tint", "ease", "follow", "src", "srcKey", "rc"];
   const look = () => JSON.parse(JSON.stringify(Object.fromEntries(LOOK.map((k) => [k, K[k]]))));
   function setLook(l) { Object.assign(K, JSON.parse(JSON.stringify(l))); save(); const kit = $("kit"); if (kit) vars(kit); if (K.art === "studio") return refreshArt(); }
-  // Coming back to an unchanged page keeps what is already built, so the page switch only has to show it.
   let leftKey = "";
   const pageKey = () => JSON.stringify([K, root.Palettes?.colors?.(), document.documentElement.dataset.theme]);
   function onShow() {
     if (leftKey && leftKey === pageKey() && $("kit")) { leftKey = ""; if (K.mode === "builder") refreshArt(); return; }
     leftKey = ""; setMode(K.mode);
   }
-  // Built ahead of a first visit (the shell does it while the home page idles), so the visit finds it ready.
   function prepare() { if (leftKey || root.Shell?.route === "components") return; setMode(K.mode); leftKey = pageKey(); }
   root.Components = { onShow, prepare, art: refreshArt, onHide: () => (leftKey = pageKey()), usePalette, remix, look, setLook, summary, sizer, preview, tokens, brief, cssVars, libraries: () => LIBS.slice(), state: () => JSON.parse(JSON.stringify(K)) };
 })(window);

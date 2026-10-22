@@ -1,5 +1,3 @@
-// Color names: the "best of" set from color-name-list by David Aerne (MIT License), https://github.com/meodai/color-name-list
-// One color per line: six hex digits followed by the name.
 window.COLOR_NAMES = `c93f38100 Mph
 19197020000 Leagues Under the Sea
 e56e2424 Carrot

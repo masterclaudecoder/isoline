@@ -3,7 +3,6 @@ U={"Inter Tight":"https://fonts.gstatic.com/s/intertight/v9/NGSwv5HMAFg6IuGlBNMj
 "Onest":"https://fonts.gstatic.com/s/onest/v11/gNMKW3F-SZuj7xmb-HY6EQ.woff2",
 "Wix Madefor Text":"https://fonts.gstatic.com/s/wixmadefortext/v17/-W_lXI_oSymQ8Qj-Apx3HGN_Hu1RZiER5zwf.woff2"}
 R="U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116"
-# (label, font, size-adjust, letter-spacing em for cyr, weight delta)
 V=[("Inter Tight · as is","Inter Tight",1,0,0),("Inter Tight · x-height matched","Inter Tight",.93,0,0),("Inter Tight · matched, +tracking, lighter","Inter Tight",.93,.012,-40),
 ("Onest · as is","Onest",1,0,0),("Onest · x-height matched","Onest",.96,0,0),("Onest · matched, tighter, lighter","Onest",.96,-.01,-40),
 ("Wix Madefor · as is","Wix Madefor Text",1,0,0),("Wix Madefor · slightly smaller","Wix Madefor Text",.97,0,0),("Wix Madefor · smaller, tighter, lighter","Wix Madefor Text",.97,-.012,-40)]

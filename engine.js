@@ -1,4 +1,3 @@
-// Topographic engine: scalar field -> contour lines -> SVG. No DOM; also runs in Node.
 (function (root) {
   "use strict";
 
@@ -7,11 +6,9 @@
     { id: "rings", label: "Rings", linear: true }, { id: "ridges", label: "Ridges" }, { id: "dunes", label: "Dunes" },
     { id: "lines", label: "Lines", linear: true }, { id: "strata", label: "Strata", linear: true }, { id: "waves", label: "Waves", linear: true },
   ];
-  // Linear patterns are measured in pixels, so lines are spaced by a fixed gap instead of a count.
   const LINEAR = new Set(PATTERNS.filter((p) => p.linear).map((p) => p.id));
   const ANGLED = new Set(["flow", "dunes", "lines", "strata", "waves"]);
 
-  // ---------- noise ----------
   function mulberry32(a) {
     return () => {
       a |= 0; a = (a + 0x6d2b79f5) | 0;
@@ -49,25 +46,14 @@
     };
   }
 
-  // ---------- scalar field ----------
-  // Where contour levels get their range. Spreading levels between the lowest and highest point the
-  // window shows made everything shift whenever a peak grew, or crossed the edge: the whole map would
-  // suddenly push one way. Instead the range comes from a coarse grid over the canvas plus a wide
-  // margin, and, for motions that morph the field (Flow and Pulse), from points all round their loop,
-  // so it holds still through playback and the still frame matches the playing ones. Drift is covered
-  // by the margin. The GPU contour pass samples the same grid, so both land levels in the same places.
   const rangeCache = new Map();
   function rangeSpec(s, w, h, k = 1) {
     const M = Math.max(0.3 * Math.max(w, h), (s.driftR || 0) * k + 1), W = w + 2 * M, H = h + 2 * M;
     const mx = 96, my = Math.max(2, Math.round((mx * H) / W));
     const m = s.motion || {}, a = m.amt ?? 0.5, a0 = m.seed ? ((m.seed * 0.6180339887) % 1) * 2 * Math.PI : 0;
     const R = m.type === "breathe" ? 0.45 * a : m.type === "pulse" ? 0.5 * a : 0;
-    // Endless Flow wanders up to 1.6 times as far, inside and outside the loop, so it samples both rings.
     const ring = (r, ph) => Array.from({ length: 6 }, (_, i) => [r * Math.cos(a0 + ph + (i * Math.PI) / 3), r * Math.sin(a0 + ph + (i * Math.PI) / 3)]);
-    // Unbound travels on forever; the noise looks alike everywhere, so points further along its way stand
-    // in for the rest.
     const along = m.unbound ? [3, 7, 12].map((d) => [0.8 * d * R + R, 0.6 * d * R]) : [];
-    // Sway and glide read along a line through the direction instead (glide twice as far, both ways).
     const path = m.endless && m.type === "breathe" ? "orbit" : m.path || "orbit", th = ((m.angle ?? 30) * Math.PI) / 180, L = path === "glide" ? 2 * R : R;
     const line = Array.from({ length: 7 }, (_, i) => [-Math.cos(th) * L * (i / 3 - 1), Math.sin(th) * L * (i / 3 - 1)]);
     const loops = R > 0 ? (m.endless && m.type === "breathe" ? [...ring(1.8 * R, 0), ...ring(0.6 * R, Math.PI / 6), ...along] : path === "orbit" ? ring(R, 0) : line) : [[0, 0]];
@@ -91,7 +77,6 @@
       return sum / norm;
     };
 
-    // Seeded bumps (strata) and seeded blobs (used when no points are placed).
     const feats = [], auto = [];
     for (let i = 0; i < 24; i++) {
       const r = s.bumpSize * k * (0.6 + rand() * 0.8);
@@ -104,7 +89,6 @@
     const pts = s.usePoints && s.points ? s.points.map((p) => ({ x: p.x * w, y: p.y * h, R: Math.max(2, p.r * k), s: p.s })) : [];
     const src = pts.length ? pts : auto;
     const P = Math.max(0.3, s.falloff);
-    // Rational falloff: long metaball-like tails at low P, approaches a Gaussian as P grows.
     const fall = (d2, R) => Math.pow(1 + d2 / (R * R * P), -P);
     const pointSum = (x, y, list, px) => {
       let v = 0;
@@ -112,22 +96,18 @@
       return v;
     };
     const ang = ((s.angle + 90) * Math.PI) / 180, ca = Math.cos(ang), sa = Math.sin(ang);
-    // Motion: the whole field can be offset (drift), in output pixels scaled to this render.
     const driftX = (s.driftX || 0) * k, driftY = (s.driftY || 0) * k;
     const smk = 40 * k;
     let lx = s.loopX || 0, ly = s.loopY || 0;
 
     const valAt = (px, py) => {
         if (s.liquify > 0) {
-          // Two-level domain warp: the noise is itself displaced by noise, which gives the liquid swirls.
           const ls = Math.max(4, sc * (s.liqScale || 1)), u0 = px / ls, v0 = py / ls;
           const qx = noise(u0 + 1.3, v0 + 7.1), qy = noise(u0 + 8.2, v0 + 2.8);
           px += s.liquify * ls * 0.06 * noise(u0 + 1.2 * qx + 4.7, v0 + 1.2 * qy + 1.9);
           py += s.liquify * ls * 0.06 * noise(u0 + 1.2 * qx + 9.2, v0 + 1.2 * qy + 5.3);
         }
         if (s.warp > 0) {
-          // loopX and loopY move where the warp is read from round a closed path, so the shape keeps
-          // morphing forward and arrives back where it began (the breathe motion).
           const u0 = px / sc, v0 = py / sc;
           px += s.warp * sc * 0.5 * fbm(u0 + 5.2 + lx, v0 + 1.3 + ly, 2);
           py += s.warp * sc * 0.5 * fbm(u0 + 1.7 - ly, v0 + 9.2 + lx, 2);
@@ -157,7 +137,6 @@
           }
           case "waves": val = px * ca + py * sa + s.bump * sc * 0.35 * fbm(u * 0.5, v * 0.5, oct) + pointSum(px, py, pts, true); break;
           case "rings": {
-            // Smooth minimum of distances: evenly spaced rings that merge where points meet.
             let acc = 0;
             for (const p of src) acc += Math.exp(-Math.hypot(px - p.x, py - p.y) / Math.max(0.15, Math.abs(p.s)) / smk);
             val = -smk * Math.log(acc + 1e-300);
@@ -168,8 +147,6 @@
         return val;
     };
     for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) f[j * nx + i] = valAt(i * sx + driftX, j * sy + driftY);
-    // Levels are spread over a range that doesn't depend on what the window happens to show (see
-    // rangeSpec): a coarse grid over the canvas and a margin round it, at every point of the motion's loop.
     const R = rangeSpec(s, w, h, k), key = JSON.stringify([s.seed, s.pattern, s.scale, s.octaves, s.warp, s.liquify, s.liqScale, s.angle, s.bump, s.bumpSize, s.features, s.falloff, s.usePoints && s.points, w, h, R.loops]);
     let mm = rangeCache.get(key);
     if (!mm) {
@@ -184,8 +161,6 @@
       rangeCache.set(key, mm);
     }
     if (s.glideW != null) {
-      // Glide: the field a loop's travel behind fades into this one (see motionState). Noise patterns are
-      // stretched back out about the middle of the range, as averaging two of them flattens it (as fmix does).
       const t = s.glideW, wb = t * t * (3 - 2 * t), dx2 = (s.driftX2 ?? s.driftX ?? 0) * k, dy2 = (s.driftY2 ?? s.driftY ?? 0) * k;
       const mid = 0.5 * (mm[0] + mm[1]), g = LINEAR.has(s.pattern) ? 1 : 1 / Math.hypot(1 - wb, wb);
       lx = s.loopX2 ?? s.loopX ?? 0; ly = s.loopY2 ?? s.loopY ?? 0;
@@ -194,9 +169,6 @@
     return { f, nx, ny, cols, rows, sx, sy, min: mm[0], max: mm[1] };
   }
 
-  // ---------- marching squares -> polylines ----------
-  // Cells sorted into buckets by the values they span, built once per field, so each level only visits
-  // the cells it can cross instead of the whole grid (a straight-line design has a hundred or more levels).
   const BUCKETS = 1024;
   function cellIndex(field) {
     if (field._idx) return field._idx;
@@ -273,7 +245,6 @@
     return lines;
   }
 
-  // ---------- geometry ----------
   function length(p, closed) {
     let L = 0;
     for (let i = 1; i < p.length; i++) L += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
@@ -281,7 +252,6 @@
     return L;
   }
 
-  // Points every `ds` along the line (closed lines do not repeat the start).
   function resampleUniform(p, closed, ds) {
     const n = p.length, segs = closed ? n : n - 1, out = [p[0]];
     let carry = 0;
@@ -297,8 +267,6 @@
     return out;
   }
 
-  // Three box-blur passes approximate a Gaussian of `sigma` samples. Open ends are point-reflected so
-  // they stay put (lines that leave the canvas keep meeting the edge); closed lines wrap around.
   function blurLine(q, closed, sigma) {
     const n = q.length;
     if (n < 4 || sigma < 0.5) return q;
@@ -331,7 +299,6 @@
     return blurLine(q, closed, sigmaPx / ds / Math.sqrt(3));
   }
 
-  // Ramer–Douglas–Peucker
   function simplify(p, eps) {
     if (p.length < 3) return p;
     const keep = new Uint8Array(p.length); keep[0] = keep[p.length - 1] = 1;
@@ -354,11 +321,6 @@
   }
 
   const n1 = (v) => Math.round(v * 10) / 10;
-  // One Catmull-Rom span p1 to p2 as a cubic Bézier. Each handle is held to a third of the span: where a
-  // short span sits next to a long straight run (simplified lines), the plain tangent reached hundreds of
-  // pixels and bulged the line into a loop.
-  // A point where the line turns sharply (a contour meeting the canvas edge, say) stays a corner: the
-  // span leaves it straight instead of swinging round it.
   const sharp = (a, b, c) => {
     const ux = b[0] - a[0], uy = b[1] - a[1], vx = c[0] - b[0], vy = c[1] - b[1], l = Math.hypot(ux, uy) * Math.hypot(vx, vy);
     return l > 0 && (ux * vx + uy * vy) / l < 0.5;
@@ -371,7 +333,6 @@
     const ax = p2[0] - p0[0], ay = p2[1] - p0[1], bx = p3[0] - p1[0], by = p3[1] - p1[1], ka = h(ax, ay), kb = h(bx, by);
     return `C${n1(p1[0] + ax * ka)} ${n1(p1[1] + ay * ka)} ${n1(p2[0] - bx * kb)} ${n1(p2[1] - by * kb)} ${n1(p2[0])} ${n1(p2[1])}`;
   }
-  // Catmull-Rom through the points, written as cubic Béziers.
   function toPath(p, closed) {
     const n = p.length;
     if (n < 2) return "";
@@ -386,7 +347,6 @@
     return d + (closed ? "Z" : "");
   }
 
-  // Field with a one-cell border far below every level, so each contour of {field > t} closes on itself.
   function padField(field) {
     const { f, nx, ny, sx, sy, min, max } = field;
     const NX = nx + 2, NY = ny + 2, g = new Float32Array(NX * NY).fill(min - 1000 * (max - min || 1));
@@ -394,10 +354,8 @@
     return { ...field, f: g, nx: NX, ny: NY, cols: NX - 1, rows: NY - 1, ox: -sx, oy: -sy };
   }
 
-  // Smooth a closed region outline but keep the stretches that run along the canvas edge exact.
   function regionLine(p, sigma, w, h, eps) {
     const out = (q) => q[0] < 0.01 || q[1] < 0.01 || q[0] > w - 0.01 || q[1] > h - 0.01;
-    // Points within a pixel of the edge go onto it, so runs along the edge are found and drawn straight.
     const snap = (v, m) => (v < 1 ? 0 : v > m - 1 ? m : v);
     const clampPt = (q) => [snap(q[0], w), snap(q[1], h)];
     let q = p;
@@ -405,8 +363,6 @@
       const ds = Math.max(0.6, Math.min(4, sigma / 5));
       const r = resampleUniform(p, true, ds);
       const b = blurLine(r, true, sigma / ds / Math.sqrt(3));
-      // Smoothing fades out toward the canvas edge, so neighbouring bands meet the edge at exactly the
-      // same points instead of each bending its own way (which left slivers along the border).
       const reach = 2.5 * sigma;
       q = b.map((v, i) => {
         const p0 = r[i];
@@ -424,14 +380,12 @@
     for (let i = 0; i < n; i++) {
       const p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
       if (edge(p1, p2)) { d += `L${n1(p2[0])} ${n1(p2[1])}`; continue; }
-      // Next to an edge run, aim the tangent along the edge instead of across it.
       const a0 = edge(p0, p1) ? p1 : p0, a3 = edge(p2, p3) ? p2 : p3;
       d += bez(a0, p1, p2, a3);
     }
     return d + "Z";
   }
 
-  // Variable-width line as a filled outline. widthAt(x, y, distFromStart, distFromEnd) -> px.
   function outlinePath(p, closed, widthAt) {
     const n = p.length;
     if (n < 2) return "";
@@ -457,8 +411,6 @@
 
   const hex = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
   const mix = (a, b, t) => "#" + hex(a).map((v, i) => Math.round(v + (hex(b)[i] - v) * t).toString(16).padStart(2, "0")).join("");
-  // Contour colors: lines, any middle colors, then the blend color. With middle colors, blended looks
-  // run a smooth ramp through all of them and plain strokes cycle through them level by level.
   function inkFor(s, pos, i, blend) {
     const inks = [s.line, ...(s.mids || []), s.line2];
     const t = Math.min(1, Math.max(0, pos));
@@ -468,10 +420,6 @@
     return mix(inks[k], inks[k + 1], f - k);
   }
 
-  // ---------- GPU spec ----------
-  // Everything the WebGL contour renderer needs to rebuild this exact field on the GPU: the same seeded
-  // permutation table, points and bumps, so playback and drags match the still render. Swell and taper
-  // draw variable-width outlines, which only the SVG path can do, so those designs return null.
   const permCache = new Map();
   function permFor(seed) {
     if (permCache.has(seed)) return permCache.get(seed);
@@ -517,7 +465,6 @@
     };
   }
 
-  // ---------- render ----------
   let svgSeq = 0;
   function buildSVG(s, opts = {}) {
     const w = opts.w || s.w, h = opts.h || s.h, k = w / s.w;
@@ -527,7 +474,6 @@
     const levels = [];
     if (lin) {
       const gap = Math.max(0.5, s.gap * k);
-      // phase slides every level up by that many steps; at a whole number the set of lines matches phase 0.
       const ph = s.phase || 0;
       for (let i = Math.floor(field.min / gap - ph); (i + ph) * gap < field.max && levels.length < 900; i++) {
         const t = (i + ph) * gap;
@@ -554,7 +500,6 @@
 
     const mode = s.mode || "lines";
     if (mode !== "lines") {
-      // Filled modes: bands between pairs of contours, or stacked layers above each contour.
       const padded = padField(field);
       const ringsAt = (t) => {
         let d = "";
@@ -565,11 +510,7 @@
         return d;
       };
       const band = Math.max(0.02, Math.min(0.98, s.band ?? 0.5));
-      // Gradient bands: each band runs through the inks on either side of it, lit along the pattern angle.
-      // Ids stay unique when several of these SVGs sit inline on one page.
       const uid = (++svgSeq).toString(36), dp = 1.5 / Math.max(2, levels.length), turn = `rotate(${Math.round(-(s.angle || 0) + 90)} .5 .5)`;
-      // Plain band colors go by each level's own number, counted from the first level a still frame
-      // would show, so as Breathe slides the levels the colors travel with them instead of all switching.
       const base = lin ? (() => { let b = Math.floor(field.min / Math.max(0.5, s.gap * k)); if (b * Math.max(0.5, s.gap * k) <= field.min) b++; return b; })() : 1;
       levels.forEach((lv, i) => {
         const next = levels[i + 1] ? levels[i + 1].t : lv.t + (i > 0 ? lv.t - levels[i - 1].t : span / 10);

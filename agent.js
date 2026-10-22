@@ -1,5 +1,3 @@
-// Agent support: a scripting API on window.Isoline for AI agents and automation, plus "For AI" briefs that
-// describe whatever page is open, ready to paste into an assistant for design or development work.
 (function (root) {
   "use strict";
   const $ = (id) => document.getElementById(id);
@@ -82,18 +80,14 @@ Follow the rules in Isoline.components.brief("design"). The user edits them in C
     studio: root.Studio,
     palettes: { get: () => root.Palettes.colors(), set: (h) => root.Palettes.load(h), generate: (m) => root.Palettes.generate(m), vary: () => root.Palettes.vary(), lock: (i, on) => root.Palettes.lock(i, on), modes: () => root.Palettes.modes(), saved: () => root.Palettes.saved() },
     components: { tokens: () => root.Components.tokens(), css: () => root.Components.cssVars(), brief: (k) => root.Components.brief(k), libraries: () => root.Components.libraries(), remix: (h) => { root.Components.remix(h); return root.Components.state(); } },
-    // Colors from scripts can be any hex form (#000, 000, #ABCDEF) or a CSS color; they're normalized first.
     color: { ...C, name: (h) => C.name(hex(h)), contrast: (a, b) => C.contrast(hex(a), hex(b)), format: (h, f) => C.format(hex(h), f) },
     brief,
   };
-  // Machine-readable pointer for browsing agents that read the DOM rather than run scripts.
   const meta = document.createElement("script");
   meta.type = "text/markdown"; meta.id = "isoline-agent-guide"; meta.textContent = GUIDE;
   document.head.appendChild(meta);
 
-  // "Copy for agents": one click copies the agent guide.
   function forAgents() { return GUIDE; }
-  // It lives in the Share menu in the top bar.
   const wrap = document.getElementById("aiCopy");
   let doneT = 0;
   wrap.addEventListener("click", async () => {

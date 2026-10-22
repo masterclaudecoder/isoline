@@ -1,15 +1,3 @@
-// Records the short clips shown inside tooltips (and, later, tutorial steps) as animated WebP.
-//
-// Clips drive the real UI with a scripted pointer and draw a cursor over it: the cursor follows its
-// waypoints on a damped spring, so paths curve and settle like a hand instead of jumping in straight
-// lines, and presses show a small ripple. Motion previews don't need clips: tooltips render those live.
-//
-// Writes previews/tips/<name>.webp and tips.js (the same clips as data URLs, so the single-file build
-// carries them too).
-//
-// Run with the site served locally:
-//   python3 -m http.server 8765 &
-//   npm i --no-save sharp playwright && node tools/record.mjs [http://localhost:8765] [clip names...]
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -18,7 +6,6 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..")
 const OUT = path.join(ROOT, "previews", "tips");
 const BASE = process.argv[2]?.startsWith("http") ? process.argv[2] : "http://localhost:8765";
 const ONLY = process.argv.slice(2).filter((a) => !a.startsWith("http"));
-// Clips are twice the tooltip's 220 by 138 frame, so they stay sharp on high density screens.
 const W = 440, H = 276;
 
 const require = createRequire(import.meta.url);
@@ -26,13 +13,11 @@ const load = (name) => { try { return require(name); } catch (e) { return requir
 const pw = load("playwright"), sharp = load("sharp");
 const browser = await pw.chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 
-// ---------- encoding ----------
 async function encode(frames, delay) {
   const sized = await Promise.all(frames.map((f) => sharp(f).resize(W, H, { fit: "cover" }).png().toBuffer()));
   return sharp(sized, { join: { animated: true } }).webp({ quality: 92, smartSubsample: true, effort: 6, loop: 0, delay: sized.map(() => delay) }).toBuffer();
 }
 
-// ---------- cursor ----------
 const CURSOR = `(() => {
   const el = document.createElement("div");
   el.id = "rec-cursor";
@@ -43,19 +28,15 @@ const CURSOR = `(() => {
   window.__cur = (x, y, press, ring) => { el.style.translate = (x - 4) + "px " + (y - 3) + "px"; el.style.scale = String((window.__curK || 1) * (press ? 0.86 : 1)); const r = el.querySelector("i"); r.style.opacity = ring > 0 ? String(ring) : "0"; r.style.scale = String(0.3 + (1 - ring) * 0.9); };
 })()`;
 
-// A scripted pointer: waypoints are targets, and the drawn position chases them on a critically damped
-// spring, sampled once per frame. Real mouse events follow the same path so the app reacts as if used.
 function pointer(page, clip, frames) {
   let x = clip.x + clip.width + 40, y = clip.y + clip.height * 0.8, vx = 0, vy = 0, down = false, ring = 0;
   const shot = async () => {
     await page.evaluate(([x, y, down, ring]) => window.__cur(x, y, down, ring), [x, y, down, ring]);
-    // Long enough for the app to finish the frame it is drawing, so no half-rendered frame is captured.
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     await page.waitForTimeout(90);
     frames.push(await page.screenshot({ clip, type: "png" }));
   };
   const step = async (tx, ty, k = 0.16) => {
-    // Spring toward the target: stiffness k, damping 2*sqrt(k), no overshoot.
     const d = 2 * Math.sqrt(k);
     vx += (tx - x) * k - vx * d; vy += (ty - y) * k - vy * d; x += vx; y += vy;
     if (ring > 0) ring = Math.max(0, ring - 0.16);
@@ -82,17 +63,13 @@ async function studio(look) {
   return page;
 }
 
-// ---------- clips ----------
 const CLIPS = {
-  // Dragging a mesh dot, then double-clicking to add one.
   "mesh-drag": async () => {
     const page = await studio({ preset: "Dusk", apply: { fxOrder: [] } });
     await page.evaluate(CURSOR);
     const art = await (await page.$("#art")).boundingBox();
-    // The clip is the canvas at the tooltip's shape, centered.
     const ch = Math.min(art.height, art.width * (H / W)), cw = ch * (W / H);
     const clip = { x: art.x + (art.width - cw) / 2, y: art.y + (art.height - ch) / 2, width: cw, height: ch };
-    // The clip is scaled down to W, so the cursor is drawn larger to land at a normal size.
     await page.evaluate((k) => (window.__curK = k), Math.max(1, (clip.width * 2 / W) * 0.85));
     const pts = await page.evaluate(() => window.Studio.state().grad.points);
     const at = (p) => [art.x + p.x * art.width, art.y + p.y * art.height];

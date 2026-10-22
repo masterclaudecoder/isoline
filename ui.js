@@ -1,16 +1,8 @@
-// Shared interface motion: custom tooltips, a sliding indicator for segmented controls, keyed list
-// transitions (FLIP) and auto-sizing text areas. Show and hide of menus, popovers and conditional rows is
-// animated in the stylesheet (transitions on display with @starting-style).
 (function (root) {
   "use strict";
   const reduce = matchMedia("(prefers-reduced-motion: reduce)");
   const EASE = "cubic-bezier(.22,1,.36,1)";
 
-  // ---------- tooltips ----------
-  // Any element with a title (or data-tip) gets a custom tooltip after a short delay; moving between
-  // targets while one is showing switches instantly. It sits centered over its trigger (or over the info
-  // icon inside it) with a nib pointing at it. data-tip-pos picks the side (top, bottom, left, right) and
-  // data-tip-align the alignment along it (center, start, end); a side with no room flips to the other.
   const tip = document.createElement("div");
   tip.className = "tip"; tip.setAttribute("role", "tooltip"); tip.hidden = true;
   let target = null, timer = 0, lastHide = 0, touchTip = false;
@@ -35,18 +27,14 @@
     else { y = along(r.top, r.height, h); x = dir === "left" ? r.left - m - w : r.right + m; }
     x = Math.round(Math.max(e, Math.min(W - w - e, x))); y = Math.round(Math.max(e, Math.min(H - h - e, y)));
     tip.style.left = x + "px"; tip.style.top = y + "px";
-    // The nib points at the middle of the trigger, wherever the edge of the screen pushed the bubble.
     const r8 = tip.classList.contains("rich") ? 12 : 9;
     tip.style.setProperty("--nib", Math.round(dir === "up" || dir === "down" ? Math.max(r8, Math.min(w - r8, r.left + r.width / 2 - x)) : Math.max(r8, Math.min(h - r8, r.top + r.height / 2 - y))) + "px");
     tip.dataset.dir = dir;
   }
-  // Rich tooltips: data-tip-media names a recorded clip in window.TIP_MEDIA, shown above the text;
-  // data-tip-preview="name:value" draws a live preview with a function registered through UI.tipPreview.
   const previews = {};
   function show(el) {
     const t = textOf(el); if (!t) return;
     target = el;
-    // Clips come from previews/tips/ as files; window.TIP_MEDIA (tips.js, inlined) is for single-file copies.
     const media = el.dataset.tipMedia && (window.TIP_MEDIA?.[el.dataset.tipMedia] || `previews/tips/${el.dataset.tipMedia}.webp`), [pn, pv] = (el.dataset.tipPreview || "").split(":"), draw = previews[pn];
     const out = !media && draw ? draw(pv, el) : null;
     if (media || out) {
@@ -59,7 +47,6 @@
     if (!tip.isConnected) document.body.appendChild(tip);
     tip.hidden = false; place(el);
   }
-  // A held tip (tapped or clicked open) keeps its trigger lit in the accent color until it closes.
   function hold(el) { touchTip = true; textOf(el); if (target !== el || tip.hidden) show(el); el.classList.add("tip-held"); }
   function hide() { clearTimeout(timer); if (!tip.hidden) lastHide = performance.now(); target?.classList.remove("tip-held"); tip.hidden = true; target = null; touchTip = false; }
   const tipTarget = (n) => n?.closest?.("[title], [data-tip]");
@@ -78,11 +65,7 @@
   document.addEventListener("focusout", (e) => { if (!touchTip) hide(); });
   document.addEventListener("keydown", hide, { passive: true, capture: true });
   document.addEventListener("wheel", () => { if (!touchTip) hide(); }, { passive: true, capture: true });
-  // A held tip follows its trigger while the page scrolls; a hover tip just goes.
   addEventListener("scroll", () => { if (tip.hidden) return; if (touchTip && target?.isConnected) place(target); else hide(); }, { passive: true, capture: true });
-  // A tap or click on an info icon, a control's label, or a tip that isn't also a control holds it open until
-  // the next tap or click on it (or anywhere else).
-  // Controls (buttons, switches, links) show theirs on a long press, and that press doesn't act.
   const ACT = "button, a[href], input, select, textarea, label, summary, [role=button], [role=tab], [contenteditable]";
   let press = 0, pressed = false, px = 0, py = 0, lastType = "";
   const tapOnly = (el, t) => t.closest(".info-i") || el.matches(".label") || !el.closest(ACT);
@@ -109,14 +92,11 @@
   }, true);
   addEventListener("blur", hide);
 
-  // Dice buttons tumble when pressed, so they read as a roll.
   document.addEventListener("click", (e) => {
     const d = e.target.closest?.("button")?.querySelector(':scope > svg.ic:has(> use[href="#i-dice"])');
     if (d && !reduce.matches) d.animate([{ rotate: "0deg", scale: 1 }, { rotate: "-20deg", scale: 0.82, offset: 0.25 }, { rotate: "360deg", scale: 1 }], { duration: 520, easing: "cubic-bezier(.3,1.25,.5,1)" });
   });
 
-  // ---------- segmented controls ----------
-  // A single indicator slides to the selected button instead of the highlight jumping between them.
   const segs = new Set(), dirty = new Set();
   let rafId = 0;
   const SEG = ".seg, .pk-fmt";
@@ -147,9 +127,6 @@
   const boot = () => scan(document.body);
   if (document.readyState === "loading") addEventListener("DOMContentLoaded", boot); else boot();
 
-  // ---------- keyed list transitions ----------
-  // flip(container, update): children with data-key glide from where they were to where they land,
-  // new ones grow in, and removed ones fade out in place.
   function flip(container, update, { sel = "[data-key]", stagger = 14 } = {}) {
     if (reduce.matches || !container.isConnected) { update(); return; }
     const before = new Map();
@@ -168,7 +145,6 @@
       } else el.animate([{ opacity: 0, transform: "translateY(8px) scale(.97)" }, { opacity: 1, transform: "none" }], { duration: 340, delay: Math.min(n, 16) * stagger, easing: EASE, fill: "backwards" });
       n++;
     }
-    // Leaving items: a ghost copy fades where the item used to be.
     for (const [k, { r, el }] of before) {
       if (seen.has(k) || r.bottom < 0 || r.top > innerHeight || el.isConnected) continue;
       const g = el.cloneNode(true);
@@ -178,8 +154,6 @@
     }
   }
 
-  // ---------- view transitions ----------
-  // Swap content with a short cross-fade where the browser supports it.
   function swap(update) {
     if (reduce.matches || !document.startViewTransition || document.documentElement.classList.contains("vt")) { update(); return; }
     const html = document.documentElement;
@@ -187,11 +161,9 @@
     document.startViewTransition(update).finished.finally(() => html.classList.remove("vt-local"));
   }
 
-  // ---------- auto-sizing text areas ----------
   function autosize(ta) { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + 2 + "px"; }
   document.addEventListener("input", (e) => { if (e.target.matches?.("textarea.autosize")) autosize(e.target); });
 
-  // Collapse an element smoothly before running an update that removes it.
   function collapse(el, done) {
     if (reduce.matches || !el.isConnected) { done(); return; }
     const h = el.offsetHeight;
@@ -199,12 +171,6 @@
     el.animate([{ height: h + "px", opacity: 1 }, { height: "0px", opacity: 0, marginTop: "0px", marginBottom: "0px", paddingTop: "0px", paddingBottom: "0px" }], { duration: 240, easing: EASE, fill: "forwards" }).onfinish = done;
   }
 
-  // ---------- resize handles ----------
-  // resizable(box, opts) puts handles on the edges and corners of a box that sits centered in its parent.
-  // They fade in when the pointer comes near an edge. Dragging resizes around the center, so the edge you
-  // hold stays under the pointer, and the new size shows below the box while you drag.
-  // opts: get() [w, h] in the box's own units, scale() css px per unit, room() [w, h] in css px the box
-  // may grow to, set(w, h) during the drag, start() and end() around it, min and max sizes in units.
   const CURSOR = { n: "ns-resize", s: "ns-resize", e: "ew-resize", w: "ew-resize", ne: "nesw-resize", sw: "nesw-resize", nw: "nwse-resize", se: "nwse-resize" };
   function resizable(box, o) {
     const host = box.parentElement, NEAR = 36;
@@ -258,17 +224,12 @@
     return { place };
   }
 
-  // ---------- dropdowns ----------
-  // Turns a segmented control into a compact dropdown. The option buttons move into the menu as they are,
-  // so whatever already handles their clicks and marks the chosen one keeps working, and the trigger shows
-  // the chosen label. The menu is placed against the viewport, so scrolling panels never clip it.
   let openDD = null;
   function dropdown(seg, { label = "" } = {}) {
     const wrap = document.createElement("div"), btn = document.createElement("button"), pop = document.createElement("div");
     wrap.className = "dd"; btn.type = "button"; btn.className = "dd-btn"; if (label) btn.setAttribute("aria-label", label);
     btn.innerHTML = `<span class="dd-v"></span><svg class="ic"><use href="#i-chev"/></svg>`;
     pop.className = "pop dd-pop"; pop.hidden = true; pop.setAttribute("role", "listbox");
-    // The menu lives on the body: a transformed panel would otherwise trap its fixed position.
     for (const old of document.querySelectorAll("body > .dd-pop")) if (!old._wrap?.isConnected) old.remove();
     seg.replaceWith(wrap); wrap.append(btn); pop.appendChild(seg); pop._wrap = wrap; document.body.appendChild(pop);
     seg.querySelector(":scope > .seg-ind")?.remove();
@@ -302,9 +263,6 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") openDD?.close(); });
   addEventListener("scroll", (e) => { if (openDD && !openDD.pop.contains(e.target)) openDD.close(); }, true);
 
-  // ---------- option groups ----------
-  // A titled group of related controls that folds open and closed. Each group remembers whether it was
-  // left open, by its key, across visits. wrapGroup moves existing nodes inside, so their handlers stay.
   const GROUPS = "isoline.groups";
   let groupState = {};
   try { groupState = JSON.parse(localStorage.getItem(GROUPS) || "{}"); } catch (e) {}
@@ -331,10 +289,6 @@
     return g;
   }
 
-  // ---------- performance mode ----------
-  // Lighter rendering for weak devices: no live glass or backdrop blur, thumbnails and the canvas preview
-  // at 1x, a calmer motion tile and a still home card. "auto" turns it on where the graphics are integrated
-  // or software, or the device has few cores and little memory; the setting can force it either way.
   const LITE_KEY = "isoline.perfMode";
   function weakDevice() {
     try {
