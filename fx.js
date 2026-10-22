@@ -537,13 +537,20 @@ float paintZoom() { return uScale * mix(1.0, 1.6, paintCh()); }
 vec2 paintOff() { float s = mod(uSeed, 97.0); return vec2(sin(s * 3.1), cos(s * 1.7)) * 9.0; }
 vec2 paintQ(vec2 p) { return (p - 0.5) * vec2(uPAsp, 1.0) * paintZoom() + paintOff(); }
 vec2 paintP(vec2 q) { return (q - paintOff()) / (vec2(uPAsp, 1.0) * paintZoom()) + 0.5; }
+vec2 paintPageOff(float k) { return k < 0.5 ? vec2(0.0) : (vec2(hash(vec2(k, 1.3)), hash(vec2(k, 7.1))) - 0.5) * 190.0; }
+float paintPage(vec2 p, float pg) {
+  float k = floor(pg), f = pg - k; f = f * f * (3.0 - 2.0 * f);
+  return snoise(p + paintPageOff(k)) * cos(1.5707963 * f) + snoise(p + paintPageOff(k + 1.0)) * sin(1.5707963 * f);
+}
 float paintPsi(vec2 q, float ch) {
   float s1 = mix(0.45, 0.55, ch), s2 = mix(0.95, 1.3, ch), tw = 6.2831853 * uTime, R = uMotion != 0 && uMotion != 2 ? 0.07 * (0.4 + uMotAmt) : 0.0;
   vec2 c1 = R * vec2(cos(tw), sin(tw)), c2 = R * vec2(cos(tw + 1.7), -sin(tw + 1.7));
   if (uEndless > 0.5) { c1 += R * 0.6 * vec2(cos(tw * 0.618 + 1.3), sin(tw * 0.618 + 0.7)); c2 += R * 0.6 * vec2(sin(tw * 0.414 + 1.1), -cos(tw * 0.414 + 0.3)); }
-  if (uEndless > 1.5) { c1 += uTime * R * 1.6 * vec2(0.92, 0.39); c2 += uTime * R * 1.6 * vec2(-0.34, 0.94); }
   vec2 p = paintP(q), out2 = max(max(-p, p - 1.0), 0.0);
-  return (snoise(q * s1 + c1) / s1 + mix(0.3, 0.45, ch) * snoise(q * s2 + vec2(7.3, 2.1) + c2) / s2) * smoothstep(-uPDom.x, 0.0, max(out2.x, out2.y));
+  float n1, n2;
+  if (uEndless > 1.5) { float pg = uTime * 0.45 * (0.4 + uMotAmt); n1 = paintPage(q * s1 + c1, pg); n2 = paintPage(q * s2 + vec2(7.3, 2.1) + c2, pg + 0.5); }
+  else { n1 = snoise(q * s1 + c1); n2 = snoise(q * s2 + vec2(7.3, 2.1) + c2); }
+  return (n1 / s1 + mix(0.3, 0.45, ch) * n2 / s2) * smoothstep(-uPDom.x, 0.0, max(out2.x, out2.y));
 }
 vec2 paintFlow(vec2 q, float ch) {
   const float e = 0.01;
@@ -563,12 +570,15 @@ vec2 paintBack(vec2 q, float n) {
 vec2 paintMapAt(vec2 p) { vec2 tu = (p - uPDom.xy) / uPDom.zw; return texture(uTex, vec2(tu.x, 1.0 - tu.y)).rg; }
 float gFoot = 0.0;
 float paintTri(float x, float k) { return mix(abs(fract(x) * 2.0 - 1.0), 0.5, smoothstep(0.1, 0.4, max(fwidth(x), gFoot * k * 1.6))); }
-vec3 paintSeed(vec2 q) {
+float paintX(vec2 q) {
   float ca = cos(uAngle), sa = sin(uAngle), mv = uMotion == 2 ? uTime * max(1.0, floor(uMotAmt * 2.0 + 0.5)) : 0.0;
   float d = dot(q, vec2(ca, sa)) * uStretch * 0.35 + 0.35 * snoise(q * 0.8 + 3.3) + mv;
   float df = d * 4.0 + 0.4 * snoise(q * 1.8), dv = d * 9.0 + 0.6 * snoise(q * 3.1 + 5.0), vc = clamp(uContrast, 0.0, 1.0);
   float ks = uStretch * 0.35 + 0.3, tri = clamp(paintTri(d, ks) * (1.0 - 0.55 * vc) + paintTri(df, ks * 4.0) * 0.35 * vc + paintTri(dv, ks * 9.0) * 0.2 * vc, 0.0, 1.0);
-  float N = float(uN - 1), x = tri * N, kk = min(floor(x), N - 1.0), f = x - kk, h = max(0.5 * clamp(uSoft, 0.02, 1.0), max(fwidth(x), gFoot * ks * N) * 0.75);
+  return tri * float(uN - 1);
+}
+vec3 paintSeed(vec2 q) {
+  float ks = uStretch * 0.35 + 0.3, N = float(uN - 1), x = paintX(q), kk = min(floor(x), N - 1.0), f = x - kk, h = max(0.5 * clamp(uSoft, 0.02, 1.0), max(fwidth(x), gFoot * ks * N) * 0.75);
   return ramp((kk + smoothstep(0.5 - h, 0.5 + h, f)) / N);
 }
 vec3 paintAt(vec2 a) { vec2 p = a / vec2(uPAsp, 1.0) + 0.5; return paintSeed(paintQ(p) + paintMapAt(p)); }
@@ -595,46 +605,66 @@ vec3 paintColor(vec2 uv) {
   return lab * 0.25;
 }
 vec2 paintCellQ(vec2 p) { vec2 tu = (p - uPDom.xy) / uPDom.zw; return paintQ(p) + texture(uTex2, vec2(tu.x, 1.0 - tu.y)).rg; }
-vec4 paintPits(vec2 c, mat2 M, float G, float th, float pr, float sd) {
-  vec2 id0 = floor(c / G); vec4 r = vec4(1e3, 1.0, 0.0, 0.0);
+vec2 paintRoundQ(vec2 p) { vec2 tu = (p - uPDom.xy) / uPDom.zw; return paintQ(p) + texture(uMip, vec2(tu.x, 1.0 - tu.y)).rg; }
+vec4 paintPits(vec2 c, float G, float th, float sd, out vec2 cv) {
+  vec2 id0 = floor(c / G); vec4 r = vec4(1e3, 1.0, 0.0, 0.0); cv = vec2(0.0);
   for (int j = 0; j < 9; j++) {
     vec2 id = id0 + vec2(j % 3 - 1, j / 3 - 1), hh = vec2(hash(id + sd), hash(id + sd + 5.3));
-    float pk = hash(id + sd + 2.7);
-    if (pk > th * pr) continue;
-    float rad = G * mix(0.18, 0.42, th) * (0.55 + 0.6 * hh.x), d = length(M * (c - (id + 0.5 + (hh - 0.5) * 0.7) * G)), ed = d - rad;
-    if (ed < r.x) r = vec4(ed, d / rad, rad, hash(id + sd + 8.8));
+    if (hash(id + sd + 2.7) > th) continue;
+    vec2 ctr = (id + 0.5 + (hh - 0.5) * 0.6) * G;
+    float rad = G * mix(0.16, 0.3, th) * (0.6 + 0.6 * hh.x), d = length(c - ctr), ed = d - rad;
+    if (ed < r.x) { r = vec4(ed, d / rad, rad, hash(id + sd + 8.8)); cv = ctr - c; }
   }
   return r;
 }
+vec3 paintRing(float ci, float depth, float hv, vec3 dark) {
+  float N = float(uN - 1), j = floor(clamp(depth, 0.0, 0.999) * 3.0);
+  if (j > 1.5 && hv < 0.55) return dark;
+  return ramp(mod(ci + 1.0 + j + floor(hv * 2.0), N + 1.0) / max(N, 1.0));
+}
 vec3 paintBlow(vec2 uv) {
-  vec3 col = paintColor(uv);
-  vec2 Qc = paintCellQ(uv), jx = dFdx(Qc), jy = dFdy(Qc);
-  float z = paintZoom(), amt = clamp(uPCell, 0.0, 1.0), px = length(jx) + length(jy);
-  mat2 M = mat2(1.0);
+  float z = paintZoom(), amt = clamp(uPCell, 0.0, 1.0);
   vec2 sd = vec2(hash(vec2(uSeed, 3.1)), hash(vec2(uSeed, 7.7))) * 50.0;
-  float cl = snoise(Qc * 0.9 / z + sd) + 0.5 * snoise(Qc * 2.1 / z + sd.yx), t0 = mix(0.9, -0.5, amt);
-  float h = smoothstep(t0, t0 + 0.9, cl);
-  vec2 c = Qc + 0.012 * z * vec2(snoise(Qc * 9.0 / z), snoise(Qc * 9.0 / z + 4.0));
-  vec4 b = vec4(1e3, 1.0, 0.0, 0.0);
+  float X = paintX(paintQ(uv) + paintMapAt(uv)), edge = 1.0 - abs(fract(X) - 0.5) * 2.0, ci = floor(X + 0.5);
+  float dk = 1e3; vec3 dark = vec3(0.0);
+  for (int i = 0; i < 8; i++) { if (i >= uN) break; vec3 l = toLab(lin(uCol[i])); if (l.x < dk) { dk = l.x; dark = l; } }
+  vec2 Qr = paintRoundQ(uv), ex = vec2(uPDom.z / float(textureSize(uTex, 0).x), 0.0), ey = vec2(0.0, uPDom.w / float(textureSize(uTex, 0).y));
+  mat2 J = mat2((paintRoundQ(uv + ex) - paintRoundQ(uv - ex)) / (2.0 * ex.x), (paintRoundQ(uv + ey) - paintRoundQ(uv - ey)) / (2.0 * ey.y));
+  float cr = snoise(Qr * 1.3 / z + sd.yx) + 0.6 * edge - 0.3, tr = mix(0.8, -0.7, amt), hr = smoothstep(tr, tr + 0.8, cr);
+  vec2 cw = Qr + 0.01 * z * vec2(snoise(Qr * 11.0 / z), snoise(Qr * 11.0 / z + 4.0));
+  vec4 b = vec4(1e3, 1.0, 0.0, 0.0); vec2 bc = vec2(0.0);
   for (int lv = 0; lv < 3; lv++) {
-    float G = z * (lv == 0 ? 0.1 : lv == 1 ? 0.045 : 0.02), need = lv == 0 ? 0.35 : lv == 1 ? 0.1 : 0.0, pr = lv == 0 ? 0.7 : lv == 1 ? 0.6 : 0.8;
-    float th = clamp((h - need) / (1.0 - need), 0.0, 1.0);
+    float G = z * (lv == 0 ? 0.11 : lv == 1 ? 0.05 : 0.022), need = lv == 0 ? 0.4 : lv == 1 ? 0.15 : 0.0;
+    float th = clamp((hr - need) / (1.0 - need), 0.0, 1.0) * (lv == 0 ? 0.55 : 0.7);
     if (th <= 0.0) continue;
-    vec4 r = paintPits(c, M, G, th, pr, float(lv) * 13.7 + 1.0);
-    if (r.x < b.x) b = r;
+    vec2 cv; vec4 r = paintPits(cw, G, th, float(lv) * 13.7 + 1.0, cv);
+    if (r.x < b.x) { b = r; bc = cv; }
   }
-  float dk = 1e3, lk = -1e3; vec3 dark = vec3(0.0), light = vec3(1.0, 0.0, 0.0);
-  for (int i = 0; i < 8; i++) { if (i >= uN) break; vec3 l = toLab(lin(uCol[i])); if (l.x < dk) { dk = l.x; dark = l; } if (l.x > lk) { lk = l.x; light = l; } }
-  int ri = int(floor(b.w * 7.99)) % uN;
-  vec3 ring = dark;
-  for (int i = 0; i < 8; i++) if (i == ri) ring = toLab(lin(uCol[i]));
-  float aa = max(px, 1e-4), q = b.y, inside = smoothstep(aa, -aa, b.x);
-  float rimW = 0.16, ringOn = step(0.35, b.w);
-  vec3 fill = mix(dark, ring, ringOn * smoothstep(0.62 - 0.03, 0.62 + 0.03, q));
-  fill = mix(fill, mix(light, col, 0.35), smoothstep(1.0 - rimW - 0.03, 1.0 - rimW + 0.03, q));
-  fill.x += 0.05 * (1.0 - q) * (1.0 - ringOn);
-  vec3 o = mix(col, fill, inside);
-  o.x = max(o.x - 0.06 * smoothstep(b.z * 0.25, 0.0, b.x) * (1.0 - inside), 0.0);
+  vec2 duv = vec2(0.0);
+  float dt = determinant(J), dd = length(bc);
+  if (b.z > 0.0 && dd > b.z && abs(dt) > 1e-9) {
+    float R = b.z * 2.4, s2 = dd < R ? R * (dd - b.z) / (R - b.z) : dd;
+    duv = inverse(J) * (-bc / dd * (dd - s2));
+    duv *= min(1.0, 0.06 / max(length(duv), 1e-6));
+  }
+  vec3 col = paintColor(uv + duv);
+  vec2 Qc = paintCellQ(uv);
+  vec2 w = vec2(snoise(Qc * 3.0 / z + sd), snoise(Qc * 3.0 / z + sd.yx + 4.0));
+  float cl = snoise(Qc * 0.9 / z + sd) + 0.5 * snoise(Qc * 2.1 / z + sd.yx) + 0.35 * edge, t0 = mix(1.0, -0.6, amt);
+  float h = smoothstep(t0, t0 + 0.9, cl);
+  float e1 = paintLace(Qc / (0.085 * z) + 0.45 * w), e2 = paintLace(Qc / (0.035 * z) + 0.4 * w + 17.0);
+  float T1 = mix(1.1, 0.12, h), T2 = mix(1.1, 0.3, h * h);
+  float f1 = fwidth(e1), f2 = fwidth(e2), k1 = 1.0 - smoothstep(0.25, 0.8, f1), k2 = 1.0 - smoothstep(0.25, 0.8, f2);
+  float o1 = smoothstep(T1 - f1, T1 + f1, e1) * k1, o2 = smoothstep(T2 - f2, T2 + f2, e2) * k2, hole = max(o1, o2);
+  float hv = hash(floor(Qc / (0.085 * z) + 0.45 * w) + 3.3);
+  vec3 fill = paintRing(ci, (e1 - T1) / max(1.0 - T1, 0.2) * 1.6, hv, dark);
+  vec3 o = mix(col, fill, hole);
+  o.x = min(o.x + 0.05 * (smoothstep(T1 - 0.1, T1, e1) - o1) * k1, 1.0);
+  float fb = max(fwidth(b.x), 1e-5), kr = 1.0 - smoothstep(0.3, 1.0, fb / max(b.z, 1e-5));
+  float qn = b.y + 0.08 * snoise(cw * 40.0 / z);
+  vec3 rf = paintRing(ci, 1.0 - qn, b.w, dark);
+  rf = mix(rf, mix(col, vec3(min(col.x + 0.12, 1.0), col.yz * 0.6), 0.8), smoothstep(0.8, 0.86, qn));
+  o = mix(o, rf, smoothstep(fb, -fb, b.x) * kr);
   return o;
 }
 uniform float uPrism; vec2 gL1 = vec2(0.0), gL2 = vec2(0.0);
@@ -1596,14 +1626,14 @@ void main() {
 }`,
 
     ridge: `uniform float uSpace; uniform float uHeight; uniform float uWidth; uniform float uRNoise; uniform float uFill; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
-float lift(float x, float i) { float l = luma(tex(toUv(vec2(x, i * uSpace))).rgb); return l * (1.0 + uRNoise * (fbm(vec2(x * 0.03, i * 1.73)) - 0.5) * 2.0); }
+float lift(float x, float i) { float l = luma(tex(toUv(vec2(x, abs(i * uSpace)))).rgb); return l * (1.0 + uRNoise * (fbm(vec2(x * 0.03, i * 1.73)) - 0.5) * 2.0); }
 void main() {
   vec2 d = dp(); float hm = uHeight * (1.0 + uRNoise), w = uWidth * 0.5, aa = 0.75 / uK;
   vec3 col = uPaper; float i = floor((d.y - hm) / uSpace) - 1.0;
-  for (int k = 0; k < 160; k++) {
+  for (int k = 0; k < 440; k++) {
     float cv = i * uSpace + uHeight * lift(d.x, i);
     if (cv + w + aa >= d.y || i * uSpace > d.y) {
-      vec3 pc = tex(toUv(vec2(d.x, i * uSpace))).rgb, ink = uMono > 0.5 ? uInk : pc;
+      vec3 pc = tex(toUv(vec2(d.x, abs(i * uSpace)))).rgb, ink = uMono > 0.5 ? uInk : pc;
       col = mix(mix(uPaper, pc * 0.35 + uPaper * 0.2, uFill), ink, 1.0 - smoothstep(w - aa, w + aa, abs(d.y - cv)));
       break;
     }
@@ -2120,17 +2150,19 @@ void main() {
         if (g.type === "paint" && floatOK) {
           const m = 0.3, dom = [-m, -m, 1 + 2 * m, 1 + 2 * m], dw = Math.max(8, Math.round(w * (1 + 2 * m) * 0.7)), dh = Math.max(8, Math.round(h * (1 + 2 * m) * 0.7));
           const A = floatTarget("paintA", dw, dh, "map"), B = floatTarget("paintB", dw, dh, "map"), pu = { ...gu, uPDom: dom, uPAsp: w / h, uPath: gu.uPath === 2 ? 0 : gu.uPath };
-          const steps = Math.round(Math.min(8, Math.max(1, g.detail ?? 5)) * 4), passes = Math.ceil(steps / 2);
+          const steps = Math.round(Math.min(8, Math.max(1, g.detail ?? 5)) * 4), cuts = [...new Set([Math.max(1, Math.round(steps * 0.07)), Math.round(steps * 0.3), ...Array.from({ length: Math.ceil(steps / 4) }, (_, i) => Math.min(steps, (i + 1) * 4))])].sort((a, b) => a - b);
           draw("gradient", srcTex, A.f, { ...pu, uPStage: 1 }, dw, dh, k, job.seed);
-          const cells = (g.cells || 0) > 0, C = cells ? floatTarget("paintC", dw, dh, "map") : null;
-          let src = A, dst = B, done = 0, kept = false;
-          for (let i = 0; i < passes; i++) {
-            const sub = Math.round((steps * (i + 1)) / passes) - done, un = { ...pu, uPStage: 2, uPSub: sub, uPDone: done };
+          const cells = (g.cells || 0) > 0, C = cells ? floatTarget("paintC", dw, dh, "map") : null, C2 = cells ? floatTarget("paintC2", dw, dh, "map") : null;
+          let src = A, dst = B, done = 0, kept = false, kept2 = false;
+          for (const cut of cuts) {
+            const sub = cut - done, un = { ...pu, uPStage: 2, uPSub: sub, uPDone: done };
+            if (sub <= 0) continue;
             draw("gradient", src.t, dst.f, un, dw, dh, k, job.seed);
-            if (C && !kept && done + sub >= steps * 0.08) { draw("gradient", src.t, C.f, un, dw, dh, k, job.seed); kept = true; }
+            if (C2 && !kept2 && cut >= cuts[0]) { draw("gradient", src.t, C2.f, un, dw, dh, k, job.seed); kept2 = true; }
+            if (C && !kept && cut >= Math.round(steps * 0.3)) { draw("gradient", src.t, C.f, un, dw, dh, k, job.seed); kept = true; }
             done += sub; [src, dst] = [dst, src];
           }
-          draw("gradient", src.t, targets.list[0].f, cells ? { ...pu, uPStage: 4, uTex2: C.t } : { ...pu, uPStage: 3 }, w, h, k, job.seed);
+          draw("gradient", src.t, targets.list[0].f, cells ? { ...pu, uPStage: 4, uTex2: C.t, uMip: C2.t } : { ...pu, uPStage: 3 }, w, h, k, job.seed);
         } else if (gu.uPath === 2 && [1, 3, 4].includes(gu.uMotion) && floatOK && (g.type === "flow" || g.type === "noise")) {
           const A = floatTarget("glideA", w, h, "rgba"), B = floatTarget("glideB", w, h, "rgba"), t = gu.uTime;
           draw("gradient", srcTex, A.f, { ...gu, uGLin: t, uGStage: 1 }, w, h, k, job.seed);
