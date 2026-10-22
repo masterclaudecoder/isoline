@@ -572,7 +572,8 @@ float gFoot = 0.0;
 float paintTri(float x, float k) { return mix(abs(fract(x) * 2.0 - 1.0), 0.5, smoothstep(0.1, 0.4, max(fwidth(x), gFoot * k * 1.6))); }
 float paintX(vec2 q) {
   float ca = cos(uAngle), sa = sin(uAngle), mv = uMotion == 2 ? uTime * max(1.0, floor(uMotAmt * 2.0 + 0.5)) : 0.0;
-  float d = dot(q, vec2(ca, sa)) * uStretch * 0.35 + 0.35 * snoise(q * 0.8 + 3.3) + mv;
+  float d = dot(q, vec2(ca, sa)) * uStretch * 0.35 + 0.35 * snoise(q * 0.8 + 3.3) + 0.16 * snoise(q * 2.2 + 11.0) + 0.07 * snoise(q * 4.7 + 23.0) + mv;
+  d += 0.45 / float(2 * uN - 1) * snoise(vec2(d * 1.7, 3.1));
   float df = d * 4.0 + 0.4 * snoise(q * 1.8), dv = d * 9.0 + 0.6 * snoise(q * 3.1 + 5.0), vc = clamp(uContrast, 0.0, 1.0);
   float ks = uStretch * 0.35 + 0.3, tri = clamp(paintTri(d, ks) * (1.0 - 0.55 * vc) + paintTri(df, ks * 4.0) * 0.35 * vc + paintTri(dv, ks * 9.0) * 0.2 * vc, 0.0, 1.0);
   return tri * float(uN - 1);
@@ -582,15 +583,6 @@ vec3 paintSeed(vec2 q) {
   return ramp((kk + smoothstep(0.5 - h, 0.5 + h, f)) / N);
 }
 vec3 paintAt(vec2 a) { vec2 p = a / vec2(uPAsp, 1.0) + 0.5; return paintSeed(paintQ(p) + paintMapAt(p)); }
-float paintLace(vec2 c) {
-  vec2 id0 = floor(c); float f1 = 8.0, f2 = 8.0;
-  for (int j = 0; j < 9; j++) {
-    vec2 id = id0 + vec2(j % 3 - 1, j / 3 - 1), pt = id + 0.05 + 0.9 * vec2(hash(id + 3.1), hash(id + 7.7));
-    float d = length(c - pt);
-    if (d < f1) { f2 = f1; f1 = d; } else if (d < f2) f2 = d;
-  }
-  return f2 - f1;
-}
 float paintFoot(vec2 uv) {
   vec2 tx = vec2(2.0 * uPDom.z / float(textureSize(uTex, 0).x), 0.0), ty = vec2(0.0, 2.0 * uPDom.w / float(textureSize(uTex, 0).y));
   vec2 Qx = paintQ(uv + tx) + paintMapAt(uv + tx) - paintQ(uv - tx) - paintMapAt(uv - tx), Qy = paintQ(uv + ty) + paintMapAt(uv + ty) - paintQ(uv - ty) - paintMapAt(uv - ty);
@@ -605,66 +597,43 @@ vec3 paintColor(vec2 uv) {
   return lab * 0.25;
 }
 vec2 paintCellQ(vec2 p) { vec2 tu = (p - uPDom.xy) / uPDom.zw; return paintQ(p) + texture(uTex2, vec2(tu.x, 1.0 - tu.y)).rg; }
-vec2 paintRoundQ(vec2 p) { vec2 tu = (p - uPDom.xy) / uPDom.zw; return paintQ(p) + texture(uMip, vec2(tu.x, 1.0 - tu.y)).rg; }
-vec4 paintPits(vec2 c, float G, float th, float sd, out vec2 cv) {
-  vec2 id0 = floor(c / G); vec4 r = vec4(1e3, 1.0, 0.0, 0.0); cv = vec2(0.0);
+vec4 paintFoam(vec2 c) {
+  vec2 id0 = floor(c); float f1 = 8.0, f2 = 8.0, h1 = 0.0;
   for (int j = 0; j < 9; j++) {
-    vec2 id = id0 + vec2(j % 3 - 1, j / 3 - 1), hh = vec2(hash(id + sd), hash(id + sd + 5.3));
-    if (hash(id + sd + 2.7) > th) continue;
-    vec2 ctr = (id + 0.5 + (hh - 0.5) * 0.6) * G;
-    float rad = G * mix(0.16, 0.3, th) * (0.6 + 0.6 * hh.x), d = length(c - ctr), ed = d - rad;
-    if (ed < r.x) { r = vec4(ed, d / rad, rad, hash(id + sd + 8.8)); cv = ctr - c; }
+    vec2 id = id0 + vec2(j % 3 - 1, j / 3 - 1), pt = id + 0.1 + 0.8 * vec2(hash(id + 3.1), hash(id + 7.7));
+    float d = length(c - pt) - 0.3 * hash(id + 1.7);
+    if (d < f1) { f2 = f1; f1 = d; h1 = hash(id + 9.1); } else if (d < f2) f2 = d;
   }
-  return r;
+  return vec4(f2 - f1 - 0.35 * max(f1, 0.0) * max(f1, 0.0), f1, h1, 0.0);
 }
-vec3 paintRing(float ci, float depth, float hv, vec3 dark) {
-  float N = float(uN - 1), j = floor(clamp(depth, 0.0, 0.999) * 3.0);
-  if (j > 1.5 && hv < 0.55) return dark;
-  return ramp(mod(ci + 1.0 + j + floor(hv * 2.0), N + 1.0) / max(N, 1.0));
+vec3 paintPal(float i) { float N = float(uN - 1); return ramp(mod(i, N + 1.0) / max(N, 1.0)); }
+vec3 paintCellCol(vec4 f, float T, float ci, float li, vec3 dark, float fw) {
+  float u = clamp((f.x - T) / 0.4, 0.0, 1.0), hv = f.z, n = float(uN), i1 = ci + 1.0;
+  if (mod(i1, n) == mod(li, n)) i1 += 1.0;
+  vec3 c = paintPal(i1);
+  c.x = mix(c.x, min(c.x + 0.12, 1.0), smoothstep(0.3, 1.0, u) * (0.4 + 0.6 * hv));
+  c = mix(c, paintPal(i1 + 1.0), step(0.78, hv) * smoothstep(0.55, 0.75, u));
+  return mix(c, dark, 0.8 * (1.0 - smoothstep(0.0, 0.14 + fw, u)));
 }
 vec3 paintBlow(vec2 uv) {
+  vec3 col = paintColor(uv);
   float z = paintZoom(), amt = clamp(uPCell, 0.0, 1.0);
   vec2 sd = vec2(hash(vec2(uSeed, 3.1)), hash(vec2(uSeed, 7.7))) * 50.0;
   float X = paintX(paintQ(uv) + paintMapAt(uv)), edge = 1.0 - abs(fract(X) - 0.5) * 2.0, ci = floor(X + 0.5);
-  float dk = 1e3; vec3 dark = vec3(0.0);
-  for (int i = 0; i < 8; i++) { if (i >= uN) break; vec3 l = toLab(lin(uCol[i])); if (l.x < dk) { dk = l.x; dark = l; } }
-  vec2 Qr = paintRoundQ(uv), ex = vec2(uPDom.z / float(textureSize(uTex, 0).x), 0.0), ey = vec2(0.0, uPDom.w / float(textureSize(uTex, 0).y));
-  mat2 J = mat2((paintRoundQ(uv + ex) - paintRoundQ(uv - ex)) / (2.0 * ex.x), (paintRoundQ(uv + ey) - paintRoundQ(uv - ey)) / (2.0 * ey.y));
-  float cr = snoise(Qr * 1.3 / z + sd.yx) + 0.6 * edge - 0.3, tr = mix(0.8, -0.7, amt), hr = smoothstep(tr, tr + 0.8, cr);
-  vec2 cw = Qr + 0.01 * z * vec2(snoise(Qr * 11.0 / z), snoise(Qr * 11.0 / z + 4.0));
-  vec4 b = vec4(1e3, 1.0, 0.0, 0.0); vec2 bc = vec2(0.0);
-  for (int lv = 0; lv < 3; lv++) {
-    float G = z * (lv == 0 ? 0.11 : lv == 1 ? 0.05 : 0.022), need = lv == 0 ? 0.4 : lv == 1 ? 0.15 : 0.0;
-    float th = clamp((hr - need) / (1.0 - need), 0.0, 1.0) * (lv == 0 ? 0.55 : 0.7);
-    if (th <= 0.0) continue;
-    vec2 cv; vec4 r = paintPits(cw, G, th, float(lv) * 13.7 + 1.0, cv);
-    if (r.x < b.x) { b = r; bc = cv; }
-  }
-  vec2 duv = vec2(0.0);
-  float dt = determinant(J), dd = length(bc);
-  if (b.z > 0.0 && dd > b.z && abs(dt) > 1e-9) {
-    float R = b.z * 2.4, s2 = dd < R ? R * (dd - b.z) / (R - b.z) : dd;
-    duv = inverse(J) * (-bc / dd * (dd - s2));
-    duv *= min(1.0, 0.06 / max(length(duv), 1e-6));
-  }
-  vec3 col = paintColor(uv + duv);
+  float dk = 1e3, lk = -1e3, li = 0.0; vec3 dark = vec3(0.0), light = vec3(1.0, 0.0, 0.0);
+  for (int i = 0; i < 8; i++) { if (i >= uN) break; vec3 l = toLab(lin(uCol[i])); if (l.x < dk) { dk = l.x; dark = l; } if (l.x > lk) { lk = l.x; light = l; li = float(i); } }
   vec2 Qc = paintCellQ(uv);
   vec2 w = vec2(snoise(Qc * 3.0 / z + sd), snoise(Qc * 3.0 / z + sd.yx + 4.0));
-  float cl = snoise(Qc * 0.9 / z + sd) + 0.5 * snoise(Qc * 2.1 / z + sd.yx) + 0.35 * edge, t0 = mix(1.0, -0.6, amt);
-  float h = smoothstep(t0, t0 + 0.9, cl);
-  float e1 = paintLace(Qc / (0.085 * z) + 0.45 * w), e2 = paintLace(Qc / (0.035 * z) + 0.4 * w + 17.0);
-  float T1 = mix(1.1, 0.12, h), T2 = mix(1.1, 0.3, h * h);
-  float f1 = fwidth(e1), f2 = fwidth(e2), k1 = 1.0 - smoothstep(0.25, 0.8, f1), k2 = 1.0 - smoothstep(0.25, 0.8, f2);
-  float o1 = smoothstep(T1 - f1, T1 + f1, e1) * k1, o2 = smoothstep(T2 - f2, T2 + f2, e2) * k2, hole = max(o1, o2);
-  float hv = hash(floor(Qc / (0.085 * z) + 0.45 * w) + 3.3);
-  vec3 fill = paintRing(ci, (e1 - T1) / max(1.0 - T1, 0.2) * 1.6, hv, dark);
-  vec3 o = mix(col, fill, hole);
-  o.x = min(o.x + 0.05 * (smoothstep(T1 - 0.1, T1, e1) - o1) * k1, 1.0);
-  float fb = max(fwidth(b.x), 1e-5), kr = 1.0 - smoothstep(0.3, 1.0, fb / max(b.z, 1e-5));
-  float qn = b.y + 0.08 * snoise(cw * 40.0 / z);
-  vec3 rf = paintRing(ci, 1.0 - qn, b.w, dark);
-  rf = mix(rf, mix(col, vec3(min(col.x + 0.12, 1.0), col.yz * 0.6), 0.8), smoothstep(0.8, 0.86, qn));
-  o = mix(o, rf, smoothstep(fb, -fb, b.x) * kr);
+  float cl = snoise(Qc * 0.9 / z + sd) + 0.5 * snoise(Qc * 2.1 / z + sd.yx) + 0.4 * edge, t0 = mix(1.1, -0.7, amt);
+  float h = smoothstep(t0, t0 + 0.8, cl);
+  vec4 fb = paintFoam(Qc / (0.07 * z) + 0.35 * w), fs = paintFoam(Qc / (0.028 * z) + 0.3 * w + 17.0);
+  float Tb = mix(1.3, 0.07, smoothstep(0.35, 0.95, h)) + 0.05 * snoise(Qc * 7.0 / z + sd), Ts = mix(1.3, 0.1, smoothstep(0.03, 0.55, h) * (1.0 - 0.6 * smoothstep(0.6, 0.95, h)));
+  float wb = fwidth(fb.x), ws = fwidth(fs.x), kb = 1.0 - smoothstep(0.25, 0.8, wb), ks = 1.0 - smoothstep(0.25, 0.8, ws);
+  float ob = smoothstep(Tb - wb, Tb + wb, fb.x) * kb, os = smoothstep(Ts - ws, Ts + ws, fs.x) * ks * (1.0 - ob);
+  vec3 lace = mix(col, mix(light, col, 0.3), 0.7 * smoothstep(0.1, 0.6, h));
+  lace = mix(lace, mix(light, col, 0.1), 0.6 * max(smoothstep(Tb - 0.12, Tb, fb.x) * kb, smoothstep(Ts - 0.1, Ts, fs.x) * ks) * smoothstep(0.0, 0.3, h));
+  vec3 o = mix(lace, paintCellCol(fb, Tb, ci, li, dark, wb), ob);
+  o = mix(o, paintCellCol(fs, Ts, ci + 2.0, li, dark, ws), os);
   return o;
 }
 uniform float uPrism; vec2 gL1 = vec2(0.0), gL2 = vec2(0.0);
@@ -2150,19 +2119,18 @@ void main() {
         if (g.type === "paint" && floatOK) {
           const m = 0.3, dom = [-m, -m, 1 + 2 * m, 1 + 2 * m], dw = Math.max(8, Math.round(w * (1 + 2 * m) * 0.7)), dh = Math.max(8, Math.round(h * (1 + 2 * m) * 0.7));
           const A = floatTarget("paintA", dw, dh, "map"), B = floatTarget("paintB", dw, dh, "map"), pu = { ...gu, uPDom: dom, uPAsp: w / h, uPath: gu.uPath === 2 ? 0 : gu.uPath };
-          const steps = Math.round(Math.min(8, Math.max(1, g.detail ?? 5)) * 4), cuts = [...new Set([Math.max(1, Math.round(steps * 0.07)), Math.round(steps * 0.3), ...Array.from({ length: Math.ceil(steps / 4) }, (_, i) => Math.min(steps, (i + 1) * 4))])].sort((a, b) => a - b);
+          const steps = Math.round(Math.min(8, Math.max(1, g.detail ?? 5)) * 4), cuts = [...new Set([Math.max(1, Math.round(steps * 0.06)), ...Array.from({ length: Math.ceil(steps / 4) }, (_, i) => Math.min(steps, (i + 1) * 4))])].sort((a, b) => a - b);
           draw("gradient", srcTex, A.f, { ...pu, uPStage: 1 }, dw, dh, k, job.seed);
-          const cells = (g.cells || 0) > 0, C = cells ? floatTarget("paintC", dw, dh, "map") : null, C2 = cells ? floatTarget("paintC2", dw, dh, "map") : null;
-          let src = A, dst = B, done = 0, kept = false, kept2 = false;
+          const cells = (g.cells || 0) > 0, C = cells ? floatTarget("paintC", dw, dh, "map") : null;
+          let src = A, dst = B, done = 0, kept = false;
           for (const cut of cuts) {
             const sub = cut - done, un = { ...pu, uPStage: 2, uPSub: sub, uPDone: done };
             if (sub <= 0) continue;
             draw("gradient", src.t, dst.f, un, dw, dh, k, job.seed);
-            if (C2 && !kept2 && cut >= cuts[0]) { draw("gradient", src.t, C2.f, un, dw, dh, k, job.seed); kept2 = true; }
-            if (C && !kept && cut >= Math.round(steps * 0.3)) { draw("gradient", src.t, C.f, un, dw, dh, k, job.seed); kept = true; }
+            if (C && !kept && cut >= cuts[0]) { draw("gradient", src.t, C.f, un, dw, dh, k, job.seed); kept = true; }
             done += sub; [src, dst] = [dst, src];
           }
-          draw("gradient", src.t, targets.list[0].f, cells ? { ...pu, uPStage: 4, uTex2: C.t, uMip: C2.t } : { ...pu, uPStage: 3 }, w, h, k, job.seed);
+          draw("gradient", src.t, targets.list[0].f, cells ? { ...pu, uPStage: 4, uTex2: C.t } : { ...pu, uPStage: 3 }, w, h, k, job.seed);
         } else if (gu.uPath === 2 && [1, 3, 4].includes(gu.uMotion) && floatOK && (g.type === "flow" || g.type === "noise")) {
           const A = floatTarget("glideA", w, h, "rgba"), B = floatTarget("glideB", w, h, "rgba"), t = gu.uTime;
           draw("gradient", srcTex, A.f, { ...gu, uGLin: t, uGStage: 1 }, w, h, k, job.seed);
