@@ -8,7 +8,7 @@
 
 <p align="center">
   <img alt="Vanilla JS" src="https://img.shields.io/badge/vanilla-JS-f7df1e?logo=javascript&logoColor=black">
-  <img alt="WebGL2" src="https://img.shields.io/badge/WebGL2-49_effects-990000?logo=webgl&logoColor=white">
+  <img alt="WebGL2" src="https://img.shields.io/badge/WebGL2-50_effects-990000?logo=webgl&logoColor=white">
   <img alt="Exports" src="https://img.shields.io/badge/export-PNG%2C_SVG%2C_MP4%2C_GIF%2C_HTML-555">
   <img alt="Languages" src="https://img.shields.io/badge/lang-EN%2C_RU-3b5bdb">
   <a href="https://github.com/masterclaudecoder/isoline/actions/workflows/pages.yml"><img alt="Deploy" src="https://github.com/masterclaudecoder/isoline/actions/workflows/pages.yml/badge.svg"></a>
@@ -35,7 +35,7 @@
 | Studio | Palettes | Components |
 | :-- | :-- | :-- |
 | <img src="docs/readme/studio.jpg" alt="Studio"> | <img src="docs/readme/palettes.jpg" alt="Palettes"> | <img src="docs/readme/components.jpg" alt="Components"> |
-| Contours, 10 gradient generators, 49 stackable effects, 3D glass objects and looping motion. | Press Space for a new palette. Lock what you like, export hex, CSS or JSON. | Type, color, spacing and motion tokens on a live product mockup, plus a directory of about 120 libraries. |
+| Contours, 10 gradient generators, 50 stackable effects, 3D glass objects and looping motion. | Press Space for a new palette. Lock what you like, export hex, CSS or JSON. | Type, color, spacing and motion tokens on a live product mockup, plus a directory of about 120 libraries. |
 
 Click the logo on the home page to roll a new look across all three.
 
