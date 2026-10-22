@@ -148,6 +148,19 @@ textarea::-webkit-scrollbar-thumb { border-width: 3px; }
 .tile.fx { padding: 4px 6px 4px 2px; gap: 2px; }
 .tile.fx .tile-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; border: 0; background: transparent; padding: 2px 0; text-align: left; }
 .tile.fx.dragging { box-shadow: 0 0 0 1.5px var(--accent), var(--pop); }
+.tile.fx { position: relative; }
+.row-tools { position: absolute; left: 24px; top: 50%; width: 64px; height: 40px; margin-top: -20px; display: flex; align-items: center; justify-content: center; gap: 4px; border-radius: 7px; background: rgba(20, 18, 16, .42); opacity: 0; pointer-events: none; transition: opacity .18s var(--ease); }
+.row-tools .ib.xs { color: #fff; background: transparent; }
+.row-tools .ib.xs:hover { background: rgba(255, 255, 255, .2); }
+.tile.fx:hover .row-tools, .tile.fx:focus-within .row-tools, .tile.fx.off .row-tools { opacity: 1; pointer-events: auto; }
+.tile.fx.off:not(:hover, :focus-within) .row-copy { display: none; }
+@media (hover: none) { .tile.fx.on .row-tools { opacity: 1; pointer-events: auto; } }
+.fx-stack.folded .row-tools { display: none; }
+.tile.fx .tile-th, .tile.fx .tile-text { transition: opacity .24s var(--ease), filter .24s var(--ease); }
+.tile.fx.off .tile-th { opacity: .4; filter: grayscale(1); }
+.tile.fx.off .tile-text { opacity: .55; }
+.row-paste { margin-left: auto; }
+.row-paste + .stack-fold { margin-left: 0; }
 .grip { display: grid; place-items: center; width: 20px; height: 32px; color: rgba(var(--line-rgb), .3); cursor: grab; touch-action: none; border-radius: 6px; flex: none; }
 .grip:hover { color: var(--ink); }
 .grip .ic { width: 16px; height: 16px; }

@@ -654,12 +654,12 @@ vec2 paintP(vec2 q) { return (q - paintOff()) / (vec2(uPAsp, 1.0) * paintZoom())
 // arrive from beyond the texture.
 // It fades the flow's stream function rather than its speed, so the flow stays free of sources and sinks
 // and paint never piles up against the wall.
-// Moving, the paint is stirred further along this same flow and back again over each loop, the swirls
-// winding in and easing out, so every frame carries the paint along its own path and the loop closes.
 float paintPsi(vec2 q, float ch) {
-  float s1 = mix(0.45, 0.55, ch), s2 = mix(0.95, 1.3, ch);
+  float s1 = mix(0.45, 0.55, ch), s2 = mix(0.95, 1.3, ch), tw = 6.2831853 * uTime, R = uMotion != 0 && uMotion != 2 ? 0.07 * (0.4 + uMotAmt) : 0.0;
+  vec2 c1 = R * vec2(cos(tw), sin(tw)), c2 = R * vec2(cos(tw + 1.7), -sin(tw + 1.7));
+  if (uEndless > 0.5) { c1 += R * 0.6 * vec2(cos(tw * 0.618 + 1.3), sin(tw * 0.618 + 0.7)); c2 += R * 0.6 * vec2(sin(tw * 0.414 + 1.1), -cos(tw * 0.414 + 0.3)); }
   vec2 p = paintP(q), out2 = max(max(-p, p - 1.0), 0.0);
-  return (snoise(q * s1) / s1 + mix(0.3, 0.45, ch) * snoise(q * s2 + vec2(7.3, 2.1)) / s2) * smoothstep(-uPDom.x, 0.0, max(out2.x, out2.y));
+  return (snoise(q * s1 + c1) / s1 + mix(0.3, 0.45, ch) * snoise(q * s2 + vec2(7.3, 2.1) + c2) / s2) * smoothstep(-uPDom.x, 0.0, max(out2.x, out2.y));
 }
 vec2 paintFlow(vec2 q, float ch) {
   const float e = 0.01;
@@ -667,37 +667,14 @@ vec2 paintFlow(vec2 q, float ch) {
   return vec2(paintPsi(q + vec2(0.0, e), ch) - c, -(paintPsi(q + vec2(e, 0.0), ch) - c)) / e;
 }
 vec2 paintBack(vec2 q, float n) {
-  float ch = paintCh(), st = uMotion != 0 && uMotion != 2 ? 1.0 + 0.7 * uMotAmt * (0.5 - 0.5 * cos(6.2831853 * uTime)) : 1.0;
-  float dt = st * uWarp * mix(0.35, 0.9, ch) / floor(clamp(uDetail, 1.0, 8.0) * 4.0 + 0.5);
+  float ch = paintCh();
+  float dt = uWarp * mix(0.35, 0.9, ch) / floor(clamp(uDetail, 1.0, 8.0) * 4.0 + 0.5);
   for (int i = 0; i < 32; i++) {
     if (float(i) >= n) break;
     vec2 m = q - 0.5 * dt * paintFlow(q, ch);
     q -= dt * paintFlow(m, ch);
   }
   return q;
-}
-// Cells, like an acrylic pour: round spots of another color in a dark lacy rim, gathered in clusters,
-// two sizes of them. They are dropped in late in the flow, so the rest of it stretches them
-// into ovals and teardrops.
-vec4 paintCells(vec2 q) {
-  float dk = 1e3; vec3 dark = vec3(0.0);
-  for (int i = 0; i < 8; i++) { if (i >= uN) break; vec3 l = toLab(lin(uCol[i])); if (l.x < dk) { dk = l.x; dark = l; } }
-  float clus = smoothstep(-0.3, 0.5, snoise(q * 0.55 + 11.3)), px = length(fwidth(q)), best = 1e3, rimW = 0.0, core = 0.0, hc = 0.0; vec3 col = dark;
-  for (int lv = 0; lv < 3; lv++) {
-    float G = lv == 0 ? 0.13 : lv == 1 ? 0.065 : 0.032, den = uPCell * clus * (lv == 0 ? 0.8 : lv == 1 ? 1.0 : 1.2);
-    vec2 id0 = floor(q / G);
-    for (int j = 0; j < 9; j++) {
-      vec2 id = id0 + vec2(j % 3 - 1, j / 3 - 1), hh = vec2(hash(id + float(lv) * 17.0), hash(id + 5.3 + float(lv) * 17.0));
-      if (hash(id + 9.1 + float(lv) * 3.0) > den) continue;
-      vec2 c = (id + 0.5 + (hh - 0.5) * 0.6) * G;
-      float r = G * (0.18 + 0.24 * hh.x), d = length(q - c) - r;
-      if (d < best) { best = d; rimW = r * 0.35; core = r; hc = hh.y; col = ramp(fract(hh.y * 7.31)); }
-    }
-  }
-  // Some cells hold a smaller cell of another color inside them.
-  if (hc > 0.55) col = mix(col, ramp(fract(hc * 13.7)), smoothstep(px, -px, best + core * 0.55));
-  float inner = smoothstep(px, -px, best), rim = smoothstep(px, -px, best - rimW);
-  return vec4(mix(dark, col, inner), rim);
 }
 // The paint as first laid down: broad bands of the palette with finer streaks inside them, in Lab.
 // Moving, the bands slide a whole number of stripes per loop, so the paint flows along its veins.
@@ -708,6 +685,28 @@ vec3 paintSeed(vec2 q) {
   float tri = clamp(abs(fract(d) * 2.0 - 1.0) * (1.0 - 0.55 * vc) + abs(fract(df) * 2.0 - 1.0) * 0.35 * vc + abs(fract(dv) * 2.0 - 1.0) * 0.2 * vc, 0.0, 1.0);
   float N = float(uN - 1), x = tri * N, kk = min(floor(x), N - 1.0), f = x - kk, h = max(0.5 * clamp(uSoft, 0.02, 1.0), fwidth(x) * 0.75);
   return ramp((kk + smoothstep(0.5 - h, 0.5 + h, f)) / N);
+}
+vec4 paintCells(vec2 q, vec3 top) {
+  float dk = 1e3; vec3 dark = vec3(0.0);
+  for (int i = 0; i < 8; i++) { if (i >= uN) break; vec3 l = toLab(lin(uCol[i])); if (l.x < dk) { dk = l.x; dark = l; } }
+  vec3 low = paintSeed(q * 1.9 + vec2(31.7, 12.9)), deep = paintSeed(q * 3.3 + vec2(4.1, 77.3));
+  float clus = smoothstep(-0.25, 0.45, snoise(q * 0.5 + 11.3) + 0.4 * snoise(q * 1.4 + 2.2)), px = length(fwidth(q)), best = 1e3, rimW = 0.0, core = 0.0, hc = 0.0;
+  for (int lv = 0; lv < 3; lv++) {
+    float G = lv == 0 ? 0.12 : lv == 1 ? 0.055 : 0.026, den = uPCell * clus * (lv == 0 ? 1.0 : lv == 1 ? 1.4 : 1.8);
+    vec2 id0 = floor(q / G);
+    for (int j = 0; j < 9; j++) {
+      vec2 id = id0 + vec2(j % 3 - 1, j / 3 - 1), hh = vec2(hash(id + float(lv) * 17.0), hash(id + 5.3 + float(lv) * 17.0));
+      if (hash(id + 9.1 + float(lv) * 3.0) > den) continue;
+      vec2 c = (id + 0.5 + (hh - 0.5) * 0.7) * G, e = q - c;
+      float r = G * (0.12 + 0.4 * hh.x), d = length(e * vec2(1.0, 1.0 + 0.5 * (hh.y - 0.5))) - r;
+      if (d < best) { best = d; rimW = max(r * 0.22, px); core = r; hc = hh.y; }
+    }
+  }
+  vec3 hole = mix(low, deep, step(0.6, hc) * smoothstep(px, -px, best + core * 0.55));
+  hole = mix(hole, dark, step(0.85, hc) * smoothstep(px, -px, best + core * 0.8));
+  vec3 lace = mix(dark, top, 0.2);
+  float inner = smoothstep(px, -px, best), rim = smoothstep(px, -px, best - rimW) * clamp(uPCell * 2.0, 0.0, 1.0);
+  return vec4(mix(lace, hole, inner), rim);
 }
 // Folds. Every sheet's front edge sweeps in one shared curve toward a side (curve) and then strays from it
 // on its own wave (wave, wavelength; jag adds finer, sharper wiggles), so neighbours overlap and cross.
@@ -753,7 +752,7 @@ void gradMain() {
       lab += texture(uTex, clamp(tv + jx * ((float(i) + 0.5) / nx - 0.5) + jy * ((float(j) + 0.5) / ny - 0.5), 0.0, 1.0)).rgb;
     }
     lab /= nx * ny;
-    if (uPCellNow > 0.5 && uPCell > 0.0) { vec4 ce = paintCells(paintQ(p)); lab = mix(lab, ce.rgb, ce.a); }
+    if (uPCellNow > 0.5 && uPCell > 0.0) { vec4 ce = paintCells(paintQ(p), lab); lab = mix(lab, ce.rgb, ce.a); }
     o = uPStage == 3 ? vec4(srgb(fromLab(lab)), 1.0) : vec4(lab, 1.0); return;
   }
   vec2 a = vec2(uRes.x / uRes.y, 1.0);
@@ -2449,7 +2448,7 @@ void main() {
           for (let i = 0; i < passes; i++) {
             const sub = Math.round((steps * (i + 1)) / passes) - done, last = i === passes - 1;
             // Cells go in at the first pass past 85% of the flow (see paintCells in the shader).
-            const cellNow = !celled && (done + sub >= steps * 0.85 || last); celled ||= cellNow;
+            const cellNow = !celled && (done + sub >= steps * 0.9 || last); celled ||= cellNow;
             draw("gradient", src.t, last ? targets.list[0].f : dst.f, { ...pu, uPStage: last ? 3 : 2, uPSub: sub, uPCellNow: cellNow ? 1 : 0 }, last ? w : dw, last ? h : dh, k, job.seed);
             done += sub; [src, dst] = [dst, src];
           }
@@ -2500,7 +2499,7 @@ void main() {
       const ink = hex3(job.ink), paper = hex3(job.paper);
       for (const id of job.order || ORDER) {
         const e = job.fx[id];
-        if (!e || !e.on || !SHADERS[id]) continue;
+        if (!e || !e.on || e.hidden || !SHADERS[id]) continue;
         const out = targets.list[ping];
         const un = effectUniforms(id, e, ink, paper);
         if (id === "dither" && e.palette) { const pl = [...new Set(job.palette || [])].slice(0, 8); un.uCol = pl.length ? pl.map(hex3) : [ink, paper]; un.uN = un.uCol.length; }

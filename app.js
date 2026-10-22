@@ -380,36 +380,36 @@
     ["Effects", "Halftone", { ...G("flow", "Prism", { scale: 0.45, detail: 2, warp: 0.5, stretch: 1.8, angle: -25 }), fx: { halftone: { size: 10, angle: 30, mono: false } }, paper: "#f1ede4" }],
     ["Effects", "Duotone", { pattern: "lines", angle: 165, scale: 500, octaves: 2, warp: 0.4, gap: 28, mode: "bands", band: 0.5, smooth: 0.5, line: "#111111", line2: "#5a0f1f", bg: "#f1ede4", fx: { gradmap: { c1: "#15123a", c2: "#4b3fd1", c3: "#f4f1ff", mix: 1 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
     // Looks picked from the design board: each one rebuilds a reference with the tools above.
-    ["Effects", "Pixel tide", { ...G("linear", ["#0b0b10", "#0b0b10", "#4b47c9", "#a9a4ff", "#e6e3ff"], { angle: 90 }), fx: { wave: { amp: 70, length: 700, angle: 0 }, dissolve: { cell: 20, shape: "square", amount: 0.5, edge: 0.3, gap: 0.12, tint: 0.1, dots: 0.5, keep: "dark" } } }],
-    ["Effects", "Pink mosaic", { ...G("linear", ["#f4f1fa", "#f7c6dc", "#f58bb4", "#e8456f"], { angle: 0 }), fx: { mesh: { cell: 130, radius: 0.16, round: 0.5, thick: 0.2, frost: 1, tint: 0.1, blend: 0.65, gap: 0, light: 0.12 } } }],
-    ["Effects", "Bar field", { ...G("flow", ["#6f9be6", "#b9d0f5", "#f5c2c8", "#f7a99a", "#6f9be6"], { scale: 0.5, detail: 3, warp: 0.5, stretch: 1.6, angle: 10, contrast: 1 }), fx: { glass: { width: 26, angle: 90, round: 1, thick: 1.4, frost: 0.05, light: 0.8 } } }],
-    ["Effects", "Dot matrix", { ...G("flow", ["#050507", "#1a1d24", "#d8d0c0", "#2b3a55", "#050507"], { scale: 0.3, detail: 2, warp: 0.3, stretch: 3, angle: -35, contrast: 1.1 }), fx: { led: { pitch: 14, size: 0.7, glow: 0.4, off: 0.03, contrast: 1.5, shape: "round" } } }],
-    ["Effects", "Green glass", { ...G("flow", ["#141c04", "#4a6a0c", "#b6dd3a", "#e9ff7a", "#2c3e06"], { scale: 0.4, detail: 3, warp: 0.6, stretch: 1.5, angle: 60, contrast: 1 }), fx: { mesh: { cell: 28, radius: 0.14, round: 0.6, thick: 2.6, frost: 0.2, texture: 0.5, gap: 0.3, light: 1.2 }, grain: { amount: 0.22, size: 1.4, soft: true } } }],
-    ["Effects", "Glass squares", { ...G("aura", ["#f3f4f1", "#c8ecb5", "#5fd248", "#22b022"], { scale: 1.1, detail: 3, warp: 0.3, stretch: 0, soft: 2.5, contrast: 0, angle: 0 }), fx: { mesh: { cell: 190, radius: 0.2, round: 0.1, thick: 0.3, frost: 1, tint: 0.25, blend: 0.4, gap: 0.3, light: 0.35 } } }],
-    ["Gradients", "Chrome folds", { ...G("folds", ["#000000", "#16171a", "#5a5e66", "#d9dce2", "#ffffff"], { scale: 1.2, warp: 0.35, warpScale: 1.2, stretch: 2, detail: 1, soft: 0.35, contrast: 1, prism: 0.9, angle: 15 }) }],
-    ["Effects", "Holo swirl", { ...G("wavegrad", ["#f7f6fa", "#262448", "#f7f6fa", "#262448"], { angle: 115, scale: 0.9, stretch: 4, warp: 1.6, soft: 0.9, contrast: 0.3 }), fx: { film: { kind: "foil", thick: 1600, gain: 1.3, vivid: 0, mix: 0.6, mid: 1 }, grain: { amount: 0.12, size: 1.4, soft: true } } }],
-    ["Effects", "Glyph bloom", { ...G("aura", ["#8fb8e6", "#f4a3a0", "#f0564a", "#ffd6c9"], { scale: 1.6, detail: 3, warp: 0.7, stretch: 0.6, soft: 2, contrast: 0, angle: 0 }), fx: { glyphs: { cell: 16, set: "binary", font: "geist", contrast: 1.6, change: 2, back: 0.65, mono: false } } }],
-    ["Effects", "Dimple glow", { ...G("aura", ["#0b0f0d", "#13302a", "#1f7d55", "#3bf08a"], { scale: 1.4, detail: 3, warp: 0.4, stretch: 0.3, soft: 1.2, contrast: 0, angle: 0 }), fx: { mesh: { cell: 24, radius: 0.5, stretch: 2, round: 1, thick: 3, frost: 0.1, gap: 0, light: 0.1 }, grain: { amount: 0.1, size: 1.2, soft: true } } }],
-    ["Effects", "Halftone ridges", { ...G("folds", ["#ffffff", "#ffffff", "#9a9a9a", "#000000"], { scale: 0.9, warp: 0.5, warpScale: 0, stretch: 0.5, detail: 5, soft: 0.6, contrast: 1.2, prism: 0, angle: 90 }), ink: "#111111", paper: "#ffffff", fx: { halftone: { size: 9, angle: 45, mono: true } } }],
-    ["Effects", "Pearl liquid", { ...G("paint", ["#f1e4ee", "#c9bcd9", "#fbf6f8", "#a9bcd8", "#e8cad8"], { scale: 0.8, warp: 2, detail: 5, stretch: 2, soft: 0.9, contrast: 0.3, warpScale: 0.4, angle: 30 }), fx: { chrome: { strength: 0.8, bands: 1.6, soft: 12, tint: "#f6e6ef", mix: 0.55 }, irid: { bands: 2, mix: 0.3, pearl: 0.7, source: "slope" } } }],
-    ["Effects", "Oil slick", { ...G("flow", ["#000000", "#000000", "#000000", "#3a3a3a", "#8a8a8a", "#ffffff"], { scale: 0.35, detail: 2, warp: 0.9, stretch: 2.2, angle: 70, contrast: 1 }), fx: { film: { thin: 0, thick: 900, index: 1.47, base: 1.33, gain: 6, vivid: 2, mix: 1 } } }],
-    ["Gradients", "Ember flow", { ...G("flow", ["#0c2b2c", "#0c2b2c", "#14494a", "#f07a2a", "#ff3b1f", "#0c2b2c"], { scale: 0.35, detail: 2, warp: 0.9, stretch: 1.5, angle: 30, contrast: 1 }), fx: { blur: { amount: 30, dir: "even", start: 0 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
-    ["Effects", "Hex lenses", { ...G("flow", ["#020306", "#0b1220", "#5c7ea8", "#c7d8ee", "#020306"], { scale: 0.35, detail: 2, warp: 0.4, stretch: 3, angle: 70, contrast: 1.1 }), fx: { mesh: { layout: "hex", cell: 26, radius: 0.5, round: 1, thick: 2, frost: 0, gap: 0.6, light: 1 }, vignette: { amount: 0.5, softness: 0.5 } } }],
-    ["Gradients", "Soft ribbon", { pattern: "lines", angle: 60, scale: 600, octaves: 2, warp: 0.7, gap: 420, mode: "bands", band: 0.12, smooth: 0.8, line: "#f0f0f0", line2: "#f0f0f0", bg: "#000000", fx: { blur: { amount: 60, dir: "even", start: 0 }, grain: { amount: 0.16, size: 1.4, soft: true } } }],
-    ["Effects", "Prism shards", { ...G("paint", ["#07050a", "#07050a", "#2a1838", "#c890b0", "#f0d090", "#7fd8d0", "#07050a"], { scale: 1.2, warp: 1.6, detail: 4, stretch: 3, soft: 0.8, contrast: 0.4, warpScale: 0.4, angle: 60 }), fx: { glass: { width: 140, angle: 60, round: 1, thick: 1.6, frost: 0.1, light: 0.8 }, chroma: { amount: 6 }, bloom: { threshold: 0.6, radius: 24, intensity: 0.6 } } }],
-    ["Effects", "Smear columns", { ...G("noise", ["#000000", "#000000", "#ffffff", "#ffffff"], { noise: "clouds", scale: 1.6, detail: 3, warp: 0.3, stretch: 1, contrast: 1.6, angle: 0 }), fx: { smear: { length: 600, angle: 90, band: 12, amount: 1, jitter: 1, threshold: 0 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
-    ["Effects", "Flow engraving", { ...G("noise", ["#000000", "#000000", "#ffffff"], { noise: "clouds", scale: 0.7, detail: 3, warp: 0.4, stretch: 1, contrast: 1.4, angle: 0 }), ink: "#e8e8e8", paper: "#050505", fx: { linescreen: { spacing: 10, angle: 30, flow: 0.3, flowSize: 700, mono: true, invert: true } } }],
-    ["Gradients", "Acrylic pour", { ...G("paint", ["#1a0a0c", "#7a1020", "#e2401c", "#f2a516", "#f6f3ef", "#9a9894", "#3c3a3a"], { scale: 1, warp: 1.8, detail: 6, stretch: 1.6, soft: 0.3, contrast: 0.35, warpScale: 0.6, angle: 40, cells: 0.8 }), seed: 11, fx: { grain: { amount: 0.05, size: 1.2, soft: true } } }],
-    ["Gradients", "Mystic swirl", { ...G("paint", ["#1a0508", "#5a0f1c", "#9a1f33", "#0b0b12", "#3fc6e0"], { scale: 1, warp: 2.2, detail: 5, stretch: 2.5, soft: 0.7, contrast: 0.4, warpScale: 0.6, angle: 30 }), fx: { bloom: { threshold: 0.5, radius: 24, intensity: 0.8 } } }],
-    ["Noise", "Carnage", { ...G("noise", ["#000000", "#000000", "#000000", "#000000", "#d8123e", "#e8174a"], { noise: "marble", scale: 2.4, detail: 5, warp: 0.8, stretch: 1, contrast: 3, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } }, motion: { type: "breathe", dur: 8, amt: 0.7, path: "glide", angle: 90 } }],
-    ["Effects", "Wave traffic", { ...G("linear", ["#76749c", "#8482aa"], { angle: 90 }), ink: "#6c63ff", paper: "#120f2e", fx: { linescreen: { spacing: 28, angle: 12, flow: 0.1, flowSize: 600, ripple: 0.5, ripLen: 30, x: -0.2, y: 1.15, x2: 1.25, y2: 0.7, mono: true } } }],
-    ["Gradients", "Glass fold", { ...G("folds", ["#020818", "#06153d", "#123a8f", "#5f9cf0", "#e8f2ff"], { scale: 0.5, warp: 0.9, warpScale: 0.3, stretch: 1.4, detail: 1, soft: 0.7, contrast: 1, prism: 0, angle: -30 }) }],
-    ["Effects", "Halftone wave", { ...G("linear", ["#0a0f2c", "#e0127a", "#ff3fa0"], { angle: 90, warp: 0.5, warpScale: 1.6, soft: 1 }), fx: { dither: { matrix: 4, pix: 12, palette: true, gap: 0.18 } } }],
-    ["Effects", "Neural pink", { ...G("noise", ["#050103", "#3a0718", "#c8124f", "#ff4f8b", "#ffd6e6"], { noise: "caustic", scale: 2.2, detail: 6, warp: 0.15, stretch: 1, contrast: 1, angle: -28 }), fx: { bloom: { threshold: 0.6, radius: 18, intensity: 0.8 }, grain: { amount: 0.06, size: 1.2, soft: true } } }],
-    ["Effects", "Green smear", { ...G("flow", ["#0a2a0a", "#1e7a1e", "#25b0ff", "#0a2a0a"], { scale: 0.5, detail: 2, warp: 0.5, stretch: 1.4, angle: 20, contrast: 1 }), fx: { smear: { length: 300, angle: 60, band: 8, amount: 0.8, jitter: 0.7, threshold: 0 }, blur: { amount: 10, dir: "even", start: 0 }, grain: { amount: 0.14, size: 1.3, soft: true } } }],
-    ["Effects", "Crimson veil", { ...G("noise", ["#2a0a12", "#6a1a2e", "#c88090", "#fff0ee"], { noise: "clouds", scale: 1.2, detail: 4, warp: 0.3, stretch: 1, contrast: 1.4, angle: 0 }), fx: { smear: { length: 500, angle: 90, band: 4, amount: 1, jitter: 0.7, threshold: 0 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
-    ["Gradients", "Parallel waves", { pattern: "lines", angle: 130, scale: 700, octaves: 2, warp: 0.3, gap: 260, mode: "bands", band: 0.35, smooth: 0.8, line: "#ffffff", line2: "#ffffff", bg: "#000000", fx: { blur: { amount: 40, dir: "even", start: 0 }, gradmap: { c1: "#04131c", c2: "#1fb3b0", c3: "#f6efb0", mix: 1 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
-    ["Effects", "Vertical bars", { ...G("noise", ["#ffffff", "#ffffff", "#8a8a8a", "#8a8a8a"], { noise: "clouds", scale: 0.6, detail: 1, warp: 0.4, stretch: 1, contrast: 1.4, angle: 0 }), ink: "#111111", paper: "#f3efe6", fx: { linescreen: { spacing: 32, angle: 90, mono: true, steps: 3, hair: 1.5 } } }],
+    ["Effects", "Pixel tide", { ...G("linear", ["#15123a", "#15123a", "#4b3fd1", "#b8a8ff", "#f4f1ff"], { angle: 90 }), fx: { wave: { amp: 70, length: 700, angle: 0 }, dissolve: { cell: 20, shape: "square", amount: 0.5, edge: 0.3, gap: 0.12, tint: 0.1, dots: 0.5, keep: "dark" } } }],
+    ["Effects", "Pink mosaic", { ...G("linear", ["#fbecef", "#f2c4cf", "#e8a6b5", "#c45a7a"], { angle: 0 }), fx: { mesh: { cell: 130, radius: 0.16, round: 0.5, thick: 0.2, frost: 1, tint: 0.1, blend: 0.65, gap: 0, light: 0.12 }, grain: { amount: 0.06, size: 1.2, soft: true } } }],
+    ["Effects", "Bar field", { ...G("flow", ["#8a9ee0", "#d3d8f2", "#f6d5c6", "#f3a683", "#8a9ee0"], { scale: 0.5, detail: 3, warp: 0.5, stretch: 1.6, angle: 10, contrast: 1 }), fx: { glass: { width: 26, angle: 90, round: 1, thick: 1.4, frost: 0.05, light: 0.8 } } }],
+    ["Effects", "Dot matrix", { ...G("flow", ["#1c1d1f", "#3b3d41", "#d9d4ca", "#2a365c", "#1c1d1f"], { scale: 0.3, detail: 2, warp: 0.3, stretch: 3, angle: -35, contrast: 1.1 }), fx: { led: { pitch: 14, size: 0.7, glow: 0.4, off: 0.03, contrast: 1.5, shape: "round" } } }],
+    ["Effects", "Green glass", { ...G("flow", ["#1a2414", "#46642a", "#a9c95a", "#e6f2a8", "#26341c"], { scale: 0.4, detail: 3, warp: 0.6, stretch: 1.5, angle: 60, contrast: 1 }), fx: { mesh: { cell: 28, radius: 0.14, round: 0.6, thick: 2.6, frost: 0.2, texture: 0.5, gap: 0.3, light: 1.2 }, grain: { amount: 0.22, size: 1.4, soft: true } } }],
+    ["Effects", "Glass squares", { ...G("aura", ["#f6f4ee", "#dbe6cf", "#8fa98b", "#34493b"], { scale: 1.1, detail: 3, warp: 0.3, stretch: 0, soft: 2.5, contrast: 0, angle: 0 }), fx: { mesh: { cell: 190, radius: 0.2, round: 0.1, thick: 0.3, frost: 1, tint: 0.25, blend: 0.4, gap: 0.3, light: 0.35 } } }],
+    ["Gradients", "Chrome folds", { ...G("folds", ["#1c1d1f", "#2a2b2e", "#7d7a74", "#d9d4ca", "#faf8f3"], { scale: 1.2, warp: 0.35, warpScale: 1.2, stretch: 2, detail: 1, soft: 0.35, contrast: 1, prism: 0.9, angle: 15 }), fx: { grain: { amount: 0.06, size: 1.2, soft: true } } }],
+    ["Effects", "Holo swirl", { ...G("wavegrad", ["#faf8f3", "#2a365c", "#faf8f3", "#2a365c"], { angle: 115, scale: 0.9, stretch: 4, warp: 1.6, soft: 0.9, contrast: 0.3 }), fx: { film: { kind: "foil", thick: 1600, gain: 1.3, vivid: 0, mix: 0.6, mid: 1 }, grain: { amount: 0.12, size: 1.4, soft: true } } }],
+    ["Effects", "Glyph bloom", { ...G("aura", ["#9cc3d5", "#f3a683", "#e1665b", "#f7e3d4"], { scale: 1.6, detail: 3, warp: 0.7, stretch: 0.6, soft: 2, contrast: 0, angle: 0 }), fx: { glyphs: { cell: 16, set: "binary", font: "geist", contrast: 1.6, change: 2, back: 0.65, mono: false } } }],
+    ["Effects", "Dimple glow", { ...G("aura", ["#0d1512", "#1f2d24", "#3fb6a8", "#d7f59a"], { scale: 1.4, detail: 3, warp: 0.4, stretch: 0.3, soft: 1.2, contrast: 0, angle: 0 }), fx: { mesh: { cell: 24, radius: 0.5, stretch: 2, round: 1, thick: 3, frost: 0.1, gap: 0, light: 0.1 }, grain: { amount: 0.1, size: 1.2, soft: true } } }],
+    ["Effects", "Halftone ridges", { ...G("folds", ["#f3efe6", "#f3efe6", "#8a8378", "#1b1b1b"], { scale: 0.9, warp: 0.5, warpScale: 0, stretch: 0.5, detail: 5, soft: 0.6, contrast: 1.2, prism: 0, angle: 90 }), ink: "#1b1b1b", paper: "#f3efe6", fx: { halftone: { size: 9, angle: 45, mono: true } } }],
+    ["Effects", "Pearl liquid", { ...G("paint", ["#f3dfe6", "#cbbad6", "#faf8f3", "#b1c3d8", "#e8cad8"], { scale: 0.8, warp: 2, detail: 5, stretch: 2, soft: 0.9, contrast: 0.3, warpScale: 0.4, angle: 30 }), fx: { chrome: { strength: 0.8, bands: 1.6, soft: 12, tint: "#f6e6ef", mix: 0.55 }, irid: { bands: 2, mix: 0.3, pearl: 0.7, source: "slope" } } }],
+    ["Effects", "Oil slick", { ...G("flow", ["#000000", "#000000", "#000000", "#3b3d41", "#8a8378", "#f1ede4"], { scale: 0.35, detail: 2, warp: 0.9, stretch: 2.2, angle: 70, contrast: 1 }), fx: { film: { thin: 0, thick: 900, index: 1.47, base: 1.33, gain: 6, vivid: 2, mix: 1 } } }],
+    ["Gradients", "Ember flow", { ...G("flow", ["#05232b", "#05232b", "#0f4a4f", "#f26b3a", "#e1452a", "#05232b"], { scale: 0.35, detail: 2, warp: 0.9, stretch: 1.5, angle: 30, contrast: 1 }), fx: { blur: { amount: 30, dir: "even", start: 0 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
+    ["Effects", "Hex lenses", { ...G("flow", ["#0e1424", "#141c30", "#5b6b9a", "#aab8dc", "#0e1424"], { scale: 0.35, detail: 2, warp: 0.4, stretch: 3, angle: 70, contrast: 1.1 }), fx: { mesh: { layout: "hex", cell: 26, radius: 0.5, round: 1, thick: 2, frost: 0, gap: 0.6, light: 1 }, vignette: { amount: 0.5, softness: 0.5 } } }],
+    ["Gradients", "Soft ribbon", { pattern: "lines", angle: 60, scale: 600, octaves: 2, warp: 0.7, gap: 420, mode: "bands", band: 0.12, smooth: 0.8, line: "#f1ede4", line2: "#f1ede4", bg: "#1b1b1b", fx: { blur: { amount: 60, dir: "even", start: 0 }, grain: { amount: 0.16, size: 1.4, soft: true } } }],
+    ["Effects", "Prism shards", { ...G("paint", ["#15123a", "#15123a", "#3b2a5e", "#e0679a", "#f6d27a", "#9cc3d5", "#15123a"], { scale: 1.2, warp: 1.6, detail: 4, stretch: 3, soft: 0.8, contrast: 0.4, warpScale: 0.4, angle: 60 }), fx: { glass: { width: 140, angle: 60, round: 1, thick: 1.6, frost: 0.1, light: 0.8 }, chroma: { amount: 6 }, bloom: { threshold: 0.6, radius: 24, intensity: 0.6 } } }],
+    ["Effects", "Smear columns", { ...G("noise", ["#1b1b1b", "#1b1b1b", "#f1ede4", "#f1ede4"], { noise: "clouds", scale: 1.6, detail: 3, warp: 0.3, stretch: 1, contrast: 1.6, angle: 0 }), fx: { smear: { length: 600, angle: 90, band: 12, amount: 1, jitter: 1, threshold: 0 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
+    ["Effects", "Flow engraving", { ...G("noise", ["#1b1b1b", "#1b1b1b", "#f1ede4"], { noise: "clouds", scale: 0.7, detail: 3, warp: 0.4, stretch: 1, contrast: 1.4, angle: 0 }), ink: "#f1ede4", paper: "#1b1b1b", fx: { linescreen: { spacing: 10, angle: 30, flow: 0.3, flowSize: 700, mono: true, invert: true } } }],
+    ["Gradients", "Acrylic pour", { ...G("paint", ["#20120e", "#8c2f17", "#e1452a", "#f0a830", "#f6f1e7", "#9a958c", "#3b3d41"], { scale: 0.9, warp: 1.6, detail: 6, stretch: 1.2, soft: 0.45, contrast: 0.15, warpScale: 0.5, angle: 40, cells: 0.85 }), seed: 11, fx: { grain: { amount: 0.05, size: 1.2, soft: true } } }],
+    ["Gradients", "Mystic swirl", { ...G("paint", ["#1a0b10", "#5a0f1f", "#a3243b", "#0e1424", "#3fb6a8"], { scale: 1, warp: 2.2, detail: 5, stretch: 2.5, soft: 0.7, contrast: 0.4, warpScale: 0.6, angle: 30 }), fx: { bloom: { threshold: 0.5, radius: 24, intensity: 0.8 }, grain: { amount: 0.06, size: 1.2, soft: true } } }],
+    ["Noise", "Carnage", { ...G("noise", ["#111111", "#111111", "#111111", "#111111", "#c8203f", "#ef2b52"], { noise: "marble", scale: 2.4, detail: 5, warp: 0.8, stretch: 1, contrast: 3, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } }, motion: { type: "breathe", dur: 8, amt: 0.7, path: "glide", angle: 90 } }],
+    ["Effects", "Wave traffic", { ...G("linear", ["#76749c", "#8482aa"], { angle: 90 }), ink: "#5b6b9a", paper: "#0e1424", fx: { linescreen: { spacing: 28, angle: 12, flow: 0.1, flowSize: 600, ripple: 0.5, ripLen: 30, x: -0.2, y: 1.15, x2: 1.25, y2: 0.7, mono: true } } }],
+    ["Gradients", "Glass fold", { ...G("folds", ["#070d26", "#0a1640", "#1f3fbf", "#6f8cff", "#e6ebff"], { scale: 0.5, warp: 0.9, warpScale: 0.3, stretch: 1.4, detail: 1, soft: 0.7, contrast: 1, prism: 0, angle: -30 }), fx: { grain: { amount: 0.06, size: 1.2, soft: true } } }],
+    ["Effects", "Halftone wave", { ...G("linear", ["#15123a", "#c8325f", "#f07a9a"], { angle: 90, warp: 0.5, warpScale: 1.6, soft: 1 }), fx: { dither: { matrix: 4, pix: 12, palette: true, gap: 0.18 } } }],
+    ["Effects", "Neural pink", { ...G("noise", ["#0f0608", "#3b1f2b", "#c2304f", "#ef6f8a", "#fbecef"], { noise: "caustic", scale: 2.2, detail: 6, warp: 0.15, stretch: 1, contrast: 1, angle: -28 }), fx: { bloom: { threshold: 0.6, radius: 18, intensity: 0.8 }, grain: { amount: 0.06, size: 1.2, soft: true } } }],
+    ["Effects", "Green smear", { ...G("flow", ["#10201a", "#34683a", "#6fb0e0", "#10201a"], { scale: 0.5, detail: 2, warp: 0.5, stretch: 1.4, angle: 20, contrast: 1 }), fx: { smear: { length: 300, angle: 60, band: 8, amount: 0.8, jitter: 0.7, threshold: 0 }, blur: { amount: 10, dir: "even", start: 0 }, grain: { amount: 0.14, size: 1.3, soft: true } } }],
+    ["Effects", "Crimson veil", { ...G("noise", ["#2a1018", "#6a2338", "#d09aa6", "#fbecef"], { noise: "clouds", scale: 1.2, detail: 4, warp: 0.3, stretch: 1, contrast: 1.4, angle: 0 }), fx: { smear: { length: 500, angle: 90, band: 4, amount: 1, jitter: 0.7, threshold: 0 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
+    ["Gradients", "Parallel waves", { pattern: "lines", angle: 130, scale: 700, octaves: 2, warp: 0.3, gap: 260, mode: "bands", band: 0.35, smooth: 0.8, line: "#f1ede4", line2: "#f1ede4", bg: "#1b1b1b", fx: { blur: { amount: 40, dir: "even", start: 0 }, gradmap: { c1: "#05232b", c2: "#3fb6a8", c3: "#f6efc9", mix: 1 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
+    ["Effects", "Vertical bars", { ...G("noise", ["#f3efe6", "#f3efe6", "#8a8378", "#8a8378"], { noise: "clouds", scale: 0.6, detail: 1, warp: 0.4, stretch: 1, contrast: 1.4, angle: 0 }), ink: "#1b1b1b", paper: "#f3efe6", fx: { linescreen: { spacing: 32, angle: 90, mono: true, steps: 3, hair: 1.5 } } }],
   ];
   const resolved = new Map();
   function resolveLook(look) {
@@ -708,10 +708,55 @@
   const objOf = () => (P.slot.startsWith("obj:") ? S.objects.find((o) => o.id === P.slot.slice(4)) : null);
   const objName = (o) => { const same = S.objects.filter((x) => x.kind === o.kind); return OBJ_LABEL[o.kind] + (same.length > 1 ? " " + (same.indexOf(o) + 1) : ""); };
   const objFact = (o) => `${MAT_LABEL[o.mat] || "Shaded"}, ${Math.round(o.size * 100)}% wide`;
+  const rowBtns = (k) => `<span class="row-tools"><button class="ib xs row-eye" data-eye="${k}" aria-label="Hide" title="Hide">${ic("eye")}</button><button class="ib xs row-copy" data-copy="${k}" aria-label="Copy" title="Copy">${ic("copy")}</button></span>`;
+  const gone = new Map();
+  const cloneThumb = (n) => { if (n.tagName !== "CANVAS") return n.cloneNode(true); const c = document.createElement("canvas"); c.width = n.width; c.height = n.height; c.getContext("2d").drawImage(n, 0, 0); return c; };
+  let clip = null;
+  function toggleHidden(k) {
+    const it = k.startsWith("fx:") ? S.fx[k.slice(3)] : S.objects.find((o) => o.id === k.slice(4));
+    if (!it) return;
+    if (it.hidden) delete it.hidden; else it.hidden = true;
+    update();
+  }
+  function copyItem(k) {
+    if (k.startsWith("fx:")) { const id = k.slice(3); const { on, hidden, ...v } = S.fx[id]; clip = { k: "fx", id, v: clone(v), name: FXI[id].name }; }
+    else { const o = S.objects.find((x) => x.id === k.slice(4)); if (!o) return; const { id, hidden, ...v } = o; clip = { k: "obj", v: clone(v), name: objName(o) }; }
+    toast(`${window.I18N?.t("Copied") ?? "Copied"} ${window.I18N?.t(clip.name) ?? clip.name}`);
+    slotKey = ""; renderSlots();
+  }
+  function pasteItem(kind) {
+    if (!clip || clip.k !== kind) return;
+    if (kind === "fx") { delete S.fx[clip.id].hidden; addFx(clip.id, clone(clip.v)); P.slot = "fx:" + clip.id; }
+    else {
+      if (S.objects.length >= 8) { toast("Up to 8 objects"); return; }
+      const o = { ...OBJ_DEFAULT, ...clone(clip.v), id: objId() };
+      while (S.objects.some((x) => Math.hypot(x.x - o.x, x.y - o.y) < 0.02)) { o.x = +Math.min(0.95, o.x + 0.05).toFixed(3); o.y = +Math.min(0.95, o.y + 0.05).toFixed(3); if (o.x >= 0.95 && o.y >= 0.95) break; }
+      S.objects.push(o); P.slot = "obj:" + o.id;
+    }
+    update(); schedulePreviews(0);
+  }
+  function syncPaste() {
+    for (const [kind, slot] of [["fx", fxSlot], ["obj", objSlot]]) {
+      const b = slot.querySelector(".row-paste"), on = clip?.k === kind;
+      if (b.hidden === !on && (!on || b.dataset.name === clip.name)) continue;
+      b.hidden = !on;
+      if (on) { b.dataset.name = clip.name; b.title = `${window.I18N?.t("Paste") ?? "Paste"} ${window.I18N?.t(clip.name) ?? clip.name}`; if (animOK()) b.animate([{ opacity: 0, transform: "translateX(-4px)" }, { opacity: 1, transform: "none" }], { duration: 220, easing: EASE }); }
+    }
+  }
+  function reuseThumb(t, k) { const g = gone.get(k); if (!g) return; gone.delete(k); g.forEach((n) => n.classList.remove("fresh")); t.querySelector(".tile-th").replaceChildren(...g); }
+  const isHidden = (k) => (k.startsWith("fx:") ? !!S.fx[k.slice(3)]?.hidden : !!S.objects.find((o) => o.id === k.slice(4))?.hidden);
+  function syncEye(t, k) {
+    const h = isHidden(k), b = t.querySelector(".row-eye");
+    t.classList.toggle("off", h);
+    if (b.dataset.h === String(h)) return;
+    b.dataset.h = String(h); b.innerHTML = ic(h ? "eyeoff" : "eye");
+    const l = window.I18N?.t(h ? "Show" : "Hide") ?? (h ? "Show" : "Hide"); b.title = l; b.setAttribute("aria-label", l);
+  }
   function objTile(o) {
     const t = document.createElement("div");
     t.className = "tile fx obj"; t.dataset.obj = o.id;
-    t.innerHTML = `<span class="grip" aria-label="Drag to reorder. Lower ones draw on top">${ic("grip")}</span><button class="tile-main" data-slot="obj:${o.id}"><span class="tile-th" data-th="obj:${o.id}"></span><span class="tile-text"><b></b><small></small></span></button><button class="ib xs" data-remove-obj="${o.id}" aria-label="Remove" title="Remove">${ic("x")}</button>`;
+    t.innerHTML = `<span class="grip" aria-label="Drag to reorder. Lower ones draw on top">${ic("grip")}</span><button class="tile-main" data-slot="obj:${o.id}"><span class="tile-th" data-th="obj:${o.id}"></span><span class="tile-text"><b></b><small></small></span></button>${rowBtns("obj:" + o.id)}<button class="ib xs" data-remove-obj="${o.id}" aria-label="Remove" title="Remove">${ic("x")}</button>`;
+    reuseThumb(t, "obj:" + o.id);
     // Until its picture is drawn, a new tile shows the design's colors rather than an empty grey box.
     try { t.querySelector(".tile-th").style.setProperty("--ph", phOf(S)); } catch (e) {}
     return t;
@@ -723,7 +768,7 @@
       if (!t) { t = objTile(o); fresh.add(t); }
       objTiles.insertBefore(t, objAdd); have.delete(o.id);
       t.classList.toggle("on", P.slot === "obj:" + o.id);
-      setText(t.querySelector("b"), objName(o)); setText(t.querySelector("small"), objFact(o));
+      setText(t.querySelector("b"), objName(o)); setText(t.querySelector("small"), o.hidden ? "Hidden" : objFact(o)); syncEye(t, "obj:" + o.id);
     }
     for (const t of have.values()) leave(t);
     objAdd.classList.toggle("on", P.slot === "addobj");
@@ -747,6 +792,8 @@
   for (const [k, slot] of [["fx", fxSlot], ["obj", objSlot]]) {
     const sum = document.createElement("span"); sum.className = "stack-sum"; sum.setAttribute("aria-hidden", "true");
     slot.querySelector(".fx-tiles").insertBefore(sum, slot.querySelector(".tile.add"));
+    const pb = document.createElement("button"); pb.className = "stack-fold row-paste"; pb.dataset.kind = k; pb.textContent = "Paste"; pb.hidden = true;
+    slot.querySelector(".slot-label").appendChild(pb);
     const b = document.createElement("button"); b.className = "stack-fold"; b.textContent = "Fold"; b.hidden = true;
     b.onclick = () => { stackOpen[k] = false; slotKey = ""; renderSlots(); };
     slot.querySelector(".slot-label").appendChild(b);
@@ -782,7 +829,8 @@
   function fxTile(id) {
     const t = document.createElement("div");
     t.className = "tile fx"; t.dataset.fx = id;
-    t.innerHTML = `<span class="grip" aria-label="Drag to reorder ${FXI[id].name}">${ic("grip")}</span><button class="tile-main" data-slot="fx:${id}"><span class="tile-th" data-th="fx:${id}"></span><span class="tile-text"><b>${FXI[id].name}</b><small></small></span></button><button class="ib xs" data-remove="${id}" aria-label="Remove ${FXI[id].name}" title="Remove">${ic("x")}</button>`;
+    t.innerHTML = `<span class="grip" aria-label="Drag to reorder ${FXI[id].name}">${ic("grip")}</span><button class="tile-main" data-slot="fx:${id}"><span class="tile-th" data-th="fx:${id}"></span><span class="tile-text"><b>${FXI[id].name}</b><small></small></span></button>${rowBtns("fx:" + id)}<button class="ib xs" data-remove="${id}" aria-label="Remove ${FXI[id].name}" title="Remove">${ic("x")}</button>`;
+    reuseThumb(t, "fx:" + id);
     // Until its picture is drawn, a new tile shows the design's colors rather than an empty grey box.
     try { t.querySelector(".tile-th").style.setProperty("--ph", phOf(S)); } catch (e) {}
     return t;
@@ -795,21 +843,23 @@
   const rel = (n) => { const r = n.getBoundingClientRect(), s = n.closest(".slot").getBoundingClientRect(); return { x: r.left - s.left, y: r.top - s.top, w: r.width, h: r.height }; };
   // A removed tile stays where it was, out of the flow, and fades while the rest close the gap.
   function leave(t) {
-    const b = before.get(tileKey(t));
+    const b = before.get(tileKey(t)), th = t.querySelector(".tile-th");
+    if (th?.children.length) gone.set(tileKey(t), [...th.children].map(cloneThumb));
     if (!animOK() || !b) { t.remove(); return; }
     const box = t.parentNode, c = rel(box);
     t.classList.add("leaving"); box.appendChild(t);
     Object.assign(t.style, { position: "absolute", margin: "0", left: b.x - c.x + "px", top: b.y - c.y + "px", width: b.w + "px", height: b.h + "px", pointerEvents: "none" });
-    t.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.94)" }], { duration: 220, easing: EASE, fill: "forwards" }).onfinish = () => t.remove();
+    t.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.96)" }], { duration: 260, easing: EASE, fill: "forwards" }).onfinish = () => t.remove();
   }
   function renderSlots() {
-    const key = JSON.stringify([gen(), S.fxOrder, P.slot, ...SLOT_DEFS.map(([id]) => slotInfo(id)), slotColors(), S.motion, S.fxOrder.map(fxFact), S.objects.map((o) => [o.id, objName(o), objFact(o)])]);
+    const key = JSON.stringify([gen(), S.fxOrder, P.slot, ...SLOT_DEFS.map(([id]) => slotInfo(id)), slotColors(), S.motion, S.fxOrder.map(fxFact), S.fxOrder.map((id) => !!S.fx[id].hidden), S.objects.map((o) => [o.id, objName(o), objFact(o), !!o.hidden]), clip?.k]);
     if (key === slotKey) return;
     slotKey = key;
     const tiles = () => [...slotList.querySelectorAll(".tile:not(.leaving)")];
     const anim = animOK(), decks = [objSlot, fxSlot];
     before = anim ? new Map(tiles().filter((n) => n.offsetParent).map((n) => [tileKey(n), rel(n)])) : new Map();
-    const hBefore = decks.map((s) => s.offsetHeight), modeBefore = decks.map((s) => s.classList.contains("fx-stack") + "" + s.classList.contains("folded"));
+    const below = [objSlot, fxSlot, motionSlot], topOf = (s) => s.getBoundingClientRect().top - slotList.getBoundingClientRect().top;
+    const yBefore = anim ? below.map(topOf) : [], modeBefore = decks.map((s) => s.classList.contains("fx-stack") + "" + s.classList.contains("folded"));
     fresh.clear();
     for (const [id] of SLOT_DEFS) {
       const wrap = slotEls[id], t = wrap.querySelector(".tile"), [title, sub] = slotInfo(id);
@@ -834,7 +884,8 @@
     syncStacks();
     { const t = motionSlot.querySelector(".tile"), m = S.motion; t.classList.toggle("on", P.slot === "motion"); setText(t.querySelector("b"), MOTION_NAME[m.type]); t.classList.toggle("still", m.type === "still"); setText(t.querySelector("small"), m.type === "still" ? "No motion yet" : `${m.dur}s, ${{ loop: "looping", pingpong: "ping-pong", once: "once" }[m.mode]}`); }
     setText(addTile.querySelector("small"), "Optional");
-    for (const t of fxTiles.querySelectorAll("[data-fx]")) setText(t.querySelector("small"), fxFact(t.dataset.fx));
+    for (const t of fxTiles.querySelectorAll("[data-fx]:not(.leaving)")) { setText(t.querySelector("small"), S.fx[t.dataset.fx].hidden ? "Hidden" : fxFact(t.dataset.fx)); syncEye(t, "fx:" + t.dataset.fx); }
+    syncPaste();
     const n = countText(S.fxOrder.length);
     countEl.hidden = !S.fxOrder.length;
     if (countEl.textContent !== n) { countEl.textContent = n; if (animOK()) countEl.animate([{ transform: "scale(.4)" }, { transform: "scale(1.15)" }, { transform: "none" }], { duration: 320, easing: EASE }); }
@@ -850,12 +901,18 @@
         if (fresh.has(t)) t.animate([{ opacity: 0, transform: "translateY(-6px) scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 280, delay: 60 * n++, easing: EASE, fill: "backwards" });
         else if (b && !t.classList.contains("dragging")) { const a = rel(t), dx = b.x - a.x, dy = b.y - a.y; if (Math.abs(dx) > 1 || Math.abs(dy) > 1) t.animate([{ translate: `${dx}px ${dy}px` }, { translate: "0 0" }], { duration: 300, easing: EASE }); }
       }
-      // The effect and object slots ease to their new height, so whatever sits below slides rather than jumps.
-      decks.forEach((s, i) => { const h = s.offsetHeight; if (Math.abs(h - hBefore[i]) > 1) { s.style.overflow = "clip"; s.style.overflowClipMargin = "6px"; s.animate([{ height: hBefore[i] + "px" }, { height: h + "px" }], { duration: 320, easing: EASE }).onfinish = () => { s.style.overflow = s.style.overflowClipMargin = ""; }; } });
+      // Sections below a deck that grew or shrank slide to their new place on the compositor, so a busy
+      // main thread (the canvas redrawing after an undo, say) can't make them stutter.
+      below.forEach((s, i) => { const dy = yBefore[i] - topOf(s); if (Math.abs(dy) > 1 && !s.hidden) s.animate([{ translate: `0 ${dy}px` }, { translate: "0 0" }], { duration: 320, easing: EASE }); });
     }
-    schedulePreviews(120);
+    schedulePreviews(anim && (fresh.size || slotList.querySelector(".leaving")) ? 360 : 120);
   }
   $("slotList").addEventListener("click", (e) => {
+    const eye = e.target.closest("[data-eye]");
+    if (eye) { toggleHidden(eye.dataset.eye); return; }
+    const cp = e.target.closest("[data-copy]");
+    if (cp) { copyItem(cp.dataset.copy); return; }
+    if (e.target.closest(".row-paste")) { pasteItem(e.target.closest(".row-paste").dataset.kind); return; }
     const ro = e.target.closest("[data-remove-obj]");
     if (ro) { const id = ro.dataset.removeObj; S.objects = S.objects.filter((o) => o.id !== id); if (P.slot === "obj:" + id) P.slot = "addobj"; update(); return; }
     const rm = e.target.closest("[data-remove]");
@@ -2949,10 +3006,16 @@
     if (document.querySelector(".modal:not([hidden])")) return;
     if (window.Shell && window.Shell.route !== "studio") return;
     if (mod && keyOf(e) === "z" && !typing) { e.preventDefault(); travel(e.shiftKey ? 1 : -1); return; }
+    if (mod && !typing && !e.shiftKey && !e.altKey && !String(getSelection()).length) {
+      const k = keyOf(e), cur = P.slot.startsWith("fx:") || P.slot.startsWith("obj:") ? P.slot : "";
+      if (k === "c" && cur) { e.preventDefault(); copyItem(cur); return; }
+      if (k === "v" && clip) { e.preventDefault(); pasteItem(clip.k); return; }
+    }
     if (typing || mod || e.altKey) return;
     const key = keyOf(e);
     if (key === "r") { e.preventDefault(); if (e.shiftKey) surprise(); else { variation(); update({ fade: true }); } }
     else if (key === "c") copyOut();
+    else if (key === "h" && (P.slot.startsWith("fx:") || P.slot.startsWith("obj:"))) toggleHidden(P.slot);
     else if (key === "e") $("exportBtn").click();
     else if (/^[1-7]$/.test(key)) { const s = SLOT_KEYS[+key - 1]; if (s !== "lines" || gen() === "contours") setSlot(s); }
     else if ((e.key === "Delete" || e.key === "Backspace") && objOf()) { e.preventDefault(); $("objRemove").click(); }
@@ -3012,7 +3075,7 @@
   // Objects read the design's colors darkest first, so shading runs from shadow to highlight.
   const paletteOf = (st) => (st.source === "gradient" ? st.grad.colors : [st.bg, st.line, ...(st.mids || []), st.line2]).slice().sort((a, b) => lum(a) - lum(b));
   function objectsFor(st) {
-    return (st.objects || []).map((o) => {
+    return (st.objects || []).filter((o) => !o.hidden).map((o) => {
       const t = o.kind === "image" ? picTex(o.image) : o.mat === "preset" ? presetTex(o.preset) : null;
       return { ...o, asp: t?.asp || 1, tex: t?.el || null, texKey: t?.key };
     });
@@ -3363,7 +3426,7 @@
     } else await rasterize(baseCanvas, T.buildSVG({ ...S, h: Math.round(S.w * 0.625) }, { w: W, h: H, res: 2.5 }).svg, W, H);
   }
   const fxThumb = (id, W, H) => { TFX.render({ w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: { [id]: { ...S.fx[id], on: true } }, order: [id], ink: S.ink, paper: S.paper, pointer: demoPointer() }); return thumbCanvas; };
-  const fxUpTo = (id, W, H) => { TFX.render({ w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: S.fx, order: S.fxOrder.slice(0, S.fxOrder.indexOf(id) + 1), ink: S.ink, paper: S.paper }); return thumbCanvas; };
+  const fxUpTo = (id, W, H) => { TFX.render({ w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: { ...S.fx, [id]: { ...S.fx[id], hidden: false } }, order: S.fxOrder.slice(0, S.fxOrder.indexOf(id) + 1), ink: S.ink, paper: S.paper }); return thumbCanvas; };
   // The generator tile shows the bare generator: default shape settings, the design's colors, no effects.
   function baseOf(st) {
     const b = clone(noFx(st));
@@ -3411,7 +3474,7 @@
       if (gen() === "noise") for (const [id] of NOISE_TYPES) card(slotOf(noiseCards[id]), () => ({ ...noFx(S), grad: { ...S.grad, noise: id } }), 130);
       varCards.forEach((c, i) => { c._seed = variationSeed(i); card(slotOf(c), { ...S, seed: c._seed }, 130); });
     }
-    for (const o of S.objects) tileJob("obj:" + o.id, { ...noFx(S), objects: [{ ...o, x: 0.5, y: 0.5, size: Math.min(0.9, Math.max(0.6, o.size)) }] });
+    for (const o of S.objects) tileJob("obj:" + o.id, { ...noFx(S), objects: [{ ...o, hidden: false, x: 0.5, y: 0.5, size: Math.min(0.9, Math.max(0.6, o.size)) }] });
     if (p === "addobj") for (const [id] of OBJ_KINDS) if (id !== "image" || [...PICS.keys()].length) card(slotOf(objKindCards[id]), () => ({ ...noFx(S), objects: [{ ...OBJ_DEFAULT, kind: id, image: [...PICS.keys()].pop() || "", mat: id === "image" ? "photo" : "shaded", size: 0.62, tilt: id === "image" ? 0 : 20 }] }), 130);
     if (p === "object" && objOf() && !isPic()) { const o = objOf(); for (const id of Object.keys(objFormCards)) card(slotOf(objFormCards[id]), { ...noFx(S), objects: [{ ...o, kind: id, x: 0.5, y: 0.5, size: 0.62 }] }, 130); }
     if (p === "lines" && gen() === "contours") for (const m of Object.keys(modeCards)) card(slotOf(modeCards[m]), () => lightLines(readable({ ...noFx(S), mode: m })), 130);
