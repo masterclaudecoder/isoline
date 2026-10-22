@@ -1,9 +1,3 @@
-// Captures a preview image for every library in libs.js, for the Components page's window panes.
-// Each library gets its own OpenGraph image when the site has one, else a screenshot of the page,
-// resized to 640 by 336 JPEG in previews/. Images already captured are kept, so a run only fetches
-// what's new. Writes previews/index.json and prints a report of what worked.
-//
-// Run with: npm i --no-save sharp playwright && npx playwright install chromium && node tools/previews.mjs
 import fs from "node:fs/promises";
 import path from "node:path";
 import vm from "node:vm";
@@ -28,10 +22,8 @@ async function get(url, ms = 15000) {
   try { return await fetch(url, { signal: ac.signal, redirect: "follow", headers: { "user-agent": UA, accept: "text/html,image/*,*/*" } }); }
   finally { clearTimeout(t); }
 }
-// The page's own social image, from the usual meta tags, resolved against the final URL.
 async function ogImage(url) {
   let r = await get(url);
-  // Rate limited: wait and try again a couple of times before falling back to a screenshot.
   for (let i = 0; r.status === 429 && i < 2; i++) { await new Promise((ok) => setTimeout(ok, 6000 * (i + 1))); r = await get(url); }
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const html = (await r.text()).slice(0, 400000);
@@ -54,7 +46,6 @@ async function screenshot(url, file) {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {});
     await page.waitForTimeout(1200);
-    // Bot checks (Cloudflare, Vercel) make a useless preview: better none, and the drawn pane shows.
     const title = await page.title(), text = (await page.evaluate(() => document.body?.innerText || "")).slice(0, 2000);
     if (/just a moment|attention required|access denied|verify you are human|security checkpoint|failed to verify your browser/i.test(title + " " + text)) throw new Error(`blocked by a bot check`);
     await save(await page.screenshot({ type: "png" }), file);

@@ -1,7 +1,3 @@
-// Interface language. The markup and scripts are written in English; in Russian the dictionary in
-// ru.js is applied to the page as it renders (text, tooltips, labels and placeholders), so nothing
-// else has to know about languages. Names (presets, palettes, fonts, brands) and the kit preview stay
-// as they are. A string with no entry stays English rather than breaking.
 (function (root) {
   const KEY = "isoline.lang";
   let pref = "auto";
@@ -15,8 +11,6 @@
   document.documentElement.lang = "ru";
   document.documentElement.classList.add("lang-ru");
 
-  // Entries are exact strings, or patterns where {n} stands for a number and {s} for a phrase that is
-  // translated on its own. {n:один|два|пять} picks the Russian plural for the number before it.
   const exact = new Map(), lower = new Map(), pats = [];
   const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   for (const [k, v] of Object.entries(D)) {
@@ -31,7 +25,6 @@
     if (n % 1) return few;
     return d === 1 && h !== 11 ? one : d >= 2 && d <= 4 && (h < 12 || h > 14) ? few : many;
   };
-  // A phrase inside a pattern ("Randomize {s}") is looked up whatever its case and takes the case it came in.
   const phrase = (s) => {
     const v = exact.get(s) ?? lower.get(s.toLowerCase()) ?? tr(s);
     if (v == null) return s;
@@ -70,8 +63,6 @@
   }
   I18N.t = t;
 
-  // Left alone: the kit preview (a made-up product shown in your fonts), names of presets, palettes,
-  // colors and fonts, code, and anything marked translate="no".
   const SKIP = '[translate="no"], .kit, .cps, .pt-name, .pt-hex, .cp-grid .lib, #presetGrid .card b, .ff-list, .ff-trigger span, .cp-pairs small, .pair-t small, .dz-text, .lg-word, pre, code, script, style, svg';
   const ATTRS = ["title", "aria-label", "placeholder", "data-tip", "alt"];
   const skipped = (el) => !!el?.closest?.(SKIP);
@@ -99,8 +90,6 @@
   if (document.body) start(); else document.addEventListener("DOMContentLoaded", start);
 })(window);
 
-// The language switch in Settings shows the language in use, saves a new choice and reloads, so every
-// part starts in that language. Three quick taps on the current flag swap it for its emoji, and back.
 document.addEventListener("DOMContentLoaded", () => {
   const seg = document.getElementById("lang");
   if (!seg) return;

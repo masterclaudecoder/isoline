@@ -1,6 +1,3 @@
-// The tutorial: a short pane of animated scenes on a miniature Studio, then, if you want it, a guided tour
-// of the real one. Both are led by the app's own pointer, the orange dot with a white ring the canvas uses
-// for its handles. It travels on gently curved paths and settles with a hint of overshoot, like a hand.
 (function (root) {
   "use strict";
   const $ = (id) => document.getElementById(id);
@@ -9,19 +6,12 @@
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const frame = () => new Promise(requestAnimationFrame);
 
-  // ---------- the pointer ----------
-  // Moves run on a spring curve: a quick start, a small overshoot and a settle. Set SPRING to false for
-  // the earlier eased curve (cubic in and out).
   const SPRING = true;
-  // An underdamped spring from 0 to 1, settled by t = 1 (damping 0.68, about 5% overshoot).
   function springEase(t) {
     if (t >= 1) return 1;
     const z = 0.68, w = 9.5, wd = w * Math.sqrt(1 - z * z);
     return 1 - Math.exp(-z * w * t) * (Math.cos(wd * t) + ((z * w) / wd) * Math.sin(wd * t));
   }
-  // Each move follows a quadratic curve bowed to one side, eased in and out over a time that grows with
-  // the distance. The dot chases that moving goal on a slightly loose spring, so it lags a touch, leans
-  // into the curve and overshoots a hair before settling.
   function pointer(el) {
     let x = 0, y = 0, vx = 0, vy = 0, gx = 0, gy = 0, raf = 0, last = 0, path = null, alive = true, done = null, calm = false;
     const paint = () => (el.style.translate = `${x}px ${y}px`);
@@ -43,7 +33,6 @@
     return {
       el,
       place(px, py) { x = gx = px; y = gy = py; vx = vy = 0; path = null; paint(); },
-      // A calm move eases in and out and lands without overshoot, for a target that is small or close.
       to(px, py, speed = 1, quiet = false) {
         if (reduce.matches) { this.place(px, py); return Promise.resolve(); }
         calm = quiet;
@@ -52,7 +41,6 @@
         done?.();
         return new Promise((r) => { done = r; kick(); setTimeout(() => { if (done === r) { done = null; r(); } }, path.dur + 900); });
       },
-      // Free paths for flourishes: f(t) for t from 0 to 1 gives the goal.
       async along(f, dur) {
         if (reduce.matches) return;
         const t0 = performance.now(); path = null; calm = false;
@@ -71,8 +59,6 @@
     };
   }
 
-  // ---------- the pane ----------
-  // Pictures in the mock are drawn by the Studio itself from four presets, once, when the pane first opens.
   const LOOKS = ["Prism", "Caddis", "Lagoon", "Orb"];
   const FALLBACK = ["linear-gradient(135deg,#f08a4b,#7b5cff 55%,#e85d9a)", "linear-gradient(120deg,#ff4d2e,#ffc93c 40%,#7fd1ff 75%,#3a7bff)", "radial-gradient(circle at 55% 50%,#c9fbff,#3fd6e6 45%,#0b5d73)", "radial-gradient(circle at 50% 50%,#6a3fd1 20%,#f2a36b 70%)"];
   let pics = null;
@@ -139,16 +125,12 @@
     return { el: m, show, cur };
   }
 
-  // Positions inside the mock come from layout offsets, not screen rectangles, so they stay right while
-  // the pane is still scaling in.
   function spot(tm, el, fx = 0.5, fy = 0.5) {
     let x = 0, y = 0, n = el;
     while (n && n !== tm) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
     return [x + el.offsetWidth * fx, y + el.offsetHeight * fy];
   }
 
-  // Each scene loops while its step is showing; a newer step (or closing) ends the old loop. once() runs
-  // after the first full pass.
   async function play(m, cur, i, once) {
     const id = ++run, alive = () => id === run && !m.hidden;
     const tm = m.querySelector(".tm"), q = (s) => tm.querySelector(s), qa = (s) => [...tm.querySelectorAll(s)];
@@ -173,7 +155,6 @@
     };
     const goto = (el, fx, fy) => cur.to(...spot(tm, el, fx, fy));
     const click = async (el, fx, fy) => { await goto(el, fx, fy); if (!alive()) return false; await cur.click(); return alive(); };
-    // Follows the pointer each frame while it travels to a point, calling f with its position.
     const dragTo = async (px, py, f) => { let fin = false; cur.to(px, py, 0.75).then(() => (fin = true)); cur.press(true); while (alive() && !fin) { f(...cur.pos); await frame(); } cur.press(false); return alive(); };
     reset();
     if (!cur.placed) { cur.place(tm.offsetWidth + 24, tm.offsetHeight * 0.75); cur.placed = true; }
@@ -210,7 +191,6 @@
           if (!(await dragTo(bx + bw * fx, by + bh * fy, (x, y) => { obj.style.left = ((x - bx) / bw) * 100 + "%"; obj.style.top = ((y - by) / bh) * 100 + "%"; }))) return;
           await wait(220);
         }
-        // Then a turn on the blue ring.
         const [ox, oy] = spot(tm, obj, 0.5, 0.5), R = obj.offsetWidth * 0.62;
         await cur.to(ox + R, oy); if (!alive()) return;
         cur.press(true);
@@ -241,21 +221,11 @@
   }
   function closePane() { if (!pane) return; pane.el.hidden = true; run++; }
 
-  // ---------- the guided tours ----------
-  // Components tour steps switch to the mode they show first, if the other one is open (from an earlier
-  // visit, or going Back past the switch).
   const mode = (m) => async () => {
     const b = document.querySelector(`#cpMode [data-v="${m}"]`);
     if (b && !b.classList.contains("on")) { b.click(); await wait(420); }
   };
   const builder = mode("builder"), libraries = mode("libraries");
-  // A spotlight moves from part to part of the real page while the dot goes there first; steps that
-  // open something click it for real, so you watch the page do it. Each page has its own short tour,
-  // offered the first time you visit it. The home tour ends by walking you into the Studio, where the
-  // tutorial pane takes over; the others end with the dot swirling into the settings button, where the
-  // tutorials live, in a puff of sparks.
-  // The Studio's tutorial pane (the floating window with demos) is switched off for now: the Studio gets a
-  // guided tour like every other page. Set PANE to true to bring the pane back for the Studio.
   const PANE = false;
   const TOURS = {
     home: [
@@ -293,8 +263,6 @@
   const seen = (k) => { try { return !!localStorage.getItem(k); } catch (e) { return true; } };
   const mark = (k) => { try { localStorage.setItem(k, "1"); } catch (e) {} };
 
-  // A step's box: the element's, or with "inner" just the part its contents fill (the logo's link
-  // stretches across the bar).
   function boxOf(s) {
     const el = document.querySelector(s.el); if (!el) return null;
     if (!s.inner || !el.children.length) return el.getBoundingClientRect();
@@ -307,7 +275,6 @@
     if (tour) return;
     const STEPS = TOURS[name] || TOURS.studio;
     mark(KEY(name));
-    // Started from another page, the first step waits for the page change to finish.
     const moving = root.Shell?.route !== name;
     if (moving) root.Shell?.go(name);
     const spotEl = document.createElement("div"), tip = document.createElement("div"), dot = document.createElement("div");
@@ -326,16 +293,10 @@
       if (y < m) { y = Math.min(innerHeight - th - m, Math.max(m, r.top + r.height / 2 - th / 2)); x = r.right + 14 + tw < innerWidth - m ? r.right + 14 : r.left - tw - 14; }
       tip.style.translate = `${Math.max(m, Math.min(innerWidth - tw - m, x))}px ${Math.max(m, Math.min(innerHeight - th - m, y))}px`;
     };
-    // A step whose part isn't on the page (hidden at this width, or not there in this state) is skipped
-    // in the direction of travel.
-    // Waits for a smooth scroll to finish (the part stops moving), so the spotlight and the dot aim at
-    // where it ends up rather than where it was.
     const settle = async (s) => {
       let y = NaN, still = 0;
       for (const t0 = performance.now(); performance.now() - t0 < 1200 && still < 4; ) { await frame(); const r = typeof s === "function" ? s() : boxOf(s); still = r && Math.abs(r.top - y) < 0.5 ? still + 1 : 0; y = r?.top; }
     };
-    // Brings a part into view clear of anything floating over the top of the screen (the Studio's mini
-    // canvas on phones), then waits for the scroll to end.
     const into = async (el, s) => {
       const box = el.getBoundingClientRect();
       const over = [...document.querySelectorAll(".mini.show")].map((n) => n.getBoundingClientRect()).filter((r) => r.top < 140 && r.left < box.right && r.right > box.left);
@@ -357,15 +318,12 @@
         if (s.pre) await s.pre();
         if (s.act) {
           const b = document.querySelector(s.act);
-          // The control scrolls into view first and the dot goes to where it ends up, then clicks it.
           if (b && b.getBoundingClientRect().width) { await into(b); if (!tour) return; const r = b.getBoundingClientRect(); await cur.to(r.left + Math.min(40, r.width / 2), r.top + r.height / 2); await cur.click(); b.click(); await wait(380); }
         }
         if (!tour) return;
-        // A part that something just opened may still be on its way in.
         for (let k = 0; k < 20 && (s.act || s.pre) && !shown(s); k++) await wait(30);
         if (shown(s)) break;
       }
-      // Nothing left to show that way: past the end finishes, before the start stays put.
       if (n < 0 || n >= STEPS.length) { busy = false; tip.classList.remove("moving"); if (n >= STEPS.length) finish(); else if (i < 0) end(); return; }
       i = n;
       const last = i === STEPS.length - 1;
@@ -387,7 +345,6 @@
     const finish = async () => {
       if (busy) return; busy = true;
       cleanup();
-      // Home hands over to the Studio: the dot clicks the Studio card and the Studio's tutorial follows.
       if (name === "home") {
         const c = document.querySelector('.home [data-go="studio"]'), r = c?.getBoundingClientRect();
         if (r) { await cur.to(r.left + r.width / 2, r.top + r.height / 2); await cur.click(); }
@@ -399,35 +356,25 @@
     };
     const key = (e) => { if (e.key === "Escape") { e.stopPropagation(); end(); } else if (e.key === "ArrowRight") go(i + 1); else if (e.key === "ArrowLeft") go(i - 1); };
     tip.onclick = (e) => { const a = e.target.closest("[data-a]")?.dataset.a; if (a === "next") go(i + 1); else if (a === "back") go(i - 1); else if (a === "end") end(); };
-    // The spotlight and tip stay on their part when the page scrolls under them.
     const follow = () => { if (i >= 0 && !busy) place(); };
     addEventListener("resize", place); addEventListener("scroll", follow, { capture: true, passive: true }); addEventListener("keydown", key, true);
     tour = { end, name };
     setTimeout(() => go(0), moving ? 760 : 120);
   }
-  // Done: the dot spirals toward the settings button, the curl widening and then tightening as it
-  // closes in, and slips inside in a puff of sparks. From far away (a phone's last step is often at the
-  // bottom of the screen) it first glides to a point a short way off and flows straight on into the
-  // same small curl, so it never sweeps across the whole screen.
   async function swirlHome(cur, dot) {
     const b = $("settingsBtn").getBoundingClientRect(), tx = b.left + b.width / 2, ty = b.top + b.height / 2;
     const [sx, sy] = cur.pos, full = Math.hypot(tx - sx, ty - sy), CURL = 180, far = full > CURL * 1.3;
-    // Where the curl starts: the dot itself, or the point CURL short of the button on the way there.
     const k = far ? 1 - CURL / full : 0, x0 = sx + (tx - sx) * k, y0 = sy + (ty - sy) * k, glide = full * k;
     const dist = Math.hypot(tx - x0, ty - y0), R = Math.min(110, Math.max(40, dist * 0.22), innerWidth * 0.13);
-    // Turn the way that curls toward the screen's middle, so the loops stay on screen.
     const dir = x0 < tx ? 1 : -1, turns = 1.6, a0 = Math.atan2(ty - y0, tx - x0) + (Math.PI / 2) * dir;
-    // The curl eases out from the glide's speed when there is a glide, and in and out when there isn't.
     const T2 = 1900, T1 = far ? Math.min(1100, 380 + glide * 0.9) : 0, T = T1 + T2;
     const v = (2 * dist) / T2, m = (v * T1) / Math.max(1, glide);
     await cur.along((t) => {
       const ms = t * T;
       if (ms < T1) {
-        // The glide starts from rest and arrives at the curl's opening speed (a cubic Hermite ease).
         const q = ms / T1, h = 3 * q * q - 2 * q * q * q + m * (q * q * q - q * q);
         return [sx + (x0 - sx) * h, sy + (y0 - sy) * h];
       }
-      // After a glide the curl opens more slowly, so the path bends into it instead of kinking.
       const u = (ms - T1) / T2, e = far ? 1 - (1 - u) * (1 - u) : u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
       const r = R * Math.pow(Math.sin(Math.PI * Math.min(1, u * 1.08)), far ? 3.2 : 1.3), a = a0 + dir * turns * Math.PI * 2 * u;
       return [x0 + (tx - x0) * e + Math.cos(a) * r, y0 + (ty - y0) * e + Math.sin(a) * r];
@@ -438,17 +385,12 @@
     setTimeout(() => { cur.stop(); dot.remove(); }, 260);
   }
 
-  // Settings, Show the tutorial: the Studio's pane in the Studio, the page's tour anywhere else.
   function showFor(r) { if (PANE && (r === "studio" || !TOURS[r])) openPane(); else startTour(TOURS[r] ? r : "studio"); }
 
-  // The first visit to each page (not from a shared link, and not under automation) offers its tutorial
-  // once the entrance has played: the pane in the Studio, a tour on the other pages.
   const offered = new Set();
   function onRoute(r) {
-    // Leaving the page a tour is about ends it.
     if (tour && tour.name !== r) tour.end();
     if (offered.has(r) || navigator.webdriver || /[?&]d=/.test(location.hash) || !TOURS[r]) return;
-    // Someone who already saw the Studio's pane counts as having seen its tour too.
     if (seen(KEY(r)) || (r === "studio" && seen(SEEN))) return;
     offered.add(r);
     (root.introDone || Promise.resolve()).then(() => setTimeout(() => {

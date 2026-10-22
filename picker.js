@@ -1,6 +1,3 @@
-// Shared color picker: a saturation/brightness field with a hue strip, or channel sliders for the chosen format
-// (HEX, RGB, HSL, HSB, OKLCH). Moving toward the top-right corner reveals a toggle between the two. It also shows
-// the nearest color name, offers swatch groups and, where the browser has one, an eyedropper.
 (function (root) {
   "use strict";
   const C = root.Color;
@@ -48,7 +45,6 @@
   }
   function emit() { paint(); cur?.onInput(hex); }
 
-  // Fields: one hex input, or three channel inputs for the other formats.
   function buildFields() {
     const f = C.FORMATS[pref.fmt];
     fields.innerHTML = pref.fmt === "hex" ? `<input class="field mono" data-c="hex" spellcheck="false" aria-label="Hex">` : f.ch.map(([l], i) => `<label class="pk-ch"><span>${l}</span><input class="field mono" data-c="${i}" inputmode="decimal" aria-label="${l}"></label>`).join("");
@@ -74,10 +70,8 @@
   });
   fields.addEventListener("keydown", (e) => { if (e.key === "Enter") e.target.blur(); });
   fields.addEventListener("change", () => { paintFields(); cur?.onDone?.(); });
-  // Pasting any supported color string into a field converts it.
   fields.addEventListener("paste", (e) => { const v = C.parse(e.clipboardData.getData("text")); if (v) { e.preventDefault(); setHex(v); emit(); cur?.onDone?.(); } });
 
-  // Sliders: each track shows the colors that channel would give, holding the other two.
   function buildSliders() {
     const f = C.FORMATS[chFmt()];
     sliders.innerHTML = f.ch.map(([l], i) => `<div class="pk-sl" data-i="${i}"><span>${l}</span><div class="pk-track"><i class="pk-knob"></i></div></div>`).join("");
@@ -107,7 +101,6 @@
   dragOn(sv, (x, y) => { hsv[1] = x; hsv[2] = 1 - y; setHex(C.hsvToHex(...hsv), "hsv"); });
   dragOn(hue, (x) => { hsv[0] = Math.min(359.9, x * 360); setHex(C.hsvToHex(...hsv), "hsv"); });
 
-  // The mode toggle slides out only near the top-right corner, and never mid-drag.
   area.addEventListener("pointermove", (e) => {
     if (dragging) return;
     const r = area.getBoundingClientRect();

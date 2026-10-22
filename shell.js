@@ -1,7 +1,3 @@
-// Shell: routes between the home page and the tools (#/, #/studio, #/palettes) and makes each change a
-// seamless transition. The top bar stays put, the old page slides away as the new one arrives, and a tool's
-// preview on the home page morphs into the tool itself (View Transitions where available, a short
-// slide otherwise).
 (function (root) {
   "use strict";
   const $ = (id) => document.getElementById(id);
@@ -12,8 +8,6 @@
   const hashFor = (r) => (r === "home" ? "#/" : "#/" + r);
   let route = null;
 
-  // inVT: the page is arriving inside a view transition, which already pulls the bars up, so their own
-  // entrance is skipped (it would restart and play a second time once the transition ends).
   function show(r, inVT = false) {
     if (route === "components" && r !== "components") root.Components?.onHide?.();
     route = r;
@@ -25,33 +19,23 @@
     if (r === "palettes") {
       if (Shell.from !== "studio" && Shell.from !== "components") root.Palettes?.returnTo("studio");
       root.Palettes?.onShow(location.hash);
-      // Columns rise in one after another, then the bar pulls up beneath them.
       const pt = document.querySelector(".pt");
       [...pt.querySelectorAll(".pt-col")].forEach((c, i) => c.style.setProperty("--k", i));
       pt.style.setProperty("--n", pt.querySelectorAll(".pt-col").length);
-      // Inside a view transition the home strip already stretches into the columns, so they only settle
-      // their labels in afterwards. A second rise on top of the morph read as a stutter.
       pt.classList.remove("enter", "bar-enter", "vt-enter"); void pt.offsetWidth;
       pt.classList.add(inVT ? "vt-enter" : "enter");
       if (!inVT) pt.classList.add("bar-enter");
       clearTimeout(pt._t); pt._t = setTimeout(() => pt.classList.remove("enter", "bar-enter", "vt-enter"), 1600);
     }
-    // Leaving home drops a roll queued behind the one under way.
     if (r === "home") paintHome(); else { setAuto(false); if (rollAgain) { rollAgain = false; $("remixBusy").lastChild.textContent = "Rolling a new look"; } }
     root.Tour?.onRoute(r);
-    // One size control: in the top bar for the studio, in the preview's own bar for the builder.
     const size = document.querySelector(".size"), slot = $("cpSizeSlot"), top = document.querySelector(".top");
     if (r === "components" && slot && size.parentElement !== slot) slot.appendChild(size);
     else if (r !== "components" && size.parentElement !== top) top.insertBefore(size, top.querySelector(".cp-top"));
     if (r === "components") root.Components?.onShow();
     root.syncSize?.();
   }
-  // want is where the latest navigation is headed. A transition shows its page a frame or more after it
-  // starts, so a second click in that window compares against want, not the page still on screen, and
-  // a transition that lands on a page nobody wants any more is corrected straight away.
   let want = null;
-  // Page switches go in the performance log: the longest gap between frames and how many frames were
-  // missed over the second and a half after the switch, noting the first visit to each page.
   const visited = new Set();
   function watchSwitch(from, r) {
     if (!root.perfEvent || from == null) return;
@@ -67,7 +51,6 @@
     if (push) history.pushState(null, "", hashFor(r));
     const from = route; Shell.from = from;
     watchSwitch(from, r);
-    // Motion pauses on its current frame before the Studio leaves, so the page change has the frames to itself.
     if (from === "studio") root.Studio?.onLeave?.();
     const dir = ORDER[r] >= ORDER[from] ? "fwd" : "back";
     document.documentElement.dataset.dir = dir;
@@ -75,42 +58,29 @@
     if (document.startViewTransition) {
       const html = document.documentElement;
       html.classList.add("vt");
-      // Studio and Palettes share their colors: the circles in Studio turn into the palette's columns.
       html.classList.toggle("vt-pal", [from, r].sort().join() === "palettes,studio");
-      // A busy main thread can hold the snapshot back; past a moment the page just switches.
-      // Phones take longer to capture the page, so they get more time before giving up on the morph.
       const late = setTimeout(() => vt.skipTransition?.(), matchMedia("(pointer: coarse)").matches ? 1100 : 450);
       const vt = document.startViewTransition(() => { clearTimeout(late); if (want === r) show(r, true); });
       vt.updateCallbackDone.catch(() => {}).finally(() => { if (want === r && route !== r) show(r); });
       vt.finished.finally(() => { html.classList.remove("vt", "vt-pal"); if (want === r) want = null; });
       return;
     }
-    // Fallback: the old page eases out, then the new one eases in.
     const old = document.querySelector(`.page[data-page="${from}"]`);
     old.classList.add("leaving");
     setTimeout(() => { old.classList.remove("leaving"); if (want !== r) return; want = null; show(r); const nu = document.querySelector(`.page[data-page="${r}"]`); nu.classList.add("arriving"); setTimeout(() => nu.classList.remove("arriving"), 460); }, 200);
   }
 
-  // Home previews: the studio's current design and the palette tool's current colors.
-  // fresh: the pictures were just rolled, so they cross-fade in.
   async function paintHome(fresh = false) {
     const pal = root.Palettes?.colors() || [], w = root.Palettes?.weights?.() || [];
     $("homePalette").innerHTML = pal.map((c, i) => `<i style="background:${c};flex-grow:${w[i] || 1}"></i>`).join("");
     root.Components?.preview($("homeComponents"));
     if (fresh && !reduce.matches) $("homeComponents").animate(root.Lite?.on ? [{ opacity: 0.2 }, { opacity: 1 }] : [{ opacity: 0.2, filter: "blur(6px)" }, { opacity: 1, filter: "none" }], { duration: 450, easing: "ease-out" });
-    // The Studio decides first whether its saved design is safe to draw on this device.
     await root.studioBoot;
     const host = $("homeStudio");
     const r = host.getBoundingClientRect(), dpr = Math.min(root.Lite?.on ? 1 : 2, devicePixelRatio || 1);
     const cw = Math.round((r.width || 560) * dpr), ch = Math.round((r.height || 350) * dpr);
-    // Drawing the card is a full render of the design, the slowest thing on the home page. The last one is
-    // kept in the browser with a fingerprint of the design and size, so an unchanged design shows at once;
-    // a changed one is drawn after the entrance has played, keeping the first second smooth.
-    // The card notes which design its picture is of, so a step back to a look whose picture is kept swaps
-    // it in, rather than leaving the picture of the look it just stepped away from.
     const keyNow = () => hashStr(JSON.stringify(root.Studio?.state?.() || "") + cw + "x" + ch);
     const key = keyNow(), seq = ++homeSeq;
-    // The Components card wears the Studio design too, so it follows a design changed in the Studio.
     if (!remixing) root.introDone.then(() => { if (seq === homeSeq) root.Components?.art?.(); });
     if (host.dataset.key === key && host.firstElementChild) return homeDone();
     let kept = null;
@@ -122,13 +92,9 @@
       host.replaceChildren(img); host.dataset.key = kept.k === key ? key : "";
     }
     if (kept?.k === key) return homeDone();
-    // The kept picture is of an older design (or there is none yet): a tiny render of the current one,
-    // blurred, stands in at once, so the card never shows the wrong picture or an empty frame while the
-    // full one is drawn. A roll covers the card with its still copies anyway, so it skips this.
     if (!remixing) {
       const t = await root.Studio?.snapshot(Math.max(24, cw >> 4), Math.max(15, ch >> 4))?.catch(() => null);
       if (t && seq === homeSeq) {
-        // Blurred as it's drawn: a CSS blur on a canvas showed as a black box on some phones.
         const c = document.createElement("canvas"), W = Math.min(cw, 240), H = Math.round(W * ch / cw), x = c.getContext("2d"), b = W / 24;
         c.width = W; c.height = H; x.imageSmoothingQuality = "high";
         if ("filter" in x) x.filter = `blur(${b}px)`;
@@ -136,24 +102,17 @@
         c.className = "lqip"; host.replaceChildren(c); host.dataset.key = "";
       }
     }
-    // The first visit draws it while the loading screen is up, so the entrance plays on an idle page;
-    // later changes wait for the entrance to finish.
     if (!document.documentElement.classList.contains("loading")) await root.introDone;
     if (seq !== homeSeq) return;
-    // The design can move on while this waits (a palette applied, say): the picture is filed under what it shows.
     const drawn = keyNow(), c = await root.Studio?.snapshot(cw, ch);
     if (!c || seq !== homeSeq) return;
     host.replaceChildren(c); host.dataset.key = drawn; homeDone();
-    // No blur on phones: a CSS blur over a canvas can draw as a black box there.
     if (fresh && !reduce.matches) c.animate(root.Lite?.on || matchMedia("(pointer: coarse)").matches ? [{ opacity: 0, transform: "scale(1.03)" }, { opacity: 1, transform: "none" }] : [{ opacity: 0, transform: "scale(1.03)", filter: "blur(8px)" }, { opacity: 1, transform: "none", filter: "none" }], { duration: 520, easing: "cubic-bezier(.22,1,.36,1)" });
     keepSnap(c, drawn);
   }
-  // The picture is kept a moment later and encoded off the main thread (toDataURL took most of a second
-  // on a weak device, and every roll waited on it); a quick run of rolls keeps only the last.
   let snapT = 0;
   function keepSnap(c, key) {
     clearTimeout(snapT);
-    // Reading the picture back holds the page for a moment, so it waits out a roll rather than delaying its note.
     snapT = setTimeout(() => remixing ? keepSnap(c, key) : c.toBlob((b) => {
       if (!b) return;
       const fr = new FileReader();
@@ -166,17 +125,11 @@
   let homeSeq = 0;
   const hashStr = (s) => { let a = 0x811c9dc5; for (let i = 0; i < s.length; i++) a = Math.imul(a ^ s.charCodeAt(i), 16777619); return (a >>> 0).toString(36) + s.length; };
 
-  // On the home page the logo rolls a new look for everything: a fresh palette, a new Studio design and a
-  // new kit, both in that palette. A click lights an orange outline round the logo that fades away.
-  // Holding it draws the outline round the logo, and once it closes the logo keeps rolling by itself
-  // (auto roll) with the outline left on, until the next press.
   let remixing = false;
   async function remixAll() {
-    // A click during a roll isn't dropped: one more roll follows when this one lands, and the note says so.
     if (remixing) { if (rollAgain || route !== "home") return; rollAgain = true; const busy = $("remixBusy"); busy.lastChild.textContent = "One more after this"; busy.animate([{ scale: 1 }, { scale: 1.06 }, { scale: 1 }], { duration: 260, easing: "ease-out" }); return; }
     await rollOnce();
   }
-  // ---------- the logo's outline: click, hold, auto roll ----------
   const HOLD_MS = 650, HOLD_DELAY = 140, AUTO_GAP = 8000;
   let auto = false, autoT = 0, holdT = 0, holdAnim = null, eatClick = false, ringAnim = null;
   function ring() {
@@ -188,14 +141,12 @@
       svg.innerHTML = '<rect pathLength="100"/>';
       b.appendChild(svg);
     }
-    // Sized to the logo as it is now, so the outline hugs it whatever the font or width.
     const w = svg.clientWidth, h = svg.clientHeight, r = svg.firstChild;
     svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
     r.setAttribute("x", 1); r.setAttribute("y", 1); r.setAttribute("width", Math.max(0, w - 2)); r.setAttribute("height", Math.max(0, h - 2)); r.setAttribute("rx", 10);
     return r;
   }
   const stopRing = () => { holdAnim?.cancel(); holdAnim = null; ringAnim?.cancel(); ringAnim = null; };
-  // A click: the outline shows at once and fades off smoothly.
   function flash() {
     if (auto) return;
     const r = ring(); stopRing();
@@ -204,7 +155,6 @@
   function holdStart() {
     clearTimeout(holdT);
     const r = ring(); stopRing();
-    // The tracing starts a beat in, so an ordinary click never shows the start of it.
     holdAnim = r.animate([{ strokeDashoffset: 100, opacity: 1 }, { strokeDashoffset: 0, opacity: 1 }], { duration: HOLD_MS, delay: HOLD_DELAY, easing: "cubic-bezier(.45,0,.55,1)", fill: "forwards" });
     holdT = setTimeout(() => { holdT = 0; eatClick = true; setAuto(true); }, HOLD_MS + HOLD_DELAY);
   }
@@ -225,8 +175,6 @@
     r.style.opacity = "0";
     ringAnim = r.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 600, easing: "cubic-bezier(.4,0,.2,1)" });
   }
-  // The next automatic roll, a moment after the last one has landed. It waits while the tab is hidden or
-  // a menu is open over the page.
   function autoNext() {
     clearTimeout(autoT);
     if (!auto) return;
@@ -241,7 +189,6 @@
   {
     const b = $("brand");
     b.draggable = false;
-    // The outline is made on first use; keyboard focus uses it too (see .brand:focus-visible).
     b.addEventListener("focus", () => ring());
     b.addEventListener("pointerdown", (e) => {
       eatClick = false;
@@ -249,19 +196,15 @@
       holdStart();
     });
     for (const t of ["pointerup", "pointercancel", "pointerleave"]) b.addEventListener(t, holdEnd);
-    // A long press on a touch screen would open the link's menu instead.
     b.addEventListener("contextmenu", (e) => { if (route === "home" && (holdT || auto || eatClick)) e.preventDefault(); });
   }
   let rollAgain = false;
   async function rollOnce() {
-    // Every roll is kept, so undo brings back a look rolled past by accident and redo returns to it.
     noteLook();
-    // Undo and redo show from the first roll on, so the note settles beside them instead of over their place.
     syncHomeHist(true);
     const ok = await homeChange(async (live) => {
       const pal = root.Palettes?.generate();
       if (!pal || !live()) return;
-      // Surprise skips any look that would be slow to draw, so the new design is ready before the cards repaint.
       await root.Studio?.surprise?.(); if (!live()) return;
       root.Studio?.usePalette?.(pal);
       await root.Components?.remix?.(pal);
@@ -271,16 +214,12 @@
     if (rollAgain) { rollAgain = false; if (route === "home") return rollOnce(); }
     autoNext();
   }
-  // ---------- saved looks ----------
-  // The home page's three cards as one look (the Studio design, the palette and the kit), saved in this
-  // browser, opened again in one go, and taken elsewhere as .json.
   const LOOKS = "isoline.looks";
   let looks = (() => { try { const v = JSON.parse(localStorage.getItem(LOOKS) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } })();
   const saveLooks = () => { try { localStorage.setItem(LOOKS, JSON.stringify(looks)); return true; } catch (e) { root.toastMsg?.("Storage full. Export some looks, then delete them"); return false; } };
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const fileName = (n) => `${String(n || "look").replace(/[^\w-]+/g, "-").toLowerCase()}.isoline-look.json`;
   const validLook = (l) => l && Array.isArray(l.pal) && l.pal.every((h) => /^#[0-9a-f]{6}$/i.test(h)) && l.studio && typeof l.studio === "object" && l.kit && typeof l.kit === "object";
-  // The thumbnail: the design, with the palette as a strip along the bottom.
   async function lookThumb(pal) {
     try {
       const c = await root.Studio.snapshot(192, 120), x = c.getContext("2d"), w = 192 / pal.length;
@@ -337,10 +276,6 @@
     } catch (err) { root.toastMsg?.("That file has no Isoline looks in it"); }
   };
 
-  // ---------- the logo's shine ----------
-  // On the home page a soft band of dithered light crosses the logo now and then, as on Apple's hardware
-  // pages, a hint that it does something. A copy of the logo in the light's color sits over it and shows
-  // only inside the band (a gradient mask crossed with a dither pattern).
   let shineT = 0;
   function shineLater(ms = 8000 + Math.random() * 7000) { clearTimeout(shineT); shineT = setTimeout(shine, ms); }
   function shine() {
@@ -354,19 +289,14 @@
     }
     shineLater();
   }
-  // ---------- home undo and redo ----------
   let homeHist = [], homeAt = -1;
   const homeLook = () => ({ pal: root.Palettes?.colors(), studio: root.Studio?.state(), kit: root.Components?.look?.() });
-  // The look on screen joins the history when it has changed since its step (a design edited in the
-  // Studio, say), so undo comes back to it rather than skipping to the look from before the edit.
   function noteLook() {
     const now = homeLook();
     if (homeAt < 0) { homeHist = [now]; homeAt = 0; return; }
     if (JSON.stringify(now) === JSON.stringify(homeHist[homeAt])) return;
     homeHist = homeHist.slice(0, homeAt + 1); homeHist.push(now); if (homeHist.length > 30) homeHist.shift(); homeAt = homeHist.length - 1;
   }
-  // Quick presses aren't lost: while one step lands the buttons keep counting, and once it has landed
-  // the look they reached follows. A roll under way ignores them (it adds its own step when it lands).
   let stepping = false;
   async function homeStep(d) {
     if (!remixing && !stepping) noteLook();
@@ -383,7 +313,6 @@
       }
     } finally { stepping = false; }
   }
-  // Where the logo ends: the mark and the word, leaving out the shine and the outline.
   function brandRight() {
     const b = $("brand"), base = $("homeHist").offsetParent?.getBoundingClientRect().left || 0;
     let r = 0;
@@ -391,10 +320,7 @@
     return (r || b.getBoundingClientRect().right) - base;
   }
   const narrowBar = matchMedia("(max-width: 360px)");
-  // show: keep the pair up even before there's a step to go back to (while the first roll lands).
   function syncHomeHist(show = false) {
-    // Clear of the logo's outline (9px past it, 6px on the narrowest phones), so a hovered undo never
-    // touches it. Where the bar is short of room the gap shrinks, keeping clear of the buttons on the right.
     const h = $("homeHist"), out = narrowBar.matches ? 6 : 9, br = brandRight(), base = h.offsetParent?.getBoundingClientRect().left || 0;
     const end = (document.querySelector(".top-right")?.getBoundingClientRect().left ?? Infinity) - base - 4;
     h.style.left = Math.max(br + out + 3, Math.min(br + out + 9, end - h.offsetWidth)) + "px";
@@ -408,11 +334,6 @@
     if (route !== "home" || !(e.metaKey || e.ctrlKey) || keyOf(e) !== "z" || e.target.closest?.("input, textarea, [contenteditable]")) return;
     e.preventDefault(); homeStep(e.shiftKey ? 1 : -1);
   });
-  // As in the Studio when a look is applied: each card keeps a still copy of its old picture on top
-  // while the new one is made underneath, and once all three are ready the copies fade out together,
-  // so nothing flashes and the cards change as one. A small note by the logo shows it's working.
-  // limit (ms): a change that hasn't landed by then is skipped. Its spinner shakes, the cards go back to
-  // the look before, and the work still running is told it's no longer wanted (live() turns false).
   let busyHide = 0, changeTok = 0;
   async function homeChange(work, label = "Rolling a new look", limit = 0) {
     remixing = true;
@@ -420,8 +341,6 @@
     const busy = $("remixBusy"), h = $("homeHist");
     const on = h.classList.contains("on");
     busy.style.left = (on ? h.offsetLeft + h.offsetWidth : brandRight() + 10) + 8 + "px";
-    // The note shows at once and reaches the screen before the work starts: the work holds the main
-    // thread, so a note left to a timer or to the next frame would come late or not at all.
     clearTimeout(busyHide);
     busy.lastChild.textContent = label; busy.hidden = false;
     const shown = performance.now();
@@ -430,13 +349,11 @@
     let landed = false, late = false, lateT = 0;
     try {
       const run = (async () => {
-        // The Studio keeps its canvas hidden while this runs, so opening it mid-roll never shows the old design.
         const w = work(live); root.Studio?.hold?.(w);
         await w;
         if (!live()) return;
         await paintHome(false);
         landed = true;
-        // New kit fonts get a moment to arrive, but a slow connection never holds the roll: they swap in late.
         await Promise.race([document.fonts?.ready, new Promise((r) => setTimeout(r, 900))]);
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       })();
@@ -447,18 +364,15 @@
         root.rollRejected?.(busy.querySelector("i")); busy.lastChild.textContent = "Took too long, skipped"; rollAgain = false;
         root.Palettes?.load(before.pal); root.Studio?.apply(before.studio); await root.Components?.setLook?.(before.kit);
         paintHome(false);
-        // The skipped roll's kit may still finish after this and paint over it, so the old one goes back once more.
         run.finally(() => { if (live()) root.Components?.setLook?.(before.kit)?.then?.(() => root.Components?.preview($("homeComponents"))); });
       }
     } catch (err) { console.error("home change failed", err); } finally {
       remixing = false;
-      // Kept up for a moment at least, so a quick roll doesn't blink it; a skipped one stays to be read.
       busyHide = setTimeout(() => (busy.hidden = true), Math.max(late ? 1400 : 0, 450 - (performance.now() - shown)));
       for (const g of ghosts) if (g) { g.style.opacity = "0"; setTimeout(() => g.remove(), 700); }
     }
     return !late;
   }
-  // A still copy of a card's picture, laid over it (outside it, since the card's contents get replaced).
   function ghostOver(host) {
     if (!host || reduce.matches) return null;
     const g = document.createElement("div");
@@ -477,7 +391,6 @@
   document.addEventListener("click", (e) => {
     if (route === "home" && e.target.closest("#brand") && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
       e.preventDefault();
-      // The click that ends a hold has already turned auto roll on; a press while it's on turns it off.
       if (eatClick) { eatClick = false; return; }
       if (auto) { setAuto(false); return; }
       flash(); remixAll(); return;
@@ -492,33 +405,19 @@
 
   const Shell = { go, route: null, looks: () => renderLooks() };
   root.Shell = Shell;
-  // A fresh visit (typed, a bookmark, the address bar filling in the last page) starts on the main menu.
-  // A bare tool route carries nothing to open, so only reloads, back/forward and links holding a design
-  // or a palette land straight in a tool.
   const nav = performance.getEntriesByType?.("navigation")[0]?.type;
   if (nav === "navigate" && /^#\/(studio|palettes|components)\/?$/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
   visited.add(parse(location.hash));
   show(parse(location.hash));
-  // First load: the page stays out of sight until its fonts are in (or a moment has passed), then the
-  // top bar settles and the page's panels rise in one after another, so nothing flashes or shifts.
-  // The entrance ends when its animations do, not on a timer, so a busy first second can't cut it short.
-  // Heavy start-up work (compiling every shader, drawing thumbnails) waits on introDone to keep the
-  // main thread free while it plays.
   const done = () => root.__introDone?.();
   root.introDone.then(() => shineLater(3500));
-  // A page is only laid out and drawn the first time it shows, so the first visit to each tool paid for
-  // that (and, in Components, for building the kit) in the middle of its transition. Once the entrance is
-  // over, each hidden page is laid out and drawn once out of sight, one per idle moment, and Components
-  // builds its kit then, so every visit is like a return.
   const idle = () => new Promise((r) => (root.requestIdleCallback ? requestIdleCallback(() => r(), { timeout: 2500 }) : setTimeout(r, 300)));
   const frames = (n) => new Promise((r) => { const f = () => (--n ? requestAnimationFrame(f) : r()); requestAnimationFrame(f); });
   root.introDone.then(async () => {
-    // Load speed (Settings, Performance) skips it.
     if (root.preferFps?.() === false) return;
     await frames(30);
     for (const page of document.querySelectorAll(".page")) {
       await idle();
-      // Not while a switch is under way, and never the page on screen.
       while (want || document.documentElement.classList.contains("vt")) await idle();
       if (!page.hidden) continue;
       page.classList.add("warm");
@@ -528,7 +427,6 @@
     }
   });
   const html = document.documentElement, reveal = () => {
-    // The loading screen, if it got as far as showing, opens from its middle rather than cutting out.
     const sp = $("splash"), shown = sp && +getComputedStyle(sp).opacity > 0.05;
     if (shown) { sp.style.setProperty("--from", getComputedStyle(sp).opacity); sp.classList.add("out"); setTimeout(() => sp.remove(), 850); } else sp?.remove();
     html.classList.remove("loading");
@@ -539,8 +437,6 @@
       Promise.race([Promise.all(anims.map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 4000))]).then(() => { html.classList.remove("intro"); done(); });
     });
   };
-  // The studio also waits for its first drawing (and for a shared design, when the link holds one), so the
-  // page doesn't appear empty and then pop; the loading screen covers the wait if it runs long.
   const firstLook = route === "studio" ? root.firstPaint : route === "home" ? homeReady : null;
   Promise.race([Promise.all([document.fonts?.ready || Promise.resolve(), firstLook]), new Promise((r) => setTimeout(r, firstLook ? 4000 : 700))]).then(() => requestAnimationFrame(() => requestAnimationFrame(reveal)));
 })(window);

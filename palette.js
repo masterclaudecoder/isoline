@@ -1,6 +1,3 @@
-// Palettes: a column-per-color palette generator. Space generates new colors for every unlocked column, in
-// OKLCH so lightness and chroma stay even. Columns show the nearest color name and contrast, can be locked,
-// edited with the shared picker, swapped for a tint or shade, reordered, saved and sent to the studio.
 (function (root) {
   "use strict";
   const C = root.Color, picker = root.ColorPicker;
@@ -10,7 +7,6 @@
   const rnd = (a, b) => a + Math.random() * (b - a);
   const ic = (n) => `<svg class="ic" aria-hidden="true"><use href="#i-${n}"/></svg>`;
   const KEY = "isoline-palette", SAVED = "isoline-saved-palettes";
-  // Harmonies: [id, name, what it does].
   const MODES = [
     ["auto", "Auto", "A different harmony every time you generate"],
     ["analogous", "Analogous", "Neighboring hues that blend calmly"],
@@ -33,9 +29,6 @@
   const snap = () => { hist = hist.slice(0, hi + 1); hist.push(JSON.stringify(st.cols)); if (hist.length > 100) hist.shift(); hi = hist.length - 1; syncBar(); };
   const travel = (d) => { const n = hi + d; if (n < 0 || n >= hist.length) return; hi = n; st.cols = JSON.parse(hist[hi]); glide(() => render(true)); save(); syncBar(); };
 
-  // Generation: pick a base hue (from the first locked color, if any), lay hues out by the harmony,
-  // and spread lightness evenly so the palette always has a dark, a light and steps between.
-  // rand is swappable so the mode menu can draw stable samples of each harmony.
   function makePalette(mode, n, base, rand = Math.random) {
     const r = (a, b) => a + rand() * (b - a);
     const H = base[2], spread = r(14, 32), flip = rand() < 0.5;
@@ -55,7 +48,7 @@
     const Cb = mode === "pastel" ? r(0.04, 0.09) : mode === "vivid" ? r(0.16, 0.24) : mode === "earth" ? r(0.03, 0.09) : mode === "mono" ? r(0.05, 0.14) : r(0.07, 0.16);
     const out = Array.from({ length: n }, (_, i) => {
       const t = n === 1 ? 0.5 : i / (n - 1), L = Llo + (Lhi - Llo) * (flip ? 1 - t : t) + r(-0.03, 0.03);
-      const edge = 1 - Math.abs(t - 0.5) * 0.9; // ends carry less chroma, like real palettes
+      const edge = 1 - Math.abs(t - 0.5) * 0.9;
       return C.fromOklch(L, Cb * (0.55 + 0.6 * edge) * r(0.85, 1.15), (hueAt(i) + 360) % 360);
     });
     if (!flip) out.sort((a, b) => C.toOklch(a)[0] - C.toOklch(b)[0]);
@@ -69,7 +62,6 @@
     let j = 0;
     morph(st.cols.map((c) => (c.lock ? c : { hex: fresh[j++], lock: false })));
   }
-  // Samples for the mode menu: the same harmony from the current palette's hue, seeded so they hold still.
   const seeded = (a) => () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   function sampleOf(mode) {
     const n = clamp(st.cols.length, 2, 10);
@@ -79,7 +71,6 @@
     return makePalette(mode, n, [0.6, 0.12, Math.round(base[2] / 10) * 10], seeded(MODES.findIndex((m) => m[0] === mode) * 97 + 7)).sort((a, b) => C.toOklch(b)[0] - C.toOklch(a)[0]);
   }
   const dots = (hexes) => hexes.map((h) => `<i style="background:${h}"></i>`).join("");
-  // Vary: nudge every unlocked color a little in hue, lightness and chroma, keeping the palette's character.
   function vary() {
     morph(st.cols.map((c) => {
       if (c.lock) return c;
@@ -87,14 +78,9 @@
       return { hex: C.fromOklch(clamp(L + rnd(-0.05, 0.05), 0.12, 0.98), Ch * rnd(0.85, 1.15), (H + rnd(-14, 14) + 360) % 360), lock: false };
     }));
   }
-  // New colors sweep across the columns as a wave: each column blends to its new color in OKLab while
-  // its hex rolls through the in-between values, then the name settles.
-  // Each column eases to its new color on a critically damped spring in OKLab. A new generate while one
-  // is still running just re-aims the springs, keeping each column's current color and speed, so
-  // pressing Space repeatedly reads as one continuous flow. Columns start one after another as a wave.
   const springs = [];
   let springRaf = 0, springLast = 0;
-  const W0 = 13; // stiffness: settles in about half a second
+  const W0 = 13;
   function morph(next) {
     const els = [...colsEl.children];
     st.cols = next; snap(); save();
@@ -127,7 +113,6 @@
     if (busy) springRaf = requestAnimationFrame(tick);
     else { springRaf = 0; settle(); }
   }
-  // After a morph the columns already show the new colors; only their bookkeeping catches up.
   function settle() {
     const keys = keysOf();
     [...colsEl.children].forEach((el, i) => { el.dataset.hex = st.cols[i].hex; el.dataset.key = keys[i]; el.classList.remove("morphing"); });
@@ -139,7 +124,6 @@
     el.querySelector(".pt-hex").textContent = hex.slice(1).toUpperCase();
     if (final) { el.querySelector(".pt-name").textContent = C.name(hex); el.querySelector(".pt-ratio").textContent = `Contrast ${C.contrast(hex, on).toFixed(1)}`; el.classList.remove("morphing"); }
   }
-  // ---------- columns ----------
   const colsEl = $("ptCols");
   const textOn = (hex) => (C.contrast(hex, "#ffffff") >= C.contrast(hex, "#111111") ? "#ffffff" : "#111111");
   const reduce = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -163,11 +147,8 @@
     </div>`;
   }
   const shadeList = (hex) => { const [, c, h] = C.toOklch(hex); return [0.96, 0.88, 0.79, 0.7, 0.6, 0.5, 0.41, 0.32, 0.23].map((L) => C.fromOklch(L, c * (1 - Math.abs(L - 0.6) * 0.9), h)); };
-  // Keys follow each color through reorders (repeats of one hex count up), so moves can glide.
   const keysOf = () => { const n = {}; return st.cols.map((c) => c.hex + ":" + (n[c.hex] = (n[c.hex] || 0) + 1)); };
-  // Only colors that changed repaint, so a generate reads as a wave rather than a blink.
   function render(all) {
-    // A rebuild hands each column its exact color; springs restart from there.
     springs.length = 0; cancelAnimationFrame(springRaf); springRaf = 0;
     const have = [...colsEl.children];
     if (all || have.length !== st.cols.length) colsEl.innerHTML = st.cols.map(colHTML).join("");
@@ -176,16 +157,12 @@
     [...colsEl.children].forEach((el, i) => { el.dataset.hex = st.cols[i].hex; el.dataset.lock = String(st.cols[i].lock); el.dataset.key = keys[i]; el.style.flexGrow = st.weighted ? weightOf(i, st.cols.length) : ""; });
     syncBar(); root.dispatchEvent(new Event("palette-change"));
   }
-  // Reorders (sort, undo, loading) glide each column to its new place.
   const glide = (fn) => (root.UI ? root.UI.flip(colsEl, fn, { sel: ".pt-col" }) : fn());
-  // A column grows in from nothing, or folds away, while its neighbors make room.
   function growIn(i) {
     const el = colsEl.children[i]; if (!el || reduce()) return;
     const g = st.weighted ? weightOf(i, st.cols.length) : 1;
     el.animate([{ flexGrow: 0.0001, opacity: 0 }, { flexGrow: g, opacity: 1 }], { duration: 460, easing: EASE });
   }
-  // The neighbors grow into the space at the same time, straight to the sizes they keep after the
-  // rebuild, so nothing jumps when the column is finally removed.
   function foldOut(el, done) {
     if (reduce()) { done(); return; }
     const els = [...colsEl.children], gone = els.indexOf(el), n = els.length - 1, opt = { duration: 380, easing: EASE, fill: "forwards" };
@@ -205,7 +182,6 @@
     if (b.dataset.shade) { c.hex = b.dataset.shade; closeShades(() => { snap(); render(true); save(); }); return; }
     const a = b.dataset.a;
     if (a === "lock") {
-      // Patched in place: the icon flips and the other tools fade, without repainting the column.
       c.lock = !c.lock; save();
       el.classList.toggle("locked", c.lock); el.dataset.lock = String(c.lock);
       b.dataset.tip = c.lock ? "Unlock" : "Lock"; b.setAttribute("aria-label", b.dataset.tip);
@@ -224,15 +200,12 @@
       picker.open(b, c.hex, (v) => { c.hex = v; el.style.setProperty("--c", v); el.style.setProperty("--on", textOn(v)); el.querySelector(".pt-hex").textContent = v.slice(1).toUpperCase(); el.querySelector(".pt-name").textContent = C.name(v); }, () => { snap(); render(); save(); }, [["Palette", st.cols.map((x) => x.hex)], ["Shades", shadeList(c.hex).filter((_, k) => k % 2 === 0)]]);
     }
   });
-  // Tints and shades fold back up before the column repaints.
   function closeShades(done) {
     const sh = colsEl.querySelector(".pt-shades"); shadesFor = -1;
     if (!sh || reduce()) { done(); return; }
     sh.animate([{ opacity: 1, clipPath: "inset(0 0 0 0)" }, { opacity: 0.6, clipPath: "inset(0 0 100% 0)" }], { duration: 260, easing: EASE, fill: "forwards" }).onfinish = done;
   }
   colsEl.addEventListener("click", (e) => { if (e.target.closest(".pt-hex")) { const i = +e.target.closest(".pt-col").dataset.i; navigator.clipboard?.writeText(st.cols[i].hex).then(() => root.toastMsg?.(`Copied ${st.cols[i].hex}`)).catch(() => {}); } });
-  // Drag a column's grip sideways (or vertically on phones) to reorder. The column follows the pointer,
-  // its neighbors slide aside to open a gap, and on release it settles into the gap.
   colsEl.addEventListener("pointerdown", (e) => {
     const g = e.target.closest(".grip"); if (!g || e.button > 0) return;
     e.preventDefault();
@@ -262,7 +235,6 @@
     };
     const up = () => {
       g.removeEventListener("pointermove", move); g.removeEventListener("pointerup", up); g.removeEventListener("pointercancel", up);
-      // Where the column lands: past the neighbors it displaced.
       let off = 0;
       if (to > from) for (let k = from + 1; k <= to; k++) off += len(rects[k]);
       else for (let k = to; k < from; k++) off -= len(rects[k]);
@@ -281,13 +253,9 @@
     g.addEventListener("pointermove", move); g.addEventListener("pointerup", up); g.addEventListener("pointercancel", up);
   });
 
-  // Proportions: size columns by a 60-30-10 style split, the first color dominant and the last an accent.
   function weightOf(i, n) { const w = [60, 30, 10].concat(Array(8).fill(6)); if (n <= 3) return w[i]; const base = [44, 22, 12]; return i < 3 ? base[i] : 22 / (n - 3); }
 
 
-  // ---------- bar ----------
-  // Harmony picker: the trigger shows the chosen harmony as color dots; the menu lists every harmony
-  // with a sample drawn from the current palette's hue, and a tooltip saying what each one does.
   function renderModes() {
     $("ptModeMenu").innerHTML = `<h3>Harmony</h3>` + MODES.map(([k, l, tip]) => `<button class="opt pt-mode${k === st.mode ? " on" : ""}" data-m="${k}" data-tip="${tip}" data-tip-pos="right"><span>${l}</span><span class="pt-dots">${dots(sampleOf(k))}</span></button>`).join("");
   }
@@ -298,7 +266,6 @@
   $("ptUndo").onclick = () => travel(-1);
   $("ptRedo").onclick = () => travel(1);
   $("ptSort").onclick = () => { st.cols.sort((a, b) => C.toOklch(a.hex)[0] - C.toOklch(b.hex)[0]); snap(); glide(() => render(true)); save(); };
-  // The bottom button sends the palette back to whichever tool opened it, the studio by default.
   let from = "studio";
   const PT_MENUS = ["ptModeMenu", "ptSavedMenu", "ptExportMenu", "ptUseMenu"];
   const setFrom = (f) => { from = f === "components" ? "components" : "studio"; $("ptUse").textContent = from === "components" ? "Use in Builder" : "Use in Studio"; };
@@ -364,7 +331,6 @@
   }
   document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".pt-bar .menu-wrap")) for (const id of PT_MENUS) $(id).hidden = true; });
 
-  // Keyboard, only while the palette page is open. Holding Space keeps generating at a readable pace.
   let lastGen = 0;
   document.addEventListener("keydown", (e) => {
     if (root.Shell?.route !== "palettes" || e.target.matches?.("input, textarea")) return;
@@ -373,7 +339,6 @@
     else if ((e.metaKey || e.ctrlKey) && keyOf(e) === "z") { e.preventDefault(); travel(e.shiftKey ? 1 : -1); }
   });
 
-  // A palette in the URL (#/palettes/2f6fdb-6a9f7a-...) wins over the stored one.
   function fromHash(h) {
     const m = h.match(/^#\/palettes\/([0-9a-f-]+)$/i);
     if (!m) return false;

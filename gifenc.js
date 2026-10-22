@@ -1,11 +1,6 @@
-// A small animated GIF encoder: one 256-color palette for the whole animation (median cut over sample
-// frames), ordered dithering so gradients don't band hard, and the GIF flavor of LZW. Frames are
-// added as RGBA pixels and the finished file comes back as a Blob.
 (function (root) {
   "use strict";
 
-  // Median cut: split the box with the widest channel at its median until there are enough boxes,
-  // then take each box's average as a palette color.
   function palette(samples, size = 256) {
     let boxes = [samples];
     while (boxes.length < size) {
@@ -26,7 +21,6 @@
     while (out.length < size) out.push([0, 0, 0]);
     return out;
   }
-  // Nearest palette entry for every 5-bit color, so indexing a pixel is one table read.
   function lookup(pal) {
     const lut = new Uint8Array(32768);
     for (let r = 0; r < 32; r++) for (let g = 0; g < 32; g++) for (let b = 0; b < 32; b++) {
@@ -47,7 +41,6 @@
     }
     return out;
   }
-  // GIF LZW with variable code sizes up to 12 bits, packed into sub-blocks of at most 255 bytes.
   function lzw(indices, minSize, out) {
     const clear = 1 << minSize, eoi = clear + 1;
     let size = minSize + 1, next = eoi + 1, table = new Map(), cur = 0, shift = 0;
@@ -72,8 +65,6 @@
   const u16 = (v) => [v & 255, (v >> 8) & 255];
 
   class GifEncoder {
-    // samples: RGBA frames (Uint8ClampedArray) used to choose the palette. dither suits gradients and
-    // photos; flat art compresses far better without it.
     constructor(w, h, samples, { dither = true } = {}) {
       this.w = w; this.h = h; this.dither = dither;
       const px = [], total = samples.length * (w * h), step = Math.max(1, Math.floor(total / 60000));
@@ -87,7 +78,6 @@
       head.push(0x21, 0xff, 0x0b, ...[..."NETSCAPE2.0"].map((c) => c.charCodeAt(0)), 3, 1, 0, 0, 0);
       this.parts.push(new Uint8Array(head));
     }
-    // delay in hundredths of a second
     add(rgba, delay) {
       const out = [0x21, 0xf9, 4, 0x04, ...u16(delay), 0, 0, 0x2c, 0, 0, 0, 0, ...u16(this.w), ...u16(this.h), 0];
       lzw(indexFrame(rgba, this.w, this.h, this.lut, this.dither), 8, out);
@@ -98,16 +88,12 @@
   root.GifEncoder = GifEncoder;
 })(typeof window !== "undefined" ? window : globalThis);
 
-// Animated WebP: the browser encodes each frame as a still WebP (full color, no palette), and the
-// frames are wrapped into one animated file: a VP8X header, an ANIM chunk with the loop count, then
-// one ANMF chunk per frame carrying that frame's image data.
 (function (root) {
   "use strict";
   const supported = () => { try { const c = document.createElement("canvas"); c.width = c.height = 1; return c.toDataURL("image/webp").startsWith("data:image/webp"); } catch (e) { return false; } };
   const u24 = (a, v) => a.push(v & 255, (v >> 8) & 255, (v >> 16) & 255);
   const u32 = (a, v) => a.push(v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >>> 24) & 255);
   const tag = (a, s) => { for (let i = 0; i < 4; i++) a.push(s.charCodeAt(i)); };
-  // The image chunks of a still WebP file: ALPH (if any) and VP8 or VP8L, each with its header.
   function imageChunks(bytes) {
     const out = []; let alpha = false;
     for (let p = 12; p + 8 <= bytes.length;) {
@@ -120,7 +106,6 @@
   }
   class WebPAnim {
     constructor(w, h, loops = 0) { this.w = w; this.h = h; this.loops = loops; this.frames = []; this.alpha = false; }
-    // canvas: the frame to add, ms: how long it shows.
     async add(canvas, ms, quality = 0.9) {
       const blob = await new Promise((r) => canvas.toBlob(r, "image/webp", quality));
       if (!blob || blob.type !== "image/webp") throw new Error("WebP encoding unavailable");
@@ -137,7 +122,7 @@
       for (const f of this.frames) {
         const size = 16 + f.out.reduce((s, c) => s + c.length, 0), h = [];
         tag(h, "ANMF"); u32(h, size); u24(h, 0); u24(h, 0); u24(h, this.w - 1); u24(h, this.h - 1); u24(h, f.ms);
-        h.push(0x02); // Don't blend with the previous frame, and leave it in place.
+        h.push(0x02);
         parts.push(new Uint8Array(h), ...f.out);
       }
       const body = parts.reduce((s, p) => s + p.length, 0), riff = [];

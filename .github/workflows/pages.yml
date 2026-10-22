@@ -1,8 +1,3 @@
-# Publishes the app to GitHub Pages from main. Changes reach main through pull requests: each pull
-# request into main runs the same build as a check (nothing is committed or deployed), and merging it
-# deploys. Before deploying, it captures a preview image for each library in libs.js
-# (tools/previews.mjs) and commits new ones to previews/, so later runs only fetch what's new.
-# Pages must be enabled once in the repository settings, with GitHub Actions as the source.
 name: Pages
 
 on:
@@ -17,7 +12,6 @@ permissions:
   pages: write
   id-token: write
 
-# A newer push to main replaces a deploy still running; a pull request's newer push replaces its check.
 concurrency:
   group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.event.number) || 'pages' }}
   cancel-in-progress: true
@@ -36,7 +30,6 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Capture library previews
         run: node tools/previews.mjs
-      # Pushes made with the workflow's own token don't start another run.
       - name: Commit new previews
         if: github.event_name != 'pull_request'
         run: |
@@ -52,11 +45,9 @@ jobs:
           mkdir _site
           cp index.html logos.html style.css *.js _site/
           cp -r previews _site/
-          # Stamp the build, bust caches on every deploy, and publish the build id for update checks.
           SHA=${GITHUB_SHA::7}; DATE=$(date -u +"%-d %b %Y")
           sed -i "s/__BUILD__/$SHA/; s/__DATE__/$DATE/" _site/app.js
           sed -i -E "s/(src=\"[a-z0-9-]+\.js)\"/\1?v=$SHA\"/g; s/href=\"style\.css\"/href=\"style.css?v=$SHA\"/" _site/index.html
-          # A new image URL each deploy, so link previews that cached an old (or missing) card fetch it again.
           sed -i "s#/isoline/og.jpg\"#/isoline/og.jpg?v=$SHA\"#g" _site/index.html
           echo "{\"build\":\"$SHA\"}" > _site/version.json
           cp og.jpg favicon.svg _site/

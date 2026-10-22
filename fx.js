@@ -1,4 +1,3 @@
-// WebGL2 raster pipeline: a source (rasterized contours or a gradient) followed by an effect stack.
 (function (root) {
   "use strict";
 
@@ -10,15 +9,9 @@ void main() { vUv = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }`;
 precision highp float;
 in vec2 vUv; out vec4 o;
 uniform sampler2D uTex; uniform vec2 uRes; uniform float uK; uniform float uSeed;
-// Quality (Settings, Performance): uQ = god ray steps, blur taps, bloom taps, glass frost taps; uQ2.x = object
-// march steps. Zero means the standard amount. (Glass that refracts through its body is per object, uBody.)
 uniform vec4 uQ; uniform vec4 uQ2;
-// A mipmapped copy of the input, bound by the glass effects for frost and block color.
 uniform sampler2D uMip;
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
-// Quintic fade: its slope and curvature are both continuous across cell edges. With the plain smoothstep
-// fade the curvature jumped at every edge, and effects that light by curvature (caustics, water) drew
-// the noise grid as faint rectangles.
 float vnoise(vec2 p) {
   vec2 i = floor(p), f = fract(p), u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0); float s = uSeed * 0.013;
   return mix(mix(hash(i + s), hash(i + vec2(1, 0) + s), u.x), mix(hash(i + vec2(0, 1) + s), hash(i + vec2(1, 1) + s), u.x), u.y);
@@ -28,9 +21,6 @@ float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 vec2 dp() { return vUv * uRes / uK; }
 vec2 toUv(vec2 d) { return d * uK / uRes; }
 vec4 tex(vec2 uv) { return texture(uTex, clamp(uv, vec2(0.0), vec2(1.0))); }
-// A disc blur of radius r (output pixels) over a mipmapped copy of the input. 48 taps on a golden spiral,
-// turned per pixel; each reads the mip level that matches the spacing between taps, so the disc is filled
-// evenly however large it gets. bokeh > 0 weights bright taps up, so highlights open into discs.
 vec4 discBlur(sampler2D m, vec2 uv, float r, float bokeh) {
   if (r < 0.5) return texture(m, uv);
   float lod = log2(max(1.0, r * 0.3)), j = hash(gl_FragCoord.xy) * 6.2831853, n = uQ.y > 0.0 ? uQ.y : 48.0; vec4 acc = vec4(0.0); float ws = 0.0;
@@ -43,9 +33,6 @@ vec4 discBlur(sampler2D m, vec2 uv, float r, float bokeh) {
   }
   return acc / ws;
 }
-// Halftone dot shapes. r is the radius of a circle with the same area, so every shape lays down the same
-// ink for the same tone, and each shape is centred on its cell. Callers test the neighboring cells too,
-// so a large dot spills into the next cell instead of being cut off at its edge.
 float sdTri(vec2 p, float r) { const float k = 1.7320508; p.y = -p.y; p.x = abs(p.x) - r; p.y += r / k; if (p.x + k * p.y > 0.0) p = vec2(p.x - k * p.y, -k * p.x - p.y) / 2.0; p.x -= clamp(p.x, -2.0 * r, 0.0); return -length(p) * sign(p.y); }
 float sdStar(vec2 p, float r, float rf) {
   const vec2 k1 = vec2(0.809016994, -0.587785252), k2 = vec2(-0.809016994, -0.587785252);
@@ -60,9 +47,6 @@ float dotSD(vec2 f, float r, float shape) {
   return sdStar(f, r * 1.541, 0.45);
 }
 float sdBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
-// Frosted sample: n blur taps on a golden spiral, rotated and spread per pixel so the blur reads as frost
-// rather than ghosted copies, with red and blue pulled apart along disp.
-// Each tap reads the mip level that matches the spacing between taps, so wide frost stays smooth.
 vec3 frostDisp(vec2 uv, float rad, vec2 disp, int n) {
   vec3 c = vec3(0.0);
   float j = hash(gl_FragCoord.xy) * 6.2831853, lod = n > 1 ? log2(max(1.0, rad * uK * 1.8 / sqrt(float(n)))) : 0.0;
@@ -73,16 +57,6 @@ vec3 frostDisp(vec2 uv, float rad, vec2 disp, int n) {
   }
   return c / float(n);
 }
-// Glass, shared by Fluted glass, Glass blocks and Liquid glass: the material of the glass objects on a
-// pane lying over the picture. g is the slope of the pane's surface (height per px, rising inward) and sd
-// the distance to its edge (px, < 0 inside). The view ray bends in through the surface, crosses the pane's
-// thickness (px) and lands on the picture behind, so steep edges bend the most and a full dome turns its
-// patch over. Frost blurs what shows through, tint fogs it milky like sea glass, and light sets the shading,
-// the highlight and the hairline on the edges that face it (from the top left).
-// Blend pulls each glass piece toward its own average color (gMean, set by the caller), down to a single
-// color at full blend. Tint is sea glass: a frosted skin that fogs the pane milky and glows lighter over
-// its rounded edges, where the frosted surface scatters the most light back. Texture dimples the surface
-// with small bumps, like patterned or pebbled glass, so what shows through breaks up and shimmers.
 vec3 gMean = vec3(0.0); float gBlend = 0.0, gBump = 0.0;
 vec3 meanAt(vec2 uv, vec2 half_) {
   float lod = log2(max(1.0, max(half_.x, half_.y) * uK));
@@ -105,7 +79,6 @@ vec3 glassMat(vec2 uv, vec2 g, float sd, float thick, float frost, float tint, f
   c = mix(c, mix(vec3(luma(c)), c, 0.8) * 0.75 + 0.27, tint);
   c = mix(c, c * 0.55 + 0.5, tint * smoothstep(0.0, 0.7, edge) * 0.7);
   float face = dot(normalize(n.xy + 1e-6), normalize(L.xy)), hair = max(1.0, 0.9 / uK);
-  // Frosted glass is lit softly, so tint also eases the dark side of the shading.
   float sh = dot(n, L) - L.z;
   c *= 1.0 + light * 0.8 * (sh < 0.0 ? sh * (1.0 - 0.7 * tint) : sh);
   c += light * (0.7 * sp + 0.12 * fr + 0.55 * exp(min(sd, 0.0) / hair) * (0.25 + 0.75 * max(face, 0.0)));
@@ -113,7 +86,6 @@ vec3 glassMat(vec2 uv, vec2 g, float sd, float thick, float frost, float tint, f
 }
 `;
 
-  // Linear light and OKLab, shared by the shaders that mix palette colors.
   const COLOR = `
 vec3 lin(vec3 c) { return pow(c, vec3(2.2)); }
 vec3 srgb(vec3 c) { return pow(max(c, 0.0), vec3(1.0 / 2.2)); }
@@ -132,10 +104,8 @@ vec3 fromLab(vec3 c) {
 
   const SHADERS = {
     copy: `void main() { o = tex(vUv); }`,
-    // Glide's fade from the frame a loop's travel behind into this one (see uGLin in the gradient).
     gmix: `uniform sampler2D uTex2; uniform float uW; void main() { o = mix(texture(uTex, vUv), texture(uTex2, vUv), uW); }`,
 
-    // Contour field, a port of engine.js buildField: one texel per grid point, in design pixels.
     field: `
 uniform sampler2D uTex2; uniform int uPattern; uniform float uSc; uniform int uOct; uniform float uP; uniform float uBump;
 uniform float uLiq; uniform float uLiqScale; uniform float uWarpA; uniform vec2 uLoop; uniform vec2 uDrift; uniform vec2 uDir;
@@ -207,7 +177,6 @@ void main() {
   }
   else if (uPattern == 8) val = lin + uBump * uSc * 0.35 * fbmS(u * 0.5, v * 0.5, uOct) + pointSum(p, true, true);
   else if (uPattern == 3) {
-    // Log-sum-exp form of the smooth minimum, so far points don't underflow in single precision.
     float smk = 40.0, m = 1e30;
     for (int i = 0; i < 32; i++) { if (i >= uNPts) break; m = min(m, length(p - uPts[i].xy) / max(0.15, abs(uPts[i].w)) / smk); }
     float acc = 0.0;
@@ -218,10 +187,6 @@ void main() {
   o = vec4(val, 0.0, 0.0, 1.0);
 }`,
 
-    // One object over the picture so far: a lit 3D form or a picture card, placed, turned and tilted.
-    // Forms are raymarched in their own unit space; materials read the palette, the design underneath
-    // (wrapped onto the surface so it turns with the form), a texture (a preset or a picture), or
-    // refract what's behind like glass. A soft contact shadow sits under each one.
     object: COLOR + `
 uniform int uKind; uniform vec2 uC; uniform float uSz; uniform float uRot; uniform float uTilt; uniform float uSpin;
 uniform int uMat; uniform float uShine; uniform float uRipple; uniform float uShadow; uniform float uAsp; uniform float uRound;
@@ -237,7 +202,6 @@ vec3 ramp(float t) {
   int i = min(int(floor(t)), uN - 2); float f = t - float(i); f = f * f * (3.0 - 2.0 * f);
   return mix(toLab(lin(uCol[i])), toLab(lin(uCol[i + 1])), f);
 }
-// A square pyramid with its base on y = 0 and a base side of 1 (Inigo Quilez's exact distance).
 float sdPyramid(vec3 p, float h) {
   float m2 = h * h + 0.25;
   p.xz = abs(p.xz); p.xz = (p.z > p.x) ? p.zx : p.xz; p.xz -= 0.5;
@@ -247,7 +211,6 @@ float sdPyramid(vec3 p, float h) {
   float d2 = min(q.y, -q.x * m2 - q.y * 0.5) > 0.0 ? 0.0 : min(a, b);
   return sqrt((d2 + q.z * q.z) / m2) * sign(max(q.z, -p.y));
 }
-// An octahedron, squashed a little in y so it reads as a cut gem.
 float sdOcta(vec3 p, float s) {
   p = abs(p); float m = p.x + p.y + p.z - s; vec3 q;
   if (3.0 * p.x < m) q = p.xyz; else if (3.0 * p.y < m) q = p.yzx; else if (3.0 * p.z < m) q = p.zxy; else return m * 0.57735027;
@@ -261,10 +224,6 @@ float sd(vec3 p) {
   else if (uKind == 1) d = length(vec2(length(p.xz) - 0.72, p.y)) - 0.3;
   else if (uKind == 2) { vec3 q = abs(p) - vec3(0.6); d = length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0) - 0.16; }
   else if (uKind == 3) { vec3 q = p; q.y -= clamp(q.y, -0.55, 0.55); d = length(q) - 0.44; }
-  // The pyramid's distance only knows its slanted faces; capping it with the base plane keeps rays from
-  // slipping through the bottom when it's seen from below.
-  // The pyramid is four slanted faces and a base, joined with a smooth maximum so every edge rounds
-  // off and the whole form shades as one continuous solid, the base included.
   else if (uKind == 6) {
     vec3 q = vec3(abs(p.x), p.y, abs(p.z));
     float a = 0.894 * q.x + 0.447 * q.y - 0.416, b = 0.894 * q.z + 0.447 * q.y - 0.416, c = -q.y - 0.62;
@@ -277,10 +236,6 @@ float sd(vec3 p) {
 }
 vec2 toPx(vec2 l) { float c = cos(uRot), s = sin(uRot); return uC + mat2(c, s, -s, c) * vec2(l.x, -l.y) * uSz; }
 vec4 texAt(vec2 px) { return tex(vec2(px.x / uRes.x, 1.0 - px.y / uRes.y)); }
-// The surface picture: the design as it was before any objects (so one never wears another), or the
-// preset texture once it's ready.
-// Scale, turn and shift the picture on the surface; past its edges it repeats mirrored, so tiles meet
-// without a seam.
 vec3 skin(vec2 uv) {
   float c = cos(uTexRot), s = sin(uTexRot);
   uv = mat2(c, s, -s, c) * (uv - 0.5) / max(0.05, uTexSc) + 0.5 + uTexOff;
@@ -295,14 +250,12 @@ void main() {
   vec4 base = tex(vUv);
   float c = cos(uRot), s = sin(uRot);
   vec2 q = mat2(c, -s, s, c) * (pp - C) / S; q.y = -q.y;
-  // Contact shadow: a soft ellipse a little below the form, darkening what's underneath.
   vec2 sq = (pp - C - vec2(0.06, 0.95) * S) / (S * vec2(1.0, 0.26));
   base.rgb *= 1.0 - uShadow * 0.5 * exp(-dot(sq, sq) * 1.6);
   mat3 R = rotY(spin) * rotX(uTilt), Ri = transpose(R);
   vec3 ro = vec3(q, 3.0), rd = vec3(0.0, 0.0, -1.0), L = normalize(vec3(-0.6, 0.8, 0.7));
   float px = 1.0 / S;
   if (uKind == 5) {
-    // Picture card: a rounded rectangle on a plane, hit by the view ray.
     vec3 n = R * vec3(0.0, 0.0, 1.0);
     if (abs(n.z) < 1e-3) { o = base; return; }
     float t = dot(n, -ro) / dot(n, rd); vec3 lp = Ri * (ro + rd * t);
@@ -328,51 +281,30 @@ void main() {
   float wrap = dot(n, L) * 0.5 + 0.5, fr = pow(1.0 - clamp(dot(n, -rd), 0.0, 1.0), 3.0), sp = pow(clamp(dot(reflect(rd, n), L), 0.0, 1.0), 32.0);
   vec3 col;
   if (uMat == 0) {
-    // A soft top-down falloff and a broad sheen as well as the sharp highlight, so flat faces shade with
-    // the same gradient curved forms get instead of reading as single flat colors.
     vec3 lab = ramp(clamp(0.1 + 0.75 * wrap * wrap + 0.18 * fr + 0.1 * pos.y, 0.0, 1.0));
     lab.x += 0.3 * sp * uShine + 0.08 * uShine * pow(clamp(dot(reflect(rd, n), L), 0.0, 1.0), 4.0);
     col = srgb(fromLab(lab));
   } else if (uMat == 6) {
-    // Vantablack: flat black that swallows the light, with only a hairline of sheen on the rim so the
-    // silhouette holds against dark grounds.
     col = vec3(0.008) + vec3(0.06) * uShine * pow(fr, 3.0);
   } else if (uMat == 3) {
-    // Glass: what's behind bends through the form, most at the edges where the surface turns away, as
-    // in a liquid glass pill. Frost blurs it, dispersion splits red from blue along the bend, the rim
-    // catches light on the edge facing it, and a tint colors the body.
     vec2 off = n.xy * vec2(1.0, -1.0) * S * 0.45 * uRefr * (0.25 + fr * 1.5);
     float tir = 0.0;
     if (uBody > 0.5) {
-      // Through the body: the view ray bends entering the surface, crosses the inside to where it leaves,
-      // bends again on the way out and lands on the picture a little behind the form. So a ball turns
-      // what's behind it over, edges squeeze the most into a thin rim, and where the ray can't get out
-      // (total internal reflection) the edge takes the light of the rim instead.
-      // The index rises quickly at first and levels off toward real glass, so high settings stay readable.
       float ior = 1.0 + 0.45 * (1.0 - exp(-max(0.05, uRefr)));
       vec3 r1 = refract(rd, n, 1.0 / ior), pin = pos - n * 0.004; float ti = 0.0;
       float lo = 0.0;
       for (int i = 0; i < 64; i++) { float d = -sd(Ri * (pin + r1 * ti)); if (d < 0.0006) break; lo = ti; ti += max(d, 0.004); }
-      // The last step can overshoot the far wall, so close in on it; a wider normal there keeps thin
-      // parts and edges from scattering neighbouring pixels across the picture.
       for (int i = 0; i < 5; i++) { float m = 0.5 * (lo + ti); if (-sd(Ri * (pin + r1 * m)) < 0.0006) ti = m; else lo = m; }
       vec3 pe = pin + r1 * ti; vec2 e2 = e * 4.0;
       vec3 n2 = normalize(e2.xyy * sd(Ri * (pe + e2.xyy)) + e2.yyx * sd(Ri * (pe + e2.yyx)) + e2.yxy * sd(Ri * (pe + e2.yxy)) + e2.xxx * sd(Ri * (pe + e2.xxx)));
-      // Near the critical angle the way out blends into the reflection over a short range instead of
-      // switching, which flickered as the form turned.
       float cs = dot(r1, n2), kk = 1.0 - ior * ior * (1.0 - cs * cs);
       float wt = smoothstep(0.0, 0.12, kk); tir = 1.0 - wt;
       vec3 r2 = normalize(mix(reflect(r1, -n2), refract(r1, -n2, ior), wt));
-      // The picture sits just behind the form. (A plane far behind it threw small bends across the whole
-      // picture, which broke into flat patches and sparkle.)
       vec2 hit = pe.xy + r2.xy * ((-1.25 - pe.z) / min(r2.z, -0.3));
       off = vec2(hit.x - q.x, -(hit.y - q.y)) * S;
-      // A soft limit on how far a ray can land, so nothing samples past the picture's edge.
       float ol = length(off), om = S * 0.6; off *= om * tanh(ol / om) / max(ol, 1e-4);
     }
     vec2 bp = pp + mat2(c, s, -s, c) * off, sx = mat2(c, s, -s, c) * normalize(off + 1e-4) * (0.5 + 6.0 * uDisp) * (0.2 + fr) * S * 0.02;
-    // Where the body squeezes a wide stretch of the picture into one pixel, blur over that stretch so
-    // fine lines behind it soften instead of breaking into sparkle.
     float fp = uBody > 0.5 ? min(length(dFdx(off)) + length(dFdy(off)), S * 0.08) : 0.0;
     float fr2 = max(uFrost * S * 0.12, fp * 0.6), fn = uQ.w > 0.0 ? uQ.w : 8.0; vec3 acc = vec3(0.0);
     for (int k = 0; k < 32; k++) {
@@ -386,22 +318,16 @@ void main() {
     float rim = pow(1.0 - abs(n.z), 4.0), face = clamp(dot(n.xy, vec2(-0.6, 0.8)), 0.0, 1.0);
     col = mix(col, vec3(1.0), 0.04 + 0.28 * fr) + uRim * rim * (0.25 + 0.75 * face) * 0.7 + uShine * 0.8 * sp;
   } else {
-    // The design or the preset is wrapped onto the form, the whole picture across each side, so it turns
-    // with the form and never lines up with what's behind it (which would read as a see-through window).
     vec3 sp3 = Ri * pos, nl = Ri * n, alb;
     if (uProj == 1) alb = skin(sp3.xy * 0.5 + 0.5);
     else if (uProj == 2) {
-      // Around a globe: longitude mirrors at the front and back, so there's no seam where it closes.
       vec3 d = normalize(sp3);
       alb = skin(vec2(abs(atan(d.x, d.z)) / 3.14159265, 1.0 - acos(clamp(d.y, -1.0, 1.0)) / 3.14159265));
     } else if (uKind == 6 || uKind == 7) {
-      // Faceted forms: their slanted faces sit between the three axes, where a triplanar blend would
-      // stack three copies of the texture. Each face takes one projection along its own normal instead.
       vec3 up = abs(nl.y) < 0.97 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
       vec3 tu = normalize(cross(up, nl)), tv = cross(nl, tu);
       alb = skin(vec2(dot(sp3, tu), dot(sp3, tv)) * 0.5 + 0.5);
     } else {
-      // Triplanar with a sharp blend: each side shows one projection, mixing only across the rounded edges.
       vec3 w = pow(abs(nl), vec3(mix(16.0, 1.5, uBlend))); w /= w.x + w.y + w.z;
       vec3 tp = sp3 * 0.5 + 0.5;
       alb = skin(tp.zy) * w.x + skin(tp.xz) * w.y + skin(tp.xy) * w.z;
@@ -411,7 +337,6 @@ void main() {
   o = vec4(mix(base.rgb, clamp(col, 0.0, 1.0), cov), base.a);
 }`,
 
-    // Min and max of the field, four by four texels per pass until one is left.
     fminmax: `
 uniform int uFirst; uniform ivec2 uIn;
 void main() {
@@ -423,7 +348,6 @@ void main() {
   o = vec4(lo, hi, 0.0, 1.0);
 }`,
 
-    // The union of the level ranges sampled round the loop, padded a little on both sides.
     frange: `
 uniform ivec2 uIn; uniform float uPad;
 void main() {
@@ -433,11 +357,7 @@ void main() {
   o = vec4(lo - pad, hi + pad, 0.0, 1.0);
 }`,
 
-    // Glide: the field a loop's travel behind fades into the current one, so the loop lands on its first frame.
     fmix: `
-// Two unrelated noise fields averaged are flatter than either, so noise patterns are stretched back out about
-// the middle of their range (uDes) and the lines keep their spacing through the fade. Straight-line patterns
-// are the same plane shifted, and a plain mix is already right for them.
 uniform sampler2D uTex2; uniform sampler2D uDes; uniform float uW; uniform float uLin;
 void main() {
   ivec2 c = ivec2(floor(gl_FragCoord.xy)); float v = mix(texelFetch(uTex, c, 0).r, texelFetch(uTex2, c, 0).r, uW);
@@ -446,7 +366,6 @@ void main() {
   o = vec4(v, 0.0, 0.0, 1.0);
 }`,
 
-    // Separable Gaussian on the field grid: the GPU stand-in for smoothing each contour line.
     fblur: `
 uniform vec2 uDir2; uniform float uSigma; uniform ivec2 uIn;
 void main() {
@@ -454,8 +373,6 @@ void main() {
   float s = 0.0, wsum = 0.0;
   for (int i = -64; i <= 64; i++) {
     if (i < -r || i > r) continue;
-    // Past the edge the field is point-reflected (2·edge − mirror), as the SVG smoothing does, so a
-    // straight field stays straight to the edge instead of bending where it was clamped.
     ivec2 q = c + ivec2(uDir2) * i, e = clamp(q, ivec2(0), uIn - 1);
     float v = texelFetch(uTex, e, 0).r;
     if (q != e) v = 2.0 * v - texelFetch(uTex, clamp(2 * e - q, ivec2(0), uIn - 1), 0).r;
@@ -464,7 +381,6 @@ void main() {
   o = vec4(s / wsum, 0.0, 0.0, 1.0);
 }`,
 
-    // Gaussian blur of brightness (first pass) or of the previous pass, for the liquid metal height.
     hblur: `
 uniform vec2 uDir2; uniform float uSigma; uniform int uFirst;
 void main() {
@@ -477,8 +393,6 @@ void main() {
   o = vec4(s / wsum, 0.0, 0.0, 1.0);
 }`,
 
-    // Contours shaded straight from the field: lines, bands, stacked layers or shaded bands, antialiased
-    // by the field's own slope, with the canvas edge cutting regions cleanly.
     contours: `
 uniform sampler2D uTex2; uniform vec2 uCell; uniform ivec2 uIn; uniform vec2 uDesign; uniform vec2 uShift;
 uniform int uMode; uniform float uLin; uniform float uGap; uniform float uPh; uniform float uLevels; uniform float uG;
@@ -529,22 +443,17 @@ void main() {
     float idx = floor(r + 0.5);
     if (idx >= rg.x && idx <= rg.y) {
       bool major = uEvery > 0.5 && mod(idx, uEvery) < 0.5;
-      // Exact coverage of a one-pixel box by the stroke, so hairlines fade instead of breaking up.
       float sw = uWeight * (major ? uIdxW : 1.0) * uRes.x / uDesign.x, d = abs(r - idx) / gr;
       a = clamp(min(d + 0.5, sw * 0.5) - max(d - 0.5, -sw * 0.5), 0.0, 1.0);
-      // Where lines crowd closer than a few pixels, each pixel would hit or miss one at random. Those
-      // stretches fade to the share of the area the lines cover, which is what the eye sees anyway.
       a = mix(a, min(1.0, sw * gr), smoothstep(0.22, 0.5, gr));
       col = ink(idx, 1.0, uBlend > 0.5);
     }
   } else if (uMode == 2) {
-    // Layers: each contour stacks its color on everything above it.
     float idx = floor(r), f = r - idx;
     vec4 c = mix(layer(idx - 1.0), layer(idx), clamp(f / gr + 0.5, 0.0, 1.0));
     c = mix(c, layer(idx + 1.0), clamp((f - 1.0) / gr + 0.5, 0.0, 1.0));
     col = c.rgb; a = c.a;
   } else {
-    // Bands: from each contour part way to the next, measured on the field like the SVG renderer.
     float idx = floor(r);
     for (int k = 0; k <= 1; k++) {
       float id = idx + float(k);
@@ -559,8 +468,6 @@ void main() {
           float dq = 1.5 / max(2.0, rg.y - rg.x + 1.0);
           col = inkAt((t0 - fmin) / span + dq * (2.0 * x - 1.0));
         } else {
-          // Colors go by each level's own number, counted from the first level a still frame shows, so
-          // as Breathe slides the levels the colors travel with them instead of all switching at once.
           float i0 = 1.0;
           if (uLin > 0.5) { i0 = floor(fmin / uGap); if (i0 * uGap <= fmin) i0 += 1.0; }
           col = ink(id, i0, uBlend > 0.5);
@@ -577,17 +484,8 @@ void main() {
 uniform int uType; uniform int uN; uniform vec3 uCol[8]; uniform vec2 uPt[8];
 uniform float uWarp; uniform float uWarpScale; uniform float uSoft; uniform float uAngle;
 uniform float uScale; uniform float uDetail; uniform float uStretch; uniform float uContrast; uniform int uNoise;
-// Motion (all loop over uTime 0..1): 1 drift, 2 color flow, 3 breathe, 4 pulse.
 uniform float uTime; uniform int uMotion; uniform float uMotAmt; uniform float uEndless;
-// Path (uPath): 0 orbit, the read points circling; 1 sway, back and forth along uMDir; 2 glide, travelling
-// on along uMDir (uGLin, how far along). Glide never turns back, so render draws the frame twice, a loop's
-// travel apart, and fades from one to the other over the loop: each frame is where the first was headed,
-// and the last is the first. (Drawing both here would double the shader, and its compile time with it.)
 uniform int uPath; uniform vec2 uMDir; uniform float uGLin;
-// Flow and noise glide on their fields instead of their colors: stage 1 writes the field, and stage 2 blends
-// the two fields (uTex, uTex2) with weight uGW and colors the blend. Their spread is kept up through the
-// blend (as the contour engine does), so the pattern morphs across the loop instead of two pictures
-// showing through each other.
 uniform sampler2D uTex2; uniform int uGStage; uniform float uGW;
 vec2 mloop(float tw, float ph) { return uPath == 1 ? uMDir * sin(tw + ph) : uPath == 2 ? uMDir * uGLin * 2.0 : vec2(cos(tw + ph), sin(tw + ph)); }
 vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -606,10 +504,8 @@ float snoise(vec2 v) {
   vec3 g; g.x = a0.x * x0.x + h.x * x0.y; g.yz = a0.yz * x12.xz + h.yz * x12.yw;
   return 130.0 * dot(m, g);
 }
-// A short simplex fbm for warping, about -1..1.
 float wfbm(vec2 p) { return snoise(p) * 0.57 + snoise(p * 2.03 + vec2(17.3, 9.1)) * 0.29 + snoise(p * 4.1 + vec2(3.7, 41.2)) * 0.14; }
 float sfbm(vec2 p) { float a = 0.5, r = 0.0; for (int i = 0; i < 8; i++) { if (float(i) >= uDetail) break; r += a * snoise(p); p = p * 2.02 + vec2(17.3, 9.1); a *= 0.5; } return r; }
-// Neuro: rotated layers of summed sines that knot into glowing, web-like filaments.
 float neuro(vec2 uv) {
   vec2 acc = vec2(0.0), res = vec2(0.0); float sc = 8.0; mat2 rot = mat2(0.5403, 0.8415, -0.8415, 0.5403);
   for (int j = 0; j < 15; j++) { uv = rot * uv; acc = rot * acc; vec2 layer = uv * sc + float(j) + acc; acc += sin(layer); res += (0.5 + 0.5 * cos(layer)) / sc; sc *= 1.2; }
@@ -622,15 +518,11 @@ vec2 worley(vec2 p) {
   return vec2(f1, f2);
 }
 vec3 ramp(float t) {
-  // Breathe: the colors sway in and out along the ramp. Blends lean on it fully; noise and mesh only
-  // a touch, since they breathe mostly by swelling (below), and a big sway there reads as flicker.
   if (uMotion == 2) t += (uType >= 1 && uType <= 3 ? 0.18 : 0.05) * uMotAmt * sin(6.2831853 * uTime);
   t = clamp(t, 0.0, 1.0) * float(uN - 1);
   int i = min(int(floor(t)), uN - 2); float f = t - float(i); f = f * f * (3.0 - 2.0 * f);
   return mix(toLab(lin(uCol[i])), toLab(lin(uCol[i + 1])), f);
 }
-// Paint's flow: the curl of two octaves of noise, so it swirls without bunching up. Chaos tightens the
-// finer octave and gives it more weight.
 vec2 paintVel(vec2 q, float ch, vec4 L) {
   const float e = 0.02;
   vec2 o1 = q * mix(0.45, 0.55, ch) + L.xy * 0.25, o2 = q * mix(0.95, 1.3, ch) + vec2(7.3, 2.1) + L.zw * 0.25;
@@ -639,21 +531,12 @@ vec2 paintVel(vec2 q, float ch, vec4 L) {
   vec2 g2 = vec2(snoise(o2 + vec2(e, 0.0)) - n2, snoise(o2 + vec2(0.0, e)) - n2) / e;
   return vec2(g1.y, -g1.x) + mix(0.3, 0.45, ch) * vec2(g2.y, -g2.x);
 }
-// Paint on the GPU path runs as a few passes, the way the drag trails move their smoke. Stage 1 lays
-// the paint down as broad stripes in a texture a little larger than the frame (uPDom: its corner and
-// size in frame units). Each later stage traces every pixel back a few steps through the flow and reads
-// the paint there from the last pass, with smooth texture filtering, so paint squeezed finer than a
-// pixel blends into its neighbours instead of breaking into noise. Stage 3 writes the frame itself.
 uniform int uPStage; uniform vec4 uPDom; uniform float uPSub; uniform float uPAsp; uniform float uPCell; uniform float uPCellNow;
 float paintCh() { return clamp(uWarpScale, 0.0, 1.0) * 0.7; }
 float paintZoom() { return uScale * mix(1.0, 1.6, paintCh()); }
 vec2 paintOff() { float s = mod(uSeed, 97.0); return vec2(sin(s * 3.1), cos(s * 1.7)) * 9.0; }
 vec2 paintQ(vec2 p) { return (p - 0.5) * vec2(uPAsp, 1.0) * paintZoom() + paintOff(); }
 vec2 paintP(vec2 q) { return (q - paintOff()) / (vec2(uPAsp, 1.0) * paintZoom()) + 0.5; }
-// The flow eases to a stop across the margin, like the wall of a marbling bath, so no paint ever has to
-// arrive from beyond the texture.
-// It fades the flow's stream function rather than its speed, so the flow stays free of sources and sinks
-// and paint never piles up against the wall.
 float paintPsi(vec2 q, float ch) {
   float s1 = mix(0.45, 0.55, ch), s2 = mix(0.95, 1.3, ch), tw = 6.2831853 * uTime, R = uMotion != 0 && uMotion != 2 ? 0.07 * (0.4 + uMotAmt) : 0.0;
   vec2 c1 = R * vec2(cos(tw), sin(tw)), c2 = R * vec2(cos(tw + 1.7), -sin(tw + 1.7));
@@ -676,8 +559,6 @@ vec2 paintBack(vec2 q, float n) {
   }
   return q;
 }
-// The paint as first laid down: broad bands of the palette with finer streaks inside them, in Lab.
-// Moving, the bands slide a whole number of stripes per loop, so the paint flows along its veins.
 vec3 paintSeed(vec2 q) {
   float ca = cos(uAngle), sa = sin(uAngle), mv = uMotion == 2 ? uTime * max(1.0, floor(uMotAmt * 2.0 + 0.5)) : 0.0;
   float d = dot(q, vec2(ca, sa)) * uStretch * 0.35 + 0.35 * snoise(q * 0.8 + 3.3) + mv;
@@ -708,8 +589,6 @@ vec4 paintCells(vec2 q, vec3 top) {
   float inner = smoothstep(px, -px, best), rim = smoothstep(px, -px, best - rimW) * clamp(uPCell * 2.0, 0.0, 1.0);
   return vec4(mix(lace, hole, inner), rim);
 }
-// Folds. Every sheet's front edge sweeps in one shared curve toward a side (curve) and then strays from it
-// on its own wave (wave, wavelength; jag adds finer, sharper wiggles), so neighbours overlap and cross.
 uniform float uPrism; vec2 gL1 = vec2(0.0), gL2 = vec2(0.0);
 float foldCurve(float y) { return uWarpScale * 0.6 * y * y; }
 float foldEdge(float i, float y, float sp, float sd) {
@@ -717,10 +596,6 @@ float foldEdge(float i, float y, float sp, float sd) {
   for (int k = 0; k < 6; k++) { if (float(k) >= clamp(uDetail, 1.0, 6.0)) break; w += amp * snoise(vec2(y * f * q * (0.8 + 0.4 * h) + i * 1.7 + gL1.x * 0.4, i * 0.31 + sd + float(k) * 3.1 + gL1.y * 0.4)); amp *= 0.5; q *= 2.3; }
   return i * sp + foldCurve(y) * (0.85 + 0.3 * h) + sp * (0.5 * (h - 0.5) + uWarp * 0.7 * w);
 }
-// A sheet's tone at x: across its width it bends like a shallow cylinder, so it reflects a strip of light
-// that slides along its length; it shades darker into the shadow of the sheet over it and catches a thin
-// rim on its own front edge (rim). Softness widens the light and the shadow. Prism splits the highlight
-// into red and blue, so it comes out in three tones, one per channel.
 vec3 foldTone(float i, float x, float y, float sp, float sd, float fw) {
   float u = x - foldEdge(i, y, sp, sd), dn = 1e3;
   for (int k = 1; k < 5; k++) dn = min(dn, foldEdge(i + float(k), y, sp, sd) - x);
@@ -742,8 +617,6 @@ void gradMain() {
     vec2 uv = vec2(vUv.x, 1.0 - vUv.y), p = uPStage == 3 ? uv : uPDom.xy + uv * uPDom.zw;
     if (uPStage == 1) { o = vec4(paintSeed(paintQ(p)), 1.0); return; }
     vec2 q = paintBack(paintQ(p), uPSub), pb = paintP(q), tu = (pb - uPDom.xy) / uPDom.zw;
-    // Where the flow squeezes several texels of the last pass into this pixel, average over that patch, so
-    // fine streaks blend instead of beating against the pixel grid.
     vec2 ts = vec2(textureSize(uTex, 0)), tv = vec2(tu.x, 1.0 - tu.y), jx = dFdx(tv), jy = dFdy(tv);
     float nx = clamp(ceil(length(jx * ts)), 1.0, 4.0), ny = clamp(ceil(length(jy * ts)), 1.0, 4.0);
     vec3 lab = vec3(0.0);
@@ -759,27 +632,14 @@ void gradMain() {
   vec2 p = vec2(vUv.x, 1.0 - vUv.y);
   float tw = 6.2831853 * uTime;
   vec2 drift = uMotion == 1 ? uMotAmt * mloop(tw, 0.0) : vec2(0.0);
-  // Breathe: the warp is read from points travelling round two loops (whole turns only), so the field
-  // morphs forward the whole time and lands back on its first frame without reversing.
   bool br = uMotion == 3;
-  // Pulse: four soft beats per loop push the field out from the center, while it morphs a little.
-  // Flow's read points move slowly: at full amplitude the field still only morphs gently.
   float beat = uMotion == 4 ? pow(0.5 - 0.5 * cos(tw * 4.0), 3.0) : 0.0, lm = br ? 0.3 : uMotion == 4 ? 0.4 : 0.0;
-  // Endless Flow adds turns at irrational rates, so the read points never close their path.
-  // Its extra turns are slower than the main one so they never cancel it (no stalls); Unbound (2) also
-  // travels steadily on through the noise, faster than it circles.
   float en = min(uEndless, 1.0), ub = uEndless > 1.5 ? 1.3 * tw : 0.0;
   vec2 L1 = lm * 1.5 * uMotAmt * (mloop(tw, 0.0) + en * (0.5 * vec2(cos(tw * 0.618 + 1.3), sin(tw * 0.618 + 0.7)) + 0.3 * vec2(cos(tw * 0.414 + 2.1), sin(tw * 0.414 + 0.4))) + ub * vec2(0.8, 0.6));
-  // Both read points travel at a constant speed, so the morph never hurries through part of the loop.
   vec2 L2 = lm * 1.5 * uMotAmt * (mloop(tw, -0.2708) + en * (0.5 * vec2(sin(tw * 0.618 + 0.4), -cos(tw * 0.618 + 2.1)) + 0.3 * vec2(sin(tw * 0.414 + 1.1), -cos(tw * 0.414 + 0.3))) + ub * vec2(-0.6, 0.8));
   p = 0.5 + (p - 0.5) * (1.0 - 0.07 * uMotAmt * beat);
   gL1 = L1; gL2 = L2;
   if (uType == 7) {
-    // Wave, after Framer's Wave Gradient shader (the background of caddis.app): four colors in two soft
-    // crossing blends, read through a field that a sine wave twists, so broad bands of color fold and
-    // ripple through each other. Frequency and ripples set the wave across and along its angle, twist
-    // how far it turns the field, softness its edges, and blend how much of the twist shows. Moving, the
-    // wave travels a whole number of periods per loop.
     float s = mod(uSeed, 100.0), wt = uMotion != 0 ? tw * max(1.0, floor(uMotAmt * 2.0 + 0.5)) : 0.0;
     vec2 tuv = p - 0.5;
     float deg = 0.5 + 0.5 * snoise(vec2(tuv.x * tuv.y, 0.0) + vec2(sin(s * 4.37), cos(s * 5.91)) * 10.0 + (uMotion != 0 ? 0.25 * uMotAmt * mloop(tw, 0.0) : vec2(0.0)));
@@ -797,7 +657,6 @@ void gradMain() {
     vec2 wv = (cos(ww) * w + sin(ww) * vec2(-w.y, w.x)) * 0.5;
     vec2 b = mix(tuv, wv, clamp(uContrast, 0.0, 1.0));
     float r1 = radians(-5.0 + sin(s * 1.83) * 20.0), r2 = radians(10.0 + cos(s * 2.47) * 20.0);
-    // Four colors: the palette's own when it has exactly four, otherwise four steps along its ramp.
     vec3 c0, c1, c2, c3;
     if (uN == 4) { c0 = uCol[0]; c1 = uCol[1]; c2 = uCol[2]; c3 = uCol[3]; }
     else { c0 = srgb(fromLab(ramp(0.0))); c1 = srgb(fromLab(ramp(1.0 / 3.0))); c2 = srgb(fromLab(ramp(2.0 / 3.0))); c3 = srgb(fromLab(ramp(1.0))); }
@@ -808,19 +667,11 @@ void gradMain() {
     o = vec4(clamp(col, 0.0, 1.0), 1.0); return;
   }
   if (uType == 8) {
-    // Paint: marbled paint. Every point is traced back through a swirling flow (the curl of two octaves
-    // of noise, so it never compresses, like the drag trails' fluid) to where its paint started. The paint
-    // started as layered stripes of the palette, fine streaks inside broad bands, so the flow drags them
-    // into thin, folded veins the way a comb drags ink across a marbling bath.
     float ca = cos(uAngle), sa = sin(uAngle), s = mod(uSeed, 97.0);
-    // Chaos (uWarpScale, 0..1) tightens the flow and lets it run further, from calm swirls to dense marbling.
-    // Its top end stops where the paint still resolves cleanly; past that, mixing finer than a pixel reads as noise.
     float ch = clamp(uWarpScale, 0.0, 1.0) * 0.7;
     vec2 q = ((p - 0.5) * a) * uScale * mix(1.0, 1.6, ch) + vec2(sin(s * 3.1), cos(s * 1.7)) * 9.0 + drift * 0.5;
     int steps = int(clamp(uDetail, 1.0, 8.0) * 4.0 + 0.5);
     float dt = uWarp * mix(0.35, 0.9, ch) / float(steps);
-    // A second point a pixel away is traced through the same flow: how far apart the two land is how much
-    // paint this pixel covers, so stripes squeezed finer than that can be averaged instead of aliasing.
     vec2 q2 = q + vec2(0.7071) * uScale * mix(1.0, 1.6, ch) / uRes.y;
     for (int i = 0; i < 32; i++) {
       if (i >= steps) break;
@@ -828,8 +679,6 @@ void gradMain() {
     }
     vec2 dir = vec2(ca, sa);
     float d = dot(q, dir) * uStretch * 0.35 + 0.35 * snoise(q * 0.8 + 3.3);
-    // Stripes squeezed finer than a pixel or two fade to their average instead of turning to noise.
-    // Veins (uContrast) sets how much two finer layers of streaks show inside the broad bands.
     float df = d * 3.7 + 0.4 * snoise(q * 1.8), dv = d * 9.3 + 0.6 * snoise(q * 3.1 + 5.0);
     float d2 = dot(q2, dir) * uStretch * 0.35 + 0.35 * snoise(q2 * 0.8 + 3.3), fp = max(abs(d2 - d), fwidth(d) * 1.4);
     float aB = smoothstep(0.15, 0.6, fp), aF = smoothstep(0.15, 0.6, fp * 3.7), aV = smoothstep(0.15, 0.6, fp * 9.3);
@@ -838,31 +687,21 @@ void gradMain() {
     float tri = clamp(broad * (1.0 - 0.55 * vc) + fine * 0.35 * vc + vein * 0.2 * vc, 0.0, 1.0);
     float N = float(uN - 1), x = tri * N, kk = min(floor(x), N - 1.0), f = x - kk, h = 0.5 * clamp(uSoft, 0.02, 1.0);
     f = smoothstep(0.5 - h, 0.5 + h, f);
-    // Where the stripes are already averaged out, the blend stays smooth: snapping an average to the
-    // palette's steps would flip neighboring pixels between two colors and read as noise.
     float blur = smoothstep(0.15, 0.7, max(aB, aF * vc));
     o = vec4(srgb(fromLab(ramp(mix((kk + f) / N, tri, blur)))), 1.0); return;
   }
   if (uType == 9) {
-    // Folds: curved sheets laid one over the next, like ribbons of chrome or glass (see foldTone).
     float ca = cos(uAngle), sa = sin(uAngle), sd = mod(uSeed, 89.0);
     vec2 r = mat2(ca, -sa, sa, ca) * ((p - 0.5) * a);
     float sp = 0.2 / max(uScale, 0.1), y = r.y + 0.5 * dot(drift, vec2(0.6, 0.8)), x = r.x, fw = fwidth(x);
-    // The topmost sheet is the last one whose front edge lies before x. Edges stray at most a couple of
-    // spacings from the shared curve, so only a few sheets round x can be it.
     float i0 = floor((x - foldCurve(y)) / sp), top = i0 - 3.0, under = i0 - 4.0;
     for (int k = 0; k < 6; k++) { float i = i0 + 2.0 - float(k); if (foldEdge(i, y, sp, sd) < x) { top = i; break; } }
     for (int k = 0; k < 6; k++) { float i = top - 1.0 - float(k); if (foldEdge(i, y, sp, sd) < x) { under = i; break; } }
     vec3 t = foldTone(top, x, y, sp, sd, fw), tu = foldTone(under, x, y, sp, sd, fw);
-    // The front edge is antialiased over a pixel against the sheet it lies on.
     t = mix(tu, t, smoothstep(0.0, fw, x - foldEdge(top, y, sp, sd)));
     o = vec4(srgb(fromLab(ramp(t.r))).r, srgb(fromLab(ramp(t.g))).g, srgb(fromLab(ramp(t.b))).b, 1.0); return;
   }
   if (uType == 6) {
-    // Aura, after the reactive background of Yandex Music's My Wave: two to four soft blobs of color
-    // stacked over a dark ground, each smaller, lighter and a little off-centre from the one behind it.
-    // Their outlines bulge and fold as they morph, light streams out from the back blob in soft rays,
-    // and an optional faint rim traces each blob, as the real one shows when music plays.
     float ca = cos(uAngle), sa = sin(uAngle);
     vec2 c = (p - 0.5) * a;
     if (uMotion == 1) { if (uPath == 0) { float r0 = tw; c = mat2(cos(r0), -sin(r0), sin(r0), cos(r0)) * c; } else c -= drift * 0.35; }
@@ -877,7 +716,6 @@ void gradMain() {
       float fi = float(i), k = NL > 1 ? fi / float(NL - 1) : 1.0;
       float Ri = R * (1.0 - 0.5 * k);
       vec2 sd2 = uSeed * vec2(0.37, 0.71) + fi * vec2(3.7, 1.9);
-      // Each blob's own loop, so the layers morph out of step with each other.
       vec2 Lm = i == 0 ? L1 : i == 1 ? L2 : i == 2 ? -L1.yx : -L2.yx;
       vec2 ctr = R * 0.26 * k * vec2(snoise(sd2 + Lm * 0.3), snoise(sd2 + 7.1 - Lm * 0.3));
       vec2 q = (c - ctr) / max(Ri, 1e-3);
@@ -887,14 +725,11 @@ void gradMain() {
       float lob = snoise(dv * 0.8 + sd2 + Lm * 0.3) * 0.75 + snoise(dv * 1.3 + sd2 * 1.3 - Lm * 0.3) * 0.25;
       float f = u / (1.0 + 0.45 * uWarp * lob);
       float m = 1.0 - smoothstep(1.0 - edge, 1.0 + edge, f);
-      // One step up the palette per layer, lighter toward each blob's middle, with a slow hue sway.
       float t = clamp(0.32 + 0.6 * k + 0.1 * (1.0 - clamp(f, 0.0, 1.0)) + 0.08 * snoise(cr * 0.5 + sd2 + L2 * 0.2), 0.0, 1.0);
       lab2 = mix(lab2, ramp(t), m);
       if (i == 0) { f0 = f; m0 = m; }
       rim += exp(-pow((f - 1.0) / 0.03, 2.0)) * (0.5 + 0.5 * k);
     }
-    // Rays: streaks of the back blob's light running outward, where angular noise lines up, curving a
-    // touch as they go and fading with distance; a haze fills the dark between them.
     vec2 qb = c / max(R, 1e-3); float ub = length(qb), th = atan(qb.y, qb.x) + 0.04 * ub;
     vec2 dr = vec2(cos(th), sin(th));
     float ray = snoise(dr * 2.4 + uSeed * 0.13 + L1 * 0.5) * 0.65 + snoise(dr * 5.0 + uSeed * 0.29 - L2 * 0.5) * 0.35;
@@ -905,20 +740,13 @@ void gradMain() {
     lab2.x += uStretch * ray * 0.03 * m0 * smoothstep(0.55, 1.0, f0) + rim * clamp(uContrast, 0.0, 1.0) * 0.1;
     o = vec4(srgb(fromLab(lab2)), 1.0); return;
   }
-  // Breathe on fields: a slow swell in and out from the middle, eased at both ends.
   if (uMotion == 2 && (uType == 0 || uType == 4 || uType == 5)) p = 0.5 + (p - 0.5) * (1.0 - 0.12 * uMotAmt * (0.5 - 0.5 * cos(tw)));
-  // Flow on plain blends doesn't morph them: the colors stream along the blend instead (below).
   bool blend = uType >= 1 && uType <= 3;
   float warp = br && !blend ? max(uWarp, 0.7 * uMotAmt) : uWarp;
   if (uType >= 1 && uType <= 3) p += drift * 0.03;
-  // Morphing reads each warp field twice, offset in opposite directions along the loop, so the field
-  // churns in place instead of sliding across like a camera pan.
-  // Simplex, not the value noise the effects use: value noise sits on a square grid, and a strong warp
-  // under high contrast drew that grid out as faint rectangles.
   if (warp > 0.0) { vec2 q = p * a * uWarpScale + drift * 0.6; p += warp * 0.3 * 0.5 * 0.7071 * vec2(wfbm(q + vec2(1.7, 9.2) + L1) + wfbm(q + vec2(4.4, 3.1) - L1), wfbm(q + vec2(8.3, 2.8) + L2) + wfbm(q + vec2(2.9, 6.6) - L2)); }
   vec3 lab;
   if (uType == 4 || uType == 5) {
-    // Flow and noise generators: a rotated, stretched simplex field mapped through the color ramp.
     float ca = cos(uAngle), sa = sin(uAngle);
     vec2 q = mat2(ca, -sa, sa, ca) * ((p - 0.5) * a);
     q.x /= max(uStretch, 0.05);
@@ -938,9 +766,6 @@ void gradMain() {
       else if (uNoise == 5) v = 0.5 + 0.5 * sin(q.x * 4.0 + sfbm(q) * 5.0);
       else if (uNoise == 6) { float nn = neuro(q * 0.5); v = clamp(1.2 * pow(nn, 3.0) + pow(nn, 10.0) - 0.1, 0.0, 1.0); }
       else if (uNoise == 9) {
-        // Smoke: thin veils that curl and fold, a ridge taken along a twice-warped field, thinning out
-        // where the slow density field drops away.
-        // Each warp is two reads moving opposite ways round the loop, so the smoke churns where it is.
         float ws = 0.5 + 1.8 * warp;
         vec2 w1 = 0.7071 * vec2(snoise(q * 0.45 + L1) + snoise(q * 0.45 + vec2(11.3, 4.7) - L1), snoise(q * 0.45 + vec2(5.2, 1.3) + L2) + snoise(q * 0.45 + vec2(2.1, 9.6) - L2));
         vec2 w2 = vec2(snoise(q * 0.8 + ws * w1 + vec2(1.7, 9.2)), snoise(q * 0.8 + ws * w1 + vec2(8.3, 2.8)));
@@ -949,12 +774,6 @@ void gradMain() {
         v = clamp(dens * (0.3 + 0.85 * pow(r, 2.5)) * (0.85 + 0.3 * fine), 0.0, 1.0);
       }
       else if (uNoise == 10) {
-        // Caustics: a beam of light split by a lens with a rippled face. Rays leave side by side across
-        // the beam and a smooth field bends each off course; the light at a point is how many rays cross
-        // there. Where neighbouring rays bunch up they fold into bright filaments that cross and split,
-        // and where they fan out only a faint veil is left. Each pair of neighbouring rays spreads its
-        // light evenly between them, measured over the pixel, so the filaments stay sharp but never alias.
-        // The beam runs through the middle of the frame whatever the seed, which only reshapes the lens.
         vec2 qb = mat2(ca, -sa, sa, ca) * ((p - 0.5) * a); qb.x /= max(uStretch, 0.05); qb *= uScale; qb.y += uSeed * 0.731;
         int nr = int(clamp(uDetail * 12.0, 12.0, 96.0)); float px = fwidth(qb.x) + 1e-5, acc = 0.0, xa = 0.0, bw = 0.7 + 0.45 * snoise(vec2(qb.y * 0.3, 3.7) + L1);
         for (int i = 0; i <= 96; i++) {
@@ -979,9 +798,6 @@ void gradMain() {
     if (uType == 1) { vec2 dir = vec2(cos(uAngle), sin(uAngle)); float ext = abs(dir.x) * a.x * 0.5 + abs(dir.y) * 0.5; t = dot(c, dir) / ext * 0.5 + 0.5; }
     else if (uType == 2) t = length(c) / length(a * 0.5);
     else t = abs(fract(atan(c.y, c.x) / 6.2831853 + uAngle / 6.2831853) * 2.0 - 1.0);
-    // Flow: the ramp is mirrored into an endless there-and-back band and slid one full period per loop,
-    // so radial rings keep streaming outward (linear ones across, conic ones round) and the last frame
-    // meets the first. The first frame is the still design.
     if (br) t = 1.0 - abs(fract((t - 2.0 * uTime) * 0.5) * 2.0 - 1.0);
     lab = ramp(t);
   }
@@ -998,8 +814,6 @@ void main() {
 }`,
 
     glass: `uniform float uBump; uniform float uBlend; uniform float uWidth; uniform float uAngle; uniform float uRound; uniform float uThick; uniform float uFrost; uniform float uTint; uniform float uLight;
-// Fluted glass: ribs of the shared glass, flat on top and rounded over toward each edge (a half-cylinder
-// at full roundness). Four sub-pixel samples across the rib edge remove the stair-stepping.
 void main() {
   gBlend = uBlend; gBump = uBump;
   vec2 dir = vec2(cos(uAngle), sin(uAngle)), nrm = vec2(-dir.y, dir.x);
@@ -1015,9 +829,6 @@ void main() {
 }`,
 
     mesh: `uniform float uCell; uniform float uGap; uniform float uRad; uniform float uRound; uniform float uThick; uniform float uFrost; uniform float uTint; uniform float uLight; uniform float uFade; uniform float uFadeAng; uniform float uHexT; uniform float uBlend; uniform float uAsp; uniform float uBump;
-// Glass blocks: a grid of tiles of the shared glass, each rounded over toward its edges (a pillow at full
-// roundness), separated by a gap. Hex lays the tiles out as a honeycomb of six-sided cells instead.
-// Stretch widens every tile, like the oval dimples of patterned bathroom glass.
 float sdHexT(vec2 p, float r) {
   const vec3 k = vec3(-0.866025404, 0.5, 0.577350269);
   p = abs(p); p -= 2.0 * min(dot(k.xy, p), 0.0) * k.xy; p -= vec2(clamp(p.x, -k.z * r, k.z * r), r);
@@ -1025,8 +836,6 @@ float sdHexT(vec2 p, float r) {
 }
 float tileSD(vec2 p, vec2 hb, float rad) { return uHexT > 0.5 ? sdHexT(p.yx, hb.x - rad) - rad : sdBox(p, hb, rad); }
 void main() {
-  // Tiles are a whole number of render pixels wide, so every tile and every gap meets the pixel grid the
-  // same way (fractional sizes drew some gaps darker than others), and a gap is never thinner than a pixel.
   float cell = max(2.0, floor(uCell * uK + 0.5)) / uK;
   vec2 asp = vec2(max(uAsp, 0.2), 1.0), d = dp() / asp, id = floor(d / cell), c = (id + 0.5) * cell;
   if (uHexT > 0.5) {
@@ -1046,14 +855,12 @@ void main() {
   float shadow = 0.22 * min(uLight, 1.0) * (1.0 - 0.6 * uTint) * exp(-max(tileSD(p + vec2(0.0, cell * 0.02), hb, rad), 0.0) / (cell * 0.05));
   vec3 outside = base.rgb * (1.0 - shadow);
   float aa = 0.6 / uK;
-  // Fade: tiles thin out toward the fade angle (0° right, 90° up), a whole tile at a time.
   vec2 fd = vec2(cos(uFadeAng), sin(uFadeAng)), cu = toUv(c * asp) - 0.5;
   float keep = mix(1.0, smoothstep(0.55, -0.55, dot(cu * vec2(uRes.x / uRes.y, 1.0), fd)), uFade);
   o = vec4(mix(base.rgb, mix(outside, inside, smoothstep(aa, -aa, sd)), keep), base.a);
 }`,
 
     bulge: `uniform float uAmt; uniform float uRad; uniform vec2 uC;
-// Bulge or pinch: inside the radius the image is magnified (or shrunk), easing back to 1:1 at the edge.
 void main() {
   vec2 res = uRes / uK, c = uC * res, d = dp() - c;
   float R = max(1.0, uRad * min(res.x, res.y)), r = length(d) / R;
@@ -1062,10 +869,8 @@ void main() {
 }`,
 
     ripple: `uniform float uAmp; uniform float uLen; uniform float uDecay; uniform float uShade; uniform vec2 uC; uniform float uAnim; uniform float uTime;
-// Concentric water ripples from a point, fading with distance, with a soft light on each crest.
 void main() {
   vec2 res = uRes / uK, d = dp() - uC * res; float r = length(d), m = min(res.x, res.y);
-  // Animated, the rings travel outward a whole number of wavelengths per loop, so it still loops.
   float ph = r / uLen * 6.2831853 - 6.2831853 * uTime * uAnim, fade = exp(-r / max(1.0, uDecay * m));
   vec2 dir = d / max(r, 1e-3);
   vec4 c = tex(vUv + toUv(dir * sin(ph) * uAmp * fade));
@@ -1073,16 +878,9 @@ void main() {
 }`,
 
     sea: `uniform float uAmt; uniform float uScale; uniform float uCaustic; uniform float uChop; uniform float uDepth; uniform float uSpeed; uniform float uTime;
-// Water: looking down through a sunlit, moving surface. Long swells and a finer chop bend what lies
-// beneath, and the light the surface focuses slides over it in soft, shifting ribbons. Every wave and
-// ribbon moves a whole number of turns per loop, so animations meet their first frame.
 float T;
-// The surface is a sum of travelling waves, so its slope and curvature come out exactly from each
-// wave's sine and cosine: one of each per wave, instead of sampling the whole sum many times over.
 void wave(vec2 q, vec2 d, float f, float amp, float tm, float ph, inout vec2 g, inout vec3 H) {
   vec2 k = d * f; float x = dot(q, k) + tm * T + ph, s = sin(x), c = cos(x);
-  // Curvature grows with the square of frequency, so the finest ripples would rule the light and break
-  // it into streaks; dividing by frequency lets the mid-size waves shape it instead.
   g += amp * c * k; H -= amp * s * vec3(k.x * k.x, k.x * k.y, k.y * k.y) / f;
 }
 void surf(vec2 q, out vec2 g, out vec3 H) {
@@ -1097,9 +895,6 @@ void surf(vec2 q, out vec2 g, out vec3 H) {
   wave(q, vec2(-0.95, 0.31), 4.7, 0.09 * ch, -2.0, 5.0, g, H);
   wave(q, vec2(0.71, -0.71), 7.1, 0.08 * ch, 3.0, 0.5, g, H);
 }
-// Caustics from the surface itself: light through it bends by its slope, and where the bent rays
-// bunch together the floor brightens. The bunching is the inverse of how much the bend stretches a
-// patch (the determinant of its Jacobian, I + D·curvature), so the light follows these very waves.
 float caustic(vec3 H, float D) {
   float det = (1.0 + D * H.x) * (1.0 + D * H.z) - D * D * H.y * H.y;
   return clamp(1.0 / max(abs(det), 0.1) - 0.8, 0.0, 3.0);
@@ -1107,15 +902,11 @@ float caustic(vec3 H, float D) {
 void main() {
   T = 6.2831853 * uTime * uSpeed;
   vec2 q = dp() / uScale * 6.0;
-  // One slow, still warp so the swells never line up into stripes or repeat.
   q += 1.8 * vec2(fbm(q * 0.13 + 3.1), fbm(q * 0.13 + 7.7)) + 1.1 * vec2(fbm(q * 0.41 + 5.3), fbm(q * 0.41 + 1.9));
   vec2 g; vec3 H; surf(q, g, H);
   vec2 off = g * uAmt * uScale * 0.03, bend = toUv(off);
-  // Red bends a touch less than blue, as through real water.
   vec3 col = vec3(tex(vUv + bend * 0.96).r, tex(vUv + bend).g, tex(vUv + bend * 1.05).b);
   col = mix(col, col * vec3(0.5, 0.82, 0.92) + vec3(0.0, 0.07, 0.1), clamp(uDepth, 0.0, 1.0));
-  // A finer copy of the surface lights the floor, so the light web is smaller than the swells that
-  // bend it, read where the floor is seen; it fades out before its cells get too small to draw cleanly.
   vec2 qc = (q + off / uScale * 6.0 * 0.6) * 1.35 + vec2(17.3, 5.9) + uSeed * vec2(0.37, 0.91);
   vec2 g2; vec3 H2; surf(qc, g2, H2);
   float px = uScale / 6.0 / 1.35 * uK, l = caustic(H2, 0.6) * smoothstep(8.0, 20.0, px * 6.2831853);
@@ -1127,8 +918,6 @@ void main() {
 }`,
 
     touch: `uniform float uAmp; uniform float uLen; uniform float uSpeed; uniform float uLife; uniform float uShade; uniform vec4 uP[8]; uniform float uNP;
-// Click ripples: each click (x, y in design pixels, its age in seconds) sends out a ring of waves that
-// spreads at a steady speed and dies away over its life, bending and lighting what's beneath.
 void main() {
   vec2 d0 = dp(), off = vec2(0.0); float lit = 0.0;
   for (int i = 0; i < 8; i++) {
@@ -1143,9 +932,6 @@ void main() {
   o = vec4(c.rgb * (1.0 + uShade * 0.15 * lit), c.a);
 }`,
 
-    // Drag trails composite, over a real fluid simulation (below): Fluid mode draws the picture through
-    // the sim's offset field, so it is carried by the flow like paint and relaxes back; Smoke mode leaves
-    // the picture alone and lays the sim's smoke density over it.
     trail: `uniform sampler2D uTex2; uniform float uSmoke; uniform vec3 uCol;
 void main() {
   vec4 d = texture(uTex2, vUv);
@@ -1154,8 +940,6 @@ void main() {
   o = vec4(mix(c.rgb, uCol, a * a * (3.0 - 2.0 * a) * 0.92), c.a);
 }`,
 
-    // ---- fluid simulation (stable fluids, after Jos Stam and Pavel Dobryakov's WebGL version) ----
-    // Velocity is in sim cells per second; cells are square in design space.
     f_splat: `uniform vec2 uPt; uniform float uRad; uniform vec4 uVal; uniform float uAsp;
 void main() { vec2 d = vUv - uPt; d.x *= uAsp; o = texture(uTex, vUv) + uVal * exp(-dot(d, d) / uRad); }`,
     f_curl: `
@@ -1169,8 +953,6 @@ void main() {
   vec2 t = 1.0 / uRes;
   float L = texture(uTex2, vUv - vec2(t.x, 0.0)).x, R = texture(uTex2, vUv + vec2(t.x, 0.0)).x, T = texture(uTex2, vUv + vec2(0.0, t.y)).x, B = texture(uTex2, vUv - vec2(0.0, t.y)).x, C = texture(uTex2, vUv).x;
   vec2 f = 0.5 * vec2(abs(T) - abs(B), abs(R) - abs(L)); f /= length(f) + 1e-4; f *= uCurl * C; f.y = -f.y;
-  // Swirl only where the fluid is really moving: confinement on the faint leftover flow everywhere else
-  // kept the whole picture slowly twisting long after a trail had faded.
   vec2 v = texture(uTex, vUv).xy;
   f *= smoothstep(1.5, 14.0, length(v));
   o = vec4(clamp(v + f * uDt, -2000.0, 2000.0), 0.0, 1.0);
@@ -1194,8 +976,6 @@ void main() {
   float L = texture(uTex2, vUv - vec2(t.x, 0.0)).x, R = texture(uTex2, vUv + vec2(t.x, 0.0)).x, T = texture(uTex2, vUv + vec2(0.0, t.y)).x, B = texture(uTex2, vUv - vec2(0.0, t.y)).x;
   o = vec4(texture(uTex, vUv).xy - vec2(R - L, T - B), 0.0, 1.0);
 }`,
-    // Advection reads back along the velocity. The offset field (Fluid mode) also gains the distance it was
-    // carried, so each cell remembers where its paint came from; dissipation lets it all fade away.
     f_adv: `uniform sampler2D uTex2; uniform float uDt; uniform float uDiss; uniform vec2 uVelTexel; uniform float uOff;
 void main() {
   vec2 coord = vUv - uDt * texture(uTex, vUv).xy * uVelTexel;
@@ -1206,12 +986,8 @@ void main() {
 
 
     water: `uniform float uAmt; uniform float uScale; uniform float uCaustic; uniform float uAnim; uniform float uTime;
-// Pool water: a rolling surface (long swells plus finer chop) bends the floor seen through it, and the
-// light it focuses lands on the floor as the bright, web-like caustic network of a sunny pool.
 float H(vec2 q) { return 0.6 * sin(q.x * 1.3 + 1.7 * sin(q.y * 0.7)) * 0.25 + fbm(q) + 0.5 * fbm(q * 2.1 + vec2(4.7, 1.9)); }
 vec2 h2(vec2 p) { return vec2(hash(p), hash(p + 17.31)); }
-// Distance from p to the nearest edge between jittered cells, in cell units. The edges of a wobbled
-// cell grid are the bright web a pool floor shows; the value is bounded, so the light never blows out.
 float cellEdge(vec2 p) {
   vec2 n = floor(p), f = fract(p), mr = vec2(0.0), mg = vec2(0.0); float md = 8.0;
   for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
@@ -1227,7 +1003,6 @@ float cellEdge(vec2 p) {
 }
 float causticLayer(vec2 p) {
   float e = cellEdge(p), aa = fwidth(p.x) * 1.2;
-  // A thin bright core inside a softer glow, both widened by a pixel so small sizes stay smooth.
   float core = 1.0 - smoothstep(0.0, 0.045 + aa, e), glow = exp(-e / (0.13 + aa));
   return clamp(0.7 * core + 0.45 * glow * glow, 0.0, 1.0);
 }
@@ -1236,22 +1011,17 @@ void main() {
   vec2 g = vec2(H(q + vec2(e, 0.0)) - H(q - vec2(e, 0.0)), H(q + vec2(0.0, e)) - H(q - vec2(0.0, e))) / (2.0 * e);
   vec2 bend = toUv(g * uAmt * uScale * 0.05);
   vec4 c = tex(vUv + bend);
-  // Caustics follow the same surface, so the web wobbles with the refraction. A second, finer web at an
-  // angle fills the larger cells the way overlapping ripples do.
   vec2 cp = q * 2.2 + vec2(vnoise(q * 1.1 + 3.1), vnoise(q * 1.1 + 7.7)) * 1.3 + uSeed * 0.71;
   vec2 cq = mat2(0.8, -0.6, 0.6, 0.8) * cp * 1.6 + 11.3;
   float l = clamp(causticLayer(cp) + 0.45 * causticLayer(cq), 0.0, 1.0);
-  // Cells under a dozen pixels across turn to noise, so the light fades out instead.
   float cellPx = uScale / 2.2 * uK; l *= smoothstep(5.0, 14.0, cellPx);
   vec3 light = vec3(1.0, 0.99, 0.95) * l * min(uCaustic, 2.0) * 0.55;
-  // The surface itself: troughs a touch darker, crests a touch brighter, facing the light from the top left.
   float face = clamp(-dot(g, vec2(0.6, -0.8)) * 0.12 * min(uAmt, 2.0), -0.12, 0.12);
   vec3 col = c.rgb * (1.0 + face);
   o = vec4(1.0 - (1.0 - clamp(col, 0.0, 1.0)) * (1.0 - clamp(light, 0.0, 1.0)), c.a);
 }`,
 
     cmyk: `uniform float uSize; uniform float uAngle; uniform vec3 uPaper; uniform float uShape;
-// Four-color halftone: cyan, magenta, yellow and black screens at their classic angles, overprinted on paper.
 float screenDot(vec2 d, float ang, int ch) {
   mat2 R = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
   vec2 g = R * d / uSize, base = floor(g) + 0.5; float aa = 0.8 / (uSize * uK), m = 0.0;
@@ -1275,7 +1045,6 @@ void main() {
 }`,
 
     paper: `uniform float uCrumple; uniform float uFiber; uniform float uScale;
-// Paper: a crumpled height field lit from the top left, plus fine fibres and tooth.
 float P(vec2 q) { return fbm(q) + 0.45 * fbm(q * 2.3 + 7.1) + 0.2 * fbm(q * 5.1 + 3.3); }
 void main() {
   vec4 c = tex(vUv);
@@ -1290,7 +1059,6 @@ void main() {
 }`,
 
     heatmap: `uniform float uGlow; uniform float uMix; uniform float uInvert;
-// Thermal camera: brightness, softened by a glow, mapped onto a heat ramp.
 vec3 heat(float t) {
   vec3 a = vec3(0.02, 0.0, 0.12), b = vec3(0.35, 0.05, 0.6), c = vec3(0.9, 0.12, 0.25), d = vec3(1.0, 0.55, 0.05), e = vec3(1.0, 0.95, 0.6);
   return t < 0.25 ? mix(a, b, t / 0.25) : t < 0.5 ? mix(b, c, (t - 0.25) / 0.25) : t < 0.75 ? mix(c, d, (t - 0.5) / 0.25) : mix(d, e, (t - 0.75) / 0.25);
@@ -1305,17 +1073,12 @@ void main() {
 
     chrome: `uniform float uStr; uniform float uBands; uniform float uSoft; uniform vec3 uTint; uniform float uMix;
 uniform sampler2D uTex2; uniform int uHasH;
-// Liquid metal: brightness becomes a soft height field whose surface reflects a banded studio environment.
-// The height is a true Gaussian blur of brightness made in two passes beforehand, so dense lines melt
-// into smooth slopes instead of aliasing into smears. The ring average is the fallback without float targets.
 float Lm(vec2 uv) {
   if (uHasH == 1) return texture(uTex2, clamp(uv, vec2(0.0), vec2(1.0))).r;
   float s = luma(tex(uv).rgb) * 0.5; for (int i = 0; i < 8; i++) { float a = float(i) * 0.7854; vec2 d = vec2(cos(a), sin(a)) * uSoft; s += luma(tex(uv + toUv(d * 0.55)).rgb) + 0.75 * luma(tex(uv + toUv(d.yx * vec2(1.0, -1.0) * 1.1)).rgb); } return s / 14.5;
 }
 void main() {
   vec4 c = tex(vUv); vec2 e = toUv(vec2(uSoft, 0.0)), f = toUv(vec2(0.0, uSoft));
-  // With a blurred height the slope is read over one pixel and scaled to match: differences taken a whole
-  // blur radius apart beat against fine ridges and made moire.
   if (uHasH == 1) { e = vec2(1.0 / uRes.x, 0.0); f = vec2(0.0, 1.0 / uRes.y); }
   vec2 g = vec2(Lm(vUv + e) - Lm(vUv - e), Lm(vUv + f) - Lm(vUv - f)) * (uHasH == 1 ? uSoft * uK : 1.0);
   vec3 n = normalize(vec3(-g * uStr * 6.0, 1.0));
@@ -1328,7 +1091,6 @@ void main() {
 }`,
 
     rays: `uniform float uLen; uniform float uThr; uniform float uInt; uniform vec2 uC;
-// God rays: bright parts of the image are smeared outward from a light point, as through haze.
 void main() {
   vec4 base = tex(vUv);
   float n = uQ.x > 0.0 ? uQ.x : 48.0, decay = pow(0.965, 48.0 / n);
@@ -1352,24 +1114,13 @@ void main() {
 }`,
 
     halftone: `uniform float uSize; uniform float uAngle; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper; uniform float uShape; uniform float uHex; uniform float uTurn; uniform float uTone; uniform float uEven; uniform float uMerge; uniform float uClassic;
-// Halftone: one dot per lattice point, sized by how dark the picture is there. Every shape grows by area
-// from nothing at white, meets its neighbours at mid grey and closes into solid ink at black: circles
-// touch at 50% and merge, squares stand on their corners so 50% is an exact checkerboard, and triangles
-// alternate up and down so they tile the plane outright. The lattice is square or hexagonal.
-// In color, dots normally stay large so the picture's colors carry; "size by tone" sizes them by lightness
-// as ink only does.
 float dark(vec3 c) { return uMono > 0.5 || uTone > 0.5 ? 1.0 - luma(c) : 0.25 + 0.75 * (1.0 - luma(c) * 0.6); }
-// Size from darkness: area-proportional up to touching at 50%, then the gaps shrink by area to nothing.
 float grow(float d, float touch, float full) { d = clamp(d, 0.0, 1.0); return d < 0.5 ? touch * sqrt(d * 2.0) : full - (full - touch) * sqrt(2.0 - d * 2.0); }
 vec2 turn(vec2 f, vec2 id) { if (uTurn < 0.5 || uShape < 0.5) return f; float a = hash(id + 17.3) * 6.2831853, c = cos(a), s = sin(a); return mat2(c, -s, s, c) * f; }
-// The size for darkness d. "Even sizes" makes every shape cover the same share of its cell for the same
-// tone (k is the shape's area for size 1), so circles, squares, triangles and stars all read alike.
-// With "merge" off, dots stop growing when they touch, so they keep their own shape and never squish.
 float size(float d, float touch, float full, float k) {
   float s = uEven > 0.5 ? min(full, sqrt(clamp(d, 0.0, 1.0) * (uHex > 0.5 ? 0.8660254 : 1.0) / k)) : grow(d, touch, full);
   return uMerge > 0.5 ? s : min(s, touch);
 }
-// Signed distance of one dot (in lattice units) for a darkness d.
 float dotAt(vec2 f, float d, vec2 id) {
   f = turn(f, id);
   bool hx = uHex > 0.5;
@@ -1383,7 +1134,6 @@ void main() {
   mat2 R = mat2(ca, -sa, sa, ca);
   vec2 r = R * dp() / uSize; float aa = 0.8 / (uSize * uK), sdm = 1e9; vec3 ink = uInk;
   if (uShape > 1.5 && uShape < 2.5 && uTurn < 0.5) {
-    // Triangles tile the plane in rows of alternating up and down ones; each scales about its centre.
     const float H = 0.8660254;
     vec2 g = vec2(r.x - 0.5 * r.y / H, r.y / H), cell = floor(g), f = fract(g);
     bool up = f.x + f.y < 1.0;
@@ -1393,20 +1143,16 @@ void main() {
     vec2 p = r - cen; if (!up) p.y = -p.y;
     float e = max(-p.y, max(dot(p, vec2(0.8660254, 0.5)), dot(p, vec2(-0.8660254, 0.5))));
     if (uClassic > 0.5) {
-      // One-way triangles: ink grows in the upward triangles until they fill half the plane at 50%; past
-      // that the downward ones fill in too, leaving shrinking paper triangles that point the other way.
       float dd = clamp(dark(c.rgb), 0.0, 1.0), m;
       if (up) m = dd < 0.004 ? 0.0 : smoothstep(aa, -aa, e - 0.2887 * min(1.0, sqrt(2.0 * dd)) - aa * step(0.5, dd));
       else m = dd <= 0.5 ? 0.0 : 1.0 - smoothstep(aa, -aa, e - 0.2887 * sqrt(max(0.0, 2.0 - 2.0 * dd)));
       o = vec4(mix(uPaper, uMono > 0.5 ? uInk : c.rgb, m), 1.0); return;
     }
-    // Full triangles overlap by a hair, so solid ink shows no seams between them.
     float sd = e - 0.2887 * s - aa * smoothstep(0.9, 1.0, s);
     float m = s < 0.02 ? 0.0 : smoothstep(aa, -aa, sd);
     o = vec4(mix(uPaper, uMono > 0.5 ? uInk : c.rgb, m), 1.0); return;
   }
   if (uHex > 0.5) {
-    // Hexagonal lattice: rows half a step apart, offset by half a dot.
     const float H = 0.8660254; float j0 = floor(r.y / H);
     for (int j = -1; j <= 2; j++) {
       float row = j0 + float(j), off = mod(row, 2.0) * 0.5, i0 = floor(r.x - off);
@@ -1436,18 +1182,12 @@ void main() {
   float v = luma(c.rgb); if (uInvert < 0.5) v = 1.0 - v;
   float idx = floor(clamp(v, 0.0, 0.999) * uCount);
   vec2 g2 = d / uCell, l = fract(g2);
-  // Gradients from the unwrapped position, so the mip level doesn't jump at every cell edge.
   vec2 sc = vec2(1.0 / uCount, 1.0);
   float g = textureGrad(uAtlas, vec2((idx + l.x) / uCount, l.y), dFdx(g2) * sc, dFdy(g2) * sc).r;
   o = vec4(mix(uPaper, uMono > 0.5 ? uInk : c.rgb, g), 1.0);
 }`,
 
     glyphs: `uniform sampler2D uAtlas; uniform sampler2D uTex2; uniform float uMem; uniform float uCell; uniform float uCount; uniform float uMono; uniform float uGamma; uniform float uChange; uniform float uBack; uniform vec3 uInk; uniform vec3 uPaper; uniform float uTime;
-// Glyph field: every cell holds a character whose opacity follows the brightness underneath, like a
-// screen of text lit from behind. The character is read from what's under the cell (its brightness and
-// hue, stepped), so a still picture keeps its letters and they change where the picture changes. Shuffle
-// swaps them a whole number of times per loop, so the field still loops; when each cell swaps follows a
-// slow noise field, so changes sweep across in drifting fronts and clusters rather than as even static.
 void main() {
   vec2 d = dp(), g2 = d / uCell, cell = floor(g2);
   vec4 c = tex(toUv((cell + 0.5) * uCell));
@@ -1455,7 +1195,6 @@ void main() {
   float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b)), hue = 0.0;
   if (mx - mn > 0.08) hue = mx == c.r ? mod((c.g - c.b) / (mx - mn), 6.0) : mx == c.g ? (c.b - c.r) / (mx - mn) + 2.0 : (c.r - c.g) / (mx - mn) + 4.0;
   vec2 look = vec2(floor(luma(c.rgb) * 7.0), floor(hue * 1.5));
-  // With Keep on, the letter follows a per-cell count of color changes (glyphMem), so it never returns.
   if (uMem > 0.5) look = vec2(floor(texelFetch(uTex2, ivec2(cell), 0).b * 255.0 + 0.5), 0.5);
   float wave = fbm(cell * 0.06 + uSeed * 0.13) * 2.2 + hash(cell + uSeed * 0.731) * 0.18;
   float slot = uChange > 0.5 ? floor(fract(uTime + wave) * uChange) : 0.0;
@@ -1464,13 +1203,10 @@ void main() {
   vec2 sc = vec2(1.0 / uCount, 1.0);
   float a = textureGrad(uAtlas, vec2((idx + l.x) / uCount, l.y), dFdx(g2) * sc, dFdy(g2) * sc).r * v;
   if (uMono > 0.5) { o = vec4(mix(uPaper, uInk, a), 1.0); return; }
-  // In color, each glyph takes the hue underneath at full strength; its opacity carries the brightness.
   vec3 fg = mix(c.rgb, c.rgb / max(max(c.r, max(c.g, c.b)), 0.06), 0.75);
   o = vec4(mix(c.rgb * uBack, clamp(fg, 0.0, 1.0), a), 1.0);
 }`,
 
-    // Glyph field memory, one texel per cell: the color it last changed at and how many times it changed.
-    // A cell counts a change only once its color has moved clearly away, so edges don't flicker.
     glyphMem: `uniform sampler2D uTex2; uniform float uCell; uniform vec2 uFull;
 vec3 lh(vec3 c) {
   float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b)), hue = 0.0;
@@ -1492,16 +1228,12 @@ float b2(vec2 a) { a = floor(mod(a, 2.0)); return fract(dot(a, vec2(0.5, a.y * 0
 float b4(vec2 a) { return b2(0.5 * a) * 0.25 + b2(a); }
 float b8(vec2 a) { return b4(0.5 * a) * 0.25 + b2(a); }
 void main() {
-  // Snap cells to whole device pixels so the pattern has no seams.
   float cell = max(1.0, floor(uPix * uK + 0.5));
   vec2 d = floor(vUv * uRes / cell);
   vec4 c = tex((d + 0.5) * cell / uRes);
   float th = (uMat < 3.0 ? b2(d) : uMat < 6.0 ? b4(d) : b8(d)) - 0.5;
   float L = max(uLevels - 1.0, 1.0);
   if (uPal > 0.5) {
-    // Design colors: the palette, darkest first, is a path through color; each cell finds the step of it
-    // closest to its own color and takes one end or the other by the threshold, so blends between two
-    // colors come out as checks and patterns of both.
     vec3 p1 = uCol[0], p2 = uCol[0]; float f = 0.0, best = 1e9;
     for (int i = 0; i < 7; i++) {
       if (i + 1 >= uN) break;
@@ -1510,7 +1242,6 @@ void main() {
       if (dd < best) { best = dd; p1 = a; p2 = uCol[i + 1]; f = t; }
     }
     vec3 col = f > th + 0.5 ? p2 : p1;
-    // Gap: the cells shrink to squares with the darkest color showing between them.
     vec2 g = fract(vUv * uRes / cell) - 0.5; float gp = 0.5 - 0.5 * uGap, aa = 0.5 / cell;
     o = vec4(mix(uCol[0], col, smoothstep(gp + aa, gp - aa, max(abs(g.x), abs(g.y)))), 1.0); return;
   }
@@ -1542,7 +1273,6 @@ void main() {
 }`,
 
     lens: `uniform float uBump; uniform float uBlend; uniform float uShape; uniform float uSize; uniform float uRound; uniform float uThick; uniform float uFrost; uniform float uTint; uniform float uLight; uniform vec2 uC;
-// Liquid glass: one pane of the shared glass, rounded over toward its edges, with a soft contact shadow.
 void main() {
   vec2 res = uRes / uK; float m = min(res.x, res.y);
   vec2 p = dp() - uC * res, hb; float rad;
@@ -1562,9 +1292,6 @@ void main() {
 }`,
 
     blur: `uniform float uAmt; uniform float uDir; uniform float uStart; uniform sampler2D uTex2;
-// Progressive blur: a disc of taps whose radius grows across the picture. The taps read a mip level
-// sized to the gap between them, so a wide blur averages smooth areas instead of stacking sharp copies of
-// the lines (which is what split them at high values).
 void main() {
   vec2 q = vec2(vUv.x, 1.0 - vUv.y); float t;
   if (uDir < 0.5) t = 1.0 - q.y; else if (uDir < 1.5) t = q.y; else if (uDir < 2.5) t = 1.0 - q.x; else if (uDir < 3.5) t = q.x;
@@ -1573,9 +1300,6 @@ void main() {
   o = discBlur(uTex2, vUv, uAmt * m * uK, 0.0);
 }`,
 
-    // Depth of field: the picture stays sharp around a focal point (or along a focal band through it, as
-    // a tilt-shift lens does) and softens with distance from it. Bright spots open into soft discs, the
-    // way out-of-focus highlights do through a real lens.
     dof: `uniform float uAmt; uniform vec2 uF; uniform float uFocus; uniform float uFall; uniform float uBand; uniform float uAngle; uniform float uBokeh; uniform sampler2D uTex2;
 void main() {
   vec2 q = vec2(vUv.x, 1.0 - vUv.y), asp = vec2(uRes.x / uRes.y, 1.0), d = (q - uF) * asp;
@@ -1622,12 +1346,6 @@ void main() { vec4 c = tex(vUv); float L = max(uLevels - 1.0, 1.0); o = vec4(flo
     linescreen: `uniform float uSpace; uniform float uAngle; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
 uniform float uFlow; uniform float uFlowSize; uniform float uDash; uniform float uDashLen; uniform float uInv;
 uniform float uRip; uniform float uRipLen; uniform vec2 uRA; uniform vec2 uRB; uniform float uTime; uniform float uSteps; uniform float uHair;
-// Engrave: parallel lines whose thickness follows the picture's tone. Flow bends them along a smooth
-// noise field, so they stream round like a currency engraving without ever crossing, and dashes break
-// each line into strokes of the given length, every line starting at its own offset. Ripples spread
-// rings from two centers through the lines; where the two sets meet they cross into beads and knots.
-// Moving, the rings travel out one wavelength per loop. Steps snaps the thickness to a few weights, so a
-// line jumps from hairline to bar where the picture crosses a tone, and hairline keeps every line visible.
 void main() {
   vec2 nrm = vec2(-sin(uAngle), cos(uAngle)), tng = vec2(nrm.y, -nrm.x), d = dp();
   float bend = uFlow > 0.0 ? uFlow * (fbm(d / uFlowSize + 3.1) - 0.5) * 2.4 * uFlowSize / uSpace : 0.0, bead = 0.0;
@@ -1671,9 +1389,6 @@ void main() {
     voronoi: `uniform float uCell; uniform float uEdge;
 vec2 h2(vec2 p) { return vec2(hash(p + uSeed), hash(p + 19.19 + uSeed)); }
 void main() {
-  // The nearest site, then the true distance to the nearest border (after Inigo Quilez). The difference
-  // between the two nearest distances, used before, ran long dark wedges into cells whose sites sat close
-  // together, turning them grey.
   vec2 d = dp() / uCell, i = floor(d), f = fract(d), mg = vec2(0.0), mr = vec2(0.0);
   float md = 8.0;
   for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
@@ -1703,12 +1418,9 @@ void main() {
   o = vec4(tex(vUv + off).r, c.g, tex(vUv - off).b, c.a);
 }`,
 
-    // Cells of the picture that fall away at random where its tone runs out, each a slightly different tint,
-    // over the paper with a faint dot grid where cells are gone.
     dissolve: `uniform float uCell; uniform float uShape; uniform float uAmt; uniform float uEdge; uniform float uTint; uniform float uDots; uniform float uLight; uniform float uGap; uniform vec3 uInk; uniform vec3 uPaper;
 void main() {
   vec2 d = dp(), cell = floor(d / uCell), l = fract(d / uCell) - 0.5;
-  // Of five points in the cell, the one with the most of the kept tone, so thin lines aren't missed.
   vec4 c = vec4(0.0); float t = -1.0;
   for (int i = 0; i < 5; i++) {
     vec2 q = i == 0 ? vec2(0.5) : vec2(i == 1 || i == 3 ? 0.25 : 0.75, i < 3 ? 0.25 : 0.75);
@@ -1716,8 +1428,6 @@ void main() {
     if (v > t) { t = v; c = s; }
   }
   float h = hash(cell + uSeed * 0.71);
-  // Solid where the kept tone reaches the threshold; below it, a band of Edge width where cells thin out,
-  // densest next to the core.
   float on = t >= uAmt ? 1.0 : step(h, pow(clamp((t - uAmt + uEdge) / max(uEdge, 1e-3), 0.0, 1.0), 2.0));
   float r = 0.5 - uGap * 0.5, aa = 1.0 / uCell;
   float sd = uShape < 0.5 ? max(abs(l.x), abs(l.y)) - r : uShape < 1.5 ? length(l) - r : sdBox(l, vec2(r), r * 0.45);
@@ -1729,11 +1439,7 @@ void main() {
   o = vec4(mix(bg, clamp(col, 0.0, 1.0), m), 1.0);
 }`,
 
-    // Thin-film color: tone (or slope) sets the film's thickness, and each channel interferes at its own
-    // wavelength, so the picture runs through soap-bubble and oil-slick bands.
     irid: `uniform float uBands; uniform float uShift; uniform float uMix; uniform float uPearl; uniform float uSlope; uniform float uAnim; uniform float uTime; uniform float uMid;
-// Midtones keeps the film to the tones between dark and light, so blacks and whites stay clean and only
-// the soft edges between them turn to rainbow.
 void main() {
   vec4 c = tex(vUv); float l = luma(c.rgb);
   vec2 e = toUv(vec2(2.0));
@@ -1744,16 +1450,6 @@ void main() {
   o = vec4(mix(c.rgb, clamp(r, 0.0, 1.0), uMix * mix(1.0, pow(clamp(4.0 * l * (1.0 - l), 0.0, 1.0), 2.0), uMid)), c.a);
 }`,
 
-    // Thin film: the colors of a film of oil on water or a soap bubble, worked out from the physics. Light
-    // reflects off the film's top and bottom faces; the two reflections add or cancel by wavelength, with a
-    // path difference of 2nd (n the film's index, d its thickness), so each thickness keeps its own mix of
-    // wavelengths. The spectrum reflected (Airy's formula for one layer) is weighed by the eye's color
-    // matching curves (the analytic fit of Wyman, Sloan and Shirley, 2013) into XYZ, then sRGB. The picture's
-    // tone sets the thickness, so its gradients turn into Newton's sequence of fringes: black where the film
-    // is thinnest, then silver, gold, magenta, blue, green, and paler pinks and greens as it thickens.
-    // Foil is holographic foil instead, a diffraction grating: its grooves (spacing d) send each wavelength
-    // off at its own angle, sin(angle) = m * wavelength / d, so as the tone (standing in for the angle)
-    // changes the foil runs through the pure spectrum, the higher orders m repeating it more tightly.
     film: `uniform float uFoil; uniform float uThin; uniform float uThick; uniform float uIdx; uniform float uSub; uniform float uGain; uniform float uVivid; uniform float uMix; uniform float uMid; uniform float uAnim; uniform float uTime;
 float lobe(float l, float m, float a, float b) { float t = (l - m) * (l < m ? a : b); return exp(-0.5 * t * t); }
 vec3 cmf(float l) {
@@ -1767,7 +1463,6 @@ void main() {
   float r1 = (1.0 - uIdx) / (1.0 + uIdx), r2 = (uIdx - uSub) / (uIdx + uSub);
   vec3 xyz = vec3(0.0); float yw = 0.0;
   if (uFoil > 0.5) {
-    // Real foil is a little rough, so each order spreads over a band of angles: three samples across it.
     for (int m = 1; m < 5; m++) for (int k = -1; k < 2; k++) { float lam = uThick * (l + float(k) * 0.02) / float(m); if (lam > 380.0 && lam < 720.0) xyz += cmf(lam) * 0.12; }
     yw = 1.0;
   } else for (int i = 0; i < 24; i++) {
@@ -1779,13 +1474,10 @@ void main() {
   vec3 rgb = mat3(3.2406, -0.9689, 0.0557, -1.5372, 1.8758, -0.2040, -0.4986, 0.0415, 1.0570) * xyz * uGain;
   rgb = max(mix(vec3(dot(rgb, vec3(0.2126, 0.7152, 0.0722))), rgb, 1.0 + uVivid), 0.0);
   rgb = pow(clamp(rgb, 0.0, 1.0), vec3(1.0 / 2.2));
-  // Where the film thins away to nothing, the picture underneath shows through.
   o = vec4(mix(c.rgb, rgb, uMix * (uFoil > 0.5 ? 1.0 : smoothstep(0.0, 40.0, d)) * mix(1.0, pow(clamp(4.0 * l * (1.0 - l), 0.0, 1.0), 1.5), uMid)), c.a);
 }`,
 
-    // An LED board: fixed dots on black whose brightness follows the picture, with a soft glow between them.
     led: `uniform float uPitch; uniform float uSize; uniform float uGlow; uniform float uOff; uniform float uShape; uniform float uGamma; uniform float uByTone;
-// Lit color of a cell: the picture with its contrast raised, so lit dots read bright against unlit ones.
 vec3 lit(vec2 cell) { vec3 c = tex(toUv((cell + 0.5) * uPitch)).rgb; return pow(c, vec3(uGamma)) * (0.9 + 0.5 * uGamma); }
 vec3 dotAt(vec2 cell, vec2 d) {
   vec3 c = lit(cell);
@@ -1808,7 +1500,6 @@ void main() {
   o = vec4(clamp(vec3(0.012) + col + g * uGlow * 0.32, 0.0, 1.0), 1.0);
 }`,
 
-    // Streaks dragged out of the picture in strips: each strip gets its own length, some don't move at all.
     smear: `uniform float uLen; uniform float uAngle; uniform float uBand; uniform float uAmt; uniform float uJit; uniform float uThr;
 void main() {
   vec2 d = dp(), dir = vec2(cos(uAngle), sin(uAngle)), nrm = vec2(-dir.y, dir.x);
@@ -1825,27 +1516,20 @@ void main() {
   o = vec4(ws > 0.01 ? mix(c.rgb, acc / ws, min(1.0, ws * 0.25)) : c.rgb, c.a);
 }`,
 
-    // Glowing lines at even steps of the picture's tone, over a darkened copy of it.
     glowlines: `uniform float uLevels; uniform float uWidth; uniform float uGlow; uniform float uDim; uniform float uCore; uniform float uAnim; uniform float uTime; uniform float uSide;
 float tone(vec2 uv) { vec2 e = toUv(vec2(uWidth * 0.35)); return 0.25 * (luma(tex(uv + vec2(e.x, 0.0)).rgb) + luma(tex(uv - vec2(e.x, 0.0)).rgb) + luma(tex(uv + vec2(0.0, e.y)).rgb) + luma(tex(uv - vec2(0.0, e.y)).rgb)); }
 void main() {
   vec4 c = tex(vUv);
-  // Distance to the nearest line in design px: the tone's distance to the next level over its slope.
   float e = max(1.0, uWidth * 0.5), t = tone(vUv), v = t * uLevels + uAnim * uTime;
   vec2 o2 = toUv(vec2(e));
   float slope = length(vec2(tone(vUv + vec2(o2.x, 0.0)) - tone(vUv - vec2(o2.x, 0.0)), tone(vUv + vec2(0.0, o2.y)) - tone(vUv - vec2(0.0, o2.y)))) / (2.0 * e) * uLevels;
   float px = min(fract(v), 1.0 - fract(v)) / max(slope, 1e-5), pu = fract(v) / max(slope, 1e-5);
-  // A wide halo and a tighter body, like light bleeding out of a tube. One side throws the halo off one
-  // side of the line only, as light bent through a fold, with a hard edge on the other.
   float w = max(0.5, uWidth), g = (mix(exp(-px / w), exp(-pu / (w * 1.6)), uSide) * 0.55 + exp(-px / (w * mix(0.3, 0.08, uSide))) * 0.75) * uGlow, core = uCore * (1.0 - smoothstep(0.5, 1.5, px * uK));
-  // The line's color is the picture's own hue at full strength, so it glows rather than greys out.
   float mx = max(c.r, max(c.g, c.b));
   vec3 hot = mix(c.rgb / max(mx, 0.08), vec3(1.0), 0.12) * 1.1;
   o = vec4(clamp(c.rgb * (1.0 - uDim) + hot * g + mix(hot, vec3(1.0), 0.5) * core, 0.0, 1.0), c.a);
 }`,
 
-    // Banknote line work: rings around several centers, a rosette, or crossing waves, each family drawn as
-    // fine lines whose phase the picture's tone bends, so the picture shows through as engraving.
     guilloche: `uniform float uMd; uniform float uSpace; uniform float uWidth; uniform float uCount; uniform float uTone; uniform float uOver; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper; uniform vec2 uC;
 float lineOf(float f, float w) { float px = min(fract(f), 1.0 - fract(f)) / max(fwidth(f), 1e-4); return 1.0 - smoothstep(w - 0.75, w + 0.75, px); }
 void main() {
@@ -1863,8 +1547,6 @@ void main() {
   o = vec4(mix(bg, ink, L), c.a);
 }`,
 
-    // Ridge lines: stacked lines lifted by the picture's brightness, each filled below so it hides the
-    // lines behind it, like a ridge plot.
     ridge: `uniform float uSpace; uniform float uHeight; uniform float uWidth; uniform float uRNoise; uniform float uFill; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
 float lift(float x, float i) { float l = luma(tex(toUv(vec2(x, i * uSpace))).rgb); return l * (1.0 + uRNoise * (fbm(vec2(x * 0.03, i * 1.73)) - 0.5) * 2.0); }
 void main() {
@@ -1882,8 +1564,6 @@ void main() {
   o = vec4(col, 1.0);
 }`,
 
-    // Echo: copies of the picture, each smaller and turned a little further around a center, fading as
-    // they go, so it trails off into a spiral. Animated, the copies slide one step along per loop.
     feedback: `uniform float uCopies; uniform float uZoom; uniform float uRot; uniform float uDecay; uniform float uHue; uniform float uAnim; uniform float uTime; uniform vec2 uC; uniform float uAdd;
 vec3 hueRot(vec3 c, float a) { vec3 k = vec3(0.57735); float ca = cos(a); return c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1.0 - ca); }
 void main() {
@@ -1893,7 +1573,6 @@ void main() {
     float k = float(i); if (k > uCopies) break; float kt = k + t, a = uRot * kt;
     vec2 q = ctr + mat2(cos(a), -sin(a), sin(a), cos(a)) * (d - ctr) * pow(uZoom, kt), uv = q / ds;
     if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) continue;
-    // Copies fade out at their own edges rather than ending in a hard rectangle.
     vec2 ed = min(uv, 1.0 - uv); float soft = smoothstep(0.0, 0.08, min(ed.x, ed.y));
     float wgt = soft * pow(uDecay, kt) * (i == 1 ? max(t, 1.0 - uAnim) : 1.0) * (k == floor(uCopies) ? 1.0 - t : 1.0);
     vec3 s = hueRot(tex(uv).rgb, uHue * kt) * wgt;
@@ -1902,8 +1581,6 @@ void main() {
   o = vec4(clamp(acc, 0.0, 1.0), c.a);
 }`,
 
-    // Glitch: strips of the picture torn sideways and blocks knocked out of place, with red and blue
-    // pulled apart where it breaks. Speed re-rolls the damage a whole number of times per loop.
     glitch: `uniform float uSlices; uniform float uShift; uniform float uProb; uniform float uBlock; uniform float uBlockAmt; uniform float uSplit; uniform float uSpeed; uniform float uTime;
 void main() {
   vec2 ds = uRes / uK, d = dp(); float fr = uSpeed > 0.0 ? floor(fract(uTime) * uSpeed) : 0.0, sd = uSeed * 0.37 + fr * 13.1;
@@ -1917,8 +1594,6 @@ void main() {
   o = vec4(tex(toUv(d - off + sp)).r, c.g, tex(toUv(d - off - sp)).b, c.a);
 }`,
 
-    // Pixel sort: runs of pixels brighter than the threshold are redrawn as a smooth run from one end's
-    // color to the other's, so bright areas melt into streaks. Stretch drags one line across instead.
     pixsort: `uniform float uMd; uniform float uThr; uniform float uLen; uniform float uAngle; uniform float uPos; uniform float uBands;
 void main() {
   vec2 d = dp(), dir = vec2(cos(uAngle), sin(uAngle)), nrm = vec2(-dir.y, dir.x), ds = uRes / uK; vec4 c = tex(vUv);
@@ -1931,7 +1606,6 @@ void main() {
   float st = uLen / 48.0, a = 0.0, b = 0.0;
   for (int i = 1; i <= 48; i++) { if (luma(tex(toUv(d - dir * st * float(i))).rgb) < uThr) break; a = st * float(i); }
   for (int i = 1; i <= 48; i++) { if (luma(tex(toUv(d + dir * st * float(i))).rgb) < uThr) break; b = st * float(i); }
-  // Each end is then found to a fraction of a pixel, so neighboring runs don't step and ripple.
   float ha = st * 0.5, hb = st * 0.5;
   for (int i = 0; i < 5; i++) {
     if (a < uLen && luma(tex(toUv(d - dir * (a + ha))).rgb) >= uThr) a += ha;
@@ -1943,8 +1617,6 @@ void main() {
   o = vec4(mix(c0, c1, smoothstep(0.0, 1.0, a / max(a + b, 1e-3))), c.a);
 }`,
 
-    // Light streaks: bright parts of the picture smeared along 2 to 8 spokes, red and blue reaching a
-    // little different lengths, so highlights flare into glints and stars.
     streaks: `uniform float uThr; uniform float uLen; uniform float uAngle; uniform float uPoints; uniform float uInt; uniform float uChroma;
 vec3 bright(vec2 uv) { vec3 c = tex(uv).rgb; return max(c - uThr, 0.0) / max(1.0 - uThr, 0.05); }
 void main() {
@@ -1963,8 +1635,6 @@ void main() {
   o = vec4(clamp(c.rgb + acc / max(ws, 1.0) * uInt * 6.0 * nd, 0.0, 1.0), c.a);
 }`,
 
-    // Outline: the picture's edges as glowing neon on dark, as ink lines on paper, or the picture solarized
-    // (tones past the threshold flipped).
     outline: `uniform float uMd; uniform float uThr; uniform float uWidth; uniform float uGlow; uniform float uKeep; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
 float sob(vec2 uv, float r) {
   vec2 e = toUv(vec2(r));
@@ -1982,8 +1652,6 @@ void main() {
   else o = vec4(mix(mix(uPaper, c.rgb, uKeep), uMono > 0.5 ? uInk : c.rgb * 0.55, clamp(e + g * 0.3, 0.0, 1.0)), c.a);
 }`,
 
-    // Grid: tiles that split into four wherever the picture changes inside them, each filled with its
-    // color and outlined; or Truchet, quarter arcs per cell that thicken where the picture is dark.
     grid: `uniform float uMd; uniform float uCell; uniform float uDepth; uniform float uThr; uniform float uStroke; uniform float uRad; uniform float uMono; uniform vec3 uInk; uniform vec3 uPaper;
 void main() {
   vec2 d = dp(); vec4 c0 = tex(vUv); float aa = 0.75 / uK;
@@ -2010,15 +1678,11 @@ void main() {
   o = vec4(mix(uMono > 0.5 ? uPaper : line, col, smoothstep(aa, -aa, sd)), 1.0);
 }`,
 
-    // Beam: a glowing outline (ring, arch, rounded square or star) with a white-hot core and a spectral
-    // fringe, optionally repeated inward.
 
     grain: `uniform float uAmt; uniform float uSize; uniform float uMono; uniform float uSoft; uniform float uAnim; uniform float uTime;
 void main() {
   vec4 c = tex(vUv);
-  // Animated grain draws a fresh pattern every frame, like film running through a gate.
   vec2 g = floor(dp() / uSize) + uSeed * 0.37 + (uAnim > 0.5 ? floor(uTime * 977.0) * vec2(13.7, 7.3) : vec2(0.0));
-  // Film grain averages a few samples (softer, rounder clumps); fine grain is one hash per cell.
   float n = uSoft > 0.5 ? (hash(g) + hash(g + 0.5) + vnoise(dp() / uSize * 0.7 + (g - floor(dp() / uSize))) - 1.5) / 1.4 : hash(g) - 0.5;
   n *= 1.0 - 0.5 * abs(luma(c.rgb) - 0.5);
   vec3 nn = uMono > 0.5 ? vec3(n) : vec3(n, hash(g + 7.1) - 0.5, hash(g + 3.3) - 0.5);
@@ -2027,10 +1691,8 @@ void main() {
 }`,
   };
 
-  // Default pipeline order when effects are added; the app can reorder freely.
   const ORDER = ["liquify", "wave", "smear", "pixsort", "glitch", "swirl", "bulge", "ripple", "touch", "trail", "sea", "water", "kaleido", "glass", "mesh", "lens", "rays", "chrome", "heatmap", "paper", "cmyk", "blur", "dof", "feedback", "bloom", "streaks", "glowlines", "emboss", "irid", "film", "gradmap", "posterize", "pixel", "dissolve", "grid", "voronoi", "halftone", "linescreen", "riso", "guilloche", "ridge", "outline", "ascii", "glyphs", "dither", "led", "scan", "chroma", "vignette", "grain"];
   const CHARSETS = { ascii: " .:-=+*#%@", blocks: " ░▒▓█", dots: " ·•●", binary: " 01", lines: " ─═│╬" };
-  // Glyph field sets: picked at random per cell, so order doesn't matter and there's no blank.
   const GLYPHSETS = {
     alnum: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
     hex: "0123456789abcdef",
@@ -2052,9 +1714,6 @@ void main() {
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
 
-    // Programs compile in the background where the browser can (KHR_parallel_shader_compile): warm()
-    // starts every one without waiting, ready() reports whether they have all finished, and a program's
-    // status is only read when it is first drawn with, so nothing stalls the page while shaders build.
     const par = gl.getExtension("KHR_parallel_shader_compile");
     const progs = {};
     function start(name) {
@@ -2079,8 +1738,6 @@ void main() {
       return pr;
     }
     const warm = () => { if (par) for (const name of Object.keys(SHADERS)) start(name); };
-    // The programs every first frame needs start compiling in the background straight away, so the first
-    // drawing waits on them less.
     if (par) for (const name of ["copy", "gradient", "grain"]) if (SHADERS[name]) start(name);
     const ready = () => !par || Object.values(progs).every((pr) => pr.checked || gl.getProgramParameter(pr.p, par.COMPLETION_STATUS_KHR));
 
@@ -2099,7 +1756,6 @@ void main() {
     function ensureTargets(w, h) {
       if (targets && targets.w === w && targets.h === h) return;
       if (targets) targets.list.forEach(({ t, f }) => { gl.deleteTexture(t); gl.deleteFramebuffer(f); });
-      // Two to ping-pong between, and a third that holds the design as it was before objects drew on it.
       const list = [0, 1, 2].map(() => {
         const t = newTex();
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -2111,9 +1767,6 @@ void main() {
       targets = { w, h, list };
     }
 
-    // Glyph atlases, one row of square cells per character set and font, kept so two text effects in one
-    // stack don't rebuild each other's every frame. Each glyph is drawn smaller than its cell and the
-    // atlas is mipmapped, so letters stay legible when the cells are only a few pixels across.
     const FONTS = {
       geist: '"Geist Mono", ui-monospace, Menlo, Consolas, monospace',
       ui: '"Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif',
@@ -2123,7 +1776,6 @@ void main() {
     let atlasTexCur = atlasTex;
     function atlas(chars, font = "geist", weight = 500) {
       const fam = FONTS[font] || FONTS.geist, spec = `${weight} 48px ${fam}`;
-      // Web fonts load on first use; until then the fallback is drawn, and the atlas is redrawn once it lands.
       let ready = true;
       try { ready = font === "mono" || document.fonts.check(spec); if (!ready && !fontAsked.has(spec)) { fontAsked.add(spec); document.fonts.load(spec); } } catch (e) {}
       const key = chars + "|" + font + "|" + weight + (ready ? "|ok" : "");
@@ -2137,7 +1789,6 @@ void main() {
         x.fillStyle = "#000"; x.fillRect(0, 0, c.width, c.height);
         x.fillStyle = "#fff"; x.textAlign = "center"; x.textBaseline = "alphabetic";
         x.font = `${weight} ${Math.round(cs * 0.74)}px ${fam}`;
-        // Centered on the ink of a capital, so letters, digits and symbols share one baseline.
         const m = x.measureText("H"), asc = m.actualBoundingBoxAscent || cs * 0.52, base = cs / 2 + asc / 2;
         glyphs.forEach((g, i) => x.fillText(g, i * cs + cs / 2, base));
         const t = newTex();
@@ -2163,6 +1814,7 @@ void main() {
       gl.uniform1i(loc("uTex"), 0);
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, atlasTexCur);
       gl.uniform1i(loc("uAtlas"), 1);
+      for (const [u, n] of [["uTex2", 2], ["uDes", 3], ["uMip", 4]]) if (!(u in uniforms)) { gl.activeTexture(gl.TEXTURE0 + n); gl.bindTexture(gl.TEXTURE_2D, null); }
       gl.uniform2f(loc("uRes"), w, h);
       gl.uniform1f(loc("uK"), k);
       gl.uniform1f(loc("uSeed"), seed % 1000);
@@ -2192,12 +1844,9 @@ void main() {
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
-    // ---------- contours on the GPU ----------
-    // Rendering to float textures needs EXT_color_buffer_float. Without it contours stay on the SVG path.
     const floatOK = !!gl.getExtension("EXT_color_buffer_float"), floatLinear = !!gl.getExtension("OES_texture_float_linear");
     const permTex = gl.createTexture(), fbos = new Map();
     let permSeed = null, rangeKey = "";
-    // Float render targets, kept by size and role so a playing animation allocates nothing per frame.
     function floatTarget(role, w, h, fmt) {
       const key = role, have = fbos.get(key);
       if (have && have.w === w && have.h === h) return have;
@@ -2217,7 +1866,6 @@ void main() {
       fbos.set(key, out);
       return out;
     }
-    // Object textures (pictures and presets), uploaded once per key and kept while in use.
     const objTexs = new Map();
     function objTex(key, src) {
       let t = objTexs.get(key);
@@ -2227,7 +1875,6 @@ void main() {
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-      // Mipmaps keep fine stripes in a preset from breaking into moiré when the form is small.
       gl.generateMipmap(gl.TEXTURE_2D);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
       objTexs.set(key, t);
@@ -2241,19 +1888,10 @@ void main() {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, 512, 1, 0, gl.RED, gl.FLOAT, c.perm);
       }
-      // Drift moves the field under a fixed grid. Sampling the field at the drifted spot would move the grid
-      // through the shape, and its interpolation error would shimmer from frame to frame. Instead the grid
-      // snaps to whole cells of the field (so every node always reads the same spot of the shape) and the
-      // leftover fraction of a cell is applied when the lines are drawn. One spare row and column covers it.
       const fs = { uTex2: permTex, uPattern: c.pattern, uSc: c.sc, uOct: c.oct, uP: c.P, uBump: c.bump, uLiq: c.liquify, uLiqScale: c.liqScale,
         uWarpA: c.warp, uLoop: c.loop, uDir: c.dir, uPts: c.pts, uNPts: c.pts.length, uUser: c.user, uFeat: c.feats.length ? c.feats : [[0, 0, 1, 0]], uNFeat: c.feats.length };
-      // Glide reads two fields a loop's travel apart, which can't share one snap, so it reads them as they are.
       const glide = c.glideW != null, snap = glide ? c.drift : [Math.floor(c.drift[0] / c.sx) * c.sx, Math.floor(c.drift[1] / c.sy) * c.sy], shift = [(c.drift[0] - snap[0]) / c.sx, (c.drift[1] - snap[1]) / c.sy];
       const nx = c.nx + 1, ny = c.ny + 1;
-      // The level range comes from the same coarse grid the CPU samples (the canvas plus a wide margin, at
-      // points round the motion's loop; see rangeSpec in the engine), not from what this frame shows, so
-      // levels never jump as the field morphs or a peak crosses the edge. It only changes with the design,
-      // so it's kept until the design does.
       const rkey = JSON.stringify([fs.uPattern, fs.uSc, fs.uOct, fs.uP, fs.uBump, fs.uLiq, fs.uLiqScale, fs.uWarpA, fs.uDir, fs.uPts, fs.uUser, fs.uFeat, c.seed, c.w, c.h, c.rng]);
       const keep = floatTarget("mmKeep", 1, 1, "rg");
       if (rangeKey !== rkey) {
@@ -2360,11 +1998,6 @@ void main() {
       return {};
     }
 
-    // job: { w, h, k, seed, image?: canvas, grad?: {...}, fx: {...}, ink, paper }
-    // ---------- fluid ----------
-    // One simulation per pipeline, stepped once per frame by the time since the last, fed by pointer
-    // events it hasn't seen yet. Velocity lives on a coarse grid of square cells; the smoke (or, in Fluid
-    // mode, the offset field) on a finer one.
     let fluid = null;
     function fluidStep(job, e, w, h) {
       const dsW = job.w / job.k, dsH = job.h / job.k, asp = dsW / dsH, N = 112;
@@ -2389,7 +2022,6 @@ void main() {
       const feed = (ev) => {
         for (const p of ev) {
           if (p[2] <= F.lastT) continue;
-          // Fast strokes are filled in between samples, so the trail is a line, not a string of beads.
           const q = F.prev && p[2] - F.prev[2] < 0.12 ? F.prev : null, n = q ? Math.min(8, Math.ceil(Math.hypot(p[0] - q[0], p[1] - q[1]) / (size * 0.4))) : 1;
           for (let i = 1; i <= n; i++) { const f = i / n; splat(q ? q[0] + (p[0] - q[0]) * f : p[0], q ? q[1] + (p[1] - q[1]) * f : p[1], p[3] || 0, p[4] || 0); }
           F.prev = p; F.lastT = p[2];
@@ -2406,7 +2038,6 @@ void main() {
         run("f_adv", F.v[0], F.d[1], { uTex2: F.d[0].t, uDt: dt, uDiss: (mode ? 1.1 : 1.6) / life, uVelTexel: [1 / sw, 1 / sh], uOff: mode ? 0 : 1 }); swap("d");
       };
       if (demo) {
-        // Thumbnails: a stroke drawn across the frame, simulated for a moment, then frozen.
         const ev = job.pointer.trail || [];
         for (let f = 0; f < 36; f++) { feed(ev.filter((p) => p[2] <= f / 60)); step(1 / 60); }
       } else {
@@ -2435,19 +2066,16 @@ void main() {
           uWarp: g.warp, uWarpScale: g.warpScale, uPCell: g.cells || 0, uSoft: g.soft, uAngle: rad(g.angle), uPrism: g.prism ?? 0,
           uTime: job.time || 0, uMotion: ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5, uEndless: +job.endless || 0,
           uPath: job.endless ? 0 : Math.max(0, ["orbit", "sway", "glide"].indexOf(job.path || "orbit")), uMDir: [-Math.cos(rad(job.mangle ?? 30)), Math.sin(rad(job.mangle ?? 30))], uGLin: 0,
-          // A program keeps its uniforms between draws, so Paint's stage is cleared for every other generator.
           uPStage: 0, uGStage: 0,
         };
         if (g.type === "paint" && floatOK) {
-          // Paint flows in passes over a texture with a margin round the frame (see paintSeed in the shader).
           const m = 0.3, dw = Math.round(w * (1 + 2 * m)), dh = Math.round(h * (1 + 2 * m)), dom = [-m, -m, 1 + 2 * m, 1 + 2 * m];
-          const A = floatTarget("paintA", dw, dh, "rgba"), B = floatTarget("paintB", dw, dh, "rgba"), pu = { ...gu, uPDom: dom, uPAsp: w / h, uPath: gu.uPath === 2 ? 0 : gu.uPath }; // Paint can't fade between two runs, so glide goes round.
+          const A = floatTarget("paintA", dw, dh, "rgba"), B = floatTarget("paintB", dw, dh, "rgba"), pu = { ...gu, uPDom: dom, uPAsp: w / h, uPath: gu.uPath === 2 ? 0 : gu.uPath };
           const steps = Math.round(Math.min(8, Math.max(1, g.detail ?? 5)) * 4), passes = Math.ceil(steps / 2);
           draw("gradient", srcTex, A.f, { ...pu, uPStage: 1, uPCellNow: 0 }, dw, dh, k, job.seed);
           let src = A, dst = B, done = 0, celled = false;
           for (let i = 0; i < passes; i++) {
             const sub = Math.round((steps * (i + 1)) / passes) - done, last = i === passes - 1;
-            // Cells go in at the first pass past 85% of the flow (see paintCells in the shader).
             const cellNow = !celled && (done + sub >= steps * 0.9 || last); celled ||= cellNow;
             draw("gradient", src.t, last ? targets.list[0].f : dst.f, { ...pu, uPStage: last ? 3 : 2, uPSub: sub, uPCellNow: cellNow ? 1 : 0 }, last ? w : dw, last ? h : dh, k, job.seed);
             done += sub; [src, dst] = [dst, src];
@@ -2473,10 +2101,7 @@ void main() {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, job.image);
         input = srcTex;
       }
-      // Objects draw under the effects unless set to sit over them. Each keeps its own motion: off, or
-      // the design's loop run a whole number of times faster, slower or backwards, so it still loops.
       const cols = (job.palette || ["#222222", "#dddddd"]).slice(0, 8).map(hex3), sz = Math.min(w, h);
-      // Objects that wear the design read it from a copy made before any of them drew, so none wears another.
       let des = srcTex;
       if ((job.objects || []).some((o) => o.kind !== "image" && (o.mat === "design" || (o.mat === "preset" && !o.tex)))) {
         draw("copy", input, targets.list[2].f, {}, w, h, k, job.seed); des = targets.list[2].t;
@@ -2505,17 +2130,14 @@ void main() {
         if (id === "dither" && e.palette) { const pl = [...new Set(job.palette || [])].slice(0, 8); un.uCol = pl.length ? pl.map(hex3) : [ink, paper]; un.uN = un.uCol.length; }
         un.uTime = job.time || 0;
         if (id === "touch") {
-          // Click events: positions in design pixels, y up, with their age.
           const ev = (job.pointer?.touch || []).slice(-8);
           un.uNP = ev.length; un.uP = ev.map((p) => [p[0], p[1], p[2], 0]);
         }
         if (id === "trail") {
-          // Without a pointer (exports, thumbnails of other effects) or float targets, trails draw nothing.
           if (!job.pointer || !floatOK) continue;
           un.uTex2 = fluidStep(job, e, w, h).t;
         }
         if (id === "glyphs" && un.uMem) {
-          // Sized in cells of the design, so a lower-resolution preview frame keeps the same memory.
           const cw = Math.ceil(w / k / e.cell), ch = Math.ceil(h / k / e.cell), prev = floatTarget(memFlip ? "gmA" : "gmB", cw, ch, "u8"), next = floatTarget(memFlip ? "gmB" : "gmA", cw, ch, "u8");
           draw("glyphMem", input, next.f, { uTex2: prev.t, uCell: e.cell, uFull: [w, h] }, cw, ch, k, 0);
           un.uTex2 = next.t; memFlip = !memFlip;
@@ -2536,7 +2158,6 @@ void main() {
       return { w, h };
     }
 
-    // A copy of the picture so far with a full mip chain, for blurs wide enough to need prefiltering.
     let mipT = null, memFlip = false;
     function mipOf(src, w, h, k) {
       if (!mipT || mipT.w !== w || mipT.h !== h) {
@@ -2554,7 +2175,6 @@ void main() {
       return mipT.t;
     }
 
-    // Resolves once the GPU has finished the work sent so far, so callers can time real frame cost.
     function sync() {
       const f = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
       if (!f) return Promise.resolve();
@@ -2571,7 +2191,6 @@ void main() {
     return { render, maxSize, warm, ready, floatOK, sync };
   }
 
-  // Effect quality, shared by every context (Settings, Performance). Zero keeps a shader's standard amount.
   const Q = { rays: 0, taps: 0, bloom: 0, frost: 0, steps: 0, phys: 0 };
   const setQuality = (q) => Object.assign(Q, q);
   root.TopoFX = { createFX, ORDER, CHARSETS, OBJ_KINDS, setQuality, quality: () => ({ ...Q }) };

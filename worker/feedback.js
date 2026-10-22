@@ -1,15 +1,8 @@
-// Feedback endpoint: a Cloudflare Worker that turns a POST from the app into a GitHub issue, so people
-// can send feedback without a GitHub account. The token lives in the worker as a secret, never in the
-// page. Deploy with Wrangler (see worker/README.md).
-//
-// POST { kind: "bug" | "idea" | "other", title, body, details?, website? }  ->  { url }
-// "website" is a honeypot: real people never fill it in.
 
 const REPO = "masterclaudecoder/isoline";
 const ORIGINS = ["https://masterclaudecoder.github.io", "http://localhost:8765"];
 const LABELS = { bug: "bug", idea: "enhancement", other: "feedback" };
 const NAMES = { bug: "Bug", idea: "Idea", other: "Feedback" };
-// A light limit per address: a few issues every ten minutes.
 const WINDOW = 10 * 60 * 1000, PER_WINDOW = 5;
 const seen = new Map();
 

@@ -1,6 +1,3 @@
-// The library directory: [name, url, what it is, frameworks, category, pick]. "Any" means
-// framework-agnostic (plain JS, CSS or HTML). Shared by the Components page and the preview build
-// (tools/previews.mjs), which captures a preview image for each entry.
 (function (root) {
   "use strict";
   const R = "React", V = "Vue", SV = "Svelte", NG = "Angular", SO = "Solid", WC = "Web components", ANY = "Any";

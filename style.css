@@ -1,6 +1,3 @@
-/* Layout: top bar; then a "Build" column of layer slots, an options column for the open slot, and the canvas. */
-/* Instrument Sans has no Cyrillic, so Russian letters fall back to Inter Tight, scaled to the same
-   lowercase height (font sheet: tools/cyrillic-fonts.html). */
 @font-face { font-family: "Iso Cyrillic"; src: url(https://fonts.gstatic.com/s/intertight/v9/NGSwv5HMAFg6IuGlBNMjxLsD8ah8QA.woff2) format("woff2"); font-weight: 100 900; font-display: swap; size-adjust: 93%; unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
 @font-face { font-family: "Iso Cyrillic"; src: url(https://fonts.gstatic.com/s/intertight/v9/NGSwv5HMAFg6IuGlBNMjxLsK8ah8QA.woff2) format("woff2"); font-weight: 100 900; font-display: swap; size-adjust: 93%; unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F; }
 :root {
@@ -25,11 +22,9 @@
   --sunken: inset 0 1px 1.5px rgba(var(--shadow-rgb), 0.06), inset 0 0 0 1px rgba(var(--line-rgb), 0.05);
   --pop: 0 0 0 1px rgba(var(--line-rgb), 0.07), 0 6px 20px -8px rgba(var(--shadow-rgb), 0.14);
   --sans: "Instrument Sans", "Iso Cyrillic", system-ui, -apple-system, "Segoe UI", sans-serif;
-  /* One family across the UI: figures use tabular numerals instead of a monospace face. */
   --mono: var(--sans);
   color-scheme: light;
 }
-/* Dark theme: follows the system unless a theme is picked in settings. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #131312; --panel: #1c1c1a; --well: #161615; --ink: #edece8; --ink-2: #bcbab3; --muted: #85837c;
@@ -58,15 +53,10 @@ button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 [hidden]:not(.page) { display: none !important; }
-/* Hidden pages stay laid out but skipped: nothing is drawn or updated in them, and switching back reuses
-   their cached layout instead of building the page again inside the transition. */
 .page[hidden] { content-visibility: hidden; visibility: hidden; pointer-events: none; }
-/* Laid out and drawn once before a first visit (see shell.js): out of the flow, so the page on screen
-   keeps its size, and too faint to see. */
 .page[hidden].warm { content-visibility: visible; visibility: visible; opacity: .01; position: absolute; inset: 0; overflow: hidden; }
 .ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
-/* scrollbars: thin thumb, no arrow buttons, on every scrolling element (panels, menus, text areas) */
 ::-webkit-scrollbar { width: 12px; height: 12px; }
 ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 ::-webkit-scrollbar-track { background: transparent; margin: 6px 0; }
@@ -78,9 +68,7 @@ textarea::-webkit-scrollbar { width: 10px; }
 textarea::-webkit-scrollbar-thumb { border-width: 3px; }
 @supports (-moz-appearance: none) { * { scrollbar-width: thin; scrollbar-color: rgba(var(--line-rgb), 0.2) transparent; } }
 
-/* ---------- shell + top bar ---------- */
 .shell { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; padding: 10px 12px 12px; gap: 10px; }
-/* The visible height on mobile browsers, so bars pinned to the bottom never sit under the address bar. */
 @supports (height: 100dvh) { .shell { height: 100dvh; } }
 .top {
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
@@ -101,13 +89,10 @@ textarea::-webkit-scrollbar-thumb { border-width: 3px; }
 .size .btn.sm { box-shadow: var(--raised); }
 .top-right { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
 
-/* ---------- main grid ---------- */
 .app { display: grid; grid-template-columns: 272px 340px minmax(0, 1fr); gap: 10px; min-height: 0; }
 .slots, .options {
   background: var(--panel); border-radius: 18px; box-shadow: var(--raised); overflow-y: auto; overscroll-behavior: contain; min-height: 0;
 }
-/* The scrollbar gutter is always reserved on the right, so content doesn't shift when a scrollbar appears;
-   the right padding is trimmed by the gutter width so the content still sits centered. */
 .slots, .options { scrollbar-gutter: stable; }
 .slots { padding: 18px 2px 18px 14px; }
 .options { padding: 18px 8px 24px 20px; }
@@ -115,19 +100,13 @@ textarea::-webkit-scrollbar-thumb { border-width: 3px; }
 .col-title { font-size: 30px; font-weight: 600; font-stretch: 88%; letter-spacing: -0.03em; line-height: 1; margin: 0; }
 .slots .col-title { padding: 0 6px 14px; }
 .opt-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
-/* The first visible section sits as close to the title as the first slot does in Build. */
 .lead, .lead > h3.sub:first-child, .lead > .sub-head:first-child, .lead > .pal-head:first-child { margin-top: 0 !important; }
 .gh-tools { display: flex; align-items: center; gap: 6px; }
 .lede { margin: 0 0 16px; color: var(--muted); font-size: 13px; line-height: 1.45; }
 
-/* ---------- slots ---------- */
 .slot { padding: 10px 0 12px; border-top: 1px solid var(--hair); }
 .slot:first-of-type { border-top: 0; padding-top: 0; }
 .slot-label { display: flex; align-items: center; gap: 6px; padding: 0 6px 7px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
-/* The border leans toward the theme's ink, so it reads on light and dark alike; figures have no descenders,
-   so they sit a pixel low to look centered. */
-/* Counters are small keys. The digits are Geist Mono, so every one is the same width and sits in the same
-   spot, and text-box trims the line to the digits' own height, so they center on the key's face exactly. */
 .count { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 3px 2px; box-sizing: border-box; border-radius: 3.5px; background: var(--accent); color: var(--on-accent, #fff); font: 500 10.5px/1 "Geist Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums lining-nums; text-box: trim-both cap alphabetic; box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--accent) 70%, #000), inset 0 1px 0 color-mix(in oklab, #fff 30%, transparent); }
 .tile {
   position: relative; display: flex; align-items: center; gap: 10px; width: 100%; border: 0; padding: 6px 8px 6px 6px; border-radius: 12px;
@@ -169,13 +148,11 @@ textarea::-webkit-scrollbar-thumb { border-width: 3px; }
 .tile.add.on { border-color: var(--accent); }
 .tile-plus { width: 64px; height: 40px; display: grid; place-items: center; border-radius: 7px; background: var(--well); color: var(--accent); flex: none; }
 
-/* ---------- options content ---------- */
 h3.sub { font-size: 13px; font-weight: 600; color: var(--ink-2); margin: 22px 0 10px; }
 h3.sub.first { margin-top: 4px; }
 h3.sub.inline { margin: 0; }
 .sub-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; margin: 22px 0 10px; }
 .sub-head h3.sub { margin: 0; }
-/* A heading with buttons beside it: centered on them, and the buttons kept together on the right. */
 .sub-head:has(> .btn) { align-items: center; justify-content: flex-start; }
 .sub-head > h3.sub + .btn { margin-left: auto; }
 .sub-note { font-size: 12px; color: var(--muted); }
@@ -183,7 +160,6 @@ h3.sub.inline { margin: 0; }
 
 .take { display: grid; gap: 7px; margin-bottom: 14px; }
 .take-label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
-/* Wraps instead of a fixed grid, so any number of parts fits whatever width the panel has. */
 .multi { display: flex; flex-wrap: wrap; gap: 2px; padding: 3px; border-radius: 11px; background: var(--well); box-shadow: var(--sunken); }
 .multi > .tog { flex: 1 1 auto; }
 .tog {
@@ -196,7 +172,6 @@ h3.sub.inline { margin: 0; }
 .tog.on { background: var(--panel); color: var(--ink); box-shadow: var(--raised); }
 .tog.on .tick { background: var(--accent); box-shadow: none; }
 .tog.on .tick .ic { opacity: 1; transform: none; }
-/* Six filters sit in two rows of three, so they never squeeze into one line in any language. */
 .seg.filter { grid-auto-flow: row; grid-template-columns: repeat(3, 1fr); margin-bottom: 14px; }
 .seg.filter button { padding: 0 6px; font-size: 12px; }
 
@@ -265,7 +240,6 @@ h3.sub.inline { margin: 0; }
 .pal:hover { color: var(--ink); }
 .pal.on { box-shadow: 0 0 0 1.5px var(--accent); color: var(--accent); }
 
-/* ---------- controls ---------- */
 .ib { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 9px; background: transparent; color: var(--muted); transition: background .15s, color .15s; flex: none; padding: 0; }
 .ib.lg { width: 36px; height: 36px; border-radius: 11px; }
 .ib:hover { background: var(--well); color: var(--ink); }
@@ -367,13 +341,10 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
 .stop-add { width: 40px; height: 40px; border-radius: 50%; border: 1.5px dashed rgba(var(--line-rgb), .22); background: transparent; color: var(--muted); display: grid; place-items: center; padding: 0; }
 .stop-add:hover { color: var(--ink); border-color: rgba(var(--line-rgb), .4); }
 
-/* ---------- menus ---------- */
 .menu-wrap { position: relative; }
 .pop { position: absolute; top: calc(100% + 8px); z-index: 30; background: var(--panel); border-radius: 14px; box-shadow: var(--pop); padding: 6px; min-width: 230px; }
 #sizeMenu { left: 50%; transform: translateX(-50%); max-height: min(70vh, 520px); overflow-y: auto; overscroll-behavior: contain; }
 .pop.export { right: 0; width: 300px; padding: 14px; display: flex; flex-direction: column; }
-/* Spacing is a margin, not a gap: rows that fold away take their margin down with them, where a gap
-   would stay until the fold ends and then snap the rows below up. */
 .pop.export > * { min-height: 0; flex-shrink: 0; }
 .pop.export > * + * { margin-top: 10px; }
 .pop.export > .label { display: block; }
@@ -402,7 +373,6 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
 .ex-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px; }
 .ex-actions .btn { justify-content: center; }
 
-/* ---------- stage ---------- */
 .stage { min-width: 0; min-height: 0; display: grid; }
 .canvas-wrap {
   position: relative; min-height: 0; border-radius: 18px; display: grid; place-items: center; padding: 32px 32px 76px; overflow: hidden; clip-path: inset(0 round 18px);
@@ -432,7 +402,6 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
 .stage-meta { position: absolute; right: 12px; top: 10px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
 .kind { padding: 3px 7px; border-radius: 6px; background: var(--panel); box-shadow: var(--raised); color: var(--ink-2); font-weight: 500; }
 
-/* ---------- floating preview (narrow screens) ---------- */
 .mini {
   position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); right: 12px; z-index: 25; width: 124px; max-height: 180px; padding: 0; border: 0; border-radius: 10px;
   overflow: hidden; background: var(--panel); line-height: 0; box-shadow: 0 0 0 1px rgba(var(--line-rgb), .08), 0 6px 18px -6px rgba(var(--shadow-rgb), .25);
@@ -443,7 +412,6 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
 .mini-in, .mini-in svg, .mini-in canvas { display: block; width: 100%; height: 100%; }
 @media (prefers-reduced-motion: reduce) { .mini, .mini.show { transition: none; } }
 
-/* ---------- modals + toast ---------- */
 .modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(var(--line-rgb), 0.28); }
 @keyframes fade { from { opacity: 0; } }
 .dialog { width: min(440px, 100%); background: var(--panel); border-radius: 16px; box-shadow: var(--pop); padding: 20px; display: grid; gap: 12px; }
@@ -451,7 +419,6 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
 .dialog p { margin: 0; color: var(--ink-2); line-height: 1.5; }
 .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 4px; flex-wrap: wrap; }
 .dialog-actions .grow { flex: 1; }
-/* Notifications: a stack in the bottom right, newest at the bottom; along the bottom on phones. */
 .toasts { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: none; width: min(360px, calc(100vw - 32px)); }
 .note-t {
   pointer-events: auto; display: flex; align-items: center; gap: 10px; max-width: 100%; min-height: 44px; padding: 6px 6px 6px 14px; border-radius: 12px; overflow: hidden;
@@ -471,7 +438,6 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
 }
 @media (prefers-reduced-motion: reduce) { .note-t { animation: none; } }
 
-/* ---------- logo (shared with the marks page) ---------- */
 .lg-word { font-size: 25px; line-height: 1; white-space: nowrap; color: var(--ink); }
 .ring-o { display: inline-block; width: 0.58em; height: 0.58em; vertical-align: -0.04em; margin: 0 0.015em; overflow: visible; }
 .lg-mark { width: 32px; height: 32px; flex: none; }
@@ -479,9 +445,7 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
 .lg-stack { display: inline-grid; }
 .lg-profile { width: 100%; height: .46em; margin-top: -.3em; }
 
-/* ---------- responsive ---------- */
 @media (max-width: 1280px) {
-  /* The canvas gives up the width here, so the layer names and the options still fit. */
   .app { grid-template-columns: 240px 330px minmax(0, 1fr); }
   .seg.wrap5 button { font-size: 12px; }
   .top { grid-template-columns: auto 1fr auto; }
@@ -496,13 +460,11 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
   .stage { order: -1; height: 46vh; min-height: 240px; }
   .canvas-wrap { padding: 16px 16px 64px; }
   .slots, .options { overflow: visible; }
-  /* No scrollbar here, so the room kept for one on the right would only push everything off center. */
   .slots, .options { scrollbar-gutter: auto; } .slots { padding: 18px 14px; } .options { padding: 18px 20px 24px; }
   #slotList { display: grid; }
   .pop.export, .pop.settings { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; }
 }
 
-/* ---------- color picker ---------- */
 .picker { position: fixed; z-index: 40; width: 268px; grid-template-columns: minmax(0, 1fr); padding: 10px; display: grid; gap: 10px; background: var(--panel); border-radius: 14px; box-shadow: var(--pop); }
 .pk-area { position: relative; display: grid; }
 .pk-pick, .pk-sliders { grid-area: 1 / 1; transition: opacity .22s ease, transform .26s cubic-bezier(.2,.8,.2,1); }
@@ -536,8 +498,6 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
 .pk-fmt button.on { background: var(--panel); color: var(--ink); box-shadow: var(--raised); }
 .pk-sw { padding-top: 10px; border-top: 1px solid var(--hair); }
 
-/* ---------- motion ---------- */
-/* Each element gets its own small offsets (--y distance, --d duration factor, --jit delay) so entrances don't move in lockstep. */
 @keyframes rise { from { opacity: 0; transform: translateY(var(--y, 8px)) scale(var(--s, 1)); } }
 .opt-head.enter { animation: rise .3s cubic-bezier(.2,.8,.2,1) both; }
 .panel-sec.enter > * { animation: rise calc(.34s * var(--d, 1)) cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 30ms + 30ms + var(--jit, 0ms)); }
@@ -545,17 +505,12 @@ kbd .kbd-ic { width: 1em; height: 1em; stroke-width: 1.7; margin: 0 0 0 -1px; }
 .count { animation: grow .3s cubic-bezier(.2,.9,.3,1.3); }
 .card, .pal, .tile { transition: transform .15s, box-shadow .2s, background .2s, color .2s; }
 .card-label { transition: color .2s; }
-/* First load: hidden until fonts are in (with a fallback in case scripts never run), then an intro. */
 html.loading .shell { opacity: 0; animation: show-late 0s 8s forwards; }
 @keyframes show-late { to { opacity: 1; } }
 @keyframes intro-top { from { opacity: 0; transform: translateY(-8px); } }
 @keyframes intro-rise { from { opacity: 0; transform: translateY(14px) scale(.985); } }
 html.intro .top { animation: intro-top .5s var(--ease) both; }
-/* The rising cards would briefly overflow the home grid and flash a scrollbar. When the grid fits the
-   window (it is sized to it), nothing scrolls anyway, so clip the overflow for the length of the intro. */
 @media (min-height: 600px) and (min-width: 901px) { html.intro .home, .home.arriving { overflow: hidden; } }
-/* Phones: the home page is its own scroller under the bar, and its scrollbar flashed in as the page
-   loaded. Touch scrolling needs no bar there. */
 @media (pointer: coarse) { .home { scrollbar-width: none; } .home::-webkit-scrollbar { display: none; } }
 html.intro .page:not([hidden]) :is(.bento > .tool, .app > .slots, .app > .options, .app > .stage, .cp-lib > *, .cp-build > *) { animation: intro-rise .62s var(--ease) both; animation-delay: .08s; }
 html.intro .page:not([hidden]) :is(.bento > .tool:nth-child(2), .app > .options, .cp-lib > :nth-child(2), .cp-build > :nth-child(2)) { animation-delay: .15s; }
@@ -564,14 +519,12 @@ html.intro .page:not([hidden]) :is(.bento > .tool:nth-child(3), .app > .stage, .
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
-/* ---------- your colors ---------- */
 .mine { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
 .mine .stop { display: grid; justify-items: center; gap: 5px; transition: opacity .2s; }
 .mine .stop > span { font-size: 11.5px; font-weight: 500; color: var(--muted); }
 .mine .stop.off { opacity: .4; }
 .mine-sep { width: 1px; height: 28px; margin: 6px 4px 0; background: var(--hair); }
 
-/* ---------- theme + accent settings ---------- */
 .set-row.static { cursor: default; }
 .set-row.static:hover { background: transparent; }
 .set-row .seg { flex: none; }
@@ -587,14 +540,12 @@ html.intro .page:not([hidden]) :is(.bento > .tool:nth-child(3), .app > .stage, .
 #fxLede { display: flex; gap: 12px; }
 #fxLede span + span { color: var(--ink-2); }
 
-/* ---------- motion ---------- */
 .seg.wrap4 { grid-auto-flow: row; grid-template-columns: repeat(4, 1fr); margin-bottom: 10px; }
 .play-btn { width: 100%; justify-content: center; margin-top: 16px; }
 .ex-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px 14px; }
 .progress { height: 6px; border-radius: 99px; background: var(--well); box-shadow: var(--sunken); overflow: hidden; margin-top: 16px; }
 .progress i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width .15s linear; }
 
-/* ---------- pages ---------- */
 .pages { display: grid; min-height: 0; position: relative; }
 .page { grid-area: 1 / 1; min-height: 0; }
 a.brand { color: inherit; text-decoration: none; border-radius: 10px; }
@@ -602,11 +553,8 @@ a.brand { color: inherit; text-decoration: none; border-radius: 10px; }
 .page.arriving { animation: page-in .44s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes page-out { to { opacity: 0; transform: scale(.985); } }
 @keyframes page-in { from { opacity: 0; transform: translateY(16px); } }
-/* View Transitions: the bar holds still, pages slide, and tool previews morph into their tools. */
 .top { view-transition-name: topbar; }
 #homeStudio, #art { view-transition-name: hero-studio; }
-/* Pages crossfade without sliding against each other: the old one settles back and fades, the new one
-   rises in a beat later. Bars are captured on their own and pull up from the bottom after their page lands. */
 ::view-transition-group(*) { animation-duration: .62s; animation-timing-function: cubic-bezier(.22,1,.36,1); }
 ::view-transition-old(root) { animation: vt-out .34s cubic-bezier(.4,0,.2,1) both; }
 ::view-transition-new(root) { animation: vt-in .56s cubic-bezier(.22,1,.36,1) .12s both; }
@@ -619,13 +567,10 @@ a.brand { color: inherit; text-decoration: none; border-radius: 10px; }
 @keyframes bar-down { to { opacity: 0; transform: translateY(40px); } }
 ::view-transition-old(hero-studio), ::view-transition-new(hero-studio) { height: 100%; object-fit: cover; overflow: clip; }
 
-/* ---------- home ---------- */
-/* Oversized cards that fill the page: the studio large on the left, the other tools stacked beside it. */
 .home { min-height: 0; overflow: auto; }
 .bento { height: 100%; min-height: 520px; display: grid; grid-template-columns: 1.45fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; }
 .bento .big { grid-row: 1 / span 2; }
 .tool { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 14px; padding: 10px; border-radius: 20px; background: var(--panel); box-shadow: var(--raised); color: inherit; text-decoration: none; position: relative; min-height: 0; transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s; }
-/* Pressed, the card gives a little at once, so a click reads as taken even while the page is busy. */
 .tool:active { transform: scale(.985); transition-duration: .08s; }
 .tool-prev { display: flex; min-height: 0; border-radius: 13px; overflow: hidden; clip-path: inset(0 round 13px); background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); }
 .tool-prev canvas, .tool-prev img { width: 100%; height: 100%; display: block; object-fit: cover; }
@@ -633,7 +578,6 @@ a.brand { color: inherit; text-decoration: none; border-radius: 10px; }
 .tool-text { display: grid; gap: 4px; padding: 0 56px 10px 10px; }
 .tool-text b { font-size: clamp(30px, 3.4vw, 52px); font-weight: 600; font-stretch: 86%; letter-spacing: -0.035em; line-height: 1; }
 .tool.big .tool-text b { font-size: clamp(40px, 5vw, 76px); }
-/* Cyrillic comes from Inter Tight, which has no narrow width, so the small cards' titles step down to fit. */
 .lang-ru .tool:not(.big) .tool-text b { font-size: clamp(26px, 2.7vw, 44px); }
 .tool-text small { font-size: 14px; color: var(--muted); }
 .tool .go { position: absolute; right: 24px; bottom: 26px; width: 26px; height: 26px; color: var(--muted); transition: transform .3s, color .3s; }
@@ -643,7 +587,6 @@ a.brand { color: inherit; text-decoration: none; border-radius: 10px; }
   .tool-prev { aspect-ratio: 16 / 10; }
 }
 
-/* ---------- palette tool ---------- */
 .pt { position: relative; display: grid; min-height: 0; border-radius: 18px; overflow: hidden; box-shadow: var(--raised); }
 .pt-cols { display: flex; min-height: 0; height: 100%; }
 .pt-col { position: relative; flex: 1; min-width: 0; background: var(--c); color: var(--on); display: flex; flex-direction: column; justify-content: flex-end; transition: background-color .45s ease, flex-grow .3s cubic-bezier(.2,.8,.2,1); }
@@ -691,10 +634,8 @@ a.brand { color: inherit; text-decoration: none; border-radius: 10px; }
   .pt-bar kbd { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
-/* The logo is only as wide as itself, so only the logo rolls a look, not the bar beside it. */
 .top > .brand { grid-column: 1; justify-self: start; }
 .top > .size { grid-column: 2; }
-/* Below 1280px the middle column stretches; the size control stays its own width, centered in it. */
 @media (min-width: 901px) { .top > .size { justify-self: center; } }
 .top > .top-right { grid-column: 3; }
 .pal-head { flex-wrap: wrap; row-gap: 8px; }
@@ -706,15 +647,12 @@ a.brand { color: inherit; text-decoration: none; border-radius: 10px; }
 body:not([data-route="studio"]) .mini { display: none; }
 .tool-text { padding-right: 44px; }
 
-/* ---------- round 7: bars, layering, transitions ---------- */
-/* The top bar is its own layer so its menus sit above every page, during and after transitions. */
 .top { position: relative; z-index: 20; }
 .stage-bar .ib, .pt-bar .ib { color: var(--ink-2); }
 .stage-bar .ib:hover, .pt-bar .ib:hover { color: var(--ink); }
 .stage-bar .ib:disabled, .pt-bar .ib:disabled { opacity: .3; }
 .pt-bar { view-transition-name: pt-bar; }
 .stage-bar { view-transition-name: stage-bar; }
-/* Glass bars: a light tint over the backdrop, a bright rim on the lit edges, and a soft lift. */
 .glass {
   background: rgba(255, 255, 255, 0.34) !important;
   -webkit-backdrop-filter: blur(10px) saturate(1.6); backdrop-filter: blur(10px) saturate(1.6);
@@ -723,7 +661,6 @@ body:not([data-route="studio"]) .mini { display: none; }
 :root[data-theme="dark"] .glass { background: rgba(28, 28, 26, 0.38) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(255,255,255,.08), 0 12px 32px -12px rgba(0,0,0,.6) !important; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .glass { background: rgba(28, 28, 26, 0.38) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(255,255,255,.08), 0 12px 32px -12px rgba(0,0,0,.6) !important; } }
 
-/* Without view transitions (and on first load) the bar still arrives after the columns. */
 .pt.enter .pt-col { animation: col-in .6s cubic-bezier(.22,1,.36,1) both; animation-delay: calc(var(--k, 0) * 55ms); }
 .pt.bar-enter .pt-bar { animation: bar-rise .55s cubic-bezier(.34,1.4,.5,1) both; animation-delay: calc(var(--n, 5) * 55ms + 200ms); }
 @keyframes col-in { from { transform: translateY(40px); opacity: 0; } }
@@ -743,7 +680,6 @@ body:not([data-route="studio"]) .mini { display: none; }
 .ex-actions:has(#copy[hidden]) { grid-template-columns: 1fr; }
 .ex-actions:has(#exCancel:not([hidden])) { grid-template-columns: auto 1fr; }
 .next-step { margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--hair); }
-/* Labels sit above their controls here, so a long label never pushes a control past the panel. */
 .motion-grid { margin-top: 16px; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .motion-grid > .label:not(:first-child) { margin-top: 8px; }
 #motionEase { margin-bottom: 10px; }
@@ -754,7 +690,6 @@ body:not([data-route="studio"]) .mini { display: none; }
 .bz-h { fill: var(--panel); stroke: var(--accent); stroke-width: 2; cursor: grab; }
 #bezVals { text-align: center; margin-top: 4px; }
 
-/* ---------- components tool ---------- */
 .top > .cp-top { grid-column: 2; }
 .cp { display: grid; min-height: 0; }
 .cp-lib { display: grid; grid-template-columns: 272px minmax(0, 1fr); gap: 10px; min-height: 0; }
@@ -794,7 +729,6 @@ body:not([data-route="studio"]) .mini { display: none; }
 .cp-canvas { position: relative; min-height: 0; border-radius: 18px; display: grid; place-items: center; padding: 26px; overflow: hidden; background: var(--well) radial-gradient(rgba(var(--line-rgb), .07) 1px, transparent 1px) 0 0 / 18px 18px; box-shadow: var(--sunken); }
 .kit-frame { overflow: hidden auto; overscroll-behavior: contain; border-radius: 10px; background: var(--k-bg, var(--panel)); box-shadow: 0 0 0 1px rgba(var(--line-rgb), .08), 0 10px 30px -14px rgba(var(--shadow-rgb), .28); min-height: 0; view-transition-name: kit-frame; }
 
-/* The preview kit: styled only by its own --k-* tokens. */
 .comp-prev { overflow: hidden; position: relative; }
 @media (max-width: 900px) {
   .cp-lib, .cp-build { grid-template-columns: 1fr; }
@@ -807,14 +741,10 @@ body:not([data-route="studio"]) .mini { display: none; }
 .cp-font { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 2px; padding: 4px 4px 4px 10px; border-radius: 10px; background: var(--panel); box-shadow: var(--raised); }
 .cp-font > span { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cp-up { justify-self: start; cursor: pointer; }
-/* The add tile has no grip, so its plus area takes the grip's width too and the text lines up with the effects above. */
 .tile.add .tile-plus { width: 80px; }
 
-/* ---------- one motion system ---------- */
 :root { interpolate-size: allow-keywords; --ease: cubic-bezier(.22,1,.36,1); --raised-hover: inset 0 1px 0 var(--hi), 0 0 0 1px rgba(var(--line-rgb), .12), 0 3px 10px -4px rgba(var(--shadow-rgb), .16); }
 
-/* One hover for every surface. Raised things brighten and their rim firms up, flat things sit in a soft
-   well. Nothing moves or scales on hover, and every hover runs on the same timing. */
 .card, .tile, .tool, .lib, .pal, .btn, .ib, .opt, .sug, .bar-btn, .cp-list button, .set-row, .pt-saved-row, .tog, .seg button, .pt-t, .cp-font, .split button, .ff-row, .pair, .val, .hex, .dim, .sw, .stop-add, .grip {
   transition: background-color .18s, box-shadow .18s, color .18s, border-color .18s, filter .18s, opacity .18s;
 }
@@ -824,10 +754,8 @@ body:not([data-route="studio"]) .mini { display: none; }
 .sw.on:hover, .stop.on .sw:hover { box-shadow: inset 0 0 0 1px rgba(0,0,0,.1), 0 0 0 2px var(--panel), 0 0 0 3.5px var(--accent); }
 .pt-col .pt-add { transition: opacity .18s, background-color .18s; transform: translateY(-50%); }
 .pt-col:hover .pt-add { transform: translateY(-50%); }
-/* Presses read the same everywhere: the surface sinks a little. */
 .card:active, .tile:active, .pal:active, .lib:active, .tool:active { box-shadow: var(--sunken); }
 
-/* ---------- segmented controls: a sliding selection ---------- */
 .seg.has-ind, .pk-fmt.has-ind { position: relative; }
 .seg-ind { position: absolute; left: 0; top: 0; z-index: 0; border-radius: 8px; background: var(--panel); box-shadow: var(--raised); pointer-events: none; opacity: 0; transition: transform .36s var(--ease), width .36s var(--ease), height .36s var(--ease), opacity .2s; }
 .pk-fmt .seg-ind { border-radius: 6px; }
@@ -835,8 +763,6 @@ body:not([data-route="studio"]) .mini { display: none; }
 .has-ind > button.on { background: transparent; box-shadow: none; }
 .seg button:not(.on):hover { color: var(--ink); }
 
-/* ---------- show and hide ---------- */
-/* Menus, popovers and the picker fade and drop in, and leave the same way. */
 .pop, .picker { transform-origin: top center; transition: opacity .16s ease, translate .26s var(--ease), scale .26s var(--ease), display .26s allow-discrete, overlay .26s allow-discrete; }
 .pop[hidden], .picker[hidden] { opacity: 0; translate: 0 -6px; scale: .98; }
 @starting-style { .pop:not([hidden]), .picker:not([hidden]) { opacity: 0; translate: 0 -6px; scale: .98; } }
@@ -849,33 +775,26 @@ body:not([data-route="studio"]) .mini { display: none; }
 .dialog { transition: translate .32s var(--ease), scale .32s var(--ease); }
 .modal[hidden] .dialog { translate: 0 12px; scale: .97; }
 @starting-style { .modal:not([hidden]) .dialog { translate: 0 12px; scale: .97; } }
-/* Rows and sections that come and go fold open and closed instead of popping the layout. */
 .ctrl, .switch-row, .note, .hint, [data-gen], #motionMore, #vidOpts, #gifOpts, #pngScale, #exProg, #inkSec, .slot, .fold, .tile-sub-row {
   transition: opacity .22s ease, height .32s var(--ease), margin .32s var(--ease), padding .32s var(--ease), display .32s allow-discrete;
 }
 .ctrl, .switch-row, .note, .hint, #vidOpts, #gifOpts, #pngScale, #exProg, .fold { overflow: clip; overflow-clip-margin: 8px; }
 :is(.ctrl, .switch-row, .note, .hint, [data-gen], #motionMore, #vidOpts, #gifOpts, #pngScale, #exProg, #inkSec, .slot, .fold)[hidden] { opacity: 0; height: 0; margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; overflow: clip; }
 @starting-style { :is(.ctrl, .switch-row, .note, .hint, [data-gen], #motionMore, #vidOpts, #gifOpts, #pngScale, #exProg, #inkSec, .slot, .fold):not([hidden]) { opacity: 0; height: 0; margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; } }
-/* Bar buttons that come and go slide the bar open. */
 #barPlay { transition: opacity .2s, width .3s var(--ease), display .3s allow-discrete; }
 #barPlay[hidden] { width: 0; opacity: 0; }
 @starting-style { #barPlay:not([hidden]) { width: 0; opacity: 0; } }
 
-/* ---------- tooltips ---------- */
 .tip { position: fixed; left: 0; top: 0; z-index: 80; max-width: 280px; padding: 6px 9px 7px; border-radius: 8px; background: var(--ink); color: var(--bg); font-size: 12px; font-weight: 500; line-height: 1.35; pointer-events: none; box-shadow: 0 6px 18px -6px rgba(0,0,0,.35); transition: opacity .14s ease, translate .22s var(--ease), display .14s allow-discrete; }
 .tip[hidden] { opacity: 0; }
 .tip[data-dir="up"][hidden] { translate: 0 3px; } .tip[data-dir="down"][hidden] { translate: 0 -3px; } .tip[data-dir="right"][hidden] { translate: -3px 0; } .tip[data-dir="left"][hidden] { translate: 3px 0; }
 @starting-style { .tip:not([hidden]) { opacity: 0; translate: 0 3px; } .tip[data-dir="down"]:not([hidden]) { translate: 0 -3px; } .tip[data-dir="right"]:not([hidden]) { translate: -3px 0; } .tip[data-dir="left"]:not([hidden]) { translate: 3px 0; } }
-/* The nib: a small rotated square half tucked under the bubble, pointing at the trigger. */
 .tip::after { content: ""; position: absolute; width: 8px; height: 8px; background: inherit; border-radius: 0 0 2px 0; }
 .tip[data-dir="up"]::after { left: var(--nib, 50%); bottom: -4px; translate: -50% 0; rotate: 45deg; }
 .tip[data-dir="down"]::after { left: var(--nib, 50%); top: -4px; translate: -50% 0; rotate: 225deg; }
 .tip[data-dir="left"]::after { top: var(--nib, 50%); right: -4px; translate: 0 -50%; rotate: -45deg; }
 .tip[data-dir="right"]::after { top: var(--nib, 50%); left: -4px; translate: 0 -50%; rotate: 135deg; }
 
-/* ---------- glass: refraction only ---------- */
-/* Where the displacement filter runs, the bar adds no tint or saturation of its own; it bends what's behind
-   it at the rim and takes a light or dark ink from what sits beneath. Elsewhere it stays frosted. */
 .glass.glass-live { background: transparent !important; color: var(--glass-ink, var(--ink)); }
 .glass.glass-live > *, .glass.glass-live .bar-btn, .glass.glass-live .ib { color: var(--glass-ink, var(--ink)); }
 .glass.glass-live > .btn.primary { color: var(--on-accent, #fff); }
@@ -887,11 +806,9 @@ body:not([data-route="studio"]) .mini { display: none; }
 .glass .bar-btn:active, .glass .ib:active { box-shadow: none; background: color-mix(in srgb, currentColor 17%, transparent); }
 .glass .bar-sep { background: color-mix(in srgb, currentColor 20%, transparent); }
 .glass { transition: color .35s ease; }
-/* Key caps on glass are cut from the glass itself: a faint fill and rim in the current ink. */
 .glass kbd { color: inherit; opacity: .85; background: color-mix(in srgb, currentColor 9%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent), inset 0 -1.5px 0 color-mix(in srgb, currentColor 24%, transparent); }
 .glass .btn.primary kbd { opacity: 1; }
 
-/* ---------- top bar: every control matches the size field ---------- */
 .top .btn, .top-right .ib.lg { height: 40px; border-radius: 12px; }
 .top-right .ib.lg { width: 40px; }
 .top .cp-top .seg { padding: 4px; border-radius: 12px; }
@@ -908,13 +825,11 @@ body:not([data-route="studio"]) .mini { display: none; }
 .split.done .split-side .ic + .ic { opacity: 1; scale: 1; }
 @media (max-width: 900px) { .split .split-main { display: none; } .split-div { display: none; } .split .split-side { border-radius: 12px; width: 40px; } }
 
-/* ---------- next step: the call to action sits at the foot of the panel ---------- */
 .options { display: flex; flex-direction: column; }
 .options > * { flex: none; }
 .next-step { margin: auto 0 -24px; padding: 22px 0 24px; border-top: 0; position: sticky; bottom: -24px; z-index: 3; background: linear-gradient(color-mix(in srgb, var(--panel) 0%, transparent), var(--panel) 20px); }
 .next-step::after { content: ""; display: block; height: 0; }
 
-/* ---------- palette tool ---------- */
 .pt-cols.sorting .pt-col { transition: transform .32s var(--ease), background-color .45s ease; }
 .pt-cols.sorting .pt-col.dragging { transition: none; z-index: 4; cursor: grabbing; }
 .pt-col.settling { z-index: 4; transition: transform .34s var(--ease), box-shadow .34s ease !important; }
@@ -932,13 +847,11 @@ body:not([data-route="studio"]) .mini { display: none; }
 .pt-mode .pt-dots i { width: 16px; height: 16px; }
 .pt-mode.on > span:first-child { color: var(--accent); }
 
-/* Local swaps (theme, view changes) cross-fade in place rather than sliding like a page change. */
 html.vt-local::view-transition-group(*) { animation-duration: .32s; }
 html.vt-local::view-transition-old(*) { animation: vt-fade-out .28s ease both; }
 html.vt-local::view-transition-new(*) { animation: fade-in .32s ease both; }
 @keyframes vt-fade-out { to { opacity: 0; } }
 
-/* ---------- libraries ---------- */
 .cp-search { position: relative; display: block; margin-bottom: 4px; }
 .cp-search .ic, .ff-search .ic { position: absolute; left: 10px; top: 50%; translate: 0 -50%; width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
 .cp-search .field, .ff-search .field { padding-left: 33px; height: 36px; }
@@ -946,15 +859,12 @@ html.vt-local::view-transition-new(*) { animation: fade-in .32s ease both; }
 .cp-list button.empty small { opacity: .6; }
 .cp-list button.on small { color: inherit; }
 .cp-results { overflow-y: auto; min-height: 0; padding: 4px 6px 32px 4px; scrollbar-gutter: stable; }
-/* Stacked on a phone, the list scrolls with the page: no gutter or inset, so the cards line up with the filters above. */
 @media (max-width: 900px) { .cp-results { overflow: visible; padding: 0 0 24px; scrollbar-gutter: auto; } }
 .lib-sec { margin-bottom: 30px; }
 .lib-h { display: flex; align-items: baseline; gap: 10px; margin: 8px 2px 12px; font-size: 26px; font-weight: 600; font-stretch: 88%; letter-spacing: -0.025em; line-height: 1; }
 .lib-h .mono { font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
 .cp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 10px; }
 .lib-sec.picks .cp-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
-/* A card is a window onto the library: its preview pane on top, then name, what it is, frameworks, and
-   the address pinned to the foot so every card ends on the same line. */
 .lib { position: relative; display: flex; flex-direction: column; min-width: 0; padding: 6px; border-radius: 16px; background: var(--panel); box-shadow: var(--raised); color: inherit; text-decoration: none; }
 .lib-pane { position: relative; display: block; aspect-ratio: 1200 / 630; border-radius: 11px; overflow: hidden; background: oklch(0.95 0.025 var(--h)); box-shadow: inset 0 0 0 1px var(--hair); }
 .lib-fallback { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 8px; padding: 12px; text-align: center; }
@@ -977,7 +887,6 @@ html.vt-local::view-transition-new(*) { animation: fade-in .32s ease both; }
 .cp-empty b { font-size: 26px; font-weight: 600; font-stretch: 88%; letter-spacing: -0.025em; }
 .cp-empty p { margin: 0 0 8px; color: var(--muted); }
 
-/* ---------- token builder ---------- */
 .tile-ic { display: grid !important; place-items: center; color: var(--accent); background: var(--accent-soft) !important; box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 16%, transparent) !important; }
 .tile-ic > .ic { position: static; width: 20px; height: 20px; }
 .ff-pair { display: grid; gap: 8px; }
@@ -1030,17 +939,13 @@ html.vt-local::view-transition-new(*) { animation: fade-in .32s ease both; }
 @starting-style { .fold-x:not([hidden]) { opacity: 0; width: 0; padding-left: 0; padding-right: 0; } }
 .cp-pals { max-height: 264px; overflow-y: auto; margin: 0 -4px; padding: 2px 4px; }
 
-/* The palette bar floats over any color. It follows the theme: frosted light glass with dark ink in light
-   mode, smoked glass with white ink in dark mode. The frost is dense enough to keep either ink legible. */
 .pt-bar.glass, .pt-bar.glass.glass-live { background: rgba(250, 250, 248, .62) !important; color: #1b1b1a; --glass-ink: #1b1b1a; }
 .pt-bar.glass:not(.glass-live), .pt-bar.glass.glass-live { -webkit-backdrop-filter: blur(16px) saturate(1.5); backdrop-filter: blur(16px) saturate(1.5); }
 .pt-bar.glass { box-shadow: inset 0 1px 0 rgba(255,255,255,.8), inset 0 -1px 0 rgba(255,255,255,.3), 0 0 0 1px rgba(0,0,0,.08), 0 12px 32px -12px rgba(0,0,0,.35) !important; }
 :root[data-theme="dark"] .pt-bar.glass { background: rgba(18, 18, 18, .56) !important; color: #fff; --glass-ink: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.22), inset 0 -1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(0,0,0,.18), 0 12px 32px -12px rgba(0,0,0,.45) !important; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pt-bar.glass { background: rgba(18, 18, 18, .56) !important; color: #fff; --glass-ink: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.22), inset 0 -1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(0,0,0,.18), 0 12px 32px -12px rgba(0,0,0,.45) !important; } }
-/* Popovers opened from the bar are ordinary menus and keep the app's ink. */
 .pt-bar .menu, .pt-bar .pop { color: var(--ink); }
 
-/* ---------- the preview kit: styled only by its own --k-* tokens ---------- */
 .kit { container-type: inline-size; min-height: 100%; background: var(--k-bg); color: var(--k-text); font-family: var(--k-body), system-ui, sans-serif; font-size: var(--k-base); line-height: 1.5; padding: var(--k-s8); transition: background-color var(--k-dur) var(--k-ease), color var(--k-dur) var(--k-ease); -webkit-font-smoothing: antialiased; }
 .kit * { box-sizing: border-box; }
 .kit .k-h1, .kit .k-h2, .kit .k-h3 { font-family: var(--k-head), system-ui, sans-serif; font-weight: var(--k-hw); letter-spacing: var(--k-track); line-height: 1.08; margin: 0; text-wrap: balance; }
@@ -1087,7 +992,6 @@ html.vt-local::view-transition-new(*) { animation: fade-in .32s ease both; }
 kbd { font-family: var(--mono); }
 .kit kbd { margin-left: auto; font-size: 11px; padding: 2px 6px; border-radius: 6px; color: var(--k-muted); background: var(--k-bg); border: 1px solid var(--k-border); box-shadow: inset 0 -1px 0 var(--k-border); }
 
-/* component sheet */
 .k-sheet { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: dense; gap: var(--k-s4); align-items: start; }
 .k-span2 { grid-column: span 2; }
 @container (max-width: 860px) { .k-sheet { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -1132,8 +1036,6 @@ kbd { font-family: var(--mono); }
 .k-proj i { width: 8px; height: 8px; border-radius: 2px; flex: none; background: color-mix(in oklab, var(--k-accent) calc(100% - var(--i) * 25%), var(--k-muted)); }
 .k-kit { display: grid; gap: var(--k-s3); }
 
-/* document review pieces, shared by the sheet and the pages */
-/* Margin's mark: a page with its margin rule and a note pinned to it, on an accent tile. */
 .k-mark { width: 1.3em; height: 1.3em; flex: none; overflow: visible; }
 .k-mark rect { fill: var(--k-accent); rx: clamp(4px, calc(var(--k-r) * 0.7), 9px); }
 .k-mark path { fill: none; stroke: var(--k-on-accent); stroke-width: 2; stroke-linecap: round; }
@@ -1155,16 +1057,13 @@ kbd { font-family: var(--mono); }
 .k-chart .k-bars { height: 140px; margin-top: var(--k-s4); }
 .k-review { display: grid; }
 
-/* pages */
 .k-landing { padding: 0; }
-/* Pages render at desktop width and zoom to fit the preview, so the layout is the real one. */
 .kit-frame > .kit { zoom: var(--z, 1); }
 .k-page { padding: 0 var(--k-s12) var(--k-s6); max-width: 1240px; margin: 0 auto; }
 .k-nav { display: flex; align-items: center; gap: var(--k-s6); padding: var(--k-s6) 0; font-size: var(--k-sm); color: var(--k-muted); font-weight: 500; }
 .k-link { color: var(--k-text); font-weight: 600; }
 .k-under { text-decoration: underline; text-decoration-color: var(--k-border); text-underline-offset: 4px; text-decoration-thickness: 2px; }
 .k-brand { display: inline-flex; align-items: center; gap: 0.45em; color: var(--k-text); font-family: var(--k-head), system-ui; font-weight: var(--k-hw); font-size: var(--k-lg); letter-spacing: calc(var(--k-track) - 0.01em); }
-/* Home: the headline and its sentence share one row, then the product picture carries the page. */
 .k-hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: var(--k-s12); align-items: center; padding: var(--k-s12) 0 var(--k-s8); }
 .k-hero .k-h1 { max-width: 11em; }
 .k-hero-side { display: grid; gap: var(--k-s4); }
@@ -1191,7 +1090,6 @@ kbd { font-family: var(--mono); }
 .k-close .k-row { margin-top: var(--k-s3); }
 .k-foot { display: flex; align-items: center; flex-wrap: wrap; gap: var(--k-s6); padding: var(--k-s6) 0; border-top: 1px solid var(--k-border); font-size: var(--k-sm); color: var(--k-muted); }
 .k-foot .k-brand { font-size: var(--k-base); margin-right: var(--k-s4); }
-/* Article: a reading column with a quiet contents rail. */
 .k-article { display: grid; grid-template-columns: minmax(0, 680px) 200px; justify-content: center; gap: var(--k-s16); padding: var(--k-s12) 0 var(--k-s16); }
 .k-article article { font-size: calc(var(--k-base) * 1.06); line-height: 1.7; }
 .k-article article > p { margin: 0 0 var(--k-s4); }
@@ -1205,7 +1103,6 @@ kbd { font-family: var(--mono); }
 .k-toc { position: sticky; top: var(--k-s6); align-self: start; display: grid; gap: var(--k-s2); font-size: var(--k-sm); color: var(--k-muted); padding-top: var(--k-s2); }
 .k-toc b { color: var(--k-text); margin-bottom: var(--k-s1); }
 .k-toc .on { color: var(--k-text); font-weight: 600; box-shadow: -2px 0 0 var(--k-accent); padding-left: var(--k-s3); margin-left: calc(var(--k-s3) * -1); }
-/* App: settings as label-and-control rows, not cards. */
 .k-pg-app { padding: 0; max-width: none; }
 .k-app { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: 760px; }
 .k-side { display: grid; align-content: start; gap: 2px; padding: var(--k-s6) var(--k-s3); border-right: 1px solid var(--k-border); background: var(--k-surface); font-size: var(--k-sm); }
@@ -1226,7 +1123,6 @@ kbd { font-family: var(--mono); }
 .k-people-list .k-person { gap: var(--k-s3); }
 .k-people-list .k-person > span:nth-child(2) { flex: 1; }
 .k-save { margin-top: var(--k-s6); }
-/* Pricing: one comparison table, the recommended plan picked out by a tinted column. */
 .k-price-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--k-s8); flex-wrap: wrap; padding: var(--k-s12) 0 var(--k-s8); }
 .k-price-head .k-lead { margin-bottom: 0; }
 .k-compare { margin-bottom: var(--k-s16); font-size: var(--k-sm); }
@@ -1239,7 +1135,6 @@ kbd { font-family: var(--mono); }
 .k-amount { font-family: var(--k-head), system-ui; font-weight: var(--k-hw); font-size: var(--k-3xl); letter-spacing: var(--k-track); line-height: 1.1; }
 .k-amount small { font-family: var(--k-body), system-ui; font-size: var(--k-sm); font-weight: 400; color: var(--k-muted); margin-left: 6px; letter-spacing: 0; }
 .k-pick { background: color-mix(in srgb, var(--k-accent) 7%, transparent); }
-/* Pricing on a phone: one card per plan instead of a table that scrolls sideways. */
 .k-plans { display: none; }
 .k-plan { display: grid; gap: var(--k-s2); align-content: start; }
 .k-plan.k-on { border-color: var(--k-accent); box-shadow: 0 0 0 1px var(--k-accent), var(--k-shadow); }
@@ -1264,15 +1159,11 @@ kbd { font-family: var(--mono); }
   .k-toc, .k-side { display: none; }
 }
 
-/* home card: the hero landing at desktop width, scaled to the card */
 .comp-prev { position: relative; overflow: hidden; }
-/* A browser window tilted back in space with a phone standing in front, on a wash of the kit's accent. */
 .cps { position: absolute; inset: 0; pointer-events: none; perspective: 1600px; background: radial-gradient(120% 90% at 85% 10%, color-mix(in srgb, var(--k-accent) 26%, transparent), transparent 60%), radial-gradient(90% 80% at 0% 100%, color-mix(in srgb, var(--k-accent) 12%, transparent), transparent 70%), color-mix(in srgb, var(--k-bg) 70%, var(--well)); }
 .cps-win, .cps-phone, .cps-shade { position: absolute; left: 0; top: 0; transform-origin: top left; transition: transform .8s cubic-bezier(.22,1,.36,1), filter .8s, opacity .8s; }
 .cps:not(.track) :is(.cps-win, .cps-phone, .cps-shade) { transition-duration: .8s; }
 .cps.track :is(.cps-win, .cps-phone, .cps-shade) { transition-duration: .25s; transition-timing-function: ease-out; }
-/* --tx and --ty run from -1 to 1 with the pointer over the card; the window turns toward it and the phone
-   drifts the other way, as if it stood in front. */
 .cps { --tx: 0; --ty: 0; --lift: 0; }
 .cps-win { width: 1240px; height: 820px; border-radius: 18px; overflow: hidden; background: var(--k-bg); box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 60px 110px -40px rgba(0,0,0,.5), 0 18px 34px -16px rgba(0,0,0,.25);
   transform: translate(calc(var(--cw) * (.07 - var(--lift) * .01) * 1px), calc(var(--ch) * (.13 - var(--lift) * .02) * 1px)) rotateX(calc((14 - var(--lift) * 4 + var(--ty) * -6) * 1deg)) rotateY(calc((-16 + var(--lift) * 5 + var(--tx) * 8) * 1deg)) rotateZ(calc((3 - var(--lift)) * 1deg)) scale(calc(var(--cw) * .74 / 1240)); }
@@ -1284,8 +1175,6 @@ kbd { font-family: var(--mono); }
 .cps-phone { width: 390px; height: 820px; padding: 12px; border-radius: 58px; background: #141416; box-shadow: inset 0 0 0 2px #2c2c30, inset 0 0 0 5px #0a0a0b;
   transform: translate(calc(var(--cw) * (.66 - var(--tx) * .012) * 1px), calc(var(--ch) * (.2 - var(--lift) * .05 - var(--ty) * .015) * 1px)) rotateY(calc(var(--tx) * -10deg)) rotateX(calc(var(--ty) * 8deg)) rotateZ(calc((-5 + var(--lift) * 2) * 1deg)) scale(calc(var(--ch) * .95 / 820)); }
 .cps-phone > .kit { border-radius: 46px; }
-/* The phone's shadow lies on the window behind it: a soft dark shape offset down and to the left, which
-   grows and softens as the phone lifts. */
 .cps-shade { width: 390px; height: 820px; border-radius: 58px; background: rgba(0,0,0,.42); filter: blur(calc((34 + var(--lift) * 18) * 1px)); opacity: calc(.75 - var(--lift) * .15);
   transform: translate(calc(var(--cw) * (.61 - var(--tx) * .02) * 1px), calc(var(--ch) * (.27 - var(--ty) * .02) * 1px)) rotateZ(calc((-5 + var(--lift) * 2) * 1deg)) scale(calc(var(--ch) * .95 / 820)); }
 .tool:hover .cps { --lift: 1; }
@@ -1303,7 +1192,6 @@ kbd { font-family: var(--mono); }
 .k-kit-cols .k-check:first-child { margin-top: 0; }
 .k-kit-cols .k-check + .k-check { margin-top: var(--k-s2); }
 
-/* ---------- round H ---------- */
 .dim { field-sizing: content; min-width: 2.2ch; max-width: 6ch; }
 .multi { gap: 4px; }
 .k-cmp-head .k-pick { border-radius: 0; }
@@ -1338,7 +1226,6 @@ kbd { font-family: var(--mono); }
 .cp-wide.on { color: var(--accent); }
 @media (max-width: 900px) { .cp-wide { display: none; } }
 @media (max-width: 900px) { .cp-build.wide { grid-template-columns: 1fr; } .cp-build.wide > .slots, .cp-build.wide > .options { opacity: 1; translate: none; pointer-events: auto; } }
-/* token specimen */
 .k-spec { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr); padding: var(--k-s2) var(--k-s6); }
 .k-spec-row { position: relative; display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: var(--k-s6); align-items: center; padding: var(--k-s4) 0; border-top: 1px solid var(--k-border); transition: background-color .3s ease; }
 .k-spec-row:first-child { border-top: 0; }
@@ -1370,7 +1257,6 @@ kbd { font-family: var(--mono); }
 .k-rules-spec span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .k-rules-spec small { color: var(--k-muted); }
 
-/* ---------- your colors: groups, overlap and reordering ---------- */
 .mine { display: flex; flex-wrap: nowrap; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
 .mine-grp { display: grid; gap: 6px; min-width: 0; }
 .mine-main { flex: 1; }
@@ -1392,7 +1278,6 @@ kbd { font-family: var(--mono); }
 .dialog.fb .switch-row { margin: 2px 0 0; }
 .dialog.fb textarea { min-height: 96px; resize: none; }
 
-/* ---------- resize handles ---------- */
 .rz-layer { position: absolute; z-index: 6; pointer-events: none; }
 .rz { position: absolute; pointer-events: none; opacity: 0; scale: .6; transition: opacity .2s ease, scale .28s var(--ease); }
 .rz::after { content: ""; position: absolute; background: var(--panel); border-radius: 99px; box-shadow: 0 0 0 1px rgba(var(--line-rgb), .14), 0 2px 6px -1px rgba(var(--shadow-rgb), .22); transition: background .15s; }
@@ -1412,7 +1297,6 @@ kbd { font-family: var(--mono); }
 .rz-size { position: absolute; left: 50%; bottom: 14px; translate: -50% 4px; padding: 4px 9px; border-radius: 8px; background: var(--ink); color: var(--panel); font: 500 11.5px/1.2 var(--sans); font-variant-numeric: tabular-nums; white-space: nowrap; opacity: 0; transition: opacity .18s ease, translate .24s var(--ease); }
 .rz-layer.dragging .rz-size { opacity: 1; translate: -50% 0; }
 
-/* ---------- builder stage: a page of a real size ---------- */
 .cp-replay { margin-top: 14px; }
 .seg.wrap5 { grid-auto-flow: row; grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .seg.wrap5 button { padding: 0 2px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -1427,7 +1311,6 @@ body[data-route="components"][data-cp="libraries"] .top > .size { visibility: hi
 .top > .size { transition: opacity .2s ease, visibility .2s; }
 ::view-transition-group(kit-frame) { animation-duration: .42s; animation-timing-function: cubic-bezier(.22,1,.36,1); }
 
-/* ---------- kit pages: adaptive from a phone to a wide display ---------- */
 .k-landing .k-page { max-width: 1320px; padding: 0 clamp(20px, 5cqi, 72px) var(--k-s6); }
 .k-landing .k-h1 { font-size: clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)); }
 .k-landing .k-h2 { font-size: clamp(var(--k-2xl), 3.6cqi, var(--k-3xl)); }
@@ -1486,7 +1369,6 @@ body[data-route="components"][data-cp="libraries"] .top > .size { visibility: hi
 @container (max-width: 640px) {
   .k-compare { display: none; }
   .k-plans { display: grid; gap: var(--k-s4); margin-bottom: var(--k-s12); }
-  /* The app's sections fold to a row of icons beside the logo, the current one marked. */
   .k-side { overflow: visible; gap: 2px; }
   .k-side .k-brand { margin-right: auto; }
   .k-side .k-sl, .k-side > span em { display: none; }
@@ -1535,7 +1417,6 @@ a.btn { text-decoration: none; color: inherit; }
   .cp-st-c { grid-row: 2; grid-column: 1 / -1; justify-self: start; }
 }
 
-/* ---------- slow playback note ---------- */
 .perf-note { position: absolute; left: 50%; bottom: 72px; translate: -50% 0; z-index: 7; display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; border-radius: 14px; background: var(--panel); box-shadow: var(--pop); width: max-content; max-width: calc(100% - 24px); transition: opacity .22s ease, translate .32s var(--ease), display .32s allow-discrete; }
 .perf-note > span { display: grid; margin-right: 6px; min-width: 0; white-space: nowrap; }
 .perf-note .btn { flex: none; }
@@ -1545,7 +1426,6 @@ a.btn { text-decoration: none; color: inherit; }
 @starting-style { .perf-note:not([hidden]) { opacity: 0; translate: -50% 10px; } }
 @media (max-width: 640px) { .perf-note { flex-wrap: wrap; } .perf-note > span { white-space: normal; flex-basis: calc(100% - 40px); } }
 
-/* ---------- top bar right: one well like the size control ---------- */
 .top .size .btn.sm { height: 32px; border-radius: 9px; }
 .top .size .ib { width: 32px; height: 32px; border-radius: 9px; }
 .top-group { display: flex; align-items: center; gap: 2px; height: 40px; padding: 4px; border-radius: 12px; background: var(--well); box-shadow: var(--sunken); }
@@ -1561,16 +1441,11 @@ a.btn { text-decoration: none; color: inherit; }
 .set-ver { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px 4px; font-size: 11.5px; color: var(--muted); }
 .set-ver .btn.sm { height: 26px; }
 .fb-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
-/* Toggles on the glass bar read as pressed: a filled well in the current ink. */
 .glass .ib.on, .glass.glass-live .ib.on { opacity: 1; background: color-mix(in srgb, currentColor 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 14%, transparent); }
 .pt-dots:has(i:nth-child(7)) i + i { margin-left: -6px; }
-/* The palette strip on the home card and the palette columns are the same stripes, so the morph
-   stretches one into the other instead of cropping, and the column labels arrive once it lands. */
 .pt.vt-enter .pt-col > * { animation: fade-in .4s ease .5s both; }
 
-/* ---------- phones: palettes and components ---------- */
 @media (max-width: 900px) {
-  /* Palettes fill the screen below the bar, and the toolbar sits under the columns instead of on them. */
   body[data-route="palettes"] .shell { height: 100dvh; }
   body[data-route="palettes"] .pages { min-height: 0; }
   .pt { height: auto; min-height: 0; grid-template-rows: minmax(0, 1fr) auto; background: var(--panel); }
@@ -1587,7 +1462,6 @@ a.btn { text-decoration: none; color: inherit; }
   .pt-bar .bar-sep { display: none; }
   .pt-bar > .btn.primary { flex-basis: 100%; justify-content: center; margin: 4px 0 0; }
 
-  /* Libraries: the filters become two rows of chips above the results. */
   .cp-lib > *, .cp-build > * { min-width: 0; }
   .cp-filters { padding: 16px 12px 12px; border-radius: 16px; }
   .cp-filters .cp-list { display: flex; gap: 6px; overflow-x: auto; margin: 0 -12px; padding: 2px 12px 6px; scrollbar-width: none; }
@@ -1595,7 +1469,6 @@ a.btn { text-decoration: none; color: inherit; }
   .cp-filters .cp-list button { flex: none; gap: 8px; padding: 7px 12px; border-radius: 99px; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); }
   .cp-filters .cp-list button.on { background: var(--accent-soft); box-shadow: none; }
 
-  /* Builder: the preview comes first, the token tiles sit two to a row, and their options follow. */
   .cp-build .cp-stage { order: -1; }
   .cp-build .kit-frame { height: auto; }
   .cp-build .cp-canvas { height: 64vh; min-height: 360px; padding: 12px; }
@@ -1614,15 +1487,11 @@ a.btn { text-decoration: none; color: inherit; }
   .top .cp-top .seg { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
 }
 @media (max-width: 640px) {
-  /* The stage bar folds into two rows: view and actions, then the page picker. Fit is the only size
-     that makes sense on a phone, so the size field steps aside. */
   .cp-stage-top { display: flex; flex-wrap: wrap; justify-content: space-between; }
   .cp-stage-top > .cp-st-c { order: 3; flex-basis: 100%; }
   #cpSizeSlot { display: none; }
 }
 .play-note { margin-top: 10px; text-align: center; }
-/* Phablets: on Components the bar stays one row, the brand, the Libraries and Builder switch centered,
-   then the actions. */
 @media (min-width: 641px) and (max-width: 900px) {
   body[data-route="components"] .top { grid-template-columns: auto minmax(0, 1fr) auto; }
   body[data-route="components"] .top > .cp-top { grid-column: 2; grid-row: 1; justify-self: center; }
@@ -1633,8 +1502,6 @@ a.btn { text-decoration: none; color: inherit; }
   .cp-build .cp-canvas { height: 74vh; }
 }
 
-/* ---------- Surprise: the button worth pressing ---------- */
-/* An accent pill in the bar with three twinkling sparks, and a burst on press. */
 .stage-bar .bar-btn.surprise, .glass.glass-live .bar-btn.surprise { position: relative; overflow: hidden; isolation: isolate; color: var(--on-accent, #fff); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, #fff), var(--accent)); box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.18); padding-left: 8px; margin-left: 2px; }
 .stage-bar .bar-btn.surprise:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 74%, #fff), color-mix(in srgb, var(--accent) 92%, #fff)); }
 .stage-bar .bar-btn.surprise:active { transform: scale(.97); }
@@ -1648,13 +1515,8 @@ a.btn { text-decoration: none; color: inherit; }
 .spark-bit { position: fixed; z-index: 80; pointer-events: none; background: var(--accent); clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%); }
 #surprise.busy .spark { animation: remix-spin .8s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .spark svg, #surprise.busy .spark { animation: none; } }
-/* View transitions copy a bar's backdrop blur onto its transition group, which outlives the bar's own
-   fade and left an empty frosted rectangle behind. The snapshots already hold how the bar looked. */
 ::view-transition-group(pt-bar), ::view-transition-group(stage-bar), ::view-transition-image-pair(pt-bar), ::view-transition-image-pair(stage-bar) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 
-/* ---------- build steps ---------- */
-/* Narrow screens lay the steps out on an even two-column grid. Every step takes one cell, and steps that
-   hold several tiles (objects, effects) stack them inside their cell. */
 @media (max-width: 900px) {
   #slotList { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
   #slotList > .slot[hidden] { display: none; }
@@ -1667,13 +1529,9 @@ a.btn { text-decoration: none; color: inherit; }
   #slotList > .slot:nth-child(2) { border-top: 1px solid var(--hair); padding-top: 10px; }
 }
 
-/* ---------- builder token tiles: live specimens ---------- */
 .tok-th { position: relative; overflow: hidden; background: var(--k-bg); color: var(--k-text); box-shadow: inset 0 0 0 1px var(--hair); transition: background-color var(--k-dur) var(--k-ease); }
 .tok-th * { transition: all var(--k-dur) var(--k-ease); }
 .tok-th :is(i, span, b, s) { transition: none; }
-/* Every token tile holds the same small card from the kit: a heading, two lines of text and a button on
-   a surface, sitting on the page background (the artwork tile puts the artwork there). Hovering animates
-   only the one property the token controls (components.js). */
 .tt-scene { position: absolute; inset: 0; background: var(--k-bg); background-size: 260% 260%; background-position: 50% 50%; }
 .tt-art { background-image: linear-gradient(135deg, var(--k-accent), color-mix(in srgb, var(--k-accent) 30%, var(--k-bg)) 45%, var(--k-text)); }
 .tt-art[style*="background-image"] { background-size: 180% 180%; }
@@ -1689,7 +1547,6 @@ a.btn { text-decoration: none; color: inherit; }
   .cp-build #cpSlots .tile .tile-th { display: block !important; grid-column: 1 / -1; width: 100%; height: 52px; }
 }
 
-/* ---------- dropdowns ---------- */
 .dd { position: relative; min-width: 0; }
 .dd-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; height: 34px; padding: 0 8px 0 12px; border: 0; border-radius: 10px; background: var(--well); box-shadow: var(--sunken); color: var(--ink); font-size: 13px; font-weight: 600; text-align: left; transition: background .15s, box-shadow .15s; }
 .dd-btn:hover { background: color-mix(in srgb, var(--ink) 5%, var(--well)); }
@@ -1703,16 +1560,12 @@ a.btn { text-decoration: none; color: inherit; }
 .dd-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .dd-pair > div { min-width: 0; }
 
-/* ---------- round L ---------- */
-/* Phones: the sticky next button keeps clear of the screen edge and the home indicator. */
 @media (max-width: 900px) {
   .next-step { bottom: 0; margin-bottom: 0; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 }
-/* The builder's export menu opens from the right edge of the bar, like the studio's. */
 #cpExportMenu { right: 0; left: auto; max-width: calc(100vw - 24px); }
 .val-static { font-size: 12.5px; font-weight: 500; }
 
-/* Palette bar: related controls sit together in quiet wells, the send action stands apart. */
 .pt-bar { gap: 6px; }
 .pt-grp { display: inline-flex; align-items: center; gap: 1px; padding: 2px; border-radius: 12px; background: color-mix(in srgb, currentColor 5%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 6%, transparent); }
 .pt-grp .ib, .pt-grp .bar-btn { height: 32px; border-radius: 10px; }
@@ -1726,8 +1579,6 @@ a.btn { text-decoration: none; color: inherit; }
 @media (max-width: 900px) {
   .pt-bar .pt-use { flex-basis: 100%; margin: 4px 0 0; }
   .pt-use #ptUse { flex: 1; justify-content: center; }
-  /* Phones: the bar fills its width in even rows (generating on top, history, order and files below, the
-     send action last) instead of centered groups of different lengths. */
   .pt-bar, .pt-bar.glass, .pt-bar.glass.glass-live { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 6px; }
   .pt-bar > .pt-grp { display: flex; min-width: 0; }
   .pt-bar > .pt-grp:has(#ptGen) { grid-column: 1 / -1; order: -1; }
@@ -1739,7 +1590,6 @@ a.btn { text-decoration: none; color: inherit; }
 .seg.wrap5 { grid-auto-flow: row; grid-template-columns: repeat(5, 1fr); margin-bottom: 10px; }
 .seg.wrap5 button { padding-inline: 2px; }
 
-/* Rich tooltips: a clip or live preview above the text. */
 .tip.rich { width: 232px; max-width: calc(100vw - 16px); padding: 5px 5px 7px; border-radius: 10px; }
 .tip.rich > span { display: block; padding: 6px 4px 0; }
 .tip-fig { overflow: hidden; border-radius: 6px; aspect-ratio: 8 / 5; background: color-mix(in srgb, var(--bg) 12%, transparent); }
@@ -1747,15 +1597,12 @@ a.btn { text-decoration: none; color: inherit; }
 .tip-fig .sweep { position: relative; width: 100%; height: 100%; }
 .tip-fig .sweep > * { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .45s var(--ease); }
 .tip-fig .sweep > .on { opacity: 1; }
-/* Words with a tooltip behind them get a quiet dotted underline. */
 .tipped { text-decoration: underline dotted color-mix(in srgb, currentColor 45%, transparent); text-underline-offset: 3px; cursor: help; }
-/* Live preview of a color strength: a small page in that tint. */
 .tp-kit { position: relative; width: 100%; height: 100%; padding: 14px 16px; display: grid; align-content: start; gap: 7px; font: 600 22px/1 var(--sans); }
 .tp-kit i { display: block; height: 5px; border-radius: 3px; background: currentColor; opacity: .55; }
 .tp-kit .tp-card { position: absolute; right: 14px; bottom: 14px; width: 92px; height: 56px; border-radius: 8px; border: 1px solid; padding: 9px; display: grid; align-content: start; gap: 6px; }
 .tp-kit .tp-pill { width: 40px; height: 12px; border-radius: 99px; }
 
-/* ---------- saved designs ---------- */
 .pop.designs { right: 0; width: 340px; padding: 8px; display: grid; gap: 2px; }
 #designsBtn .lbl { margin: 0 2px; }
 .dz-head { display: flex; gap: 6px; padding: 2px; }
@@ -1788,7 +1635,6 @@ a.btn { text-decoration: none; color: inherit; }
 .compat-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--ink-2); line-height: 1.5; font-size: 14px; }
 @media (max-width: 860px) { .pop.designs { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; } #designsBtn .lbl { display: none; } }
 
-/* ---------- option groups ---------- */
 .grp { border-top: 1px solid var(--hair); margin: 0 -2px; padding: 0 2px; }
 .grp-h { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; padding: 12px 0; font-size: 14px; font-weight: 600; letter-spacing: -.005em; color: var(--ink); text-align: left; border-radius: 6px; }
 .grp-h .grp-t { flex: none; }
@@ -1815,14 +1661,11 @@ a.btn { text-decoration: none; color: inherit; }
 #objMat { margin-bottom: 2px; }
 .seg.grid2 { grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); }
 .seg button[hidden] { display: none; }
-/* Multi-row segmented controls wrap, so a last row with fewer options stretches across instead of
-   leaving a gap. --n is how many fit on a row. */
 .seg:is(.wrap, .wrap4, .wrap5, .filter, .grid2) { display: flex; flex-wrap: wrap; --n: 3; }
 .seg.wrap4 { --n: 4; }
 .seg.wrap5 { --n: 5; }
 .seg.grid2 { --n: 2; }
 .seg:is(.wrap, .wrap4, .wrap5, .filter, .grid2) > button { flex: 1 1 calc((100% - (var(--n) - 1) * 2px) / var(--n)); min-width: 0; }
-/* Sections inside a step are divided by a hairline, the same one option groups use. */
 .panel-sec > h3.sub:not(.first), .panel-sec > .sub-head:not(.first), .panel-sec [data-gen] > h3.sub:not(.first), .panel-sec [data-gen] > .sub-head:not(.first), .panel-sec > .pal-pager + #inkSec > h3.sub { border-top: 1px solid var(--hair); padding-top: 14px; margin-top: 16px; }
 .panel-sec > .grp:first-child, .panel-sec .lead.grp { border-top: 0; }
 .panel-sec > .cards + .grp, .panel-sec > .take + .grp { margin-top: 14px; }
@@ -1832,23 +1675,17 @@ a.btn { text-decoration: none; color: inherit; }
 .grp[hidden] { display: none; }
 #cpOpts > h3.sub:not(.first), #cpOpts > .sub-head:not(.first) { border-top: 1px solid var(--hair); padding-top: 14px; margin-top: 18px; }
 #cpOpts > .grp { margin-top: 14px; transition: margin-top .3s var(--ease); }
-/* A closed group sits right on the next one's rule, so its row has even room above and below. */
 #cpOpts > .grp:not(.open) + .grp { margin-top: 0; }
 #cpOpts > .grp:first-child { margin-top: 0; border-top: 0; }
 .grp-in > .dd-pair h3.sub { margin-top: 12px; }
 
-/* A setting the current shape ignores: dimmed, with a tooltip saying why. */
 .ctrl.na { opacity: .42; }
 .ctrl.na input[type=range] { pointer-events: none; }
 .ctrl.na .val { color: var(--muted); }
 .ctrl.na .ib.xs { visibility: hidden; }
 
-/* Narrow screens: two or more effects (or objects) fold into a deck of overlapping cards. */
 .stack-fold { margin-left: auto; border: 0; background: transparent; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--accent); padding: 2px 6px; border-radius: 6px; }
 .fx-stack .fx-tiles { transition: gap .3s var(--ease); }
-/* The folded deck keeps one width however many cards it holds: each card behind the front one shows a
-   sliver (thinner the more there are), and the further back a card sits the smaller and fainter it is,
-   so the names and the add button beside the deck never get pushed aside. */
 .fx-stack.folded .fx-tiles { display: flex; align-items: center; gap: 0; }
 .fx-stack { --step: min(12px, calc(28px / max(1, var(--n, 2) - 1))); }
 .fx-stack .tile.fx { transition: margin .36s var(--ease), padding .36s var(--ease), transform .36s var(--ease), opacity .36s var(--ease), box-shadow .15s, background .15s; }
@@ -1862,27 +1699,17 @@ a.btn { text-decoration: none; color: inherit; }
 .fx-stack.folded .tile.add .tile-text { display: none; }
 .fx-stack.folded .tile.fx.on { box-shadow: 0 0 0 1.5px var(--accent); }
 .fx-stack.folded .tile.add .tile-plus { width: 34px; height: 38px; }
-/* A card joining the deck slides in from the right; one leaving fades as the others close up. */
 @starting-style { .fx-stack.folded .tile.fx { opacity: 0; transform: translateX(18px) scale(.94); } }
 
-/* Palette pages: three rows of three, paged from underneath. */
 .pal-pager { justify-content: center; margin-top: 10px; transition: opacity .2s; }
 .pal-pager.off { opacity: 0; pointer-events: none; height: 0; margin-top: 0; overflow: hidden; }
 .palettes.empty { display: block; }
 .pal-empty { display: grid; justify-items: start; gap: 10px; padding: 16px; border-radius: 12px; background: var(--well); color: var(--muted); font-size: 13px; }
 .pal-empty p { margin: 0; }
-/* Whatever opens a panel sits right under its title, without a separator above it. */
-/* A segmented control leading a panel keeps its own inner padding, or its pill would touch the track's top. */
 .panel-sec > .lead:not(.seg), .panel-sec > .lead > :is(h3.sub, .sub-head, .grp):first-child { border-top: 0 !important; padding-top: 0 !important; }
-/* Key letters and the shift arrow share one center line. No text-box trim: browsers trim an inline-flex key differently, and some left the letter riding high.
-   Instrument Sans centers capitals in its line box on its own, so plain padding keeps them centered. */
-/* While the frame glides to a new size, the picture inside is cropped to it rather than squeezed. */
 .art-fx, .art-ghost canvas { object-fit: cover; }
 html.intro .page:not([hidden]) .pt-col { animation: intro-rise .6s var(--ease) both; animation-delay: calc(var(--k, 0) * 45ms + .08s); }
 
-/* Home to Palettes: each stripe of the home card is the same element as its column, so the stripes
-   themselves travel and stretch into the columns (and back), each a beat after the one before. The
-   labels are held back while the columns land, then settle in. */
 html.vt #homePalette > i:nth-child(1), html.vt .pt-col:nth-child(1) { view-transition-name: pc-1; view-transition-class: palcol; }
 ::view-transition-group(pc-1) { animation-delay: 0ms; }
 html.vt #homePalette > i:nth-child(2), html.vt .pt-col:nth-child(2) { view-transition-name: pc-2; view-transition-class: palcol; }
@@ -1907,7 +1734,6 @@ html.vt #homePalette > i:nth-child(11), html.vt .pt-col:nth-child(11) { view-tra
 ::view-transition-group(pc-11) { animation-delay: 220ms; }
 html.vt #homePalette > i:nth-child(12), html.vt .pt-col:nth-child(12) { view-transition-name: pc-12; view-transition-class: palcol; }
 ::view-transition-group(pc-12) { animation-delay: 242ms; }
-/* Studio to Palettes and back: the same, from the circles under Your colors. */
 html.vt-pal #mine .sw[data-pc="1"] { view-transition-name: pc-1; view-transition-class: palcol; }
 html.vt-pal #mine .sw[data-pc="2"] { view-transition-name: pc-2; view-transition-class: palcol; }
 html.vt-pal #mine .sw[data-pc="3"] { view-transition-name: pc-3; view-transition-class: palcol; }
@@ -1923,29 +1749,22 @@ html.vt-pal #mine .sw[data-pc="12"] { view-transition-name: pc-12; view-transiti
 ::view-transition-group(.palcol) { animation-duration: .64s; animation-timing-function: cubic-bezier(.22,1,.36,1); overflow: clip; }
 ::view-transition-old(.palcol), ::view-transition-new(.palcol) { width: 100%; height: 100%; object-fit: fill; animation: none; }
 ::view-transition-old(.palcol) { display: none; }
-/* Builder tokens on narrow screens sit two to a row, with the same hairline between rows as the studio's
-   build steps, so both lists read the same way. */
 @media (max-width: 900px) {
   .cp-build #cpSlots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; align-items: start; }
   #cpSlots > .slot { border-top: 1px solid var(--hair); padding-top: 10px; }
   #cpSlots > .slot:nth-child(-n + 2) { border-top: 0; padding-top: 0; }
 }
-/* In the studio the canvas bar sits along the bottom; notifications clear it where they could meet. */
 @media (min-width: 601px) and (max-width: 1600px) { body[data-route="studio"] .toasts, body[data-route="palettes"] .toasts { bottom: 84px; } }
 
-/* Studio wide mode: the build and options columns fold away so the canvas gets the page. */
 .app { transition: grid-template-columns .5s var(--ease), column-gap .5s var(--ease); }
 .app.wide { grid-template-columns: 0px 0px minmax(0, 1fr); column-gap: 0; }
 .app.wide > .slots, .app.wide > .options { opacity: 0; translate: -30px 0; padding-left: 0; padding-right: 0; overflow: hidden; pointer-events: none; }
 .st-wide.on, #stFull.on { color: var(--accent); }
 @media (max-width: 900px) { .st-wide { display: none; } .app.wide { grid-template-columns: 1fr; } .app.wide > .slots, .app.wide > .options { opacity: 1; translate: none; pointer-events: auto; } }
-/* Full screen: the stage alone, edge to edge, over everything (also where the Fullscreen API isn't offered). */
 .stage.full { position: fixed; inset: 0; z-index: 90; height: auto; min-height: 0; background: var(--bg); border-radius: 0; margin: 0; }
 .stage.full .stage-meta { display: none; }
 .stage.full .st-wide { display: none; }
 .stage:not(.full) #stFill { display: none; }
-/* Fill: the design covers the whole screen, like a wallpaper, with the bar and every handle hidden.
-   Double-click brings the bar back; the pointer hides while it rests. */
 .stage.fill .canvas-wrap { padding: 0; border-radius: 0; clip-path: none; background: var(--bg); box-shadow: none; }
 .stage.fill .artboard { position: absolute; left: 50%; top: 50%; translate: -50% -50%; border-radius: 0; clip-path: none; box-shadow: none; }
 .stage.fill .stage-bar, .stage.fill .perf-note, .stage.fill .rz-layer { display: none; }
@@ -1957,9 +1776,6 @@ html.vt-pal #mine .sw[data-pc="12"] { view-transition-name: pc-12; view-transiti
 .switch-row.off { opacity: .45; }
 .switch-row.off .switch { pointer-events: none; }
 
-/* ---------- 1.12: top bar menus ---------- */
-/* Settings, Designs, Share and Export are one family: the same height, corners and raised face, with
-   Export the one accent. Icons lead, labels follow, and a chevron marks each one that opens a menu. */
 .top-right { gap: 6px; }
 .top-right > .menu-wrap > .ib.lg { background: var(--panel); box-shadow: var(--raised); }
 .top-right > .menu-wrap > .ib.lg:hover { background: var(--lift); box-shadow: var(--raised-hover); }
@@ -1975,11 +1791,9 @@ html.vt-pal #mine .sw[data-pc="12"] { view-transition-name: pc-12; view-transiti
 .opt.rich.done .tb-ic .ic:first-child { opacity: 0; scale: .5; }
 .opt.rich.done .tb-ic .ic + .ic { opacity: 1; scale: 1; }
 .pop.designs h3 { margin: 8px 10px 2px; }
-/* Behind the bigger menus the page dims and softens; the top bar stays sharp above it. */
 .scrim { position: fixed; inset: 0; z-index: 19; pointer-events: none; opacity: 0; background: rgba(var(--shadow-rgb, 0,0,0), .18); -webkit-backdrop-filter: blur(1.5px) saturate(.92); backdrop-filter: blur(1.5px) saturate(.92); transition: opacity .22s ease; }
 body.scrimmed .scrim { opacity: 1; }
 @media (prefers-reduced-transparency: reduce) { .scrim { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(0,0,0,.22); } }
-/* Phones: Designs and Share fold to icons so the bar fits a 360px screen without zooming out. */
 @media (max-width: 640px) {
   .top-right { gap: 4px; }
   .top-right .btn .lbl, .top-right .btn:not(.primary) .chev { display: none; }
@@ -1987,14 +1801,11 @@ body.scrimmed .scrim { opacity: 1; }
   .top-right .btn.primary { padding: 0 12px; }
   .pop.share, .pop.designs { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; }
 }
-/* A menu's button stays pressed while its menu is open, on every screen. */
 .top-right > .menu-wrap:has(> .pop:not([hidden])) > .ib.lg, .top-right > .menu-wrap:has(> .pop:not([hidden])) > .btn:not(.primary) { background-color: var(--lift); box-shadow: var(--raised-hover); color: var(--ink); }
 .top-right > .menu-wrap:has(> .pop:not([hidden])) > .btn .ic:not(.chev) { color: var(--ink); }
 .top-right > .menu-wrap:has(> .pop:not([hidden])) > .btn.primary { filter: brightness(1.07); }
 .btn .chev { transition: rotate .2s var(--ease); }
 .menu-wrap:has(> .pop:not([hidden])) > .btn .chev { rotate: 180deg; }
-/* Phones: the icon buttons drop their raised faces and sit flat in the bar, so Export is the one button
-   that stands out and the row reads as a toolbar rather than a stack of boxes. */
 @media (max-width: 640px) {
   .top .top-right > .menu-wrap > .ib.lg, .top .top-right > .menu-wrap > .btn:not(.primary) { background: transparent; box-shadow: none; }
   .top .top-right > .menu-wrap > :is(.ib.lg, .btn:not(.primary)) .ic { color: var(--ink); opacity: .8; }
@@ -2005,14 +1816,11 @@ body.scrimmed .scrim { opacity: 1; }
   .top-right .btn.primary { padding: 0 10px; }
   .top { column-gap: 6px; }
 }
-/* The folded deck: cards, then what's in it, then the add button. */
 .stack-sum { display: none; }
 .fx-stack.folded .stack-sum { display: grid; order: 1; min-width: 0; flex: 1; padding: 0 8px 0 12px; cursor: pointer; animation: rise .3s var(--ease) both; }
 .fx-stack.folded .stack-sum b { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fx-stack.folded .stack-sum small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fx-stack.folded .tile.add { order: 2; margin-left: 0; }
-/* With something already in the list, adding another is a slim row rather than a full card. */
-/* The add button shrinks once the slot has tiles, and grows back when the last one goes: eased, not snapped. */
 .slot-fx { interpolate-size: allow-keywords; }
 .slot-fx .tile.add { transition: border-color .2s, padding .3s var(--ease), width .3s var(--ease), height .3s var(--ease); }
 .slot-fx .tile.add .tile-plus { transition: width .3s var(--ease), height .3s var(--ease); }
@@ -2022,16 +1830,11 @@ body.scrimmed .scrim { opacity: 1; }
 .slot-fx:not(.folded):has(.tile.fx) .tile.add small { max-height: 0; opacity: 0; }
 .slot-fx:not(.folded):has(.tile.fx) .tile.add b { font-size: 13px; }
 
-/* ---------- loading screen ---------- */
-/* Shown only while html.loading lasts longer than a beat, so quick loads never flash it. Everything in it
-   animates transform and opacity, which the compositor keeps running while scripts start up. */
 .splash { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: var(--bg); pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .45s ease, visibility 0s .45s; }
 html.loading .splash { visibility: visible; opacity: 1; transition: none; animation: splash-show .35s .25s both, splash-gone .3s 8s forwards; }
 @keyframes splash-show { from { opacity: 0; } }
 @keyframes splash-gone { to { opacity: 0; visibility: hidden; } }
 .splash-in { display: grid; justify-items: center; gap: 18px; animation: splash-rise .6s .25s cubic-bezier(.22,1,.36,1) both; }
-/* Leaving, the logo rushes toward the viewer and blurs away while a hole opens from its middle and widens
-   past the corners, so the page is uncovered from the center out. */
 @property --hole { syntax: "<length>"; inherits: false; initial-value: 0px; }
 .splash.out { visibility: visible; opacity: var(--from, 1); --at: 50% calc(50% - 10px);
   -webkit-mask: radial-gradient(circle at var(--at), transparent var(--hole), #000 calc(var(--hole) + 48px));
@@ -2049,7 +1852,6 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .splash-bar { width: 120px; height: 3px; border-radius: 3px; overflow: hidden; background: color-mix(in srgb, var(--ink) 10%, transparent); }
 .splash-bar i { display: block; width: 40%; height: 100%; border-radius: 3px; background: var(--accent, #e8572a); animation: splash-run 1.1s cubic-bezier(.45,0,.25,1) infinite; }
 @keyframes splash-run { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
-/* The message hangs below the bar, out of the layout, so a longer tip never moves the logo. */
 .splash-msg { position: absolute; top: calc(100% + 18px); left: 50%; translate: -50% 0; width: min(300px, calc(100vw - 48px)); margin: 0; font-size: 13px; line-height: 1.45; text-align: center; text-wrap: balance; color: var(--muted); transition: opacity .22s ease; }
 .splash-msg.swap { opacity: 0; }
 .splash-in { position: relative; }
@@ -2061,7 +1863,6 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .overlay.dragging .fc, .overlay.dragging .fbg { cursor: grabbing; }
 .pal-sort { margin-left: auto; flex: none; }
 .pal-sort span { min-width: 34px; text-align: left; }
-/* Preset and effect search, and the note shown when nothing matches. */
 .st-search { margin: 0 0 12px; }
 .st-search .field::-webkit-search-cancel-button { cursor: pointer; }
 .no-match { display: grid; justify-items: center; gap: 6px; padding: 28px 16px 24px; text-align: center; color: var(--muted); border-radius: 14px; background: var(--well); box-shadow: inset 0 0 0 1px var(--hair); }
@@ -2069,19 +1870,15 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .no-match b { color: var(--ink); font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
 .no-match span { font-size: 12.5px; max-width: 260px; }
 .no-match .btn { margin-top: 8px; }
-/* The "i" beside a setting's name: there's a hint on hover. */
 .label .info-i { width: 12px; height: 12px; margin-left: 5px; vertical-align: -1px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; opacity: .38; transition: opacity .15s ease, color .15s ease; }
 .ctrl:hover .label .info-i { opacity: .6; }
 @media (hover: hover) { .label:hover .info-i { opacity: 1; color: var(--accent); } }
 .tip-held .info-i, .info-i.tip-held { opacity: 1; color: var(--accent); }
 
-/* ---------- tutorial ---------- */
 .tour-pane { width: min(880px, 100%); grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); grid-template-rows: 1fr auto; gap: 0; padding: 0; overflow: hidden; }
 .tour-stage { background: var(--well); padding: 20px; display: grid; place-items: center; box-shadow: inset -1px 0 0 var(--hair); }
 .tour-copy { padding: 28px 24px 20px; display: grid; align-content: start; gap: 10px; }
 .tour-kicker { font-size: 12px; font-weight: 600; color: var(--accent); letter-spacing: .01em; }
-/* The foot spans both halves: back or skip on the left, where you are in the middle, next on the right.
-   After the last scene has played once, "Show me around" takes the place of the dots. */
 .tour-foot { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 12px 16px; box-shadow: inset 0 1px 0 var(--hair); }
 .tf-l { justify-self: start; display: flex; gap: 6px; }
 .tf-r { justify-self: end; }
@@ -2095,7 +1892,6 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .tour-dots button.on { width: 20px; background: var(--accent); }
 @media (max-width: 640px) { .tour-pane { grid-template-columns: 1fr; grid-template-rows: auto auto auto; } .tour-stage { box-shadow: inset 0 -1px 0 var(--hair); padding: 12px; } }
 
-/* The miniature Studio: top bar, build column, options and the stage, at about a third of the size. */
 .tm { --art: none; position: relative; width: 100%; max-width: 470px; aspect-ratio: 16 / 10.4; display: grid; grid-template-columns: 24% 30% 1fr; grid-template-rows: auto 1fr; gap: 5px; padding: 5px; box-sizing: border-box; border-radius: 12px; background: var(--bg); box-shadow: 0 0 0 1px var(--hair), 0 12px 32px -16px rgba(var(--shadow-rgb), .4); user-select: none; font: 600 7px/1.2 var(--sans); color: var(--ink); }
 .tm-top { grid-column: 1 / -1; display: flex; align-items: center; gap: 4px; padding: 4px 5px; border-radius: 7px; background: var(--panel); box-shadow: 0 0 0 1px var(--hair); }
 .tm-logo { display: flex; align-items: center; gap: 3px; font-size: 8.5px; font-weight: 600; letter-spacing: -.02em; }
@@ -2133,7 +1929,6 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .tm-board { --zoom: 1; position: relative; width: 100%; aspect-ratio: 16 / 10; border-radius: 2px; overflow: hidden; box-shadow: 0 0 0 .5px rgba(var(--line-rgb), .1), 0 2px 5px rgba(var(--shadow-rgb), .12); }
 .tm-pic { position: absolute; inset: 0; background: center / cover; opacity: 0; scale: var(--zoom); transition: opacity .55s ease; }
 .tm-pic.on { opacity: 1; }
-/* A glass sphere with the three turning rings the Studio draws round a selected object. */
 .tm-obj { position: absolute; left: 50%; top: 50%; width: 30%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; opacity: 0; scale: .6; transition: opacity .3s ease, scale .4s var(--ease);
   background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.95) 0 6%, rgba(255,255,255,.25) 16%, transparent 40%), radial-gradient(circle at 60% 70%, rgba(255,255,255,.18), transparent 60%);
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.55), inset -6px -8px 14px rgba(255,255,255,.18), 0 6px 12px -4px rgba(0,0,0,.35); backdrop-filter: blur(3px) saturate(1.3); }
@@ -2152,11 +1947,9 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .tm-toast { position: absolute; left: 50%; bottom: 10px; z-index: 2; translate: -50% 6px; padding: 3px 8px; border-radius: 6px; background: var(--ink); color: var(--bg); font-size: 6.5px; opacity: 0; transition: opacity .25s ease, translate .35s var(--ease); }
 .tm.saved .tm-toast { opacity: 1; translate: -50% 0; }
 
-/* The pointer: the app's own handle, an orange dot in a white ring with a soft shadow for any background. */
 .tp { position: absolute; left: 0; top: 0; z-index: 5; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px #fff, 0 1px 4px 1px rgba(0,0,0,.35); pointer-events: none; transition: scale .14s ease; }
 .tp.down { scale: .78; }
 .tp .tp-ring { position: absolute; inset: -9px; border-radius: 50%; border: 1.5px solid var(--accent); opacity: 0; }
-/* The guided tour: a spotlight that glides between parts of the page, a note beside it and the cursor. */
 .tour-spot { position: fixed; z-index: 300; border-radius: 14px; pointer-events: none; box-shadow: 0 0 0 2px var(--accent), 0 0 0 200vmax rgba(12, 12, 16, .42); transition: left .5s var(--ease), top .5s var(--ease), width .5s var(--ease), height .5s var(--ease), opacity .3s ease; animation: fade .3s ease; }
 .tour-tip { position: fixed; left: 0; top: 0; z-index: 302; width: min(300px, calc(100vw - 24px)); display: grid; gap: 6px; padding: 14px 14px 12px; border-radius: 14px; background: var(--panel); box-shadow: var(--pop); transition: translate .5s var(--ease), opacity .2s ease; animation: fade .3s ease; }
 .tour-tip.moving { opacity: .0; }
@@ -2168,9 +1961,6 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .tour-spot.gone, .tour-tip.gone, .tour-dot.gone { opacity: 0; transition: opacity .3s ease; }
 #objProj { margin-bottom: 12px; }
 
-/* ---------- 1.16 ---------- */
-/* Segmented controls share the Apply menu's look: a sunken well with 4px of room on every side, and
-   raised 30px keys with their labels set in from the edges. */
 .multi, .seg { padding: 4px; gap: 4px; border-radius: 12px; }
 .tog { padding: 0 10px; }
 .seg button { height: 30px; padding: 0 10px; font-size: 12.5px; color: var(--muted); }
@@ -2180,39 +1970,29 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .perf-note small { white-space: normal; max-width: 330px; }
 .perf-off { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 12px; color: var(--muted); cursor: pointer; }
 .perf-off input { width: 13px; height: 13px; margin: 0; accent-color: var(--accent); }
-/* The logo remix: still copies of the old card pictures fade off the new ones together, as a look does
-   in the Studio, while a small note by the logo shows it's working. */
 .home-ghost { position: absolute; z-index: 2; display: flex; border-radius: 13px; overflow: hidden; clip-path: inset(0 round 13px); background: var(--well); pointer-events: none; transition: opacity .42s ease; }
 .home-ghost canvas, .home-ghost img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .remix-busy { position: absolute; top: 50%; translate: 0 -50%; display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 10px 0 8px; border-radius: 13px; background: var(--well); box-shadow: var(--sunken); font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; transition: opacity .2s ease, translate .25s var(--ease), display .25s allow-discrete; }
 .remix-busy[hidden] { display: none; opacity: 0; translate: -4px -50%; }
-/* It enters by sliding only: it must be fully visible on its first frame, since the roll that follows can hold the page. */
 @starting-style { .remix-busy:not([hidden]) { translate: -4px -50%; } }
 .remix-busy i { width: 11px; height: 11px; border-radius: 50%; border: 2px solid color-mix(in oklab, var(--accent) 25%, transparent); border-top-color: var(--accent); animation: remix-spin .7s linear infinite; }
 @keyframes remix-spin { to { rotate: 1turn; } }
-/* Phones: no room beside the logo, so the note hangs centered just under the bar, with its words. */
 @media (max-width: 520px) {
   .remix-busy { left: 50% !important; top: calc(100% + 8px); translate: -50% 0; z-index: 6; background: var(--panel); box-shadow: var(--pop); }
   .remix-busy[hidden] { translate: -50% -4px; }
   @starting-style { .remix-busy:not([hidden]) { translate: -50% -4px; } }
 }
 
-/* ---------- 1.17: Margin's landing page ---------- */
-/* The mark: two arches in the text color make a lowercase m; its last leg ends in a note in the accent.
-   It stands on the wordmark's baseline, a little taller than its capitals, and the wordmark is trimmed
-   to its capitals, so the logo centers on the same line as a button beside it. */
 .k-brand { align-items: baseline; line-height: 1; }
 .k-brand .k-word { text-box: trim-both cap alphabetic; }
 .k-mark { height: 0.94em; height: 1.3cap; width: auto; aspect-ratio: 18.3 / 21.4; flex: none; overflow: visible; }
 .k-mark .k-mk-m { fill: none; stroke: currentColor; stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; }
 .k-mark .k-mk-n { fill: var(--k-accent); stroke: none; }
 .k-brand .k-word { letter-spacing: -0.035em; }
-/* Hero: the headline is capped so a large type scale can't push the product picture out of view. */
 .k-under .k-ic { width: 15px; height: 15px; flex: none; }
 .k-under { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .k-landing .k-pg-home .k-hero .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 5.2cqi); max-width: 12em; }
 .cps-win .k-landing .k-pg-home .k-hero .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 4.4cqi); }
-/* Product views: the editor's margin shows one part of the work. */
 .k-mg-top { padding-top: 28px; display: grid; gap: 12px; align-content: start; }
 .k-mg-h { font-size: 15px; }
 .k-mg-top > .k-small { margin: -6px 0 2px; }
@@ -2224,18 +2004,12 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .k-ver { cursor: pointer; }
 .k-at { color: var(--k-accent); font-weight: 600; }
 .k-margin .k-cmt p { margin: 4px 0 0; }
-/* Hero: the editor is in the hero, beside the copy, on the artwork, running off the page's right edge. */
-/* The copy column is measured in the headline's own font (ch), so a wide or large display face gets the
-   room it needs instead of breaking the headline into a narrow stack; the picture takes the rest. */
 .k-hero-pic { --hh: min(clamp(var(--k-3xl), 4.4cqi, calc(var(--k-4xl) * 1.1)), 4.4cqi); font: var(--k-hw) var(--hh) / 1.1 var(--k-head), system-ui, sans-serif; letter-spacing: var(--k-track); grid-template-columns: minmax(0, clamp(34%, 16ch, 58%)) minmax(0, 1fr); gap: var(--k-s8); align-items: center; padding: var(--k-s8) 0 var(--k-s16); }
 .k-hero-pic > * { font: 400 var(--k-base) / 1.5 var(--k-body), system-ui, sans-serif; letter-spacing: normal; }
 .k-hero-copy { display: grid; gap: var(--k-s4); justify-items: start; }
 .k-hero-copy .k-lead { margin: 0; }
 .k-hero-copy .k-row { gap: var(--k-s6); margin-top: var(--k-s2); }
 .k-landing .k-pg-home .k-hero-pic .k-h1, .cps-win .k-landing .k-pg-home .k-hero-pic .k-h1 { font-size: var(--hh); max-width: none; text-wrap: balance; margin-bottom: var(--k-s2); }
-/* Below: the headline with the buttons under it on the left, the lead on the right level with the
-   headline's last line, and the picture across the page under both. The headline column is measured in
-   the headline's own font, like the side-by-side hero. */
 .k-hero-below { --hh: min(clamp(var(--k-3xl), 4.6cqi, calc(var(--k-4xl) * 1.2)), 4.6cqi); font: var(--k-hw) var(--hh) / 1.1 var(--k-head), system-ui, sans-serif; letter-spacing: var(--k-track); grid-template-columns: minmax(0, clamp(48%, 23ch, 68%)) minmax(0, 1fr); grid-template-areas: "h lead" "go ." "pic pic"; gap: var(--k-s6) var(--k-s12); align-items: start; padding: var(--k-s12) 0 var(--k-s16); }
 .k-hero-below > * { font: 400 var(--k-base) / 1.5 var(--k-body), system-ui, sans-serif; letter-spacing: normal; }
 .k-landing .k-pg-home .k-hero-below .k-h1, .cps-win .k-landing .k-pg-home .k-hero-below .k-h1 { grid-area: h; max-width: none; font-size: var(--hh); text-wrap: balance; margin: 0; }
@@ -2251,8 +2025,6 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .k-hero-frame .k-doc { padding: 28px 32px; font-size: 15px; }
 .k-hero-frame .k-doc .k-h3 { font-size: 22px; }
 .k-hero-frame .k-margin { padding-top: 64px; }
-/* Spreads: the view sits on the artwork (or a tint of the accent) and runs off the edge, like
-   a crop of the real app. */
 .k-spread { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--k-s12); align-items: center; margin-bottom: var(--k-s16); }
 .k-flip { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
 .k-flip > .k-spread-text { order: 2; }
@@ -2267,7 +2039,6 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .k-win .k-shot-body { grid-template-columns: minmax(0, 1fr) minmax(0, 250px); }
 .k-win .k-doc { padding: 28px 32px 32px; font-size: 15px; }
 .k-win .k-doc .k-h3 { font-size: 22px; }
-/* Closing: the words on the left, a working import on the right. */
 .k-close-imp { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--k-s12); align-items: center; justify-items: stretch; }
 .k-close-imp > div:first-child { display: grid; gap: var(--k-s3); justify-items: start; }
 .k-close-imp .k-h2, .k-close-imp .k-p { margin: 0; }
@@ -2282,7 +2053,6 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 @keyframes k-fill { from { width: 4%; } to { width: 100%; } }
 .k-import.done .k-import-done { display: grid; gap: var(--k-s1); justify-items: start; }
 .k-import-done .k-row { margin-top: var(--k-s2); gap: var(--k-s4); }
-/* Threads resolve into a quiet line; the highlight they were about clears with them. */
 .k-resolved { display: none; align-items: center; gap: var(--k-s2); padding: var(--k-s2) var(--k-s3); border-radius: var(--k-r); background: color-mix(in srgb, var(--k-accent) 10%, transparent); font-size: var(--k-sm); }
 .k-resolved .k-ic { width: 16px; height: 16px; color: var(--k-accent); flex: none; }
 .k-resolved span:first-of-type { flex: 1; }
@@ -2291,7 +2061,6 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .kit mark { transition: background-color var(--k-dur) var(--k-ease), border-color var(--k-dur) var(--k-ease); }
 .kit mark.done { background: transparent; border-bottom-color: transparent; }
 .kit [data-k], .k-qa b, .k-tabs > span, .k-switch, .k-check, .k-radio, .k-item, .k-chip i { cursor: pointer; }
-/* Suggestions are taken or left, with an undo. */
 .k-sg-done { display: none; align-items: center; gap: var(--k-s3); }
 .k-suggest:is(.accepted, .rejected) .k-sg-acts { display: none; }
 .k-suggest:is(.accepted, .rejected) .k-sg-done { display: flex; }
@@ -2299,17 +2068,13 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
 .k-suggest.accepted ins { text-decoration: none; background: transparent; animation: k-flash 1.4s var(--k-ease); }
 .k-suggest.rejected del { text-decoration: none; }
 @keyframes k-flash { from { background: color-mix(in srgb, var(--k-accent) 32%, transparent); } }
-/* Sign-off goes round, then comes back. */
 .k-btn.k-wait { background: color-mix(in srgb, var(--k-accent) 16%, var(--k-surface)); color: var(--k-text); }
 .k-btn.k-wait::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: k-spin .8s linear infinite; }
 .k-btn.k-done .k-ic { width: 14px; height: 14px; }
 @keyframes k-spin { to { rotate: 1turn; } }
 @keyframes k-sticky-in { 0%, 70% { opacity: 0; translate: 0 16px; visibility: hidden; } 100% { opacity: 1; translate: none; visibility: visible; } }
 .k-qa:not(.open) .k-p { display: none; }
-/* Phones: a real menu behind a full-size burger, a full-width call to action that stays in reach, and
-   the comment thread as a sheet over the draft. */
 .k-mnav, .k-sticky, .k-i-close { display: none; }
-/* The "How review works" heading only appears over the swipeable cards on phones; it sits above the row. */
 .k-spreads-head { display: none; }
 .k-nav { position: relative; }
 @container (max-width: 640px) {
@@ -2324,8 +2089,6 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
   .k-landing .k-pg-home .k-hero .k-h1 { font-size: min(clamp(calc(var(--k-3xl) * .95), 6.4cqi, calc(var(--k-4xl) * 1.3)), 11.5cqi); }
   .k-hero-side .k-row { align-items: stretch; }
   .k-hero-side .k-row .k-btn { width: 100%; }
-  /* Phones get their own layout: the picture runs edge to edge under the copy, the features become a
-     row of cards you swipe through, and the sticky button waits until the hero's own is scrolled past. */
   .k-hero-pic { grid-template-columns: minmax(0, 1fr); gap: var(--k-s8); padding: var(--k-s6) 0 var(--k-s12); }
   .k-hero-copy, .k-hero-go { justify-items: stretch; }
   .k-hero-below { grid-template-columns: minmax(0, 1fr); grid-template-areas: "h" "lead" "go" "pic"; }
@@ -2372,8 +2135,6 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
   .k-win .k-doc { padding: 20px 20px 28px; font-size: 15px; }
   .k-import-row { flex-direction: column; }
   .k-sticky { display: block; position: sticky; bottom: 12px; z-index: 4; margin-top: var(--k-s4); }
-  /* While the hero's own button is on screen the sticky one stays out of the way; it rises in once the
-     page has scrolled past it (where scroll-driven animations are supported). */
   @supports (animation-timeline: scroll()) {
     .k-sticky { animation: k-sticky-in linear both; animation-timeline: scroll(nearest block); animation-range: 0 560px; }
   }
@@ -2381,25 +2142,18 @@ html.loading .splash { visibility: visible; opacity: 1; transition: none; animat
   .k-margin { margin: -14px 10px 10px; padding: 14px 16px 16px; border: 1px solid var(--k-border); border-radius: calc(var(--k-r) + 8px); background: var(--k-surface); box-shadow: 0 -12px 30px -18px rgba(0,0,0,.35); position: relative; }
   .k-margin::before { content: ""; display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--k-border); margin: 0 auto 12px; }
 }
-/* The closing section is plain and left-aligned like the hero. */
 @container (max-width: 640px) {
   .k-pg-home .k-close .k-row { flex-direction: column; justify-self: stretch; }
   .k-pg-home .k-close .k-btn { width: 100%; }
 }
-/* Home: undo and redo for logo remixes sit by the logo, showing once there's something to step through. */
 .home-hist { position: absolute; top: 50%; left: 150px; translate: 0 -50%; display: inline-flex; gap: 2px; opacity: 0; pointer-events: none; transition: opacity .25s ease; }
 .home-hist.on { opacity: 1; pointer-events: auto; }
 .home-hist .ib:disabled { opacity: .35; }
-/* The narrowest phones: the outline hugs the logo closer and undo and redo get a little smaller, so the
-   pair fits between the logo and the buttons on the right. */
 @media (max-width: 360px) {
   .home-hist { gap: 0; }
   .home-hist .ib { width: 28px; }
 }
 
-/* Performance mode (html.lite, see ui.js): backdrop blur and the live glass refraction redraw whatever lies
-   behind them on every frame, which integrated graphics feel most, so bars and menus go solid instead.
-   The home card's scene stays still under the pointer. */
 html.lite { --glass: var(--panel); }
 html.lite *, html.lite *::before, html.lite *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 html.lite .scrim { background: rgba(var(--shadow-rgb, 0,0,0), .26); }
@@ -2408,16 +2162,11 @@ html.lite .glass, html.lite .glass.glass-live { background: var(--panel) !import
 html.lite .glass.glass-live > *, html.lite .glass.glass-live .bar-btn, html.lite .glass.glass-live .ib { color: var(--ink); }
 @media (max-width: 900px) { html.lite .pt-bar, html.lite .pt-bar.glass.glass-live { background: transparent !important; } }
 
-/* The logo's shine (shell.js): a copy of the logo in a pale accent light, shown only inside a band that
-   sweeps across, crossed with a dither so it glints like a sheen rather than a flat wipe. */
 .brand { position: relative; }
-/* The logo's outline (shell.js): flashes on a click, draws round the logo while it's held, and stays on
-   while auto roll runs. */
 .top > .brand { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
 .brand-ring { position: absolute; left: -9px; top: -6px; width: calc(100% + 18px); height: calc(100% + 12px); overflow: visible; pointer-events: none; }
 .brand-ring rect { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 0; opacity: 0; }
 @media (max-width: 360px) { .brand-ring { left: -6px; width: calc(100% + 12px); } }
-/* Keyboard focus shows the same outline instead of a second, browser-drawn ring inside it. */
 .top > .brand:focus-visible { outline: none; }
 .top > .brand:focus-visible .brand-ring rect { opacity: 1 !important; stroke-dashoffset: 0 !important; }
 .brand-shine {
@@ -2439,12 +2188,9 @@ html.lite .glass.glass-live > *, html.lite .glass.glass-live .bar-btn, html.lite
   100% { opacity: 1; -webkit-mask-position: 0 0, 0 0; mask-position: 0 0, 0 0; }
 }
 
-/* Rough stand-ins (app.js thumb with lq, the home card): a small render of the right picture, blurred,
-   until the real one fades in over it. */
 .th > svg.lqip { filter: blur(8px); scale: 1.15; }
 #homeStudio > .lqip { width: 100%; height: 100%; object-fit: cover; }
 
-/* The Performance dialog (Settings): rows of label and control, scrolling on short screens. */
 .perf-dialog { width: min(560px, 100%); gap: 2px; max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; }
 .perf-dialog h3 { margin-bottom: 8px; }
 .perf-dialog .set-row { padding: 8px 2px; }
@@ -2457,7 +2203,5 @@ html.lite .glass.glass-live > *, html.lite .glass.glass-live .bar-btn, html.lite
 .opt-note { font-size: 12px; color: var(--muted); }
 @media (max-width: 560px) { .perf-dialog .set-row.static { flex-direction: column; align-items: stretch; gap: 8px; } .perf-dialog .seg { align-self: flex-start; } }
 
-/* Clicks during a page change go through to the page arriving, instead of landing on the transition's
-   snapshot layer and doing nothing. */
 ::view-transition { pointer-events: none; }
 #objBody { margin: 2px 0 10px; }

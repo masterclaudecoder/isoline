@@ -1,7 +1,4 @@
-// Russian interface strings for i18n.js. Keys are the English text as it appears on the page; {n} is a
-// number, {s} a phrase translated on its own, and {n:форма|формы|форм} a number with its plural.
 window.I18N_RU = {
-  // ---------- patterns ----------
   "Randomize {s}": "Случайно: {s}",
   "{s} value": "{s}: значение",
   "Harmony: {s}": "Гармония: {s}",
@@ -53,7 +50,6 @@ window.I18N_RU = {
   "Lighter drawing for laptops with built-in graphics: no glass blur, previews at {n}x, calmer motion. Auto turns it on for slower devices": "Облегчённая отрисовка для ноутбуков со встроенной графикой: без размытия стекла, превью в {n}x, спокойнее движение. «Авто» включает его на медленных устройствах",
   "You'll be able to type values far past the slider limits. Extreme ones, like a {n}px grid or thousands of lines, can freeze or crash this tab.": "Можно будет вводить значения далеко за пределами ползунков. Крайние, вроде сетки в {n} px или тысяч линий, могут подвесить или уронить вкладку.",
 
-  // ---------- app and navigation ----------
   "Home": "Главная",
   "Isoline home": "Главная Isoline",
   "Studio": "Студия",
@@ -152,7 +148,6 @@ window.I18N_RU = {
   "Take it anywhere": "Забирайте куда угодно",
   "Export a PNG, SVG, video, GIF or a live HTML file. Share sends a link, or a brief your AI agent can build from.": "Экспортируйте PNG, SVG, видео, GIF или живой HTML-файл. «Поделиться» даёт ссылку или бриф, по которому соберёт ваш ИИ-агент.",
 
-  // ---------- home ----------
   "Patterns, gradients, effects and motion": "Узоры, градиенты, эффекты и движение",
   "Palettes, color names and contrast": "Палитры, названия цветов и контраст",
   "Libraries, tokens and layouts": "Библиотеки, токены и макеты",
@@ -163,7 +158,6 @@ window.I18N_RU = {
   "Saved in this browser": "Сохранено в этом браузере",
   "Open the Studio": "Открыть Студию",
 
-  // ---------- settings ----------
   "Safe values": "Безопасные значения",
   "Randomize within clean ranges": "Случайные значения без крайностей",
   "Unlock values": "Снять ограничения",
@@ -192,7 +186,6 @@ window.I18N_RU = {
   "Download the frame times measured here, to send with a report": "Скачать замеры кадров, чтобы приложить к отчёту",
   "Frame rate": "Кадры/с",
 
-  // ---------- studio: top bar, canvas ----------
   "Swap width and height": "Поменять ширину и высоту",
   "Width": "Ширина",
   "Height": "Высота",
@@ -240,7 +233,6 @@ window.I18N_RU = {
   "Exports stay smooth. To lighten the preview:": "Экспорт всё равно будет плавным. Чтобы разгрузить превью:",
   "Turn on motion to see objects move": "Включите движение, и объекты задвигаются",
 
-  // ---------- designs, export, share ----------
   "Save as a new design (⌘S)": "Сохранить как новый дизайн (⌘S)",
   "Save as a new version of": "Сохранить как новую версию",
   "Design name": "Название дизайна",
@@ -262,7 +254,6 @@ window.I18N_RU = {
   "PNG, SVG, video, GIF or HTML. Share has a link and a brief for AI agents.": "PNG, SVG, видео, GIF или HTML. В меню «Поделиться» есть ссылка и инструкция для ИИ-агентов.",
   "Use somewhere else": "Использовать в другом месте",
 
-  // ---------- build panel ----------
   "Build": "Сборка",
   "Preset": "Пресет",
   "No preset": "Без пресета",
@@ -305,7 +296,6 @@ window.I18N_RU = {
   "Drag to reorder": "Перетащите, чтобы переставить",
   "Click to edit, drag to reorder": "Нажмите, чтобы изменить. Перетащите, чтобы переставить",
 
-  // ---------- generators and shapes ----------
   "Contours": "Контуры",
   "Gradient": "Градиент",
   "Flow": "Поток",
@@ -403,7 +393,6 @@ window.I18N_RU = {
   "Paper": "Бумага",
   "Paper color": "Цвет бумаги",
 
-  // ---------- parameters ----------
   "Amplitude": "Амплитуда",
   "Angle": "Угол",
   "Bias": "Смещение",
@@ -498,7 +487,6 @@ window.I18N_RU = {
   "One copy on each side": "По копии на каждой стороне",
   "Flat black that swallows the light": "Матовый чёрный, поглощающий свет",
 
-  // ---------- objects ----------
   "Sphere": "Сфера",
   "Cube": "Куб",
   "Torus": "Тор",
@@ -517,7 +505,6 @@ window.I18N_RU = {
   "A soft ring of smoke": "Мягкое кольцо дыма",
   "A glowing body of light": "Светящееся тело света",
 
-  // ---------- effects ----------
   "Grain": "Зерно",
   "Glow": "Свечение",
   "Bloom": "Ореол",
@@ -578,7 +565,6 @@ window.I18N_RU = {
   "Signal": "Сигнал",
   "Lines swell outward and colors sway in and out": "Линии раздуваются, цвета колышутся",
 
-  // ---------- motion ----------
   "Animation": "Анимация",
   "Loop": "Цикл",
   "Once": "Один раз",
@@ -614,7 +600,6 @@ window.I18N_RU = {
   "Quick start, gentle finish": "Быстрый старт, мягкий финиш",
   "Replay the entrance": "Повторить появление",
 
-  // ---------- palettes ----------
   "Palette": "Палитра",
   "Your colors": "Ваши цвета",
   "Suggested": "Идеи",
@@ -670,7 +655,6 @@ window.I18N_RU = {
   "Tint": "Оттенок",
   "Pick tint": "Выбрать оттенок",
 
-  // ---------- components: builder ----------
   "Two modes": "Два режима",
   "Tokens": "Токены",
   "Type": "Шрифт",
@@ -722,7 +706,6 @@ window.I18N_RU = {
   "Build brief with tokens": "Бриф для сборки с токенами",
   "Desktop": "Десктоп",
 
-  // ---------- components: libraries ----------
   "Find a library": "Найти библиотеку",
   "Search libraries": "Искать библиотеки",
   "Search, or narrow the list by framework and category.": "Ищите или сузьте список по фреймворку и категории.",
@@ -739,7 +722,6 @@ window.I18N_RU = {
   "3D and canvas": "3D и canvas",
   "3D assets": "3D-ассеты",
 
-  // ---------- performance dialog ----------
   "Auto: on for this device": "Авто: включён для этого устройства",
   "Auto: off for this device": "Авто: выключен для этого устройства",
   "Lighter drawing for built-in graphics": "Облегчённая графика для встроенных видеокарт",
@@ -763,7 +745,6 @@ window.I18N_RU = {
   "Bends what's behind by the slope of the surface": "Преломляет то, что позади, по наклону поверхности",
   "Light goes in, across and out again, like real glass": "Свет входит, проходит насквозь и выходит, как в настоящем стекле",
 
-  // ---------- notices ----------
   "Restore": "Вернуть",
   "Visit": "Перейти",
   "Copied": "Скопировано",
@@ -819,7 +800,6 @@ window.I18N_RU = {
   "Saved {s}": "Сохранён «{s}»",
   "Took {s} from {s}": "Взято: {s} из «{s}»",
 
-  // ---------- more ----------
   "An idea": "Идея",
   "Dimensions": "Размеры",
   "Its own pace within the loop. Negative runs backward": "Свой темп внутри цикла. Отрицательный идёт назад",
@@ -951,7 +931,6 @@ window.I18N_RU = {
   "All changes saved": "Всё сохранено",
   "Unsaved changes": "Есть несохранённые изменения",
 
-  // ---------- effect settings, export progress, feedback ----------
   "Font": "Шрифт",
   "Interface": "Как в интерфейсе",
   "System mono": "Системный моноширинный",
@@ -1263,7 +1242,6 @@ window.I18N_RU = {
   "One more after this": "И ещё один после этого",
   "That look would take too long to draw, so it was skipped": "Этот образ рисовался бы слишком долго, поэтому он пропущен",
   "Isoline: patterns, palettes and design tokens": "Isoline: узоры, палитры и дизайн-токены",
-  // ---------- new effects ----------
   "Glitch": "Глитч", "Strips": "Полосы", "Tear": "Разрыв", "Color split": "Разлёт цвета", "Re-roll": "Перебрасывать",
   "Pixel sort": "Сортировка пикселей", "Sort": "Сортировка", "Start": "Начало",
   "Echo": "Эхо", "Lighten": "Светлее", "Additive": "Сложение", "Copies": "Копии",
@@ -1313,8 +1291,6 @@ window.I18N_RU = {
   "One side": "С одной стороны",
 };
 
-// The kit preview's demo copy in Russian. It shows when the Builder's Cyrillic switch is on, so the
-// fonts are seen setting the text they were picked for. Names and brand words stay as they are.
 window.KIT_RU = {
   "Product": "Продукт", "Pricing": "Цены", "Changelog": "Что нового", "Sign in": "Войти", "Try it free": "Попробовать бесплатно",
   "Review drafts right where they're written": "Согласуйте черновики там, где их пишут",

@@ -10,8 +10,6 @@
   const px = (v) => v + "px", deg = (v) => v + "°", f2 = (v) => (+v).toFixed(2), pct = (v) => Math.round(v * 100) + "%";
   const ic = (name, cls = "") => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 
-  // ---------- effect catalog: [id, name, category, defaults, params] ----------
-  // Text effects pick the face their characters are drawn in.
   const FONT_SEG = { seg: "font", label: "Font", options: [["geist", "Geist Mono"], ["ui", "Interface"], ["mono", "System mono"]] };
   const FXC = [
     ["liquify", "Liquify", "Distort", { amount: 0.5, scale: 220 }, [{ k: "amount", label: "Amount", min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.2, 0.9] }, { k: "scale", label: "Size", min: 20, max: 1200, step: 5, log: true, fmt: px, rand: [120, 500] }]],
@@ -67,12 +65,10 @@
   ];
   const FXI = Object.fromEntries(FXC.map(([id, name, cat, d, p]) => [id, { id, name, cat, d, p }]));
   const FX_IDS = FXC.map((f) => f[0]);
-  // Effects with randomness get their own seed; 0 follows the design's seed.
   const SEEDED = new Set(["dissolve", "smear", "glitch", "grid", "ridge", "liquify", "voronoi", "grain", "water", "sea", "glyphs", "paper", "riso", "rays"]);
   const FX_DEFAULTS = Object.fromEntries(FXC.map(([id, , , d]) => [id, { on: false, ...d, ...(SEEDED.has(id) ? { seed: 0 } : {}) }]));
   const FX_CATS = [...new Set(FXC.map((f) => f[2]))];
 
-  // ---------- generators + palettes ----------
   const GENS = [
     ["contours", "Contours", "Lines and bands"],
     ["mesh", "Mesh", "Soft color points"],
@@ -89,8 +85,6 @@
   ];
   const GEN_LABEL = Object.fromEntries(GENS.map((g) => [g[0], g[1]]));
   const NOISE_TYPES = [["clouds", "Clouds"], ["ridges", "Ridges"], ["billow", "Billow"], ["cells", "Cells"], ["veins", "Veins"], ["marble", "Marble"], ["neuro", "Neuro"], ["ring", "Smoke ring"], ["smoke", "Smoke"], ["caustic", "Caustics"]];
-  // Objects: forms and pictures placed over the design, before effects. Forms take a material: lit in
-  // the palette, wrapped in the design underneath, wrapped in a preset, or glass.
   const OBJ_KINDS = [["sphere", "Sphere"], ["torus", "Torus"], ["cube", "Cube"], ["capsule", "Capsule"], ["blob", "Blob"], ["pyramid", "Pyramid"], ["diamond", "Diamond"], ["image", "Picture"]];
   const OBJ_LABEL = Object.fromEntries(OBJ_KINDS);
   const OBJ_MATS = [["shaded", "Shaded", "Lit in your palette"], ["design", "Design", "Wrapped in the design underneath"], ["preset", "Preset", "Wrapped in a preset of your choice"], ["glass", "Glass", "Bends what's behind it"], ["vanta", "Vantablack", "Flat black that swallows the light"]];
@@ -99,7 +93,6 @@
   const OBJ_DEFAULT = { kind: "sphere", x: 0.5, y: 0.5, size: 0.5, rot: 0, tilt: 20, spin: 30, mat: "shaded", preset: "Prism", shine: 0.6, ripple: 0, round: 0.15, shadow: 0.4, image: "", layer: "under", anim: true, speed: 1, refract: 1, body: false, frost: 0, disp: 0.3, rim: 0.5, tint: "#ffffff", tintAmt: 0 };
   const objId = () => "o" + Math.random().toString(36).slice(2, 8);
   const NOISE_LABEL = Object.fromEntries(NOISE_TYPES);
-  // Palettes: [name, colors dark to light, contour roles [lines, blend, background] when they differ from the default pick]
   const CURATED = [
     ["Paper", ["#2c2a26", "#6f6a60", "#b9b2a5", "#faf8f3"], ["#2c2a26", "#b9b2a5", "#faf8f3"]],
     ["Bone", ["#1b1b1b", "#4a4640", "#8a8378", "#f1ede4"], ["#1b1b1b", "#8a8378", "#f1ede4"]],
@@ -138,11 +131,6 @@
     ["Acid", ["#0f0a1f", "#5b2bff", "#c6ff3d", "#f2f2f2"], ["#c6ff3d", "#5b2bff", "#0f0a1f"]],
     ["Reef", ["#082b3a", "#43bccd", "#ff6f59", "#ffd1a6"], ["#ff6f59", "#43bccd", "#082b3a"]],
   ];
-  // Brand palettes, from each company's brand pages where published (Slack, Spotify, Discord, IKEA, Mastercard)
-  // and otherwise from the values design references agree on (Figma, Stripe, Linear, Airbnb, Instagram).
-  // Brands whose colors are the same three inks share one palette, named for the best known of them
-  // (Spotify for MegaFon too, Notion for Vercel, Google for Duolingo, Netflix for Alfa and MTS,
-  // Yandex Go for T-Bank and Mailchimp, Dropbox for VK). Yandex has its own: its red is warmer.
   const BRANDS = [
     ["Caddis", ["#2f6fdb", "#6a9f7a", "#d8a51f", "#e2632a", "#c9302c"], ["#2f6fdb", "#e2632a", "#f7f4ee"]],
     ["Slack", ["#4a154b", "#36c5f0", "#2eb67d", "#ecb22e", "#e01e5a"], ["#4a154b", "#36c5f0", "#f4ede4"]],
@@ -163,14 +151,9 @@
     ["Starbucks", ["#1e3932", "#00704a", "#d4e9e2", "#f2f0eb"], ["#1e3932", "#00704a", "#f2f0eb"]],
     ["Mastercard", ["#1a1a1a", "#eb001b", "#ff5f00", "#f79e1b", "#ffffff"], ["#eb001b", "#f79e1b", "#1a1a1a"]],
     ["LEGO", ["#000000", "#d01012", "#ffcf00", "#ffffff"], ["#d01012", "#000000", "#ffcf00"]],
-    // Russian brands, read from the official logo files (Wikimedia Commons SVGs from each bank's site:
-    // Yandex, Sber, Alfa, VTB, MegaFon, Wildberries) or the brands' own websites (Alice AI for Yandex
-    // Intel, MTS, Kaspersky, Avito, VK's brand page). Yandex Neo is Yandex Music's My Wave glow. T-Bank and
-    // Ozon block automated access, so theirs come from their logos as commonly reproduced.
     ["Yandex Neo", ["#050407", "#7a0f5c", "#e0336f", "#f2a81d", "#f4e04d"], ["#e0336f", "#f4e04d", "#050407"]],
     ["Yandex", ["#000000", "#fc3f1d", "#ffffff"], ["#fc3f1d", "#000000", "#ffffff"]],
     ["Netflix", ["#000000", "#e30613", "#ffffff"], ["#e30613", "#000000", "#ffffff"]],
-    // The taxi yellow with black and white, as on Yandex Go's icon and cars (T-Bank's and Mailchimp's match).
     ["Yandex Go", ["#21201f", "#fce000", "#ffffff", "#f5f4f2"], ["#21201f", "#ffffff", "#fce000"]],
     ["Yandex Intel", ["#120a2e", "#6335e0", "#7a55ff", "#a88cff", "#f3efff"], ["#6335e0", "#a88cff", "#120a2e"]],
     ["Sber", ["#f2e913", "#a3cd39", "#21a038", "#0fa8e0", "#0291eb", "#ffffff"], ["#21a038", "#0291eb", "#ffffff"]],
@@ -182,10 +165,8 @@
     ["Kaspersky", ["#1d1d1b", "#00a88e", "#ffffff"], ["#00a88e", "#1d1d1b", "#ffffff"]],
   ];
   const lum = (h) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
-  // Lines take the darkest color, the blend a middle one and the background the lightest.
   const rolesOf = (cols) => { const o = cols.slice().sort((a, b) => lum(a) - lum(b)); return [o[0], o[Math.floor(o.length / 2)], o[o.length - 1]]; };
   const PAL_GROUPS = [["Curated", CURATED], ["Brands", BRANDS]];
-  // Palettes are ordered by background: light ones first, neutrals before tints, then around the hue wheel.
   const bgKey = (hex) => {
     const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
     let h = 0;
@@ -198,7 +179,6 @@
   const ramp = (n) => (Array.isArray(n) ? n.slice() : PAL_BY[n].colors.slice());
   const palState = (n) => { const [line, line2, bg] = PAL_BY[n].roles; return { line, line2, bg }; };
 
-  // ---------- defaults ----------
   const DEFAULTS = {
     source: "contours",
     w: 1440, h: 900, pattern: "terrain",
@@ -228,14 +208,12 @@
     if (!T.PATTERNS.some((p) => p.id === out.pattern)) out.pattern = DEFAULTS.pattern;
     if (!Array.isArray(out.points)) out.points = [];
     const g = out.grad;
-    // The 3D shape generator became objects: its form moves onto a soft radial background.
     if (g.type === "solid") {
       const sz = 0.35 + 0.6 * clamp(+src.grad.scale || 0.6, 0.1, 2);
       if (!Array.isArray(src.objects) || !src.objects.length) out.objects = [{ ...OBJ_DEFAULT, id: objId(), kind: OBJ_LABEL[src.grad.solid] ? src.grad.solid : "sphere", size: +(sz * 0.95).toFixed(3), tilt: 29, spin: +src.grad.angle || 0, shine: clamp((+src.grad.soft || 1.6) / 2.6, 0, 1), ripple: +src.grad.ripple || 0 }];
       g.type = "radial"; g.warp = 0;
     }
     delete g.solid; delete g.ripple;
-    // Aura was a noise type before it became a generator of its own.
     if (g.type === "noise" && g.noise === "aura") { g.type = "aura"; g.noise = "clouds"; g.scale = 1; g.warp = 0.6; g.detail = 3; g.stretch = 1; g.soft = 1.6; g.contrast = 0.1; }
     out.objects = (Array.isArray(out.objects) ? out.objects : []).map((o) => (o?.kind === "pill" ? { ...o, kind: "capsule" } : o)).filter((o) => o && OBJ_LABEL[o.kind]).slice(0, 8).map((o) => ({ ...OBJ_DEFAULT, ...o, id: typeof o.id === "string" ? o.id : objId() }));
     if (!GENS.some((x) => x[0] === g.type && x[0] !== "contours")) g.type = "mesh";
@@ -255,28 +233,20 @@
   const savePrefs = () => { try { localStorage.setItem(PREFS, JSON.stringify(P)); } catch (e) {} };
   let sel = null;
 
-  // ---------- helpers ----------
   const gen = (st = S) => (st.source === "contours" ? "contours" : st.grad.type);
-  // Coming from a gradient, contours start as bands in that gradient's colors, as their preview shows.
-  const asContours = (st) => { if (st.source === "contours") return st; const own = PALS.find((p) => sameCols(p.colors, st.grad.colors)), [line, line2, bg] = own ? own.roles : rolesOf(st.grad.colors); // Every color of the gradient carries over: the background, then the rest as inks in order.
+  const asContours = (st) => { if (st.source === "contours") return st; const own = PALS.find((p) => sameCols(p.colors, st.grad.colors)), [line, line2, bg] = own ? own.roles : rolesOf(st.grad.colors);
     const inks = st.grad.colors.filter((c) => c !== bg).slice(0, 6), many = inks.length >= 3;
     return { ...st, source: "contours", mode: "bands", band: clamp(st.band, 0.35, 0.6), line: many ? inks[0] : line, line2: many ? inks[inks.length - 1] : line2, mids: many ? inks.slice(1, -1) : [], bg, gradient: false, transparent: false, opacity: 1 }; };
-  // Going the other way, a gradient takes the contour inks, unless its colors already hold the same set.
-  // Aura starts from its own settings, so the canvas matches the thumbnail that was clicked.
   const AURA_BASE = { scale: 1.25, detail: 3, stretch: 1, soft: 1.6, warp: 0.7, contrast: 0.1 };
-  // Wave starts from the settings of Framer's Wave Gradient as caddis.app uses it.
   const WAVE_BASE = { scale: 0.9, stretch: 6, warp: 2.1, soft: 0.74, contrast: 0.54, angle: 105 };
-  // Paint starts as a strong, five-step swirl through medium bands.
   const PAINT_BASE = { scale: 1, warp: 2.2, detail: 5, stretch: 4, soft: 0.3, contrast: 0.5, warpScale: 0.7, angle: 30, cells: 0 };
   const FOLDS_BASE = { scale: 1.6, warp: 0.6, warpScale: 0.8, stretch: 1.4, detail: 1, soft: 0.45, contrast: 0.8, prism: 0.4, angle: 20 };
   const GEN_BASE = { aura: AURA_BASE, wavegrad: WAVE_BASE, paint: PAINT_BASE, folds: FOLDS_BASE };
   const asGradient = (st, type) => { const g = { ...st, source: "gradient", grad: { ...st.grad, type } };
-    // Aura glows out of its first color, so it starts from the darkest one, at settings made for it.
     if (type === "aura" && st.grad?.type !== "aura") Object.assign(g.grad, AURA_BASE, { colors: [...st.grad.colors].sort((x, y) => lum(x) - lum(y)) });
     if (type === "wavegrad" && st.grad?.type !== "wavegrad") Object.assign(g.grad, WAVE_BASE);
     if (type === "paint" && st.grad?.type !== "paint") Object.assign(g.grad, PAINT_BASE);
     if (type === "folds" && st.grad?.type !== "folds") Object.assign(g.grad, FOLDS_BASE);
-    // Leaving one of those, the others get their own defaults back: its settings mean other things there.
     const from = GEN_BASE[st.grad?.type];
     if (from && type !== st.grad?.type) for (const k of Object.keys(from)) g.grad[k] = DEFAULTS.grad[k];
     if (st.source !== "contours") return g;
@@ -289,9 +259,6 @@
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const newSeed = () => Math.floor(Math.random() * 999999);
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
-  // Notifications stack in the bottom right (along the bottom on phones). Each slides in, waits while
-  // hovered, and leaves on its own. One with an action gets a button and stays up longer. The same
-  // message twice in a row refreshes the one showing instead of stacking a copy.
   const toast = (msg, opt = {}) => {
     const host = $("toasts");
     const same = [...host.children].find((n) => !n.classList.contains("out") && n.dataset.msg === msg && !opt.action);
@@ -320,7 +287,6 @@
   const getPath = (o, p) => p.split(".").reduce((a, k) => (a == null ? a : a[k]), o);
   const setPath = (o, p, v) => { const ks = p.split("."), last = ks.pop(); ks.reduce((a, k) => a[k], o)[last] = v; };
   const patLabel = (id) => T.PATTERNS.find((p) => p.id === id)?.label || id;
-  // New effects go before a trailing grain so the grain stays on top, the way film grain would.
   function addFx(id, params) {
     S.fx[id] = { ...S.fx[id], ...(params || {}), on: true };
     if (S.fxOrder.includes(id)) return;
@@ -329,7 +295,6 @@
   }
   function removeFx(id) { S.fx[id].on = false; S.fxOrder = S.fxOrder.filter((x) => x !== id); }
 
-  // ---------- presets ----------
   const BASE = { source: "contours", mode: "lines", liquify: 0, swell: 0, taper: 0, indexEvery: 0, gradient: false, transparent: false, opacity: 1, usePoints: false, ink: "#1b1b1b", paper: "#f1ede4" };
   const G = (type, colors, extra = {}) => ({ source: "gradient", grad: { type, colors: ramp(colors), ...extra } });
   const PRESETS = [
@@ -356,14 +321,11 @@
     ["Noise", "Neuro", { ...G("noise", "Iris", { noise: "neuro", scale: 1, detail: 3, warp: 0.2, stretch: 1, contrast: 1.1, angle: 0 }), fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
     ["Noise", "Halo", { ...G("noise", "Dusk", { noise: "ring", scale: 0.8, detail: 3, warp: 0.6, stretch: 1, contrast: 1, angle: 0 }), fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Noise", "Aura", { ...G("aura", "Yandex Neo", { scale: 1.2, detail: 3, warp: 0.55, stretch: 1.2, soft: 1.3, contrast: 0, angle: 20 }), fx: { grain: { amount: 0.05, size: 1.2, soft: true } }, motion: { type: "breathe", dur: 14, amt: 0.6 } }],
-    // The background of caddis.app: Framer's Wave Gradient at the settings and colors it uses there.
     ["Gradients", "Caddis", { ...G("wavegrad", ["#ff3624", "#92c198", "#ffae00", "#598dfd"], { angle: 105, scale: 0.9, stretch: 6, warp: 2.1, soft: 0.74, contrast: 0.54 }), seed: 32, fx: { grain: { amount: 0.14, size: 1.2, soft: true } }, motion: { type: "drift", dur: 10, amt: 0.5 } }],
     ["Gradients", "Marbling", { ...G("paint", ["#16122e", "#3b5bdb", "#f4efe6", "#ff7a45", "#ffd166"], { scale: 1, warp: 2.4, detail: 6, stretch: 4, soft: 0.3, contrast: 0.6, warpScale: 0.8, angle: 30 }), seed: 7, fx: { grain: { amount: 0.06, size: 1.2, soft: true } } }],
     ["Noise", "Smoke", { ...G("noise", ["#060608", "#1d1d22", "#5b5b66", "#c9c9d1", "#ffffff"], { noise: "smoke", scale: 1.4, detail: 4, warp: 0.3, stretch: 1.2, contrast: 1.1, angle: 25 }), fx: { glyphs: { cell: 11, set: "alnum", font: "geist", contrast: 1.3, change: 2, back: 0, mono: false } }, motion: { type: "breathe", dur: 10, amt: 0.5 } }],
     ["Noise", "Lagoon", { ...G("aura", ["#02161c", "#05607a", "#0fb5d0", "#3fe3ef", "#b8fbff"], { scale: 2.2, detail: 3, warp: 0.6, stretch: 0.8, soft: 2.4, contrast: 0.25, angle: -30 }), motion: { type: "breathe", dur: 12, amt: 0.6 } }],
-    // Alfa-Bank's advertising: flat black shapes floating on their red.
     ["Gradients", "Alfa", { ...G("linear", ["#da2618", "#ef3124", "#f5473a"], { angle: 115, warp: 0.15, soft: 1 }), objects: [{ kind: "image", x: 0.6, y: 0.6, size: 0.52, rot: -6, tilt: 16, spin: -14, mat: "vanta", shine: 0.4, ripple: 0, round: 0.2, shadow: 0.35, image: "" }, { kind: "capsule", x: 0.18, y: 0.3, size: 0.34, rot: 38, tilt: 10, spin: 20, mat: "vanta", shine: 0.4, ripple: 0, round: 0.15, shadow: 0.3, image: "" }, { kind: "sphere", x: 0.86, y: 0.2, size: 0.18, rot: 0, tilt: 0, spin: 0, mat: "vanta", shine: 0.4, ripple: 0, round: 0.15, shadow: 0.25, image: "" }] }],
-    // Yandex Go: the taxi yellow, with black and white forms riding on it.
     ["Gradients", "Yandex Go", { ...G("linear", ["#f2d200", "#fce000", "#ffe94a"], { angle: 125, warp: 0.12, soft: 1 }), objects: [{ kind: "capsule", x: 0.36, y: 0.56, size: 0.5, rot: -28, tilt: 12, spin: 24, mat: "vanta", shine: 0.4, shadow: 0.35 }, { kind: "sphere", x: 0.72, y: 0.36, size: 0.3, tilt: 20, spin: 30, mat: "glass", shine: 0.8, shadow: 0.3, frost: 0.55, tint: "#ffffff", tintAmt: 0.75, rim: 0.7 }, { kind: "torus", x: 0.8, y: 0.76, size: 0.26, rot: 20, tilt: 40, spin: -30, mat: "vanta", shine: 0.4, shadow: 0.3 }] }],
     ["Gradients", "Orb", { ...G("radial", "Dusk", { warp: 0.2, soft: 1.6 }), objects: [{ kind: "blob", x: 0.5, y: 0.5, size: 0.62, tilt: 29, spin: 25, mat: "shaded", shine: 0.6, ripple: 0.3, shadow: 0.35 }], fx: { grain: { amount: 0.1, size: 1.2, soft: true } } }],
     ["Gradients", "Ring", { ...G("radial", "Glacier", { warp: 0, soft: 2 }), objects: [{ kind: "torus", x: 0.5, y: 0.5, size: 0.66, tilt: 29, spin: -30, mat: "shaded", shine: 0.8, shadow: 0.3 }], fx: { grain: { amount: 0.08, size: 1.2, soft: true } } }],
@@ -379,7 +341,6 @@
     ["Effects", "Relief", { pattern: "terrain", scale: 900, octaves: 3, warp: 0.3, levels: 12, mode: "layers", smooth: 0.6, line: "#b9b2a5", line2: "#faf8f3", bg: "#b9b2a5", fx: { emboss: { strength: 2.2, angle: 135, depth: 3 } } }],
     ["Effects", "Halftone", { ...G("flow", "Prism", { scale: 0.45, detail: 2, warp: 0.5, stretch: 1.8, angle: -25 }), fx: { halftone: { size: 10, angle: 30, mono: false } }, paper: "#f1ede4" }],
     ["Effects", "Duotone", { pattern: "lines", angle: 165, scale: 500, octaves: 2, warp: 0.4, gap: 28, mode: "bands", band: 0.5, smooth: 0.5, line: "#111111", line2: "#5a0f1f", bg: "#f1ede4", fx: { gradmap: { c1: "#15123a", c2: "#4b3fd1", c3: "#f4f1ff", mix: 1 }, grain: { amount: 0.08, size: 1.2, soft: true } } }],
-    // Looks picked from the design board: each one rebuilds a reference with the tools above.
     ["Effects", "Pixel tide", { ...G("linear", ["#15123a", "#15123a", "#4b3fd1", "#b8a8ff", "#f4f1ff"], { angle: 90 }), fx: { wave: { amp: 70, length: 700, angle: 0 }, dissolve: { cell: 20, shape: "square", amount: 0.5, edge: 0.3, gap: 0.12, tint: 0.1, dots: 0.5, keep: "dark" } } }],
     ["Effects", "Pink mosaic", { ...G("linear", ["#fbecef", "#f2c4cf", "#e8a6b5", "#c45a7a"], { angle: 0 }), fx: { mesh: { cell: 130, radius: 0.16, round: 0.5, thick: 0.2, frost: 1, tint: 0.1, blend: 0.65, gap: 0, light: 0.12 }, grain: { amount: 0.06, size: 1.2, soft: true } } }],
     ["Effects", "Bar field", { ...G("flow", ["#8a9ee0", "#d3d8f2", "#f6d5c6", "#f3a683", "#8a9ee0"], { scale: 0.5, detail: 3, warp: 0.5, stretch: 1.6, angle: 10, contrast: 1 }), fx: { glass: { width: 26, angle: 90, round: 1, thick: 1.4, frost: 0.05, light: 0.8 } } }],
@@ -456,16 +417,11 @@
     ["Print 300 dpi", [["A4", 2480, 3508], ["Letter", 2550, 3300]]],
   ];
 
-  // ---------- history ----------
   let hist = [JSON.stringify(S)], hi = 0, histT = 0;
-  // Edits settle for a moment before they land in history, so a drag is one step. Big jumps (presets,
-  // Surprise, variations) land at once: if the app is busy, a debounced step could be overtaken by the
-  // next jump and lost from undo.
   let histPend = null;
   function commit(now = false) {
     clearTimeout(histT);
     const push = (j) => { if (j === hist[hi]) return; hist = hist.slice(0, hi + 1); hist.push(j); if (hist.length > 120) hist.shift(); hi = hist.length - 1; };
-    // A jump first lands any edit still waiting, as its own step, then itself.
     if (now) { if (histPend) push(histPend); histPend = null; push(JSON.stringify(S)); syncHistory(); return; }
     histPend = JSON.stringify(S);
     histT = setTimeout(() => { if (histPend) push(histPend); histPend = null; syncHistory(); }, 350);
@@ -481,16 +437,12 @@
   }
   const syncHistory = () => { $("undo").disabled = hi <= 0; $("redo").disabled = hi >= hist.length - 1; };
 
-  // ---------- color ----------
   const { toOklch, fromOklch } = window.Color;
   const picker = window.ColorPicker;
-  // Colors already in play, offered as quick picks in the picker.
   const inPlay = () => (S.source === "contours" ? [S.bg, S.line, ...(S.mids || []), S.line2] : S.grad.colors);
-  // Colors that sit well next to one: lighter, darker, its neighbours on the wheel, its opposite and a soft near-white.
   const variants = (hex) => { const [l, c, h] = toOklch(hex); return [[l + 0.16, c * 0.7, h], [l - 0.18, c, h], [l, c, h + 30], [l, c, h - 30], [l, Math.max(c, 0.08), h + 180], [0.95, 0.02, h]].map(([a, b, d]) => fromOklch(clamp(a, 0.12, 0.97), b, (d + 360) % 360)); };
   const swatchesFor = (hex) => [["In use", inPlay()], ["Try", variants(parseHex(hex) || "#808080")]];
 
-  // ---------- control factories ----------
   const syncers = [], sliders = [];
   const roundStep = (v, c, lo = c.min, hi = c.max) => +clamp(Math.round(v / c.step) * c.step, lo, hi).toFixed(4);
   const hardRange = (c) => c.hard || [c.min > 0 ? c.min / 20 : c.min === 0 ? 0 : c.min * 20, c.max * 25];
@@ -498,8 +450,6 @@
     const [a, b] = P.safe && c.rand ? c.rand : [c.min, c.max];
     return roundStep(c.log && a > 0 ? a * Math.pow(b / a, Math.random()) : rnd(a, b), c);
   }
-  // What each setting does, shown on hover over its name. Shape and line settings also play a short
-  // loop of the current design swept from low to high, so the change is visible before it is made.
   const SLIDER_TIP = {
     Scale: "How large the pattern is drawn", Detail: "Layers of finer detail on top of the main shape", Warp: "Bends the pattern with a slow, smooth push",
     "Warp size": "How broad the bends are", Liquify: "Swirls the pattern like stirred paint", "Liquify size": "How broad the swirls are", Cells: "Round spots of other colors in dark rims, like an acrylic pour",
@@ -519,7 +469,6 @@
     Speed: "Its own pace within the loop. Negative runs backward", Amplitude: "How far things move", "Loop length": "Seconds before the motion repeats",
     Caustics: "The bright web of light a pool casts on its floor", Grain: "Fine film grain", Intensity: "How strong the effect is",
   };
-  // Hints for effect settings whose names don't say enough on their own, keyed effect.setting.
   const INFO_I = `<svg class="info-i" aria-hidden="true" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.25"/><path d="M8 7.2v3.8M8 5h.01"/></svg>`;
   const FX_TIP = {
     "halftone.tone": "In color, dots normally stay large so the colors carry. This sizes them by lightness instead, like ink only",
@@ -558,7 +507,6 @@
     const tipText = c.tip || SLIDER_TIP[c.label];
     if (tipText) {
       const lab = row.querySelector(".label"); lab.dataset.tip = tipText;
-      // A small "i" says there's a hint; hovering the name or the icon shows it.
       lab.insertAdjacentHTML("beforeend", INFO_I);
       if (SWEEP_GROUPS.has(c.group) && !c.noSweep) { c._sweep = sweeps.length; lab.dataset.tipPreview = "sweep:" + c._sweep; sweeps.push(c); }
     }
@@ -599,11 +547,9 @@
       const vis = !c.when || c.when();
       row.hidden = !vis;
       if (!vis) return;
-      // A setting the current shape ignores stays in place, dimmed, saying so, rather than doing nothing.
       const na = c.na?.() || "";
       row.classList.toggle("na", !!na); input.disabled = val.disabled = !!na;
       if (na) row.dataset.tip = na; else delete row.dataset.tip;
-      // The reason it does nothing replaces the usual description on the name, too.
       const lab = row.querySelector(".label");
       if (tipText) { if (na) { lab.dataset.tip = na; delete lab.dataset.tipPreview; } else { lab.dataset.tip = tipText; if (c._sweep != null) lab.dataset.tipPreview = "sweep:" + c._sweep; } }
       const v = c.get();
@@ -655,10 +601,7 @@
     return b;
   }
 
-  // ---------- slots (left column) ----------
-  // Each layer of the design is a slot showing its current pick. Clicking opens its choices.
   const slotWhen = { lines: () => gen() === "contours" };
-  // Tile copy: the title names what is chosen; the subtitle lists its key settings as plain facts.
   const PRESET_KIND = { Lines: "Line preset", Fills: "Fill preset", Gradients: "Gradient preset", Noise: "Noise preset", Effects: "Effect preset" };
   function slotInfo(id) {
     const g = gen(), gr = S.grad, sc = (v) => f2(v) + "×";
@@ -684,10 +627,8 @@
     }
     return ["", ""];
   }
-  // An effect tile's subtitle is its first setting and value, like "Rib width 44px".
   function fxFact(id) { const p = FXI[id].p.find((q) => q.k); if (!p) return FXI[id].cat; const v = S.fx[id][p.k]; return `${window.I18N?.t(p.label) ?? p.label} ${p.fmt ? p.fmt(v) : v}`; }
   const slotColors = () => (gen() === "contours" ? (S.gradient || S.mode === "layers" || S.mode === "shaded" || S.mids.length ? [S.bg, S.line, ...S.mids, S.line2] : [S.bg, S.line]) : S.grad.colors);
-  // The build column is built once and patched in place, so selection, text and colors can transition.
   let slotKey = "";
   const SLOT_DEFS = [["preset", "Preset"], ["generator", "Generator"], ["shape", "Shape"], ["lines", "Lines"], ["colors", "Colors"]];
   const slotEls = {};
@@ -702,7 +643,6 @@
   objSlot.className = "slot slot-fx slot-obj";
   objSlot.innerHTML = `<div class="slot-label">Objects<span class="count" hidden></span></div><div class="fx-tiles" id="objTiles"><button class="tile add" data-slot="addobj"><span class="tile-plus">${ic("plus")}</span><span class="tile-text"><b>Add object</b><small>Optional</small></span></button></div>`;
   slotList.appendChild(objSlot);
-  // Counters stop at two digits; past 99 they read as endless.
   const countText = (n) => (n > 99 ? "∞" : String(n));
   const objTiles = objSlot.querySelector(".fx-tiles"), objAdd = objSlot.querySelector(".tile.add"), objCount = objSlot.querySelector(".count");
   const objOf = () => (P.slot.startsWith("obj:") ? S.objects.find((o) => o.id === P.slot.slice(4)) : null);
@@ -757,7 +697,6 @@
     t.className = "tile fx obj"; t.dataset.obj = o.id;
     t.innerHTML = `<span class="grip" aria-label="Drag to reorder. Lower ones draw on top">${ic("grip")}</span><button class="tile-main" data-slot="obj:${o.id}"><span class="tile-th" data-th="obj:${o.id}"></span><span class="tile-text"><b></b><small></small></span></button>${rowBtns("obj:" + o.id)}<button class="ib xs" data-remove-obj="${o.id}" aria-label="Remove" title="Remove">${ic("x")}</button>`;
     reuseThumb(t, "obj:" + o.id);
-    // Until its picture is drawn, a new tile shows the design's colors rather than an empty grey box.
     try { t.querySelector(".tile-th").style.setProperty("--ph", phOf(S)); } catch (e) {}
     return t;
   }
@@ -780,14 +719,10 @@
   slotList.appendChild(fxSlot);
   const fxTiles = fxSlot.querySelector(".fx-tiles"), addTile = fxSlot.querySelector(".tile.add"), countEl = fxSlot.querySelector(".count");
   const motionSlot = document.createElement("div");
-  // Motion's tile plays the loop, so the last step reads as movement at a glance.
   motionSlot.className = "slot slot-motion";
   motionSlot.innerHTML = `<div class="slot-label">Motion</div><button class="tile" data-slot="motion"><span class="tile-th" data-th="motion"></span><span class="tile-text"><b></b><small></small></span>${ic("next", "go")}</button>`;
   slotList.appendChild(motionSlot);
   const EASE = "cubic-bezier(.2,.8,.2,1)";
-  // Two or more effects or objects fold into a deck of overlapping cards with their names beside it, like
-  // the color strip, so the column doesn't fill with rows. Clicking the deck spreads it into the full
-  // list, where the grips reorder it, and Fold gathers it up again.
   const stackOpen = { fx: false, obj: false };
   for (const [k, slot] of [["fx", fxSlot], ["obj", objSlot]]) {
     const sum = document.createElement("span"); sum.className = "stack-sum"; sum.setAttribute("aria-hidden", "true");
@@ -797,7 +732,6 @@
     const b = document.createElement("button"); b.className = "stack-fold"; b.textContent = "Fold"; b.hidden = true;
     b.onclick = () => { stackOpen[k] = false; slotKey = ""; renderSlots(); };
     slot.querySelector(".slot-label").appendChild(b);
-    // Clicking a card in the deck spreads the deck and opens that card's settings; the names open it too.
     slot.addEventListener("click", (e) => {
       if (!slot.classList.contains("folded")) return;
       const card = e.target.closest(".tile.fx");
@@ -806,7 +740,6 @@
       if (card) setSlot(card.dataset.fx ? "fx:" + card.dataset.fx : "obj:" + card.dataset.obj); else renderSlots();
     }, true);
   }
-  // Folding and spreading: the cards ease into their new places one after another instead of snapping.
   function spread(slot) {
     const open = !slot.classList.contains("folded");
     [...slot.querySelectorAll(".tile.fx:not(.leaving), .stack-sum, .tile.add")].forEach((t, i) => t.animate(open ? [{ opacity: 0, transform: "translateY(-10px) scale(.97)" }, { opacity: 1, transform: "none" }] : [{ opacity: 0, transform: "translateX(-12px)" }, { opacity: getComputedStyle(t).opacity }], { duration: 300, delay: i * 40, easing: EASE, fill: "backwards", composite: "replace" }));
@@ -824,24 +757,19 @@
     }
   }
   const animOK = () => !reduceMotion.matches && !document.body.classList.contains("boot");
-  // Text that changes fades in rather than snapping.
   function setText(el, v) { if (window.I18N && !el.closest('[translate="no"]')) v = I18N.t(v); if (el.textContent === v) return; el.textContent = v; if (animOK()) el.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: 200 + Math.random() * 90, easing: EASE }); }
   function fxTile(id) {
     const t = document.createElement("div");
     t.className = "tile fx"; t.dataset.fx = id;
     t.innerHTML = `<span class="grip" aria-label="Drag to reorder ${FXI[id].name}">${ic("grip")}</span><button class="tile-main" data-slot="fx:${id}"><span class="tile-th" data-th="fx:${id}"></span><span class="tile-text"><b>${FXI[id].name}</b><small></small></span></button>${rowBtns("fx:" + id)}<button class="ib xs" data-remove="${id}" aria-label="Remove ${FXI[id].name}" title="Remove">${ic("x")}</button>`;
     reuseThumb(t, "fx:" + id);
-    // Until its picture is drawn, a new tile shows the design's colors rather than an empty grey box.
     try { t.querySelector(".tile-th").style.setProperty("--ph", phOf(S)); } catch (e) {}
     return t;
   }
-  // Tiles that arrived in this render, and where every tile sat before it (relative to its slot, since
-  // the slots above may grow or shrink at the same time).
   const fresh = new Set();
   let before = new Map();
   const tileKey = (n) => (n.dataset.fx ? "fx:" + n.dataset.fx : n.dataset.obj ? "obj:" + n.dataset.obj : n.dataset.slot);
   const rel = (n) => { const r = n.getBoundingClientRect(), s = n.closest(".slot").getBoundingClientRect(); return { x: r.left - s.left, y: r.top - s.top, w: r.width, h: r.height }; };
-  // A removed tile stays where it was, out of the flow, and fades while the rest close the gap.
   function leave(t) {
     const b = before.get(tileKey(t)), th = t.querySelector(".tile-th");
     if (th?.children.length) gone.set(tileKey(t), [...th.children].map(cloneThumb));
@@ -864,18 +792,15 @@
     for (const [id] of SLOT_DEFS) {
       const wrap = slotEls[id], t = wrap.querySelector(".tile"), [title, sub] = slotInfo(id);
       const show = !slotWhen[id] || slotWhen[id]();
-      if (wrap.hidden === show) wrap.hidden = !show; // folds open and closed in CSS
+      if (wrap.hidden === show) wrap.hidden = !show;
       t.classList.toggle("on", P.slot === id);
-      // Preset and palette names are names, so they stay as they are in any language.
       const nb = t.querySelector("b");
       if (id === "colors" || (id === "preset" && currentPreset())) nb.setAttribute("translate", "no"); else nb.removeAttribute("translate");
       setText(nb, title); setText(t.querySelector("small"), sub);
     }
-    // Color tile: same number of colors eases each one; a new count rebuilds the strip.
     const sw = slotEls.colors.querySelector(".tile-sw"), cols = slotColors();
     if (sw.children.length === cols.length) [...sw.children].forEach((i, n) => (i.style.background = cols[n]));
     else sw.innerHTML = cols.map((c) => `<i style="background:${c}"></i>`).join("");
-    // Effects: keep existing tiles, add new ones, let removed ones collapse out.
     const have = new Map([...fxTiles.querySelectorAll("[data-fx]")].filter((n) => !n.classList.contains("leaving")).map((n) => [n.dataset.fx, n]));
     for (const id of S.fxOrder) { let t = have.get(id); if (!t) { t = fxTile(id); fresh.add(t); } fxTiles.insertBefore(t, addTile); t.classList.toggle("on", P.slot === "fx:" + id); have.delete(id); }
     for (const t of have.values()) leave(t);
@@ -890,8 +815,6 @@
     countEl.hidden = !S.fxOrder.length;
     if (countEl.textContent !== n) { countEl.textContent = n; if (animOK()) countEl.animate([{ transform: "scale(.4)" }, { transform: "scale(1.15)" }, { transform: "none" }], { duration: 320, easing: EASE }); }
     if (anim) {
-      // A deck that folds or unfolds deals its cards in again; the others glide within their slot and
-      // new ones grow in one after another.
       const redealt = decks.filter((s, i) => modeBefore[i] !== s.classList.contains("fx-stack") + "" + s.classList.contains("folded"));
       redealt.forEach(spread);
       let n = 0;
@@ -901,8 +824,6 @@
         if (fresh.has(t)) t.animate([{ opacity: 0, transform: "translateY(-6px) scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 280, delay: 60 * n++, easing: EASE, fill: "backwards" });
         else if (b && !t.classList.contains("dragging")) { const a = rel(t), dx = b.x - a.x, dy = b.y - a.y; if (Math.abs(dx) > 1 || Math.abs(dy) > 1) t.animate([{ translate: `${dx}px ${dy}px` }, { translate: "0 0" }], { duration: 300, easing: EASE }); }
       }
-      // Sections below a deck that grew or shrank slide to their new place on the compositor, so a busy
-      // main thread (the canvas redrawing after an undo, say) can't make them stutter.
       below.forEach((s, i) => { const dy = yBefore[i] - topOf(s); if (Math.abs(dy) > 1 && !s.hidden) s.animate([{ translate: `0 ${dy}px` }, { translate: "0 0" }], { duration: 320, easing: EASE }); });
     }
     schedulePreviews(anim && (fresh.size || slotList.querySelector(".leaving")) ? 360 : 120);
@@ -920,7 +841,6 @@
     const t = e.target.closest("[data-slot]");
     if (t) setSlot(t.dataset.slot);
   });
-  // Drag a grip to reorder effects (the order they run in) or objects (lower ones draw on top).
   $("slotList").addEventListener("pointerdown", (e) => {
     const grip = e.target.closest(".grip");
     if (!grip || grip.closest(".fx-stack.folded")) return;
@@ -956,7 +876,6 @@
   function panelOf(slot) { return slot.startsWith("fx:") ? "effect" : slot.startsWith("obj:") ? "object" : slot; }
   const fxOf = () => (P.slot.startsWith("fx:") ? P.slot.slice(3) : null);
 
-  // Dice in the options header randomizes whatever the open panel controls.
   const optDice = document.createElement("button");
   optDice.className = "ib"; optDice.innerHTML = ic("dice");
   optDice.onclick = () => {
@@ -974,7 +893,6 @@
       if (o) Object.assign(o, { rot: Math.round(rnd(-35, 35)), tilt: Math.round(rnd(-30, 45)), spin: Math.round(rnd(-90, 90)), shine: +rnd(0.3, 0.9).toFixed(2), ...(o.kind === "image" ? { mat: pick(["photo", "palette"]) } : { kind: pick(OBJ_KINDS.filter(([k]) => k !== "image"))[0], mat: pick(["shaded", "shaded", "design", "glass", "preset"]), preset: pick(PRESETS)[1] }) });
     }
     else if (p === "motion") {
-      // A new motion: a moving type, then its sliders, playback, direction and easing.
       if (S.motion.type === "still" || Math.random() < 0.6) S.motion.type = pick(["drift", "flow", "breathe", "pulse"].filter((x) => x !== S.motion.type));
       randomizeGroup("motion");
       S.motion.mode = pick(["loop", "loop", "pingpong"]); S.motion.ease = pick(["linear", "ease", "inout", "linear"]);
@@ -987,7 +905,6 @@
   };
   $("optTools").appendChild(optDice);
 
-  // ---------- preset panel ----------
   const takeRow = $("takeRow");
   takeRow.innerHTML = `<span class="take-label">Apply</span><div class="multi" role="group" aria-label="Parts to apply">` + Object.keys(LAYERS).map((L) => `<button class="tog" data-l="${L}" aria-pressed="true"><span class="tick">${ic("check")}</span>${LAYER_NAMES[L]}</button>`).join("") + `</div>`;
   takeRow.onclick = (e) => {
@@ -1012,9 +929,6 @@
     return { el: c, group, name, look, done: false };
   });
 
-  // ---------- image generator ----------
-  // One picture at a time, kept outside the design state so undo history and saved designs stay small.
-  // The design only holds its id; effects and colors then work on it like on any other source.
   const IMG_KEY = "isoline.image";
   let IMG = null;
   const imgCache = new Map();
@@ -1024,7 +938,6 @@
     el.src = url;
   }
   try { const v = JSON.parse(localStorage.getItem(IMG_KEY) || "null"); if (v?.url) loadImg(v.url, v.id); } catch (e) {}
-  // The picture fills the canvas like CSS cover. Without one, a quiet placeholder in the design's colors.
   function imageCanvas(st, w, h) {
     w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
     const key = `${IMG?.id || st.grad.colors.join()}|${w}x${h}`;
@@ -1051,7 +964,6 @@
       r.onload = () => {
         const raw = new Image();
         raw.onload = () => {
-          // Large pictures are scaled to 2400px on the long side, which still covers a 4K export's width.
           const sc = Math.min(1, 2400 / Math.max(raw.naturalWidth, raw.naturalHeight)), c = document.createElement("canvas");
           c.width = Math.round(raw.naturalWidth * sc); c.height = Math.round(raw.naturalHeight * sc);
           c.getContext("2d").drawImage(raw, 0, 0, c.width, c.height);
@@ -1067,7 +979,6 @@
     inp.click();
   }
 
-  // ---------- generator panel ----------
   const genCards = {};
   for (const [id, label, sub] of GENS) {
     const c = card(label, () => { if (id === "image" && !IMG) return pickImage(); if (gen() !== id) { setGen(id); update({ fade: true }); } }, sub);
@@ -1075,7 +986,6 @@
     $("genGrid").appendChild(c); genCards[id] = c;
   }
 
-  // ---------- shape panel ----------
   const selPoint = () => (S.source === "contours" && sel != null ? S.points[sel] : null);
   const k = (key) => bindKey(() => S, key);
   const patCards = {};
@@ -1106,7 +1016,6 @@
   const isG = (...t) => () => t.includes(gen());
   [
     { label: "Scale", ...bindKey(gr, "scale"), min: 0.1, max: 6, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.35, 1.2], when: isG("flow", "noise") },
-    // Aura has its own set: the blobs' size, wobble, edge and number, their rays and a faint outline.
     { label: "Size", ...bindKey(gr, "scale"), min: 0.3, max: 4, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.8, 2.2], when: isG("aura") },
     { label: "Wobble", ...bindKey(gr, "warp"), min: 0, max: 2, step: 0.01, fmt: f2, rand: [0.3, 1.1], when: isG("aura") },
     { label: "Edge", ...bindKey(gr, "soft"), min: 0.5, max: 4, step: 0.05, fmt: f2, rand: [1, 2.6], when: isG("aura") },
@@ -1114,7 +1023,6 @@
     { label: "Rays", ...bindKey(gr, "stretch"), min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.4, 1.6], when: isG("aura") },
     { label: "Outline", ...bindKey(gr, "contrast"), min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0.3], when: isG("aura") },
     { label: "Color turn", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("aura") },
-    // Wave: the wave's angle and frequencies, how far it twists the field, its softness and how much shows.
     { label: "Angle", ...bindKey(gr, "angle"), min: -180, max: 180, step: 1, fmt: deg, when: isG("wavegrad", "paint", "folds") },
     { label: "Scale", ...bindKey(gr, "scale"), min: 0.2, max: 5, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.6, 1.8], when: isG("paint") },
     { label: "Swirl", ...bindKey(gr, "warp"), min: 0, max: 4, step: 0.01, fmt: f2, rand: [0.8, 2.4], when: isG("paint") },
@@ -1124,7 +1032,6 @@
     { label: "Chaos", ...bindKey(gr, "warpScale"), min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 1], when: isG("paint") },
     { label: "Veins", ...bindKey(gr, "contrast"), min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0.2, 0.9], when: isG("paint") },
     { label: "Cells", ...bindKey(gr, "cells"), min: 0, max: 1, step: 0.01, fmt: pct, pct: true, rand: [0, 0], when: isG("paint") },
-    // Folds: how many sheets, how they bend, how gradually each one lights and how bright its edge is.
     { label: "Sheets", ...bindKey(gr, "scale"), min: 0.3, max: 6, step: 0.01, log: true, fmt: (v) => f2(v) + "×", rand: [0.8, 3], when: isG("folds") },
     { label: "Curve", ...bindKey(gr, "warpScale"), min: -2, max: 2, step: 0.01, fmt: f2, rand: [-1.2, 1.2], when: isG("folds") },
     { label: "Wave", ...bindKey(gr, "warp"), min: 0, max: 3, step: 0.01, fmt: f2, rand: [0.2, 1.2], when: isG("folds") },
@@ -1149,7 +1056,6 @@
   $("seed").onchange = (e) => { S.seed = clamp(Math.floor(+e.target.value || 0), 0, 999999); update({ fade: true }); };
   const variationSeed = (i) => (S.seed * 31 + (i + 1) * 7919) % 999999;
 
-  // ---------- lines panel ----------
   const modeCards = {};
   for (const [id, label, sub] of [["lines", "Lines", "Strokes"], ["bands", "Bands", "Filled stripes"], ["layers", "Layers", "Stacked fills"], ["shaded", "Gradient", "Shaded stripes"]]) {
     const c = card(label, () => { S.mode = id; if (S.line && S.bg) Object.assign(S, readable(S)); update({ fade: true }); }, sub);
@@ -1172,9 +1078,6 @@
     { label: "Clean", ...k("minLen"), min: 0, max: 300, step: 1, fmt: (v) => (v ? v + "px" : "Off"), rand: [8, 40] },
   ].forEach((c) => makeSlider($("lines"), { group: "lines", ...c }));
 
-  // ---------- colors panel ----------
-  // One color model for both kinds of generator: contours have a background plus inks (lines, any middle
-  // colors, blend); gradients have their color stops. Palettes resample to however many colors you have.
   const PER_PAGE = 9;
   const sameCols = (a, b) => a.length === b.length && a.every((c, i) => c === b[i]);
   const inksOf = (st = S) => (st.source === "contours" ? [st.line, ...(st.mids || []), st.line2] : st.grad.colors);
@@ -1184,7 +1087,6 @@
   }
   const toLab = (h) => { const [l, c, hh] = toOklch(h); return [l, c * Math.cos((hh * Math.PI) / 180), c * Math.sin((hh * Math.PI) / 180)]; };
   const fromLab = ([l, a, b]) => fromOklch(l, Math.hypot(a, b), ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360);
-  // n colors from a list: evenly picked when there are enough, otherwise blended between neighbours in OKLab.
   function sampleN(list, n) {
     if (list.length === n) return list.slice();
     if (n === 1) return [list[0]];
@@ -1195,7 +1097,6 @@
       return i === 0 ? list[0] : i === n - 1 ? list[list.length - 1] : fromLab(labs[k].map((v, j) => v + (labs[k + 1][j] - v) * t));
     });
   }
-  // A palette fitted to the current design: { bg, inks } for contours, { inks } for gradients.
   function fitPal(p, n = inksOf().length) {
     if (gen() !== "contours") return { inks: sampleN(p.colors, n) };
     const roles = p.roles || rolesOf(p.colors), bg = roles[2];
@@ -1212,7 +1113,6 @@
     if (f.bg) { S.bg = f.bg; S.transparent = false; }
     setInks(f.inks);
   }
-  // Harmonies grown from the strongest color in play, plus the closest library palettes.
   function suggestions() {
     const cols = gen() === "contours" ? [S.bg, ...inksOf()] : inksOf();
     const lch = cols.map(toOklch), [, C0, H] = lch.reduce((a, b) => (b[1] > a[1] ? b : a));
@@ -1229,7 +1129,6 @@
     return out;
   }
   const palEl = $("palettes");
-  // Palettes saved in the palette tool get their own tab.
   const savedPals = () => (window.Palettes?.saved() || []).map((p) => ({ name: p.name, colors: p.colors, group: "Saved" }));
   const tabs = () => ["Suggested", ...PAL_GROUPS.map(([g]) => g), "Saved"];
   const TAB_TIP = { Suggested: "Built from the colors you have", Curated: "Hand-picked palettes", Brands: "Colors from well-known brands", Saved: "Saved in the palette tool" };
@@ -1237,7 +1136,6 @@
   addEventListener("palettes-saved", () => { renderTabs(); if (panelOf(P.slot) === "colors") renderPalettes(); });
   P.palTab ||= "Curated"; P.palPage ||= 0;
   let sugList = [];
-  // Palettes sort by color (neutrals first, then around the hue wheel by their most colorful swatch) or by name.
   const hueKey = (p) => {
     const best = p.colors.map((hex) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255), mx = Math.max(r, g, b), d = mx - Math.min(r, g, b); let h = 0; if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return [d, (h * 60 + 360) % 360]; }).reduce((a, x) => (x[0] > a[0] ? x : a));
     return best[0] < 0.12 ? -1 + best[0] : best[1];
@@ -1282,7 +1180,6 @@
     if (b.dataset.v === "Suggested") sugList = suggestions();
     P.palTab = b.dataset.v; P.palPage = 0; savePrefs(); renderPalettes(d);
   };
-  // Opening Colors shows the page holding the palette in use, and fresh suggestions.
   function revealPalette() {
     renderTabs();
     sugList = suggestions();
@@ -1295,8 +1192,6 @@
     while (S.grad.points.length < S.grad.colors.length) S.grad.points.push({ x: +rnd(0.1, 0.9).toFixed(3), y: +rnd(0.1, 0.9).toFixed(3) });
     S.grad.points = S.grad.points.slice(0, S.grad.colors.length);
   }
-  // Your colors: a background circle (contours) and a circle per ink or stop. Circles update in place
-  // when only their colors change, so they ease to the new color; adding or removing rebuilds the row.
   const MAX_INKS = () => (gen() === "contours" ? 6 : 8);
   function renderMine() {
     const el = $("mine"), contours = gen() === "contours", inks = inksOf();
@@ -1309,22 +1204,17 @@
     } else {
       const before = el.dataset.shape ? el.querySelectorAll("[data-ink]").length : inks.length;
       el.dataset.shape = shape;
-      // Two labeled groups: the background on its own, then the inks (or stops) in order, which you
-      // can drag to reorder.
       let html = contours ? `<div class="mine-grp mine-bg"><div class="stop bgc" data-k="bg"><button class="sw" style="background:${S.bg}" aria-label="Background color"></button></div><span class="mine-l">Background</span></div><span class="mine-sep"></span>` : "";
       html += `<div class="mine-grp mine-main"><div class="mine-inks">` + inks.map((c, i) => `<div class="stop${i >= before ? " fresh" : ""}" data-ink="${i}"><button class="sw" style="background:${c}" aria-label="Edit color ${i + 1}" title="Click to edit, drag to reorder"></button>${inks.length > 2 ? `<button class="x" aria-label="Remove color ${i + 1}">${ic("x")}</button>` : ""}</div>`).join("");
       if (inks.length < MAX_INKS()) html += `<button class="stop-add" title="Add color" aria-label="Add color">${ic("plus")}</button>`;
       html += `</div>${contours ? `<span class="mine-l">Lines, first to last</span>` : ""}</div>`;
       el.innerHTML = html;
-      // Numbered in the order Palettes lays out its columns, so each circle can travel to its column.
       el.querySelectorAll(".sw").forEach((sw, i) => (sw.dataset.pc = i + 1));
       renderMine();
     }
     fitMine();
     $("stopCount").textContent = contours ? `${inks.length} ${inks.length === 1 ? "color" : "colors"} + background` : `${inks.length} of 8`;
   }
-  // When the row runs out of room the circles slide together and overlap. Only when even a deep overlap
-  // can't fit them do they wrap onto another line.
   const SW = 40, GAP = 8, MAX_OV = 24;
   function fitMine() {
     const row = $("mine").querySelector(".mine-inks"); if (!row) return;
@@ -1336,7 +1226,6 @@
     row.classList.toggle("tight", ov > 0 && ov <= MAX_OV);
   }
   new ResizeObserver(fitMine).observe($("mine"));
-  // Drag to reorder: the circle follows the pointer and the others step aside into its old place.
   let mineDrag = null, mineDragged = false;
   $("mine").addEventListener("pointerdown", (e) => {
     const sw = e.target.closest("[data-ink] > .sw"); if (!sw || e.button) return;
@@ -1365,7 +1254,6 @@
     if (!d.on) return;
     mineDragged = true; setTimeout(() => (mineDragged = false), 0);
     const r = d.rects[d.to], r0 = d.rects[d.from];
-    // Settle into the new slot, then rebuild in the new order.
     d.el.classList.remove("dragging"); d.el.classList.add("settling");
     d.el.style.translate = `${r.left - r0.left}px ${r.top - r0.top}px`;
     setTimeout(() => {
@@ -1389,7 +1277,6 @@
     if (e.target.closest(".stop-add")) {
       const a = inksOf();
       if (gen() === "contours") {
-        // A new ink lands between the last two, or beside the first when they match.
         const [p, q] = a.slice(-2), mid = p === q ? variants(a[0])[2] : sampleN([p, q], 3)[1];
         a.splice(a.length - 1, 0, mid); setInks(a); update();
       }
@@ -1399,7 +1286,6 @@
     const sw = e.target.closest("[data-ink] .sw");
     if (sw) { const i = +sw.parentElement.dataset.ink; picker.open(sw, inksOf()[i], (v) => { const a = inksOf(); a[i] = v; setInks(a); sw.style.background = v; update({ instant: true }); }, () => commit(), swatchesFor(inksOf()[i])); }
   });
-  // The palette tool opens with these colors, background first, and its "Use" button brings them back.
   $("toPalettes").onclick = () => { window.Palettes?.load(gen() === "contours" ? [S.bg, ...inksOf()] : inksOf(), "studio"); window.Shell?.go("palettes"); };
   function roleRow(host, roles) {
     const el = $(host);
@@ -1424,7 +1310,6 @@
   }
   function scatterGrad() { S.grad.points = S.grad.colors.map(() => ({ x: +rnd(0.08, 0.92).toFixed(3), y: +rnd(0.08, 0.92).toFixed(3) })); }
 
-  // ---------- effect panels ----------
   const fxBodies = {}, fxSliders = {};
   for (const [id, , , , params] of FXC) {
     const e = () => S.fx[id];
@@ -1462,8 +1347,6 @@
   let swapping = null;
   $("fxRemove").onclick = () => { const id = fxOf(); if (!id) return; removeFx(id); P.slot = S.fxOrder.length ? "fx:" + S.fxOrder[S.fxOrder.length - 1] : "addfx"; update(); };
   $("fxSwap").onclick = () => { swapping = fxOf(); setSlot("addfx"); };
-  // Search: every word typed has to appear in the name, the group or a few words people use for it.
-  // Cards that come back ease in; when nothing matches, a note says so and offers a way out.
   let presetQ = "", fxQ = "";
   const norm = (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const hits = (q, text) => !q || norm(q).split(/\s+/).filter(Boolean).every((w) => norm(text).includes(w));
@@ -1516,18 +1399,15 @@
   }
   function randomEffects() {
     for (const id of [...S.fxOrder]) removeFx(id);
-    // Curated pairings read better than any two effects at random.
     const combos = [["guilloche"], ["ridge"], ["feedback", "grain"], ["glitch", "scan"], ["pixsort"], ["streaks", "bloom"], ["outline"], ["grid"], ["dissolve"], ["irid", "grain"], ["led"], ["smear", "grain"], ["glowlines", "grain"], ["glass", "grain"], ["mesh"], ["lens", "grain"], ["blur", "grain"], ["halftone"], ["riso"], ["linescreen"], ["emboss"], ["bloom", "vignette"], ["wave", "chroma", "scan"], ["voronoi"], ["dither"], ["pixel"], ["chrome"], ["cmyk", "paper"], ["water"], ["bulge", "grain"], ["heatmap"], ["rays", "grain"], ["ripple"], ["paper", "grain"]];
     for (const id of pick(combos)) { addFx(id); randomizeFx(id); }
     if (P.safe) safeFix();
   }
 
-  // ---------- randomizing ----------
   function randomizeGroup(group) {
     for (const c of sliders) if (c.group === group && c.visible() && c.label !== "Grid") c.set(randomValue(c));
     if (P.safe) safeFix();
   }
-  // Keeps randomized output away from settings that turn into solid fills or stall rendering.
   function safeFix(st = S) {
     const lin = T.LINEAR.has(st.pattern);
     if (lin) st.gap = Math.max(st.gap, (st.mode === "lines" ? 10 : 12) + st.liquify * 4);
@@ -1548,7 +1428,6 @@
     f.ripple.amp = Math.min(f.ripple.amp, 30); f.water.amount = Math.min(f.water.amount, 2); f.rays.intensity = Math.min(f.rays.intensity, 2); f.cmyk.size = Math.max(f.cmyk.size, 5); f.bulge.amount = clamp(f.bulge.amount, -0.8, 0.85);
     f.dither.pix = Math.max(f.dither.pix, 2); f.kaleido.segments = clamp(f.kaleido.segments, 3, 12);
   }
-  // A variation keeps the look and moves the details: new seed plus small nudges.
   function variation() {
     const nudge = (v, r) => v * (1 + rnd(-r, r));
     S.seed = newSeed();
@@ -1563,31 +1442,18 @@
     }
     if (P.safe) safeFix();
   }
-  // Surprise: half the time a whole preset; otherwise the shape and lines of one preset, a random palette
-  // and the effects of another (or none). Then a variation on top, so repeats still differ.
   const NO_FX = {};
-  // Surprise mixes several recipes: a preset as it is, a preset's shape in new colors, a look built from
-  // scratch on any generator, and now and then an object or two on top.
-  // A look that would take too long to draw is never shown: each roll is first drawn small and off
-  // screen, timed, and scaled up to the full frame. Past about a second and a half it's dropped and
-  // another is rolled; after a few tries the quickest one wins. Rolls happen on a copy, so the design
-  // on screen stays put while they're tested.
   const SLOW_MS = 1500;
-  // Roll time limits from the Performance settings, in ms (0 is no limit). The home page reads them too.
   const rollLimit = (k) => 1000 * (P[k] ?? 6);
   window.rollLimit = (where) => rollLimit(where === "home" ? "rollHome" : "rollStudio");
-  // A roll that ran past its limit: its spinner shakes, and the look stays as it was.
   window.rollRejected = (el) => { if (el && !reduceMotion.matches) el.animate([{ translate: "0" }, { translate: "-3px" }, { translate: "3px" }, { translate: "-2px" }, { translate: "2px" }, { translate: "0" }], { duration: 420, easing: "ease-in-out" }); };
   let surpriseTok = 0;
-  // limited: the Studio's own Surprise keeps to its time limit; the home page's roll has its own.
   async function surprise(limited = true) {
     const tok = ++surpriseTok, was = S, t0 = performance.now(), lim = limited ? rollLimit("rollStudio") : 0, btn = $("surprise");
     let best = null;
     btn.classList.add("busy");
     try {
-      // The tests themselves get a second in all, so a slow device isn't kept waiting on them either.
       for (let i = 0; i < 5 && performance.now() - t0 < 1000; i++) {
-        // Each test gets its own task, so frames keep drawing between them.
         if (i) { await new Promise((r) => setTimeout(r, 0)); if (tok !== surpriseTok || S !== was) return; }
         S = clone(was); roll(); const cand = S; S = was;
         const ms = await drawCost(cand);
@@ -1596,7 +1462,6 @@
         if (ms <= SLOW_MS) break;
       }
     } finally { if (tok === surpriseTok) btn.classList.remove("busy"); }
-    // Even the quickest look would take past the limit to show: the roll is skipped.
     if (lim && performance.now() - t0 + best.ms > lim) { rollRejected(btn.querySelector(".spark") || btn); toast("That look would take too long to draw, so it was skipped"); return; }
     S = best.st;
     update({ fade: true });
@@ -1613,11 +1478,9 @@
     };
     try {
       const ms = await once();
-      // A slow first draw can just be a shader building; the second one shows the real cost.
       return ms > SLOW_MS ? await once() : ms;
     } catch (e) { return Infinity; }
   }
-  // Rolls never land on a gradient map: it recolors the whole picture away from the palette just rolled.
   function roll() {
     const others = PRESETS.filter((p) => !lookMatches(p[2]) && !p[2].fx?.gradmap);
     const a = pick(others)[2], roll = Math.random();
@@ -1630,7 +1493,6 @@
       else if (r < 0.6) applyLook(pick(others.filter((p) => p[2].fx))[2], ["effects"]);
       else randomEffects();
     } else {
-      // From scratch: any generator, its own shape settings rolled, new colors, maybe a little effect.
       applyLook(NO_FX, ["effects"]);
       setGen(pick(GENS.filter(([id]) => id !== "image"))[0]);
       const g = gen();
@@ -1650,7 +1512,6 @@
     variation();
   }
   $("variation").onclick = () => { variation(); update({ fade: true }); };
-  // Wide: hide the build and options columns, as in the builder. Full screen: the stage alone.
   function setStudioWide(on) {
     P.wide = on; savePrefs();
     document.querySelector(".app").classList.toggle("wide", on);
@@ -1667,8 +1528,6 @@
     if (!on && document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
   }
   $("stFull").onclick = () => { window.UI?.tip?.hide?.(); setFull(!stageEl.classList.contains("full")); };
-  // Fill: from full screen, the design grows to cover the whole screen (cropped like a wallpaper, the
-  // design itself unchanged) and the bar goes. Double-click brings the bar back; Esc leaves full screen.
   let fillIdle = 0;
   const fillRest = () => { stageEl.classList.remove("idle"); clearTimeout(fillIdle); if (stageEl.classList.contains("fill")) fillIdle = setTimeout(() => stageEl.classList.add("idle"), 1800); };
   function setFill(on) {
@@ -1696,10 +1555,8 @@
     else if (keyOf(e) === "w") { e.preventDefault(); setFill(!stageEl.classList.contains("fill")); }
     else if (e.key === "Escape" && stageEl.classList.contains("full")) setFull(false);
   });
-  // Surprise throws a few sparks as it rolls a new look.
   $("surprise").onclick = () => { burst($("surprise")); surprise(); };
   function burst(btn) { const r = btn.getBoundingClientRect(); sparks(r.left + 22, r.top + r.height / 2); }
-  // The same sparks anywhere on the page; the tutorial's pointer leaves in a puff of them.
   function sparks(cx, cy) {
     if (reduceMotion.matches) return;
     for (let i = 0; i < 9; i++) {
@@ -1713,7 +1570,6 @@
   $("undo").onclick = () => travel(-1);
   $("redo").onclick = () => travel(1);
 
-  // ---------- points ----------
   $("usePoints").onchange = (e) => { S.usePoints = e.target.checked; if (S.usePoints && !S.points.length) S.points = clone(DEFAULTS.points); update(); };
   $("showPoints").onclick = () => { S.showPoints = !S.showPoints; update({ commit: false, instant: true }); };
   $("addPoint").onclick = () => addPoint(rnd(0.2, 0.8), rnd(0.2, 0.8));
@@ -1730,8 +1586,6 @@
     S.usePoints = true; sel = null;
   }
 
-  // ---------- next step ----------
-  // Each panel ends with a way on to the next layer; the last step opens Export.
   const STEP_ORDER = () => ["preset", "generator", "shape", ...(gen() === "contours" ? ["lines"] : []), "colors", "addobj", "addfx", "motion"];
   function nextOf(slot) {
     const p = panelOf(slot) === "effect" ? "addfx" : panelOf(slot) === "object" ? "addobj" : slot, order = STEP_ORDER(), i = order.indexOf(p);
@@ -1745,13 +1599,7 @@
     setText($("nextSub"), n === "addfx" || n === "addobj" || n === "motion" ? "Optional" : "");
   }
 
-  // ---------- motion ----------
-  // Every motion loops: drift moves the field round a circle, flow slides the contour levels (or sways a
-  // gradient's colors) by whole steps, breathe morphs the shape round a loop that never reverses.
-  // The ids are older than the names: "breathe" morphs (shown as Flow) and "flow" swells (shown as Breathe).
   const MOTION_NAME = { still: "Still", drift: "Drift", breathe: "Flow", flow: "Breathe", pulse: "Pulse" };
-  // Time shaping: ping-pong runs forward then back, reverse flips direction, and the easing curve
-  // (a preset or your own cubic bezier) sets the pace inside each pass.
   const EASES = { linear: [0, 0, 1, 1], ease: [0.25, 0.1, 0.25, 1], in: [0.42, 0, 1, 1], out: [0, 0, 0.58, 1], inout: [0.42, 0, 0.58, 1] };
   function bezier(x, [x1, y1, x2, y2]) {
     const B = (t, a, b) => 3 * a * t * (1 - t) ** 2 + 3 * b * t * t * (1 - t) + t ** 3;
@@ -1759,12 +1607,9 @@
     for (let i = 0; i < 24; i++) { t = (lo + hi) / 2; if (B(t, x1, x2) < x) lo = t; else hi = t; }
     return B(t, y1, y2);
   }
-  // Endless Flow never loops: time runs on unbounded and unshaped, so the morph never comes back round.
   const endless = (m = S.motion) => !!m?.endless && m.type === "breathe";
   const unbound = (m = S.motion) => endless(m) && !!m.unbound;
   function motionT(raw, m = S.motion) {
-    // Endless keeps the easing curve, once per loop length: each stretch eases from one whole number to
-    // the next, so speed changes the way the curve says and never jumps where stretches meet.
     if (endless(m)) { const n = Math.floor(raw), u = n + bezier(raw - n, m.ease === "custom" ? m.bez : EASES[m.ease] || EASES.linear); return m.dir < 0 ? -u : u; }
     let u = m.mode === "pingpong" ? 1 - Math.abs(1 - 2 * raw) : raw;
     u = bezier(u, m.ease === "custom" ? m.bez : EASES[m.ease] || EASES.linear);
@@ -1776,9 +1621,6 @@
     if (!m || m.type === "still") return st;
     const off = seedFrac(m.seed), o = { ...st, _t: endless(m) ? t + off : (t + off) % 1 }, tw = 2 * Math.PI * t, a = m.amt, a0 = off * 2 * Math.PI;
     if (st.source === "contours") {
-      // The path the read point takes: round a circle (orbit), back and forth along the direction (sway), or
-      // on along it (glide). Glide can't come back, so it also gives the state a loop's travel behind, and
-      // the field fades from one to the other over the loop (glideW), landing on its first frame.
       const path = endless(m) ? "orbit" : m.path || "orbit", th = ((m.angle ?? 30) * Math.PI) / 180, dx = -Math.cos(th), dy = Math.sin(th);
       const lin = (o._t % 1 + 1) % 1, P = (ph, l = lin) => (path === "sway" ? [dx * Math.sin(tw + a0 + ph), dy * Math.sin(tw + a0 + ph)] : path === "glide" ? [dx * 2 * l, dy * 2 * l] : [Math.cos(tw + a0 + ph), Math.sin(tw + a0 + ph)]);
       const glide = path === "glide" && ["drift", "breathe", "pulse"].includes(m.type);
@@ -1787,20 +1629,11 @@
         const R = a * st.scale * 0.5, [x, y] = P(0); o.driftX = R * x; o.driftY = R * y; o.driftR = glide ? 2 * R : R;
         if (glide) { const [x2, y2] = P(0, lin - 1); o.driftX2 = R * x2; o.driftY2 = R * y2; }
       }
-      // Cycling inks need a whole cycle of steps per loop, or the colors would jump at the seam.
       else if (m.type === "flow") { const cyc = st.mids?.length && !st.gradient && st.mode !== "layers" && st.mode !== "shaded" ? st.mids.length + 2 : 1; o.phase = t * cyc * Math.max(1, Math.round(a * 4)); }
-      // Breathe reads the warp from points travelling round a loop, so the shape morphs forward the
-      // whole time and only meets its first frame again at the end, with a slow swell on top.
       else if (m.type === "pulse") {
         const beat = Math.pow(0.5 - 0.5 * Math.cos(tw * 4), 3), [x, y] = P(0); o.loopX = 0.5 * a * x; o.loopY = 0.5 * a * y; o.scale = st.scale * (1 + 0.08 * a * beat);
         if (glide) { const [x2, y2] = P(0, lin - 1); o.loopX2 = 0.5 * a * x2; o.loopY2 = 0.5 * a * y2; }
       }
-      // The read point moves at a constant speed and nothing else swells, so the morph keeps an even pace.
-      // Endless: two more turns at irrational rates ride on the circle, so the path never closes and no
-      // stretch of the morph ever repeats.
-      // The extra turns are slower than the main one (0.618 and 0.414 of it), so their pulls can never
-      // cancel it out: the morph keeps a steady pace instead of stalling now and then. Unbound also travels
-      // steadily through the noise, faster than it circles, so it never comes back to any shape at all.
       else if (endless(m)) {
         const R = 0.45 * a, dr = unbound(m) ? 1.3 * R * tw : 0;
         o.loopX = R * (Math.cos(tw + a0) + 0.5 * Math.cos(tw * 0.618 + 1.3) + 0.3 * Math.cos(tw * 0.414 + 2.1)) + dr * 0.8;
@@ -1821,7 +1654,6 @@
     { label: "Amplitude", ...bindKey(() => S.motion, "amt"), min: 0.05, max: 1, step: 0.01, fmt: f2, rand: [0.3, 0.7], when: moving },
     { label: "Seed", ...bindKey(() => S.motion, "seed"), min: 0, max: 9999, step: 1, fmt: (v) => (v ? String(v) : "Off"), rand: [1, 9999], when: moving },
   ].forEach((c) => makeSlider($("motionCtrls"), { group: "motion", ...c }));
-  // Path: how Drift, Flow and Pulse travel. Endless Flow keeps its own wandering circle.
   {
     const pathed = () => ["drift", "breathe", "pulse"].includes(S.motion.type) && !endless();
     const host = document.createElement("div"); $("motionCtrls").appendChild(host);
@@ -1831,12 +1663,10 @@
     syncers.push(() => (host.hidden = !pathed()));
   }
   makeSeg($("motionMode"), () => S.motion.mode, (v) => (S.motion.mode = v));
-  // Endless Flow: never loops, so only Once makes sense; Loop and Ping-pong step aside while it's on.
   {
     const host = document.createElement("div"); $("motionCtrls").appendChild(host);
     makeSwitch(host, "Endless (no loop)", () => S.motion.endless, (v) => { S.motion.endless = v; if (v) S.motion.mode = "once"; });
     host.lastElementChild.dataset.tip = "Keeps morphing and never repeats. Exports run the full length without looping back";
-    // Unbound: only meaningful once Endless is on, so it stays dimmed until then.
     makeSwitch(host, "Unbound", () => S.motion.unbound, (v) => (S.motion.unbound = v));
     const ub = host.lastElementChild; ub.dataset.tip = "Keeps traveling through the pattern and never revisits a shape";
     syncers.push(() => { const on = endless(); ub.classList.toggle("off", !on); ub.querySelector("input").disabled = !on; });
@@ -1850,7 +1680,6 @@
   makeSeg($("motionDir"), () => S.motion.dir, (v) => (S.motion.dir = v));
   makeSeg($("motionEase"), () => S.motion.ease, (v) => (S.motion.ease = v));
   window.UI?.dropdown($("motionEase"), { label: "Easing" });
-  // Custom easing: drag the two handles of the cubic bezier.
   const bz = $("bezier");
   function drawBezier() {
     const [x1, y1, x2, y2] = S.motion.ease === "custom" ? S.motion.bez : EASES[S.motion.ease] || EASES.linear;
@@ -1889,26 +1718,16 @@
     playBusy = true;
     const secs = (now - playT0) / 1000, raw = endless() ? secs / S.motion.dur : (secs % S.motion.dur) / S.motion.dur;
     const t0 = performance.now();
-    // The frame rate is the gap between drawn frames. (Timing each frame until the GPU reported it done
-    // read two or three display frames long even on fast hardware, since that report only arrives once
-    // per frame.) Gaps over half a second are pauses, not slowness.
     if (lastDrawn && t0 - lastDrawn < 500) watchPerf(t0 - lastDrawn);
     lastDrawn = t0;
-    // A cross-fade asked for by an edit (or by starting) snapshots the frame on screen before drawing over it.
     let fadeDone = null;
     if (playFade) { playFade = false; crossfade(new Promise((r) => (fadeDone = r))); }
     paint(motionState(S, motionT(raw)), false, true).then((r) => { playBusy = false; fadeDone?.(); if (r) (r.raster && FXR?.sync ? FXR.sync() : Promise.resolve()).then(() => { const c = performance.now() - t0; $("ms").textContent = `${Math.round(c)} ms`; }); });
   }
-  // Playback draws contours from a grid sized to the preview on screen rather than the full design, which
-  // is several times less work on a phone. The grid is chosen once per play and only coarsens once if
-  // frames stay slow, so the shape never flickers between two levels of detail.
   let playRes = 0;
   const pickPlayRes = (coarse = 1) => { const shown = Math.max(1, art.clientWidth) / S.w; playRes = Math.max(S.res, (2.4 / shown) * coarse); };
   function startPlay() { perfTimes = []; lastDrawn = 0; lowRes = 0; perfSkip = 8; pickPlayRes(); startPlay0(); }
-  // The loop's first frame isn't the still design, so starting cross-fades into it rather than cutting.
   function startPlay0() { if (S.motion.type === "still") { S.motion.type = "drift"; update(); } playing = true; held = false; playFade = true; playT0 = performance.now(); cancelAnimationFrame(playRaf); playRaf = requestAnimationFrame(playFrame); syncPlay(); }
-  // Editing while it plays: the loop pauses so the edit isn't fighting the motion, the edit lands with
-  // its usual transition, and once you let go the loop crossfades back in from its first frame.
   let held = false, holdT = 0, ptrDown = false;
   addEventListener("pointerdown", () => (ptrDown = true), true);
   addEventListener("pointerup", () => (ptrDown = false), true);
@@ -1922,17 +1741,11 @@
     if (!playing || !held) return;
     if (ptrDown) { holdT = setTimeout(resumePlay, 300); return; }
     held = false; cancelAnimationFrame(raf); cancelAnimationFrame(anim); anim = 0; ++paintTok;
-    // A new design gets a fresh start at full detail: the last one's slowness says nothing about it.
     lowRes = 0; pickPlayRes(); perfSkip = 8;
     crossfade(paint(motionState(S, motionT(0)), false, true));
     perfTimes = []; lastDrawn = 0; playT0 = performance.now();
     playRaf = requestAnimationFrame(playFrame);
   }
-  // Slow playback: frames are timed by the gap between drawn frames; a background tab or a pause (any gap
-  // over half a second) never counts. When the typical frame is
-  // slower than the threshold in Settings (60 fps unless changed), a note offers to lighten the design.
-  // Closing it quiets it for that look only: another slow look brings it back. "Don't remind me" turns
-  // it off until a threshold is picked again in Settings.
   let resumeOnShow = false;
   let perfTimes = [], perfSkip = 0, perfSig = "", perfShownFor = "", lastDrawn = 0;
   const perfQuiet = new Set();
@@ -1942,17 +1755,13 @@
     if (document.hidden || document.body.dataset.route !== "studio") return;
     const sig = lookSig();
     if (sig !== perfSig) { perfSig = sig; perfTimes = []; perfSkip = Math.max(perfSkip, 8); }
-    // The first frames of a new design build shaders and textures, so they don't count.
     if (perfSkip > 0) { perfSkip--; return; }
     perfTimes.push(cost); if (perfTimes.length > 45) perfTimes.shift();
-    // A verdict needs 45 frames, or on a slow device at least 12 frames spanning 2.5 seconds.
     const n = perfTimes.length;
     if (n < 12 || (n < 45 && perfTimes.reduce((a, b) => a + b, 0) < 2500)) return;
     const sorted = perfTimes.slice().sort((a, b) => a - b), mid = sorted[n >> 1];
     perfLog(sig, sorted);
     perfTimes = perfTimes.slice(-Math.floor(n / 3));
-    // Detail never steps down mid-play: a visible drop in sharpness reads worse than a lower frame rate,
-    // which slow frames give on their own since a frame is skipped while the last one is still drawing.
     const fps = P.perfFps ?? 60;
     if (fps && mid > 1080 / fps && !perfQuiet.has(sig) && $("perfNote").hidden) {
       perfShownFor = sig;
@@ -1960,7 +1769,6 @@
       $("perfNote").hidden = false; $("perfFx").hidden = !S.fxOrder.some((id) => S.fx[id]?.on); $("perfOff").checked = false;
     }
   }
-  // Closing the note quiets it for this look; with "Don't remind me" ticked it stays off.
   function closePerf() {
     $("perfNote").hidden = true; perfQuiet.add(perfShownFor);
     if ($("perfOff").checked) { P.perfFps = 0; savePrefs(); syncPerfSet(); toast("Lag warnings off. Turn them on in Settings"); }
@@ -1968,8 +1776,6 @@
   $("perfFx").onclick = () => { closePerf(); S.fxOrder = []; update(); toast("Effects removed", { action: "Undo", onAction: () => travel(-1) }); };
   $("perfStop").onclick = () => { closePerf(); stopPlay(); S.motion.type = "still"; update(); };
   $("perfX").onclick = closePerf;
-  // Settings: the frame rate below which playback counts as slow, or off.
-  // Performance mode (see ui.js): Auto, On or Off, with a note saying what Auto decided here.
   function syncPerfMode() {
     const L = window.Lite; if (!L) return;
     for (const b of $("perfMode").children) b.classList.toggle("on", b.dataset.v === L.pref);
@@ -1977,16 +1783,12 @@
     $("perfSum").textContent = L.on ? "On" : "";
   }
   $("perfMode").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; window.Lite.set(b.dataset.v); syncPerfMode(); syncQuality(); };
-  // The Performance dialog, from Settings.
   $("perfOpen").onclick = () => { closeMenus(); syncPerfMode(); syncPerfSet(); syncQuality(); openModal("perfModal"); };
   $("perfDone").onclick = () => closeModal("perfModal");
   $("perfModal").addEventListener("pointerdown", (e) => { if (e.target === $("perfModal")) closeModal("perfModal"); });
-  // The render time in the canvas corner can be hidden.
   const syncMs = () => { $("ms").hidden = P.showMs === false; $("showMs").checked = P.showMs !== false; };
   $("showMs").onchange = (e) => { P.showMs = e.target.checked; savePrefs(); syncMs(); };
   syncMs();
-  // Effect quality: how many samples the costly effects take (see uQ in fx.js). Kept per device, not per
-  // design, since it's about what this machine can draw. Auto is Low in performance mode, Mid otherwise.
   const QKEY = "isoline.quality", QLV = { rays: [24, 48, 96], taps: [24, 48, 96], bloom: [20, 40, 80], frost: [4, 8, 24], steps: [48, 80, 160] };
   const QIDS = { rays: "qRays", taps: "qTaps", bloom: "qBloom", frost: "qFrost", steps: "qSteps" };
   let QP = {};
@@ -2010,9 +1812,6 @@
     for (const b of $("perfPrio").children) b.classList.toggle("on", b.dataset.v === (P.priority || "load"));
     for (const k of ["rollHome", "rollStudio"]) for (const b of $(k).children) b.classList.toggle("on", +b.dataset.v === (P[k] ?? 6));
   }
-  // Priority: Load speed (the default) draws previews straight away, several per frame, and skips the
-  // page warm-up. Frame rate keeps every frame for animations, so previews wait for calm moments, fade in
-  // one after another, and pages are laid out ahead of a first visit.
   const preferFps = () => P.priority === "fps";
   window.preferFps = preferFps;
   for (const k of ["rollHome", "rollStudio"]) $(k).onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P[k] = +b.dataset.v; savePrefs(); syncPerfSet(); };
@@ -2020,8 +1819,6 @@
   $("perfFps").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b) return; P.perfFps = +b.dataset.v; perfQuiet.clear(); savePrefs(); syncPerfSet(); };
   syncPerfSet();
 
-  // Performance log: how fast each look plays and draws on this device, kept in the browser (the last
-  // 300 entries) and downloaded from Settings, so slow effects can be found and fixed.
   const PERF_LOG = "isoline.perfLog";
   let perfEntries = [];
   try { perfEntries = JSON.parse(localStorage.getItem(PERF_LOG) || "[]"); } catch (e) {}
@@ -2033,7 +1830,6 @@
     if (perfEntries.length > 300) perfEntries = perfEntries.slice(-300);
     clearTimeout(perfSaveT); perfSaveT = setTimeout(() => { try { localStorage.setItem(PERF_LOG, JSON.stringify(perfEntries)); } catch (e) {} }, 1000);
   }
-  // Other parts of the app (page switches) log here too.
   window.perfEvent = (kind, look, data) => {
     perfEntries.push({ at: new Date().toISOString(), kind, look, ...data });
     if (perfEntries.length > 300) perfEntries = perfEntries.slice(-300);
@@ -2044,7 +1840,6 @@
   }
   $("exportLogs").onclick = () => {
     closeMenus();
-    // A summary per look first (slowest at the top), then every entry.
     const by = {};
     for (const e of perfEntries) if (e.fps) { const k = e.kind + " | " + e.look; (by[k] ||= []).push(e.fps); }
     const summary = Object.entries(by).map(([look, f]) => ({ look, runs: f.length, fps: { median: f.sort((a, b) => a - b)[f.length >> 1], min: f[0], max: f[f.length - 1] } })).sort((a, b) => a.fps.median - b.fps.median);
@@ -2061,9 +1856,6 @@
   }
   $("playBtn").onclick = $("barPlay").onclick = () => (playing ? stopPlay() : startPlay());
 
-  // Video export renders every frame at an exact timestamp. Browsers with WebCodecs get an H.264 MP4;
-  // others record a WebM in real time.
-  // Draws frame i of an animation into a canvas of the export size, at an exact point in the loop.
   function framer(W, H, frames, fps) {
     const frameCanvas = document.createElement("canvas");
     frameCanvas.width = W; frameCanvas.height = H;
@@ -2078,8 +1870,6 @@
     }
     return { frameCanvas, drawFrame };
   }
-  // GIF: a palette chosen from a few frames spread across the loop, then every frame indexed and
-  // compressed in turn. Delays are in hundredths of a second, spread so the loop keeps its length.
   async function exportGif() {
     if (exporting) return;
     if (S.motion.type === "still") { S.motion.type = "drift"; update(); }
@@ -2091,7 +1881,6 @@
     const pixels = async (i) => (await drawFrame(i)).getImageData(0, 0, W, H).data;
     try {
       if (useWebp()) {
-        // Animated WebP: each frame keeps its full color, so there is no palette to choose first.
         const anim = new window.WebPAnim(W, H, 0);
         let t = 0;
         for (let i = 0; i < frames && !job0.cancel; i++) {
@@ -2125,7 +1914,6 @@
     }
   }
   let exporting = null;
-  // Scripts only some visits need (the MP4 muxer, the tooltip clips) load on demand, cache-busted by build.
   const loaded = {};
   const loadScript = (name) => (loaded[name] ||= new Promise((res, rej) => { const el = document.createElement("script"); el.src = name + (stamped ? "?v=" + BUILD : ""); el.onload = res; el.onerror = () => { delete loaded[name]; rej(new Error(name)); }; document.head.appendChild(el); }));
   const canMp4 = () => typeof window.VideoEncoder === "function";
@@ -2142,7 +1930,6 @@
       let blob;
       if (canMp4()) await loadScript("mp4-muxer.js").catch(() => {});
       if (canMp4() && window.Mp4Muxer) {
-        // H.264 first (plays everywhere, Figma included), then VP9 in MP4 where H.264 encoding is missing.
         const base = { width: W, height: H, bitrate: Math.round(W * H * fps * 0.12), framerate: fps };
         let pick = null;
         for (const [codec, mux] of [["avc1.640033", "avc"], ["avc1.4d0033", "avc"], ["vp09.00.40.08", "vp9"]]) {
@@ -2190,13 +1977,8 @@
   }
   $("exCancel").onclick = () => exporting && (exporting.cancel = true);
 
-  // ---------- canvas overlay ----------
   const art = $("art"), artSvg = $("artSvg"), fxCanvas = $("fx"), ov = $("ov"), wrap = $("wrap");
   const handleList = (st = S) => (st.source === "gradient" ? (st.grad.type === "mesh" ? st.grad.points : null) : st.usePoints && st.showPoints ? st.points : null);
-  // The open object gets a ring with a move handle in the middle, a size handle on the ring and a
-  // rotate handle above it. Positions come from the state being painted, so they track motion tweens.
-  // Selected object: drag it to move, the white handle to size, and three rings to turn it. The circle
-  // turns it in the picture's plane, the upright ring tilts it toward or away, the flat ring spins it.
   const RINGS = [["obz", "#3e8cf0", "Rotate"], ["obx", "#e5484d", "Tilt"], ["oby", "#2fb36d", "Spin"]];
   function objOverlay(st, o) {
     const u = S.w / Math.max(1, art.clientWidth), ns = 'vector-effect="non-scaling-stroke"', A = accentNow();
@@ -2211,13 +1993,8 @@
       + `<circle class="obs" cx="${rx}" cy="${ry}" r="${6 * u}" fill="#fff" stroke="${A}" stroke-width="1.5" ${ns}><title>Size</title></circle>`
       + `<circle cx="${x}" cy="${y}" r="${4 * u}" fill="${A}" stroke="#fff" stroke-width="1.5" ${ns} pointer-events="none"/>`;
   }
-  // Effects with a center (the light of god rays, a lens, the focus of depth of field, twirls, bulges and
-  // ripples) get a handle on the canvas while their panel is open; a press anywhere else moves it there.
-  // Where the effect has a reach, a second handle sizes it, and a focus band also turns.
   const FX_PT = new Set(["rays", "lens", "dof", "swirl", "bulge", "ripple", "feedback", "guilloche", "linescreen"]);
-  // Engrave has centers to drag only while its ripples are on.
   const fxPt = () => { const id = fxOf(); return id && FX_PT.has(id) && S.fx[id] && (id !== "linescreen" || S.fx[id].ripple > 0) ? id : null; };
-  // Where each reach handle sits, from the effect's settings: [x, y] in canvas pixels.
   function fxGeo(id, e) {
     const x = (e.x ?? 0.5) * S.w, y = (e.y ?? 0.5) * S.h, m = Math.min(S.w, S.h), out = { x, y };
     if (id === "swirl" || id === "bulge") { out.r = e.radius * m; out.fr = [x + out.r, y]; }
@@ -2249,11 +2026,9 @@
       } else out += circ(Math.max(1, G.f), false) + circ(G.g, true);
       out += knob("fr", G.fr, "In focus") + knob("ff", G.ff, "Falloff");
     }
-    // The center: a sun for god rays, a cross-hair for a focus, a dot for the rest.
     const c = drag?.fx === "c";
     if (id === "rays") out += [0, 45, 90, 135, 180, 225, 270, 315].map((a) => { const r = (a * Math.PI) / 180, c0 = Math.cos(r), s0 = Math.sin(r); return line(`M${x + c0 * 12 * u} ${y + s0 * 12 * u}L${x + c0 * 18 * u} ${y + s0 * 18 * u}`); }).join("");
     if (id === "dof") out += line(`M${x - 14 * u} ${y}h${8 * u}M${x + 6 * u} ${y}h${8 * u}M${x} ${y - 14 * u}v${8 * u}M${x} ${y + 6 * u}v${8 * u}`);
-    // Engrave's ripples spread from a second center as well.
     if (id === "linescreen") { const x2 = (e.x2 ?? 0.85) * S.w, y2 = (e.y2 ?? 0.9) * S.h; out += `<circle cx="${x2}" cy="${y2}" r="${8 * u}" fill="#fff" stroke="rgba(0,0,0,.2)" stroke-width="1" ${ns} pointer-events="none"/><circle cx="${x2}" cy="${y2}" r="${4.5 * u}" fill="${A}" ${ns} pointer-events="none"/><circle class="fc2" cx="${x2}" cy="${y2}" r="${14 * u}" fill="transparent"><title>Drag to move</title></circle>`; }
     out += `<circle cx="${x}" cy="${y}" r="${(c ? 10 : 8) * u}" fill="#fff" stroke="rgba(0,0,0,.2)" stroke-width="1" ${ns} pointer-events="none"/><circle cx="${x}" cy="${y}" r="${4.5 * u}" fill="${A}" ${ns} pointer-events="none"/>`;
     return out + `<circle class="fc" cx="${x}" cy="${y}" r="${14 * u}" fill="transparent"><title>Drag to move</title></circle>`;
@@ -2282,8 +2057,6 @@
     });
     ov.innerHTML = out;
   }
-  // A drag on the canvas while the loop plays is drawn by the loop's next frame; painting the still design
-  // in between would flash it against the motion.
   const liveDraw = () => { if (!playing || held) render(true); };
   const toArt = (e) => { const r = ov.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * S.w, ((e.clientY - r.top) / r.height) * S.h]; };
   let drag = null;
@@ -2301,7 +2074,6 @@
     if (fid) {
       const fe = S.fx[fid], [x, y] = toArt(e), k = ["fr", "ff", "fa", "fc2"].find((c) => t.classList?.contains(c)) || "c";
       if (k === "fc2") { drag = { fx: "c2", dx: (fe.x2 ?? 0.85) * S.w - x, dy: (fe.y2 ?? 0.9) * S.h - y }; ov.setPointerCapture(e.pointerId); ov.classList.add("dragging"); e.preventDefault(); return; }
-      // A press off the handles moves the center to it and keeps dragging from there.
       if (k === "c" && !t.classList?.contains("fc")) { fe.x = +clamp(x / S.w, 0, 1).toFixed(4); fe.y = +clamp(y / S.h, 0, 1).toFixed(4); }
       drag = { fx: k, dx: (fe.x ?? 0.5) * S.w - x, dy: (fe.y ?? 0.5) * S.h - y };
       ov.setPointerCapture(e.pointerId); ov.classList.add("dragging");
@@ -2324,7 +2096,6 @@
       else if (drag.fx === "c2") { fe.x2 = +clamp((x + drag.dx) / S.w, 0, 1).toFixed(4); fe.y2 = +clamp((y + drag.dy) / S.h, 0, 1).toFixed(4); }
       else if (drag.fx === "fa") { let a = Math.round((Math.atan2(y - cy, x - cx) * 180) / Math.PI); if (e.shiftKey) a = Math.round(a / 15) * 15; fe.angle = ((a + 450) % 180) - 90; }
       else {
-        // Reach handles measure from the center; a focus band measures across the band.
         const G = fxGeo(fid, fe), d = G.n ? Math.abs((x - cx) * G.n[0] + (y - cy) * G.n[1]) : Math.hypot(x - cx, y - cy);
         if (fid === "swirl" || fid === "bulge") fe.radius = +clamp(d / m, 0.05, 1.5).toFixed(3);
         else if (fid === "lens") fe.size = +clamp(d / (m * (fe.shape === "pill" ? 0.95 : 0.5)), 0.1, 1.2).toFixed(3);
@@ -2341,8 +2112,6 @@
       else if (drag.obj === "size") o.size = +clamp((2 * Math.hypot(x - o.x * S.w, y - o.y * S.h)) / Math.min(S.w, S.h), 0.05, 2).toFixed(3);
       else if (drag.obj === "obz") { let a = Math.round((Math.atan2(y - o.y * S.h, x - o.x * S.w) * 180) / Math.PI - drag.a0); if (e.shiftKey) a = Math.round(a / 15) * 15; o.rot = ((a + 540) % 360) - 180; }
       else {
-        // Tilt and spin follow the pointer along the ring, measured in the object's own turned frame:
-        // a drag of a quarter of the ring is a quarter turn.
         const a = ((o.rot || 0) * Math.PI) / 180, ddx = x - drag.x0, ddy = y - drag.y0, k = 90 / Math.max(8, (o.size * Math.min(S.w, S.h)) / 2);
         const lx = ddx * Math.cos(a) + ddy * Math.sin(a), ly = -ddx * Math.sin(a) + ddy * Math.cos(a), snap = (v) => (e.shiftKey ? Math.round(v / 15) * 15 : Math.round(v));
         if (drag.obj === "obx") o.tilt = clamp(snap(drag.tilt + ly * k), -90, 90);
@@ -2380,10 +2149,7 @@
     clearTimeout(wheelT); wheelT = setTimeout(() => update({ instant: true }), 180);
   }, { passive: false });
 
-  // ---------- size ----------
   const clampDim = (v) => clamp(Math.round(+v || 0), 64, P.unlock ? 16000 : 8000);
-  // The size control drives whichever tool is open: the studio canvas, or the page in the Components
-  // builder, which also offers a size that follows the window.
   const studioSize = { get: () => [S.w, S.h], set: (w, h) => { S.w = w; S.h = h; update(); } };
   const sizer = () => (window.Shell?.route === "components" && window.Components?.sizer) || studioSize;
   for (const key of ["w", "h"]) {
@@ -2397,17 +2163,14 @@
   const presetName = (w, h) => { if (sizer().fitting?.()) return "Fit"; for (const [, list] of SIZES) for (const [n, pw, ph] of list) if (pw === w && ph === h) return n; return "Custom"; };
   function syncSize() {
     const [w, h] = sizer().get();
-    // Where the browser can size a field to its content, CSS does it; otherwise measure the digits.
     for (const [key, v] of [["w", w], ["h", h]]) { const el = $(key); if (document.activeElement !== el) el.value = v; if (!fieldSizing) el.style.width = Math.max(24, measure(String(v))) + 8 + "px"; }
     $("sizeName").textContent = presetName(w, h);
     sizeMenu.querySelector(".fit-opt").hidden = !sizer().fit;
   }
   window.syncSize = syncSize;
 
-  // ---------- menus + modals ----------
   $("tourBtn").onclick = () => { closeMenus(); window.Tour?.show(window.Shell?.route); };
   const menus = { sizeBtn: sizeMenu, exportBtn: $("exportMenu"), settingsBtn: $("settingsMenu"), designsBtn: $("designsMenu"), shareBtn: $("shareMenu"), looksBtn: $("looksMenu") };
-  // The bigger menus dim and blur the page behind them, so the eye lands on the menu.
   const SCRIMMED = ["exportMenu", "designsMenu", "shareMenu", "cpExportMenu", "looksMenu"];
   const syncScrim = () => document.body.classList.toggle("scrimmed", SCRIMMED.some((id) => $(id) && !$(id).hidden));
   window.syncScrim = syncScrim;
@@ -2430,7 +2193,6 @@
   const closeModal = (id) => ($(id).hidden = true);
   for (const m of document.querySelectorAll(".modal")) m.addEventListener("pointerdown", (e) => { if (e.target === m) m.hidden = true; });
 
-  // ---------- theme + accent ----------
   const ACCENTS = ["#e8572a", "#3557d6", "#6d4ce0", "#2f7d5b", "#d6457a", "#c08a2b"];
   P.theme ||= "system"; P.accent ||= ACCENTS[0];
   const darkMQ = matchMedia("(prefers-color-scheme: dark)");
@@ -2440,7 +2202,6 @@
     r.style.setProperty("--accent", P.accent);
     r.style.setProperty("--on-accent", window.Color.contrast(P.accent, "#ffffff") < 2.6 ? "#1c1c1e" : "#ffffff");
     window.TopoBrand?.favicon(P.accent);
-    // No "Auto" button: the switch shows the theme in use, which follows the system until one is picked.
     const shown = P.theme === "system" ? (darkMQ.matches ? "dark" : "light") : P.theme;
     for (const b of $("theme").children) b.classList.toggle("on", b.dataset.v === shown);
     for (const b of $("accents").querySelectorAll("[data-c]")) b.classList.toggle("on", b.dataset.c === P.accent);
@@ -2459,7 +2220,6 @@
   };
   $("theme").onclick = (e) => { const b = e.target.closest("[data-v]"); if (!b || b.classList.contains("on")) return; P.theme = b.dataset.v; savePrefs(); window.UI ? UI.swap(applyTheme) : applyTheme(); };
 
-  // ---------- settings ----------
   $("safe").onchange = (e) => { P.safe = e.target.checked; savePrefs(); toast(P.safe ? "Safe values on" : "Safe values off. Randomize uses full ranges"); };
   $("unlock").onchange = (e) => {
     if (e.target.checked) { e.target.checked = false; closeMenus(); openModal("unlockModal"); return; }
@@ -2471,8 +2231,6 @@
   $("exportSettings").onclick = () => { closeMenus(); download(new Blob([settingsJSON()], { type: "application/json" }), `isoline-settings-${S.seed}.json`, "Settings saved"); };
   $("copySettings").onclick = async () => { closeMenus(); try { await navigator.clipboard.writeText(settingsJSON()); toast("Settings copied"); } catch (e) { toast("Clipboard blocked. Use Download"); } };
   $("importSettings").onclick = () => { closeMenus(); $("importErr").hidden = true; $("importText").value = ""; openModal("importModal"); $("importText").focus(); };
-  // Feedback becomes a GitHub issue: the form fills in a new-issue page, which the person posts with
-  // their own account, so the site needs no server or token.
   const ISSUES = "https://github.com/masterclaudecoder/isoline/issues/new";
   const FB_KIND = { bug: ["Bug", "bug"], idea: ["Idea", "enhancement"], other: ["Feedback", "feedback"] };
   let fbKind = "bug";
@@ -2493,8 +2251,6 @@
   $("fbSubject").oninput = syncFb;
   $("fbText").oninput = (e) => { syncFb(); window.UI?.autosize(e.target); };
   $("fbCancel").onclick = () => closeModal("feedbackModal");
-  // With an endpoint (worker/feedback.js) the issue is created directly; without one, or if it fails,
-  // the person finishes on GitHub.
   const FEEDBACK_URL = "";
   $("fbOk").onclick = async () => {
     const [name, label] = FB_KIND[fbKind], text = $("fbText").value.trim(), subj = $("fbSubject").value.trim() || text.split("\n")[0].slice(0, 80);
@@ -2515,9 +2271,6 @@
     done("Thanks. Post it on the GitHub page that opened.");
   };
   if (FEEDBACK_URL) { $("fbOk").lastChild.textContent = "Send"; $("fbOk").querySelector("svg").remove(); $("feedbackModal").querySelector(".note").textContent = "Goes straight to the team as a GitHub issue."; }
-  // ---------- version ----------
-  // The deploy stamps the build and its date in here; the site also publishes version.json so an open
-  // or cached copy can tell when a newer build is live.
   const VERSION = "2.0", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
   $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
   $("verReload").onclick = () => location.reload();
@@ -2537,10 +2290,6 @@
       $("importErr").hidden = false;
     }
   };
-  // ---------- saved designs ----------
-  // Designs live in this browser's storage, each with its own history of saved versions. Every version
-  // records the settings schema and app version it was saved with, so opening one made by a newer
-  // Isoline, or one that needs a picture this browser doesn't have, says what will change first.
   const SCHEMA = 6, LIB = "isoline-designs-v1", MAX_VERSIONS = 30;
   let lib = (() => { try { const v = JSON.parse(localStorage.getItem(LIB) || "null"); return Array.isArray(v?.items) ? v.items : []; } catch (e) { return []; } })();
   const saveLib = () => {
@@ -2564,7 +2313,6 @@
   async function thumbURL() {
     try { const c = await window.Studio.snapshot(160, 100); return c.toDataURL("image/jpeg", 0.82); } catch (e) { return ""; }
   }
-  // What opening src will change, in plain words. An empty list means it opens exactly as saved.
   function compat(src, meta = {}) {
     const notes = [], names = (ids) => ids.map((x) => `"${x}"`).join(", ");
     if (meta.schema > SCHEMA) notes.push(`It was saved with a newer Isoline${meta.app ? ` (${meta.app})` : ""}, so settings this version doesn't know are left out.`);
@@ -2579,7 +2327,6 @@
     return notes;
   }
   let pending = null;
-  // Opens src after showing what will change, if anything. Undo returns to the design before.
   function openState(src, meta, then, boot = false) {
     const notes = compat(src, meta);
     const go = () => { S = withDefaults(src); sel = null; if (boot && !notes.length) { bootShared = false; update({ instant: true }); } else update({ fade: true }); then?.(); };
@@ -2615,8 +2362,6 @@
         <div class="dz-vers"><div>${d.versions.map((v, i) => ({ v, i })).reverse().map(({ v, i }) => `<button class="opt" data-act="restore" data-v="${i}"><span>Version ${i + 1}</span><span class="mono">${when(v.at)}</span></button>`).join("")}</div></div>
       </div>`).join("");
   }
-  // Save keeps a new design every time, so nothing saved earlier is ever changed by it; "Save as a new
-  // version" adds to the design that's open instead, which keeps its history of versions.
   const freeName = (name) => { const taken = new Set(lib.map((d) => d.name)); if (!taken.has(name)) return name; const base = name.replace(/ \d+$/, ""); let n = 2; while (taken.has(`${base} ${n}`)) n++; return `${base} ${n}`; };
   async function saveDesign(asVersion = false) {
     const open = libItem(P.designId);
@@ -2654,7 +2399,6 @@
   };
   const toastUndo = (msg, undo) => toast(msg, { action: "Undo", onAction: undo });
   $("dzExportAll").onclick = () => download(new Blob([JSON.stringify({ app: "isoline", kind: "designs", schema: 1, items: lib }, null, 2)], { type: "application/json" }), "isoline-designs.json", `${lib.length === 1 ? "1 design" : lib.length + " designs"} saved`);
-  // Takes design files, whole libraries, or plain settings. Designs join the library; settings open.
   function importData(data) {
     const items = data?.kind === "designs" ? data.items : data?.kind === "design" ? [data] : null;
     if (items) {
@@ -2680,9 +2424,6 @@
     try { importData(JSON.parse(await f.text())); } catch (err) { toast("Not an Isoline file"); }
   };
 
-  // ---------- share links ----------
-  // A link holds only what differs from the defaults, deflated and base64url encoded in the hash, so
-  // most designs fit in a short URL. Pictures stay out: they're too big and belong to their owner.
   function diffOf(a, d) {
     if (typeof a !== "object" || a === null || Array.isArray(a) || typeof d !== "object" || d === null || Array.isArray(d)) return JSON.stringify(a) === JSON.stringify(d) ? undefined : a;
     const out = {};
@@ -2721,8 +2462,6 @@
     history.replaceState(null, "", location.pathname + location.search + "#/studio");
     try {
       const { state, meta } = await readCode(m[1]);
-      // Opening the page from a link: the shared design is drawn straight away, behind the loading screen,
-      // rather than cross-faded over whatever this browser had open last.
       const boot = bootShared;
       openState(state, meta, () => { P.designId = null; savePrefs(); toast("Shared design opened"); }, boot);
       if (boot && bootShared) firstPainted();
@@ -2736,7 +2475,6 @@
 
   $("resetAll").onclick = () => { closeMenus(); S = withDefaults(null); sel = null; P.slot = "preset"; update(); toast("Reset", { action: "Undo", onAction: () => travel(-1) }); };
 
-  // ---------- export ----------
   let saver = null;
   window.claude?.use?.("downloads").then((d) => (saver = d)).catch(() => {});
   async function download(blob, name, done) {
@@ -2754,7 +2492,6 @@
   const fmtBytes = (n) => (n < 1048576 ? Math.max(1, Math.round(n / 1024)) + " KB" : (n / 1048576).toFixed(1) + " MB");
   const exportFmt = () => (S.fmt === "video" || S.fmt === "gif" || S.fmt === "html" ? S.fmt : isRaster(S) ? "png" : S.fmt);
   const animFmt = (f) => f === "video" || f === "gif";
-  // Progress: every export reports what it is doing and how far along it is.
   function setProg(label, f) {
     $("exProg").hidden = false;
     $("exProg").querySelector("i").style.width = Math.round(f * 100) + "%";
@@ -2821,8 +2558,6 @@
     }
     const tok = ++exportTok;
     facts([["Dimensions", dims], ["File size", "Measuring"]]);
-    // The size is estimated from a small sample rather than rendering the full PNG, which used to stall
-    // the page for seconds after the menu opened. Raster designs sample the canvas already on screen.
     setTimeout(() => { if (tok !== exportTok || $("exportMenu").hidden) return; measure(); }, 420);
     const measure = async () => {
       try {
@@ -2868,9 +2603,6 @@
   }
   $("copy").onclick = copyOut;
 
-  // ---------- option groups ----------
-  // Long panels fold into titled groups. A closed group sums up its values in its header, so nothing
-  // set inside it goes unseen. Groups with nothing to show for the current design hide themselves.
   function groupOf(nodes, title, { open = true, hint, tip } = {}) {
     const g = UI.wrapGroup(nodes, title, { key: "studio-" + title, open, hint: hint ? "1" : "" });
     if (!g) return null;
@@ -2894,8 +2626,6 @@
   { const sec = document.querySelector('.panel-sec[data-panel="colors"] [data-gen="contours"]'); groupOf([...sec.children], "Fine-tune", { tip: "How the colors fill the lines and the space between them", hint: () => facts(S.gradient || S.mode !== "lines" ? "blended" : "", S.transparent ? "transparent" : "", S.opacity < 1 ? pct(S.opacity) : "") }); }
   groupOf([$("motionMore")], "Timing", { tip: "Repeat, back and forth or once, and the easing", open: false, hint: () => facts({ loop: "loop", pingpong: "ping-pong", once: "once" }[S.motion.mode], S.motion.ease === "linear" ? "linear" : S.motion.ease) });
 
-  // ---------- objects ----------
-  // New objects land off-centre, staggered, so a second one doesn't hide the first.
   const SPOTS = [[0.5, 0.5], [0.32, 0.4], [0.68, 0.6], [0.66, 0.34], [0.34, 0.66], [0.5, 0.3], [0.5, 0.7], [0.22, 0.5]];
   function addObject(kind, image = "") {
     if (S.objects.length >= 8) { toast("Up to 8 objects"); return; }
@@ -2918,7 +2648,6 @@
   $("objPicReplace").onclick = () => pickPicture((pid) => { const o = objOf(); if (o) { o.image = pid; update(); } });
   $("objDup").onclick = () => { const o = objOf(); if (!o || S.objects.length >= 8) return toast("Up to 8 objects"); const c = { ...clone(o), id: objId(), x: clamp(o.x + 0.06, 0, 1), y: clamp(o.y + 0.06, 0, 1) }; S.objects.push(c); P.slot = "obj:" + c.id; update(); };
   $("objRemove").onclick = () => { const o = objOf(); if (!o) return; S.objects = S.objects.filter((x) => x !== o); P.slot = S.objects.length ? "obj:" + S.objects[S.objects.length - 1].id : "addobj"; update(); };
-  // How a design or preset sits on a form. Kept out of OBJ_DEFAULT so objects that never change it stay short in links.
   const TEX_DEFAULT = { proj: "wrap", texScale: 1, texRot: 0, texX: 0, texY: 0, blend: 0 };
   const ob = (key) => ({ get: () => objOf()?.[key] ?? OBJ_DEFAULT[key] ?? TEX_DEFAULT[key], set: (v) => { const o = objOf(); if (o) o[key] = v; } });
   const isPic = () => objOf()?.kind === "image";
@@ -2928,7 +2657,6 @@
     const seg = document.createElement("div"); seg.className = "seg sm grid2"; seg.id = "objMat";
     seg.innerHTML = [...OBJ_MATS, ...PIC_MATS].map(([v, l, tip]) => `<button data-v="${v}" data-tip="${tip}">${l}</button>`).join("");
     mat.appendChild(seg);
-    // Forms list Vantablack among the presets, as a surface to wrap them in; pictures keep it as a button.
     makeSeg(seg, () => { const o = objOf(); return o?.mat === "vanta" && !isPic() ? "preset" : o?.mat; }, (v) => { const o = objOf(); if (o) o.mat = v; });
     syncers.push(() => { const pic = isPic(); for (const b of seg.children) if (b.dataset.v) b.hidden = b.dataset.v === "vanta" ? !pic : pic !== PIC_MATS.some(([k]) => k === b.dataset.v); });
     const pr = document.createElement("div"); pr.className = "label-row obj-preset";
@@ -2939,8 +2667,6 @@
     UI.dropdown(pseg, { label: "Preset" });
     syncers.push(() => (pr.hidden = isPic() || !["preset", "vanta"].includes(objOf()?.mat)));
     const pct = (v) => Math.round(v * 100) + "%";
-    // Texture: how the design or preset is laid on the form. Wrap gives each side its own copy, Front
-    // projects it straight through, Globe wraps it around like a map. Past its edges it repeats mirrored.
     const tex = G("Texture");
     const tseg = document.createElement("div"); tseg.className = "seg sm"; tseg.id = "objProj";
     tseg.innerHTML = `<button data-v="wrap" data-tip="One copy on each side">Wrap</button><button data-v="front" data-tip="Projected straight through from the front">Front</button><button data-v="sphere" data-tip="Wrapped around like a map on a globe">Globe</button>`;
@@ -2960,10 +2686,7 @@
     const turn = G("Orientation");
     makeSlider(turn, { label: "Tilt", ...ob("tilt"), min: -90, max: 90, step: 1, fmt: deg, rand: [-35, 45] });
     makeSlider(turn, { label: "Spin", ...ob("spin"), min: -180, max: 180, step: 1, fmt: deg, rand: [-90, 90] });
-    // Glass: how far it bends what's behind, frost, color split, the lit rim and a tint.
     const glass = G("Glass");
-    // Surface bends what's behind by the slope of the surface; through the body follows the ray in, across
-    // the inside and out again, like real glass.
     const bseg = document.createElement("div"); bseg.className = "seg sm"; bseg.id = "objBody";
     bseg.innerHTML = `<button data-v="surface" data-tip="Bends what's behind by the slope of the surface">Surface</button><button data-v="body" data-tip="Light goes in, across and out again, like real glass">Through the body</button>`;
     glass.appendChild(bseg);
@@ -2975,7 +2698,6 @@
     makeColor(glass, "Tint", () => objOf()?.tint || "#ffffff", (v) => { const o = objOf(); if (o) o.tint = v; });
     makeSlider(glass, { label: "Tint amount", ...ob("tintAmt"), min: 0, max: 1, step: 0.01, pct: true, fmt: (v) => (v ? pct(v) : "Off"), rand: [0, 0.5] });
     syncers.push(() => (groups.Glass.hidden = isPic() || objOf()?.mat !== "glass"));
-    // Layer and motion: under the effects (they apply to it) or over them, and its own pace in the loop.
     const lay = G("Layer and motion");
     const lseg = document.createElement("div"); lseg.className = "seg sm"; lseg.id = "objLayer";
     lseg.innerHTML = `<button data-v="under" data-tip="Effects apply to it">Under effects</button><button data-v="over" data-tip="Sits on top, untouched by effects">Over effects</button>`;
@@ -2995,8 +2717,6 @@
     });
   }
 
-  // ---------- keyboard ----------
-  // Shortcuts follow the key's place on the keyboard, so they work in any layout (R is R in Russian too).
   const keyOf = (e) => (/^Key[A-Z]$/.test(e.code) ? e.code[3].toLowerCase() : /^Digit\d$/.test(e.code) ? e.code[5] : (e.key || "").toLowerCase());
   const SLOT_KEYS = ["preset", "generator", "shape", "lines", "colors", "addfx", "motion"];
   document.addEventListener("keydown", (e) => {
@@ -3027,7 +2747,6 @@
     }
   });
 
-  // ---------- smooth wheel scrolling ----------
   function smoothWheel(el) {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let target = 0, anim = 0;
@@ -3052,7 +2771,6 @@
   }
   for (const el of [$("slots"), $("options"), sizeMenu]) smoothWheel(el);
 
-  // ---------- rendering ----------
   let FXR = null, TFX = null;
   const thumbCanvas = document.createElement("canvas");
   try { FXR = window.TopoFX.createFX(fxCanvas); } catch (e) { FXR = null; }
@@ -3072,7 +2790,6 @@
   }
   const isImg = (st) => st.source === "gradient" && st.grad.type === "image";
   const job = (st, w, h, image) => ({ w, h, k: w / st.w, seed: st.seed, image: isImg(st) ? imageCanvas(st, w, h) : image, grad: st.source === "gradient" && !isImg(st) ? st.grad : null, fx: st.fx, order: st.fxOrder, ink: st.ink, paper: st.paper, time: st._t || 0, motion: st._t != null ? st.motion.type : "still", motionAmt: st.motion?.amt, endless: st._t != null ? (unbound(st.motion) ? 2 : endless(st.motion) ? 1 : 0) : 0, path: st.motion?.path, mangle: st.motion?.angle, objects: objectsFor(st), palette: paletteOf(st) });
-  // Objects read the design's colors darkest first, so shading runs from shadow to highlight.
   const paletteOf = (st) => (st.source === "gradient" ? st.grad.colors : [st.bg, st.line, ...(st.mids || []), st.line2]).slice().sort((a, b) => lum(a) - lum(b));
   function objectsFor(st) {
     return (st.objects || []).filter((o) => !o.hidden).map((o) => {
@@ -3081,8 +2798,6 @@
     });
   }
 
-  // ---------- pictures for objects ----------
-  // Kept in this browser, scaled to at most 1400px so a handful fit in storage. Designs hold only ids.
   const PICS_KEY = "isoline.pictures", PICS = new Map();
   const picTex = (id) => { const p = PICS.get(id); return p ? { el: p.el, key: "pic:" + id, asp: p.el.naturalWidth / Math.max(1, p.el.naturalHeight) } : null; };
   function loadPic(id, url) {
@@ -3092,7 +2807,6 @@
   }
   try { for (const [id, url] of Object.entries(JSON.parse(localStorage.getItem(PICS_KEY) || "{}"))) loadPic(id, url); } catch (e) {}
   function storePics() {
-    // Pictures no object uses, here or in a saved design, are let go first.
     const used = new Set([...S.objects.map((o) => o.image), ...lib.flatMap((d) => d.versions.flatMap((v) => (v.state.objects || []).map((o) => o.image)))]);
     const keep = {};
     for (const [id, p] of PICS) if (used.has(id)) keep[id] = p.url;
@@ -3117,7 +2831,6 @@
     };
     inp.click();
   }
-  // A preset as a texture: rendered once at a modest size, then wrapped onto forms.
   const presetTexs = new Map();
   function presetTex(name) {
     const have = presetTexs.get(name);
@@ -3135,14 +2848,11 @@
     }
     return null;
   }
-  // A render job for the effects pipeline R. Contours come from the GPU field where R supports it, which
-  // antialiases dense lines properly; otherwise the SVG is rasterized. res is the grid in output pixels.
   async function fxJob(R, st, w, h, canvas = rasterCanvas, res) {
     const gpu = st.source === "contours" && R?.floatOK ? T.gpuSpec(st, Math.max(st.res, res ? (res * st.w) / w : 0)) : null;
     if (gpu || st.source !== "contours") return { ...job(st, w, h, null), contours: gpu };
     return job(st, w, h, await rasterize(canvas, T.buildSVG(st, { w, h, ...(res ? { res } : {}) }).svg, w, h));
   }
-  // While a resize handle is held the scale stays put, so the edge tracks the pointer.
   let rzScale = 0, lowRes = 0, fitWH = "", glideUntil = 0;
   const room = () => { const cs = getComputedStyle(wrap); return [wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)]; };
   window.UI?.resizable(art, {
@@ -3154,11 +2864,7 @@
   function fit() {
     const cs = getComputedStyle(wrap);
     const aw = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), ah = wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-    // Filling the screen covers it, like object-fit: cover; otherwise the design fits inside.
     const sc = rzScale || (wrap.parentElement.classList.contains("fill") ? Math.max : Math.min)(aw / S.w, ah / S.h), key = S.w + "x" + S.h;
-    // A new size glides into place; dragging a handle or resizing the window tracks directly. Paints call
-    // this every frame, so a glide in progress is left alone until it lands: clearing the transition
-    // part-way would cut it short and snap the frame to its new size.
     const now = performance.now();
     if (!rzScale && fitWH && key !== fitWH) { art.style.transition = "width .48s var(--ease), height .48s var(--ease)"; glideUntil = now + 520; }
     else if (rzScale || now > glideUntil) art.style.transition = "none";
@@ -3167,10 +2873,8 @@
     if (art.style.width !== W) art.style.width = W;
     if (art.style.height !== H) art.style.height = H;
   }
-  // Playback and slider drags preview effects at less detail, stepping down further when frames run slow.
   function previewDims(st, draft) {
     const dpr = Math.min(window.Lite?.on ? (playing || draft ? 1 : 1.25) : playing ? 1.5 : draft ? 1.25 : 2, window.devicePixelRatio || 1);
-    // The frame's final width, not its width mid-glide, so a new size renders once at the right detail.
     let w = Math.max(64, Math.round((parseFloat(art.style.width) || art.clientWidth) * dpr)), h = Math.round((w * st.h) / st.w);
     const cap = playing ? 1600 : draft ? 1400 : 2200, m = Math.max(w, h);
     if (m > cap) { w = Math.round((w * cap) / m); h = Math.round((h * cap) / m); }
@@ -3182,8 +2886,6 @@
     let raster = isRaster(st);
     if (raster && !FXR) { raster = false; if (!fxWarned) { fxWarned = true; toast("No WebGL2 here, so gradients and effects are off"); } }
     let svg = "";
-    // Playback and drags draw contours on the GPU straight from the field, which keeps bands and dense
-    // lines smooth. Stills keep the SVG path, which is what exports use.
     const gpu = st.source === "contours" && (play || draft || raster) && FXR?.floatOK ? T.gpuSpec(st, Math.max(st.res, 1.6 / Math.max(0.05, art.clientWidth / st.w))) : null;
     if (gpu) raster = true;
     else if (st.source === "contours") svg = T.buildSVG(st, play && playRes ? { res: playRes } : draft ? { res: Math.max(st.res * 2, 7) } : {}).svg;
@@ -3197,17 +2899,13 @@
     art.classList.toggle("clear", st.source === "contours" && st.transparent);
     $("ms").textContent = `${Math.round(performance.now() - t0)} ms`;
     $("kind").textContent = raster ? "PNG" : "SVG";
-    // A motion frame counts as the design it plays, so a return to the page doesn't take it for a stale one.
     painted = clone(play ? S : st);
     drawOverlay(st);
     return { svg, raster };
   }
-  // The first finished drawing lets the shell reveal the page. A shared link waits for its own design.
   let bootShared = /[?&]d=/.test(location.hash), firstDone = null;
   window.firstPaint = new Promise((r) => (firstDone = r));
   const firstPainted = () => { bootShared = false; firstDone?.(); firstDone = null; };
-  // A render that's overtaken by the next one (undo pressed quickly, say) settles when that one lands,
-  // so a cross-fade waiting on it lifts off the picture actually drawn, not a frame or two early or late.
   let renderWait = [];
   function render(draft = false) {
     cancelAnimationFrame(raf); cancelAnimationFrame(anim); anim = 0;
@@ -3224,7 +2922,6 @@
     });
   }
 
-  // Still frames go in the performance log once per look, timed until the GPU has finished.
   const stillSeen = new Set();
   function logStill(t0, r) {
     const sig = lookSig();
@@ -3232,24 +2929,15 @@
     stillSeen.add(sig);
     (r.raster && FXR?.sync ? FXR.sync() : Promise.resolve()).then(() => perfLog(sig, [performance.now() - t0], "still"));
   }
-  // ---------- previews ----------
   let queue = [], pumping = false, previewT = 0, quietUntil = 0;
   const quiet = (ms = 500) => (quietUntil = Math.max(quietUntil, performance.now() + ms));
   document.addEventListener("pointerdown", (e) => { quiet(e.target.closest(".top button, .dd-btn, .bar-btn, .tile") ? 500 : 250); }, true);
-  // Thumbnails also hold off while the pointer is moving, the page is scrolling or a transition runs, so
-  // hover effects and animations get every frame. They draw once things settle.
-  // A moving pointer alone needs no frames; the hover effects it starts are caught by transitionrun.
   for (const t of ["wheel", "keydown"]) document.addEventListener(t, () => quiet(160), { capture: true, passive: true });
   document.addEventListener("scroll", () => quiet(200), { capture: true, passive: true });
   document.addEventListener("transitionrun", () => quiet(350), true);
-  // Waits for a calm moment: past any quiet window, then the start of the gap after a frame. (Idle callbacks
-  // were tried, but an animating tile leaves a weak device no idle time, so every job waited out the timeout.)
   const afterFrame = () => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
   async function calm() {
-    // Nothing is drawn for a Studio that isn't on screen, or while the page is switching.
     while (window.Shell?.route !== "studio" || document.documentElement.classList.contains("vt") || document.hidden) await new Promise((r) => setTimeout(r, 250));
-    // Never starves: after a second of constant activity the next job runs anyway. Resolves with the time
-    // the slot opened, so cheap jobs can share it.
     for (const t0 = performance.now(); ; ) {
       const late = performance.now() - t0 > 1000 || !preferFps();
       if (!late && performance.now() < quietUntil) { await new Promise((r) => setTimeout(r, Math.min(250, quietUntil - performance.now() + 10))); continue; }
@@ -3261,14 +2949,10 @@
   async function pump() {
     pumping = true;
     await window.introDone;
-    // The next job: the first whose card is in view (jobs without a card count as in view), else the first.
     const next = () => { const i = queue.findIndex((j) => !j.at || inView(j.at())); return i < 0 ? 0 : i; };
     while (queue.length) {
-      // Thumbnails wait while shaders are still compiling in the background rather than blocking on them.
       for (let n = 0; queue.length && !queue[next()].cheap && TFX?.ready && !TFX.ready() && n < 60; n++) await new Promise((r) => setTimeout(r, 50));
-      // And while the user is interacting or something is animating, so the page stays smooth.
       const t = await calm();
-      // Cheap jobs keep going while the slot they started in has time left.
       do {
         if (!queue.length) break;
         const j = queue.splice(next(), 1)[0], j0 = performance.now();
@@ -3278,8 +2962,6 @@
     }
     pumping = false;
   }
-  // New thumbnails fade in over the old ones, which leave once the fade is done.
-  // Pictures that land together come in one after another, a beat apart, rather than all at once.
   let revealAt = 0;
   function swapIn(slot, node) {
     const old = [...slot.children], now = performance.now();
@@ -3299,20 +2981,13 @@
     c.getContext("2d").drawImage(src, 0, 0, w, h);
     return swapIn(slot, c);
   }
-  // Thumbnails are drawn at the screen's pixel density (up to 2x), not always at 2x: on a 1x screen that's
-  // a quarter of the pixels, which is most of the cost on a weak GPU.
   let TH_DPR = 1;
   const thDpr = () => { TH_DPR = window.Lite?.on ? 1 : Math.min(2, Math.max(1, devicePixelRatio || 1)); };
   thDpr();
   addEventListener("lite-change", () => { thDpr(); for (const pc of presetCards) pc.done = false; schedulePreviews(0); render(); });
   const svgNode = (markup) => { const t = document.createElement("template"); t.innerHTML = markup.trim(); return t.content.firstChild; };
-  // Render a state into a thumbnail slot at a 16:10 frame.
-  // Contour previews zoom into the center so individual lines stay readable at thumbnail size.
-  // lq draws a rough stand-in instead (a sixth of the size, coarse lines), shown blurred until the real one.
   async function thumb(slot, st, w = 200, ar = 0.625, lq = false) {
     const h = Math.round(w * ar), s = { ...st, h: Math.round(st.w * ar) };
-    // A card whose picture wouldn't change (adding an effect leaves every shape card as it was) keeps it,
-    // with no stand-in and no redraw.
     const key = JSON.stringify(s.fxOrder?.length ? s : { ...s, fx: null, motion: null }) + w + ":" + TH_DPR, have = slot.lastElementChild;
     if (slot._thk === key && have && !have.classList.contains("lqip")) return have;
     const n = await drawThumb(slot, s, w, h, lq);
@@ -3332,21 +3007,16 @@
     if (lq) { const n = soften(thumbCanvas, W, H, w, h); n.classList.add("lqip"); return swapIn(slot, n); }
     return putCanvas(slot, thumbCanvas, W, H);
   }
-  // A rough stand-in, blurred as it's drawn. A CSS blur on a canvas showed as a black box on some phones.
   function soften(src, sw, sh, w, h) {
     const c = document.createElement("canvas"); c.width = w; c.height = h;
     const x = c.getContext("2d"), b = Math.max(2, w / 22);
     x.imageSmoothingQuality = "high";
     if ("filter" in x) x.filter = `blur(${b}px)`;
-    // Drawn a little past the edges, so the blur doesn't pull in transparent (dark) borders.
     x.drawImage(src, 0, 0, sw, sh, -b * 2, -b * 2, w + b * 4, h + b * 4);
     return c;
   }
-  // How long a full thumbnail takes here, on average. Where it's slow, every card first gets a rough,
-  // blurred stand-in of its new picture, so nothing shows a stale or empty preview while the queue works.
   let thumbMs = 0;
   const slowThumbs = () => thumbMs > 25 || (!thumbMs && !!window.Lite?.on);
-  // A job's card is in view when it's on screen and inside its scrolling panel; those are drawn first.
   function inView(el) {
     if (!el?.isConnected) return false;
     const r = el.getBoundingClientRect();
@@ -3354,8 +3024,6 @@
     const box = el.closest("#options, #slots")?.getBoundingClientRect();
     return !box || (r.bottom > box.top && r.top < box.bottom);
   }
-  // Preset thumbnails don't depend on the design being edited, so they're kept between visits (per build,
-  // so a change to the drawing code redraws them) and a returning visitor sees them at once.
   const thumbDir = () => `thumbs/${stamped ? BUILD : "dev"}/${TH_DPR}/`;
   const thumbCache = window.caches && isSecureContext ? caches.open("isoline-thumbs").catch(() => null) : Promise.resolve(null);
   thumbCache.then((c) => c?.keys().then((ks) => { for (const k of ks) if (!k.url.includes("/" + thumbDir())) c.delete(k); })).catch(() => {});
@@ -3370,8 +3038,6 @@
       swapIn(slot, img); return true;
     } catch (e) { return false; }
   }
-  // Shipped preset thumbnails (previews/presets.webp, made by tools/preset-thumbs.mjs), so even a first
-  // visit shows them at once. Each carries a fingerprint of its look; an edited preset is drawn live instead.
   const lookHash = (look) => { const t = JSON.stringify(look); let a = 0x811c9dc5; for (let i = 0; i < t.length; i++) a = Math.imul(a ^ t.charCodeAt(i), 16777619); return (a >>> 0).toString(36); };
   let sheet = null;
   const presetSheet = () => (sheet ||= fetch("previews/presets.json", { priority: "low" }).then((r) => (r.ok ? r.json() : null)).then(async (m) => {
@@ -3387,10 +3053,7 @@
     c.getContext("2d").drawImage(s.img, (it[0] % cols) * w, Math.floor(it[0] / cols) * h, w, h, 0, 0, w, h);
     swapIn(slot, c); return true;
   }
-  // A preview not drawn yet shows a soft wash of its own colors instead of an empty well.
   const phOf = (st) => `linear-gradient(135deg, ${st.source === "contours" ? `${st.bg} 30%, color-mix(in oklab, ${st.bg} 70%, ${st.line})` : st.grad.colors.join(", ")})`;
-  // Shipped preset pictures go in as soon as the sheet arrives, without waiting for the Studio's first
-  // render, the entrance or the preview queue.
   Promise.resolve().then(() => {
     for (const pc of presetCards) try { slotOf(pc.el).style.setProperty("--ph", phOf(resolveLook(pc.look))); } catch (e) {}
     return presetSheet();
@@ -3405,15 +3068,11 @@
   }
   const slotOf = (c) => c.querySelector(".th");
   const noFx = (st) => ({ ...st, fxOrder: [], objects: [] });
-  // Shape previews: strokes in the design's own colors, so the pattern reads without the fills.
   const strokes = (st) => (st.source === "contours" ? readable({ ...st, gradient: false, mode: "lines", transparent: false, opacity: 1, swell: 0, taper: 0, indexEvery: 0 }) : st);
-  // Stroke modes need ink that stands off the paper; layered looks often share them.
   const hexDist = (a, b) => { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const x = p(a), y = p(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]); };
   const readable = (st) => (st.mode !== "layers" && /^#[0-9a-f]{12}$/i.test(st.line + st.bg.slice(1)) && hexDist(st.line, st.bg) < 60 ? { ...st, line: st.line2, line2: st.line } : st);
   const lightLines = (st) => ({ ...st, gap: Math.max(st.gap, st.w / 18), levels: Math.min(st.levels, 12), weight: Math.max(st.weight, 2.4) });
   function schedulePreviews(delay = 260) { clearTimeout(previewT); previewT = setTimeout(buildPreviews, preferFps() ? delay : Math.min(delay, 60)); }
-  // Effect previews need a base image: the finished design (to preview adding one more effect),
-  // or the design before any effects (so each effect tile shows the stack up to that step).
   async function effectBase(W, H, final = true) {
     baseCanvas.width = W; baseCanvas.height = H;
     const x = baseCanvas.getContext("2d");
@@ -3427,7 +3086,6 @@
   }
   const fxThumb = (id, W, H) => { TFX.render({ w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: { [id]: { ...S.fx[id], on: true } }, order: [id], ink: S.ink, paper: S.paper, pointer: demoPointer() }); return thumbCanvas; };
   const fxUpTo = (id, W, H) => { TFX.render({ w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: { ...S.fx, [id]: { ...S.fx[id], hidden: false } }, order: S.fxOrder.slice(0, S.fxOrder.indexOf(id) + 1), ink: S.ink, paper: S.paper }); return thumbCanvas; };
-  // The generator tile shows the bare generator: default shape settings, the design's colors, no effects.
   function baseOf(st) {
     const b = clone(noFx(st));
     for (const key of LAYERS.shape) if (key !== "source" && key !== "grad.type" && key !== "pattern" && key !== "grad.image") setPath(b, key, clone(getPath(DEFAULTS, key)));
@@ -3438,10 +3096,7 @@
     if (drag) return;
     try { document.querySelector('[data-page="studio"]').style.setProperty("--ph", phOf(S)); } catch (e) {}
     const jobs = [];
-    // Slot tile thumbnails first: they're always on screen.
     const tileJob = (key, st) => jobs.push(async () => { const el = $("slotList").querySelector(`[data-th="${key}"]`); if (!el) return; await thumb(el, st, 64); });
-    // The build column reads as layers: the bare generator, then the tuned shape, then line style,
-    // then each effect stacked on what came before; the preset tile shows the finished result.
     tileJob("preset", S);
     const gb = baseOf(S); if (GEN_BASE[gen()]) Object.assign(gb.grad, GEN_BASE[gen()]);
     tileJob("generator", lightLines(strokes(gb)));
@@ -3452,8 +3107,6 @@
       for (const id of S.fxOrder) { const el = $("slotList").querySelector(`[data-th="fx:${id}"]`); if (!el) continue; putCanvas(el, fxUpTo(id, 128, 80), 128, 80); }
     });
     const p = panelOf(P.slot);
-    // A panel card's thumbnail: the full one, plus a rough stand-in first where thumbnails are slow.
-    // st may be a function, so the state is made only when the job runs.
     const quick = [], lq = slowThumbs();
     const card = (el, st, w, skip, done) => {
       const at = () => (el.isConnected ? el : null), get = () => (typeof st === "function" ? st() : st);
@@ -3463,7 +3116,6 @@
     };
     if (p === "preset") {
       const todo = presetCards.filter((pc) => !pc.done && !pc.el.hidden);
-      // Kept thumbnails come in all at once, ahead of everything else, without waiting on shaders.
       const kept = async () => { await Promise.all(todo.map(async (pc) => { if ((await sheetThumb(slotOf(pc.el), pc)) || (await cachedThumb(slotOf(pc.el), pc.name))) pc.done = true; })); };
       kept.cheap = true; quick.unshift(kept);
       for (const pc of todo) card(slotOf(pc.el), () => resolveLook(pc.look), 220, () => pc.done, (n) => { keepThumb(pc.name, n); pc.done = true; });
@@ -3482,16 +3134,11 @@
       jobs.push(() => effectBase(260, 163));
       for (const id of FX_IDS) { const el = slotOf(fxCards[id]), f = () => putCanvas(el, fxThumb(id, 260, 163), 260, 163); f.at = () => el; jobs.push(f); }
     }
-    // The motion tile comes last: its loop takes many frames, made one per turn.
     jobs.push(motionThumb);
     enqueue([...quick, ...jobs]);
   }
 
-  // Motion tile: the finished design playing its loop, like every other tile shows its layer. A short
-  // run of small frames is rendered once per change and cycled; a still design shows as a still.
   const thumbSVG = (s, w, h) => { const z = 2, W = w * z, H = h * z; return T.buildSVG(s, { w: W, h: H, res: 2.5 * z, minLen: 8 }).svg.replace(/^<svg([^>]*?) width="\d+" height="\d+" viewBox="[^"]*"/, `<svg$1 width="${w}" height="${h}" viewBox="${(W - w) / 2} ${(H - h) / 2} ${w} ${h}"`); };
-  // The frames are made one per turn of the queue, and the rest wait behind every other preview, so a
-  // design with motion never holds up the panel's cards. The first frame shows as a still meanwhile.
   let motionKey = "", motionTok = 0, motionRun = null;
   async function motionThumb() {
     const el = $("slotList").querySelector('[data-th="motion"]'); if (!el) return;
@@ -3499,7 +3146,6 @@
     if (key === motionKey && el.children.length && !motionRun) return;
     if (key !== motionKey || !motionRun) {
       motionKey = key; motionTok++;
-      // A still design previews a gentle drift, so the tile always reads as movement.
       if (reduceMotion.matches) { motionRun = null; await thumb(el, S, 64); return; }
       const still = S.motion.type === "still", M = still ? { ...S.motion, type: "drift", amt: 0.45, mode: "loop", dir: 1, ease: "linear", seed: 0 } : S.motion;
       motionRun = { M, base: still ? { ...S, motion: M } : S, frames: [] };
@@ -3517,8 +3163,6 @@
     motionRun = null;
     const view = document.createElement("canvas"); view.width = W; view.height = H;
     const x = view.getContext("2d"), L = Math.min(4, Math.max(1.6, S.motion.dur)) * 1000;
-    // The loop only has N frames, so it's stepped on a timer at their rate rather than on every display
-    // frame, which left a weak device no idle time between frames.
     let last = -1;
     const tick = () => {
       if (tok !== motionTok || !view.isConnected) return;
@@ -3532,7 +3176,6 @@
     requestAnimationFrame(tick);
   }
 
-  // ---------- animated changes ----------
   const INT_KEYS = new Set(["levels", "octaves", "indexEvery", "features", "matrix", "pix", "segments", "detail"]);
   const hexMix = (a, b, t) => "#" + [1, 3, 5].map((i) => Math.round(parseInt(a.substr(i, 2), 16) * (1 - t) + parseInt(b.substr(i, 2), 16) * t).toString(16).padStart(2, "0")).join("");
   function tween(a, b, e, key) {
@@ -3558,7 +3201,6 @@
     done.then(() => requestAnimationFrame(() => (ghost.style.opacity = "0")));
     setTimeout(() => ghost.remove(), 1600);
   }
-  // Small edits morph; big jumps (presets, variations, new generators) cross-fade so nothing flails mid-way.
   function animateFrom(from, fade) {
     const to = clone(S);
     if (!from || reduceMotion.matches) return render();
@@ -3578,7 +3220,6 @@
     anim = requestAnimationFrame(step);
   }
 
-  // ---------- floating preview on narrow screens ----------
   const mini = $("mini"), miniIn = $("miniIn"), narrow = matchMedia("(max-width: 900px)");
   let miniShown = false;
   function updateMini() {
@@ -3596,7 +3237,6 @@
   }, { threshold: 0.08 }).observe(wrap);
   mini.onclick = () => wrap.scrollIntoView({ behavior: reduceMotion.matches ? "auto" : "smooth", block: "center" });
 
-  // ---------- sync ----------
   const mirror = document.createElement("span");
   mirror.className = "dim";
   mirror.style.cssText = "position:absolute;visibility:hidden;width:auto;padding:0;white-space:pre;left:-9999px";
@@ -3604,7 +3244,6 @@
   const fieldSizing = CSS.supports?.("field-sizing", "content");
   const measure = (text) => { mirror.style.fontSize = getComputedStyle($("w")).fontSize; mirror.textContent = text; return Math.ceil(mirror.getBoundingClientRect().width); };
   let stopsKey = "", bodyFor = null, shownSlot = null;
-  // Opening a panel: the title and sections rise in, and cards follow in a short stagger.
   const jitter = (el) => { el.style.setProperty("--y", (5 + Math.random() * 7).toFixed(1) + "px"); el.style.setProperty("--d", (0.85 + Math.random() * 0.35).toFixed(2)); el.style.setProperty("--jit", Math.round(Math.random() * 45) + "ms"); el.style.setProperty("--s", (0.985 + Math.random() * 0.015).toFixed(3)); };
   function enterPanel(sec) {
     if (!sec || reduceMotion.matches) return;
@@ -3621,7 +3260,6 @@
     for (const s of document.querySelectorAll(".panel-sec")) s.hidden = s.dataset.panel !== panel;
     if (P.slot !== shownSlot) { shownSlot = P.slot; enterPanel(document.querySelector(`.panel-sec[data-panel="${panel}"]`)); }
     for (const s of document.querySelectorAll("[data-gen]")) s.hidden = s.dataset.gen === "raster" ? g === "contours" || g === "image" : s.dataset.gen !== g;
-    // A picture has no seed or settings of its own: its shape panel is just the picture.
     for (const el of [$("variations"), $("variations").previousElementSibling]) el.hidden = g === "image";
     for (const sec of document.querySelectorAll(".panel-sec")) { for (const c of sec.children) c.classList.remove("lead"); [...sec.children].find((c) => !c.hidden)?.classList.add("lead"); }
     const fid = fxOf();
@@ -3661,11 +3299,8 @@
   }
   document.fonts?.ready.then(() => { syncUI(); if (isRaster(S)) render(); });
 
-  // What a render would leave behind for exports, the mini preview and thumbnails, without touching the
-  // canvas the loop is drawing on.
   let stillT = 0;
   function syncStill() { current = { svg: S.source === "contours" && !isRaster(S) ? T.buildSVG(S).svg : "", raster: isRaster(S), of: JSON.stringify(S) }; updateMini(); schedulePreviews(); }
-  // The Caddis preset is the background of caddis.app; putting it on brings a note pointing there.
   let wasCaddis = false;
   function caddisCheck() {
     const look = PRESETS.find((p) => p[1] === "Caddis"), on = !!look && lookMatches(look[2]);
@@ -3676,8 +3311,6 @@
     if (!draft) caddisCheck();
     if (sel != null && !(S.source === "gradient" ? S.grad.points[sel] : S.points[sel])) sel = null;
     syncUI(); save(); savePrefs();
-    // While it plays, the loop keeps running and draws the edit on its next frame: drags track live,
-    // and anything else cross-fades from the frame on screen, so nothing jumps back to the still design.
     if (playing && !held) {
       if (!draft && !instant) playFade = true;
       if (!draft) { clearTimeout(stillT); stillT = setTimeout(syncStill, 400); }
@@ -3688,24 +3321,16 @@
     if (doCommit && !draft) commit(fade);
   }
 
-  // ---------- interactive effects ----------
-  // Click ripples and drag trails read the pointer over the canvas. Events keep their time, and each
-  // frame passes their positions (design pixels, y up) and ages to the effects. While any are still
-  // fading and the loop isn't playing, the canvas keeps redrawing until they're gone.
   const IX = { touch: [], trail: [] };
   const ixOn = (id, st = S) => st.fxOrder.includes(id) && st.fx[id]?.on;
   function livePointer(st) {
     if (!ixOn("touch", st) && !ixOn("trail", st)) return null;
     const now = performance.now() / 1000, life = st.fx.touch?.life || 2;
-    // Clicks carry their age; drag samples go to the fluid sim as they are, with their own time, and it
-    // takes each one once. They're kept for a second so a slow frame doesn't miss any.
     IX.touch = IX.touch.filter((e) => now - e[2] < life);
     IX.trail = IX.trail.filter((e) => now - e[2] < 1);
     return { now, touch: IX.touch.map((e) => [e[0], e[1], now - e[2]]), trail: IX.trail.slice() };
   }
-  // Keep drawing while a ripple is spreading or the fluid is still moving (for its life after the last drag).
   const ixLive = () => { const now = performance.now() / 1000; return IX.touch.length > 0 || (ixOn("trail") && now - ixLastT < (S.fx.trail?.life || 1.6) + 0.6); };
-  // Effect tiles show a click and a drag frozen part-way, since nobody is pointing at them.
   function demoPointer() {
     const w = S.w, h = S.h;
     return { demo: true, now: 0, touch: [[w * 0.42, h * 0.5, 0.5], [w * 0.7, h * 0.35, 0.25]], trail: Array.from({ length: 18 }, (_, i) => { const t = i / 17; return [w * (0.12 + 0.76 * t), h * (0.5 + 0.18 * Math.sin(t * 6)), t * 0.3 + 0.001, w * 2.5, h * 0.18 * 6 * Math.cos(t * 6) * 3.3]; }) };
@@ -3739,10 +3364,6 @@
   });
   addEventListener("pointerup", () => (ixLast = null));
 
-  // ---------- HTML export ----------
-  // A standalone page that plays the design live: the same WebGL pipeline (and the contour engine for
-  // contour designs) inlined beside the design, its pictures as data, and the motion loop's timing. It
-  // fills the window, keeps playing, and answers clicks and drags when interactive effects are on.
   async function htmlExport() {
     const srcs = await Promise.all(["fx.js", "engine.js"].map((f) => fetch(f).then((r) => r.text())));
     const toData = (el, max = 2048) => { const iw = el.naturalWidth || el.width, ih = el.naturalHeight || el.height, sc = Math.min(1, max / Math.max(iw, ih)); const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(iw * sc)); c.height = Math.max(1, Math.round(ih * sc)); c.getContext("2d").drawImage(el, 0, 0, c.width, c.height); return c.toDataURL("image/png"); };
@@ -3761,7 +3382,6 @@
 <!-- Made with Isoline -->
 </body></html>`], { type: "text/html" });
   }
-  // Runs inside the exported page, so it may only use what that page defines.
   function htmlRuntime(D) {
     const st = D.st, cv = document.getElementById("c"), FX = window.TopoFX && TopoFX.createFX(cv);
     const contours = st.source === "contours";
@@ -3813,20 +3433,13 @@
   }
 
   let lastWrap = "";
-  // A hidden studio has no size: skip it, or the preview would re-render at the 64px minimum.
   new ResizeObserver(() => { if (!wrap.clientWidth || !wrap.clientHeight) return; const key = wrap.clientWidth + "x" + wrap.clientHeight; if (painted && key !== lastWrap) { lastWrap = key; render(); } }).observe(wrap);
 
   window.TopoBrand?.mount($("brand"), "isoline");
   applyTheme();
-  // First visit opens on a curated preset rather than an empty default.
   let firstVisit = true;
   try { firstVisit = !localStorage.getItem(STORE); } catch (e) {}
   if (firstVisit) applyLook(PRESETS.find((p) => p[1] === "Prism")[2]);
-  // Load guard: a design too heavy for this device must never lock anyone out of the app. A flag is set
-  // while the page starts and cleared a few seconds in; a page that finds it still set knows the last
-  // visit froze or crashed, so a design with effects or objects opens without them, with an offer to
-  // bring them back. Designs with effects are also test-drawn small first, as Surprise does, and one
-  // that would take more than three seconds to draw opens the same way.
   const GUARD = "isoline.loadGuard";
   let crashed = false;
   try { crashed = localStorage.getItem(GUARD) === "1"; localStorage.setItem(GUARD, "1"); } catch (e) {}
@@ -3845,10 +3458,8 @@
   else boot();
   setTimeout(() => document.body.classList.remove("boot"), 900);
 
-  // ---------- links to the shell and the palette tool ----------
   window.toastMsg = toast;
   window.downloadBlob = download;
-  // A frame of st's motion loop at t, cropped to fill canvas c like object-fit: cover.
   async function loopFrame(st0, t, c) {
     const { width: w, height: h } = c, st = { ...motionState(st0, motionT(t, st0.motion)), w: st0.w, h: st0.h };
     const sc = Math.max(w / st.w, h / st.h), dw = Math.round(st.w * sc), dh = Math.round(st.h * sc);
@@ -3857,8 +3468,6 @@
     else src = await rasterize(document.createElement("canvas"), T.buildSVG(st, { w: dw, h: dh, res: 2.5 }).svg, dw, dh);
     c.getContext("2d").drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
   }
-  // Motion tooltips play the chosen motion on your own design: 36 frames rendered as they're first
-  // needed, then looped from memory for as long as the tooltip is open.
   window.UI?.tipPreview("motion", (type) => {
     const c = document.createElement("canvas"); c.width = 330; c.height = 206;
     const st = { ...clone(S), motion: { ...S.motion, type, amt: Math.max(0.45, S.motion.amt), mode: "loop", dir: 1, ease: "linear", seed: 0 } }, N = 36, frames = [];
@@ -3872,9 +3481,6 @@
     })();
     return c;
   });
-  // Timing tooltips: a dot runs along a track with that playback, direction or easing, the rest of the
-  // timing as you have it, so each choice shows what it changes.
-  // A slider's preview: the current design at five settings from low to high, cross-fading in a loop.
   const sweepCache = new Map();
   let sweepBusy = Promise.resolve();
   window.UI?.tipPreview("sweep", (v) => {
@@ -3928,8 +3534,6 @@
     return c;
   });
   window.Studio = {
-    // A palette from the palette tool: its lightest color becomes the background for contours and the rest
-    // become inks, strongest contrast first; gradients take the colors as they are.
     usePalette(hexes) {
       if (gen() === "contours") {
         const byLum = hexes.slice().sort((a, b) => lum(b) - lum(a)), bg = byLum[0];
@@ -3939,9 +3543,6 @@
       P.slot = "colors";
       update({ fade: true });
     },
-    // The current design cropped to fill w x h, like object-fit: cover.
-    // Rendered fresh at the requested size, so it stays sharp whatever the studio canvas last drew.
-    // With a preset name it draws that preset instead, leaving your design alone (the tutorial uses it).
     async snapshot(w, h, preset) {
       const look = preset && PRESETS.find((p) => p[1].toLowerCase() === String(preset).toLowerCase());
       const st = look ? { ...resolveLook(look[2]), w: S.w, h: S.h } : S;
@@ -3950,49 +3551,31 @@
       let src;
       if (isRaster(st) && TFX) {
         TFX.render(await fxJob(TFX, st, dw, dh, document.createElement("canvas"))); src = thumbCanvas;
-      // The last drawing is reused only if it is of this design: right after a change (a roll on the home
-      // page, say) it can still be the one before.
       } else src = await rasterize(document.createElement("canvas"), (!look && current.svg && current.of === JSON.stringify(S) && current.svg) || T.buildSVG(st).svg, dw, dh);
       x.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
       return c;
     },
-    // Each preset's name and look fingerprint, for tools/preset-thumbs.mjs.
     presetLooks: () => PRESETS.map((p) => [p[1], lookHash(p[2])]),
-    // One frame of the motion loop at t (0 to 1), w x h, for scripts that record previews.
     async frameAt(t, w = 440, h = 275) { const c = document.createElement("canvas"); c.width = w; c.height = h; await loopFrame(S, t, c); return c; },
-    // Arriving from another page, the canvas still holds its last frame, so the redraw (and the thumbnails
-    // after it) waits until the page transition has played, then cross-fades in any change.
     onShow() {
       lastWrap = ""; fit(); if (playing) return; quiet(1100); clearTimeout(showT);
       const later = document.documentElement.classList.contains("vt") ? 680 : 0;
-      // The design changed while the page was away (a roll on the home page, say) and the canvas still holds
-      // the old one: that frame and any cross-fade copy of it are hidden before the page appears and the new
-      // one is drawn at once, so the wrong picture never shows. Motion paused on the way out plays on from it.
-      // A roll still under way on the home page counts too: the canvas stays hidden until its design lands.
       if (rolling || JSON.stringify(painted) !== JSON.stringify(S)) {
         const resume = resumeOnShow; resumeOnShow = false;
         for (const g of art.querySelectorAll(".art-ghost")) g.remove();
         art.classList.add("stale");
-        // The build column's and option cards' pictures are of the old design too: they give way to a plain
-        // stand-in (neutral while a roll is still landing, the new colors after) until they're drawn again.
         const blank = (ph) => { for (const t of document.querySelectorAll('#slotList .tile-th:not([data-th="colors"]), #options .th')) { if (t.closest("#presetGrid")) continue; t._thk = ""; t.replaceChildren(); if (ph) t.style.setProperty("--ph", ph); else t.style.removeProperty("--ph"); } };
         blank(rolling ? "" : phOf(S));
         const show = () => { blank(phOf(S)); schedulePreviews(0); return render().then(() => requestAnimationFrame(() => { art.classList.remove("stale"); if (resume && !playing) startPlay(); })); };
         if (rolling) rolling.finally(show); else show();
         return;
       }
-      // Motion that was paused on the way out picks up again once the page has arrived.
       if (resumeOnShow) { resumeOnShow = false; showT = setTimeout(() => { if (!playing) startPlay(); }, later); return; }
       showT = setTimeout(() => crossfade(render()), later);
     },
-    // The home page's roll in progress, so a Studio opened before it lands waits for it (see onShow).
     hold(p) { const r = (rolling = p.catch(() => {})); r.then(() => { if (rolling === r) rolling = null; }); },
-    // Leaving the Studio: motion stops on the frame it's showing (no redraw), to resume on return.
     onLeave() { if (!playing) return; resumeOnShow = true; playing = false; held = false; clearTimeout(holdT); cancelAnimationFrame(playRaf); syncPlay(); },
-    // A contour drawing from default settings plus overrides, as SVG markup. The Components kit uses it
-    // for its map pictures, colored with the kit's own tokens.
     contour(over = {}, w = 800, h = 500) { const st = withDefaults({ ...clone(DEFAULTS), fxOrder: [], ...over }); return T.buildSVG({ ...st, w, h }, { w, h }).svg; },
-    // For agents and scripts: read and change the design, and get its exports.
     state: () => clone(S),
     apply(partial) { S = withDefaults({ ...clone(S), ...partial, grad: { ...S.grad, ...(partial?.grad || {}) }, fx: { ...S.fx, ...(partial?.fx || {}) } }); sel = null; update({ fade: true }); return clone(S); },
     presets: () => PRESETS.map(([group, name]) => ({ group, name })),
