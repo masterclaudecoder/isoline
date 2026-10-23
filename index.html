@@ -139,6 +139,7 @@
           <button class="opt" id="copySettings"><span><svg class="ic"><use href="#i-copy"/></svg>Copy settings</span></button>
           <button class="opt" id="importSettings"><span><svg class="ic"><use href="#i-import"/></svg>Import settings</span></button>
           <div class="set-sep"></div>
+          <button class="opt" id="changelogBtn"><span><svg class="ic"><use href="#i-history"/></svg>Changelog</span><span class="opt-note" id="changelogVer"></span></button>
           <button class="opt" id="tourBtn"><span><svg class="ic"><use href="#i-play"/></svg>Show the tutorial</span></button>
           <button class="opt" id="feedbackBtn"><span><svg class="ic"><use href="#i-chat"/></svg>Send feedback</span></button>
           <button class="opt danger" id="resetAll"><span><svg class="ic"><use href="#i-reset"/></svg>Reset to defaults</span></button>
@@ -500,6 +501,13 @@
   </div>
 </div>
 
+<div class="modal" id="changelogModal" hidden>
+  <div class="dialog log" role="dialog" aria-modal="true" aria-labelledby="logTitle">
+    <div class="log-head"><h3 id="logTitle">Changelog</h3><button class="ib" id="logClose" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button></div>
+    <div class="log-list" id="logList"></div>
+  </div>
+</div>
+
 <div class="modal" id="feedbackModal" hidden>
   <div class="dialog fb" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
     <h3 id="fbTitle">Send feedback</h3>
@@ -524,6 +532,7 @@
 <script src="engine.js"></script>
 <script src="brand.js"></script>
 <script src="fx.js"></script>
+<script src="changelog.js"></script>
 <script src="app.js"></script>
 <script src="palette.js"></script>
 <script src="libs.js"></script>

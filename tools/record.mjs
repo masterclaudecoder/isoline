@@ -5,7 +5,8 @@ import { createRequire } from "node:module";
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const OUT = path.join(ROOT, "previews", "tips");
 const BASE = process.argv[2]?.startsWith("http") ? process.argv[2] : "http://localhost:8765";
-const ONLY = process.argv.slice(2).filter((a) => !a.startsWith("http"));
+const ARGS = process.argv.slice(2).filter((a) => !a.startsWith("http")), LOG = ARGS[0] === "changelog";
+const ONLY = LOG ? ARGS.slice(1) : ARGS;
 const W = 440, H = 276;
 
 const require = createRequire(import.meta.url);
@@ -89,6 +90,34 @@ const CLIPS = {
     return { frames, delay: 50 };
   },
 };
+
+async function banner(look, frame, n, delay = 60) {
+  const page = await studio(look), frames = [];
+  for (let i = 0; i < n; i++) {
+    const url = await page.evaluate(async ([code, i, n, W, H]) => { const k = i / n; window.Studio.apply(new Function("k", "return " + code)(k)); await new Promise((r) => setTimeout(r, 60)); return (await window.Studio.frameAt(k * 4, W * 2, H * 2)).toDataURL("image/png"); }, [frame.toString().replace(/^\(?k\)?\s*=>\s*/, ""), i, n, W, H]);
+    frames.push(Buffer.from(url.split(",")[1], "base64"));
+  }
+  await page.close();
+  return { frames, delay };
+}
+
+const BANNERS = {
+  "2.7.0": () => banner({ preset: "Glass squares" }, (k) => ({ fx: { mesh: { on: true, cell: 150, gap: 12, radius: 0.12, checker: true, merge: Math.min(1, (0.5 - 0.5 * Math.cos(k * Math.PI * 2)) * 1.15) } } }), 36),
+  "2.6.0": () => banner({ preset: "Glass squares" }, (k) => ({ grad: { type: "aura", colors: ["#060a2a", "#10208a", "#2a5cff", "#7fd8ff"] }, fx: { mesh: { on: false } }, objects: [{ kind: "cursor", x: 0.42, y: 0.5, size: 0.62, rot: 0, tilt: 12, spin: -18, mat: "glass", shine: 0.9, body: true, anim: false, merge: 1 }, { kind: "sphere", x: 0.78 - 0.24 * (0.5 - 0.5 * Math.cos(k * Math.PI * 2)), y: 0.42, size: 0.3, mat: "glass", shine: 0.9, body: true, anim: false, merge: 1 }] }), 36),
+};
+
+if (LOG) {
+  const dir = path.join(ROOT, "previews", "changelog");
+  await fs.mkdir(dir, { recursive: true });
+  for (const [v, make] of Object.entries(BANNERS)) {
+    if (ONLY.length && !ONLY.includes(v)) continue;
+    const t0 = Date.now(), { frames, delay } = await make(), buf = await encode(frames, delay);
+    await fs.writeFile(path.join(dir, v + ".webp"), buf);
+    console.log(`${v}: ${frames.length} frames, ${Math.round(buf.length / 1024)} KB, ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+  }
+  await browser.close();
+  process.exit(0);
+}
 
 await fs.mkdir(OUT, { recursive: true });
 const media = {};

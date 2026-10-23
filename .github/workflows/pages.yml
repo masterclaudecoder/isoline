@@ -45,8 +45,8 @@ jobs:
           mkdir _site
           cp index.html logos.html style.css *.js _site/
           cp -r previews _site/
-          SHA=${GITHUB_SHA::7}; DATE=$(date -u +"%-d %b %Y")
-          sed -i "s/__BUILD__/$SHA/; s/__DATE__/$DATE/" _site/app.js
+          SHA=${GITHUB_SHA::7}
+          sed -i "s/__BUILD__/$SHA/" _site/app.js
           sed -i -E "s/(src=\"[a-z0-9-]+\.js)\"/\1?v=$SHA\"/g; s/href=\"style\.css\"/href=\"style.css?v=$SHA\"/" _site/index.html
           sed -i "s#/isoline/og.jpg\"#/isoline/og.jpg?v=$SHA\"#g" _site/index.html
           echo "{\"build\":\"$SHA\"}" > _site/version.json

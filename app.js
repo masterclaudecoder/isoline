@@ -2271,8 +2271,22 @@
     done("Thanks. Post it on the GitHub page that opened.");
   };
   if (FEEDBACK_URL) { $("fbOk").lastChild.textContent = "Send"; $("fbOk").querySelector("svg").remove(); $("feedbackModal").querySelector(".note").textContent = "Goes straight to the team as a GitHub issue."; }
-  const VERSION = "2.0", BUILD = "__BUILD__", BUILT = "__DATE__", stamped = !BUILD.startsWith("__");
-  $("verLine").textContent = `Version ${VERSION}${stamped ? `, build ${BUILD} from ${BUILT}` : ", local copy"}`;
+  const LOG = window.CHANGELOG || [], VERSION = LOG[0]?.v || "2.0.0", BUILD = "__BUILD__", stamped = !BUILD.startsWith("__");
+  const logDate = (at) => new Date(at).toLocaleString(I18N.lang === "ru" ? "ru-RU" : "en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  $("verLine").textContent = stamped && LOG[0] ? `Version ${VERSION} from ${logDate(LOG[0].at)}` : `Version ${VERSION}, local copy`;
+  if (stamped) $("verLine").title = `Build ${BUILD}`;
+  $("changelogVer").textContent = VERSION;
+  const LOG_KINDS = [["feat", "Added"], ["fix", "Fixed"], ["perf", "Faster"], ["", "Changed"]];
+  const renderLog = () => {
+    const box = $("logList");
+    if (box.childElementCount) return;
+    box.innerHTML = LOG.map((e) => {
+      const groups = LOG_KINDS.map(([k, name]) => [name, e.items.filter(([t]) => (k ? t === k : !LOG_KINDS.some(([kk]) => kk && kk === t)))]).filter(([, l]) => l.length);
+      return `<section class="log-entry"><div class="log-meta"><b>${esc(e.title)}</b><span class="mono" translate="no">${esc(e.v)}</span><time datetime="${esc(e.at)}">${esc(logDate(e.at))}</time></div>${e.media ? `<img class="log-media" src="${esc(e.media)}" alt="" loading="lazy">` : ""}${groups.map(([name, l]) => `<div class="log-group"><small>${name}</small><ul>${l.map(([, s]) => `<li>${esc(s)}</li>`).join("")}</ul></div>`).join("")}</section>`;
+    }).join("");
+  };
+  $("changelogBtn").onclick = () => { closeMenus(); renderLog(); openModal("changelogModal"); $("logList").scrollTop = 0; };
+  $("logClose").onclick = () => closeModal("changelogModal");
   $("verReload").onclick = () => location.reload();
   let updateSeen = false;
   const checkVersion = () => { if (!stamped || updateSeen || location.protocol === "file:") return; fetch("version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((v) => { if (v?.build && v.build !== BUILD) { updateSeen = true; $("verLine").textContent = `Version ${VERSION}, a newer build is out`; $("verReload").hidden = false; toast("New version out. Reload to update"); } }).catch(() => {}); };

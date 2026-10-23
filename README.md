@@ -47,4 +47,4 @@ python3 -m http.server
 
 Then open `localhost:8000`. No install, no bundler. Agents can drive the app through `window.Isoline` (see **Share → Copy for agents**).
 
-Design rules live in [DESIGN.md](DESIGN.md). Pull requests into `main` deploy to GitHub Pages.
+Design rules live in [DESIGN.md](DESIGN.md). Commits, versions and the changelog are in [CONTRIBUTING.md](CONTRIBUTING.md). Pull requests into `main` deploy to GitHub Pages.
