@@ -902,6 +902,7 @@
   const artCache = new Map();
   async function refreshArt() {
     if (K.art !== "studio" || !root.Studio) { artKey = ""; artJob = null; artURL = ""; applyArt(); return; }
+    if (root.Shell?.route !== "components") { artKey = ""; return; }
     const key = JSON.stringify(root.Studio.state?.() || Math.random());
     if (key === artKey) return artJob || applyArt();
     artKey = key;
