@@ -923,7 +923,7 @@ float sdHexT(vec2 p, float r) {
   return length(p) * sign(p.y);
 }
 float tileSD(vec2 p, vec2 hb, float rad) { return uHexT > 0.5 ? sdHexT(p.yx, hb.x - rad) - rad : sdBox(p, hb, rad); }
-float gCell; vec2 gHb; float gRad;
+float gCell; vec2 gHb; float gRad; vec2 gB2; float gBd, gBd2;
 bool tileOn(vec2 c) {
   if (uChecker < 0.5) return true;
   if (uHexT > 0.5) { float r = floor(c.y / (gCell * 0.8660254) + 0.5), q = floor(c.x / gCell - 0.5 * mod(r, 2.0) + 0.5) - floor(r * 0.5); return mod(q - r, 3.0) > 0.5; }
@@ -942,18 +942,19 @@ float fieldSD(vec2 d, vec2 c0, out vec2 bc) {
     V = floor(d / gCell + 0.5) * gCell;
     cs[0] = V + vec2(-0.5, -0.5) * gCell; cs[1] = V + vec2(0.5, -0.5) * gCell; cs[2] = V + vec2(-0.5, 0.5) * gCell; cs[3] = V + vec2(0.5, 0.5) * gCell;
   }
-  float res = 1e5, bd = 1e5, nk = 1e5;
+  float res = 1e5, bd = 1e5, bd2 = 1e5, nk = 1e5; gB2 = c0;
   for (int i = 0; i < 4; i++) {
     if (i >= n) break;
     if (!tileOn(cs[i])) continue;
     float s = tileSD(d - cs[i], gHb, gRad);
-    if (s < bd) { bd = s; bc = cs[i]; }
+    if (s < bd) { bd2 = bd; gB2 = bc; bd = s; bc = cs[i]; } else if (s < bd2) { bd2 = s; gB2 = cs[i]; }
     if (uHexT > 0.5) res = k > 0.0 ? smin(res, s, k) : min(res, s);
     else {
       res = min(res, s);
       if (k > 0.0) { vec2 a = cs[i] + sign(V - cs[i]) * (gHb - gRad), e = V - a, pa = d - a; e *= min(reach / length(e), 1.0); float h = clamp(dot(pa, e) / dot(e, e), 0.0, 1.0); nk = min(nk, length(pa - e * h) - mix(R, w, h)); }
     }
   }
+  gBd = bd; gBd2 = bd2;
   return uHexT < 0.5 && k > 0.0 ? smin(res, nk, gCell * (0.03 + 0.06 * uMerge)) : res;
 }
 void main() {
@@ -968,11 +969,13 @@ void main() {
   vec2 hb = vec2(cell * 0.5 - gap * 0.5);
   float rad = clamp(uRad, 0.0, 0.5) * (uHexT > 0.5 ? 1.0 : 2.0) * hb.x;
   gCell = cell; gHb = hb; gRad = rad;
-  vec2 bc, tc; float sd = fieldSD(d, c, bc);
-  vec2 n = normalize(vec2(fieldSD(d + vec2(0.5, 0.0), c, tc) - fieldSD(d - vec2(0.5, 0.0), c, tc), fieldSD(d + vec2(0.0, 0.5), c, tc) - fieldSD(d - vec2(0.0, 0.5), c, tc)) + 1e-6);
+  vec2 bc, tc; float sd = fieldSD(d, c, bc), bev = max(0.5 / uK, uRound * hb.x), st = uMerge > 0.0 ? max(0.5, 0.3 * bev) : 0.5;
+  vec2 c2 = gB2; float w2 = uMerge > 0.0 ? 0.5 - 0.5 * smoothstep(0.0, cell * (0.04 + 0.12 * uMerge), gBd2 - gBd) : 0.0;
+  vec2 gr = vec2(fieldSD(d + vec2(st, 0.0), c, tc) - fieldSD(d - vec2(st, 0.0), c, tc), fieldSD(d + vec2(0.0, st), c, tc) - fieldSD(d - vec2(0.0, st), c, tc)), n = normalize(gr + 1e-6);
   c = bc;
-  vec2 g = -n * glassSlope(-sd, max(0.5 / uK, uRound * hb.x));
-  gBlend = uBlend; gBump = uBump; if (uBlend > 0.0) gMean = meanAt(toUv(c * asp), hb * asp * 0.5);
+  vec2 g = -n * glassSlope(-sd, bev) * (uMerge > 0.0 ? smoothstep(0.0, 1.0, length(gr) / (2.0 * st)) : 1.0);
+  gBlend = uBlend; gBump = uBump; if (uBlend > 0.0) { gMean = meanAt(toUv(c * asp), hb * asp * 0.5); if (w2 > 0.002) gMean = mix(gMean, meanAt(toUv(c2 * asp), hb * asp * 0.5), w2); }
+  c = mix(c, c2, w2);
   vec3 inside = glassMat(vUv, g, sd, uThick * hb.x, uFrost * cell * 0.15, uTint, uLight, 16);
   vec4 base = tex(vUv);
   float shadow = 0.22 * min(uLight, 1.0) * (1.0 - 0.6 * uTint) * exp(-max(fieldSD(d + vec2(0.0, cell * 0.02), c, tc), 0.0) / (cell * 0.05));
