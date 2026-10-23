@@ -931,19 +931,30 @@ bool tileOn(vec2 c) {
 }
 float smin(float a, float b, float k) { float h = max(k - abs(a - b), 0.0) / k; return min(a, b) - h * h * k * 0.25; }
 float fieldSD(vec2 d, vec2 c0, out vec2 bc) {
-  float gc = max(1.4142136 * (gCell - 2.0 * (gHb.x - gRad)) - 2.0 * gRad, 0.02 * gCell), k = uMerge <= 0.0 ? 0.0 : uHexT > 0.5 ? gCell * (0.05 + 0.3 * uMerge) : 2.0 * gc * (1.0 + 0.6 * uMerge), res = 1e5, bd = 1e5; bc = c0;
-  int nn = uMerge > 0.0 || uChecker > 0.5 ? (uHexT > 0.5 ? 7 : 9) : 1;
-  for (int j = 0; j < 9; j++) {
-    if (j >= nn) break;
-    vec2 o = uHexT > 0.5 ? (j == 0 ? vec2(0.0) : vec2(cos(float(j) * 1.0471976), sin(float(j) * 1.0471976))) : vec2(float(j % 3 - 1), float(j / 3 - 1));
-    if (uHexT < 0.5 && j == 0) o = vec2(0.0); else if (uHexT < 0.5 && j == 4) o = vec2(-1.0);
-    vec2 c = c0 + o * gCell;
-    if (!tileOn(c)) continue;
-    float s = tileSD(d - c, gHb, gRad);
-    if (s < bd) { bd = s; bc = c; }
-    res = k > 0.0 ? smin(res, s, k) : min(res, s);
+  bc = c0;
+  if (uMerge <= 0.0 && uChecker < 0.5) return tileSD(d - c0, gHb, gRad);
+  float gc = max(1.4142136 * (gCell - 2.0 * (gHb.x - gRad)) - 2.0 * gRad, 0.04 * gCell), k = uMerge <= 0.0 ? 0.0 : uHexT > 0.5 ? gCell * (0.03 + 0.15 * uMerge) : 1.0, w = gCell * (0.012 + 0.035 * uMerge), R = min(gRad, max(gRad, 0.04 * gCell) * 0.85), reach = gCell * (0.08 + 0.5 * uMerge);
+  vec2 cs[4], V = vec2(0.0); int n = 4;
+  if (uHexT > 0.5) {
+    vec2 r = d - c0; float th = 0.5235988 + floor((atan(r.y, r.x) - 0.5235988) / 1.0471976 + 0.5) * 1.0471976;
+    cs[0] = c0; cs[1] = c0 + gCell * vec2(cos(th - 0.5235988), sin(th - 0.5235988)); cs[2] = c0 + gCell * vec2(cos(th + 0.5235988), sin(th + 0.5235988)); cs[3] = c0; n = 3;
+  } else {
+    V = floor(d / gCell + 0.5) * gCell;
+    cs[0] = V + vec2(-0.5, -0.5) * gCell; cs[1] = V + vec2(0.5, -0.5) * gCell; cs[2] = V + vec2(-0.5, 0.5) * gCell; cs[3] = V + vec2(0.5, 0.5) * gCell;
   }
-  return res;
+  float res = 1e5, bd = 1e5, nk = 1e5;
+  for (int i = 0; i < 4; i++) {
+    if (i >= n) break;
+    if (!tileOn(cs[i])) continue;
+    float s = tileSD(d - cs[i], gHb, gRad);
+    if (s < bd) { bd = s; bc = cs[i]; }
+    if (uHexT > 0.5) res = k > 0.0 ? smin(res, s, k) : min(res, s);
+    else {
+      res = min(res, s);
+      if (k > 0.0) { vec2 a = cs[i] + sign(V - cs[i]) * (gHb - gRad), e = V - a, pa = d - a; e *= min(reach / length(e), 1.0); float h = clamp(dot(pa, e) / dot(e, e), 0.0, 1.0); nk = min(nk, length(pa - e * h) - mix(R, w, h)); }
+    }
+  }
+  return uHexT < 0.5 && k > 0.0 ? smin(res, nk, gCell * (0.03 + 0.06 * uMerge)) : res;
 }
 void main() {
   float cell = max(2.0, floor(uCell * uK + 0.5)) / uK;
