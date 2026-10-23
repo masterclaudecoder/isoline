@@ -1293,6 +1293,8 @@ window.I18N_RU = {
   "One side": "С одной стороны",
   "Changelog": "Что нового",
   "Versioned updates": "Обновления с версиями",
+  "Smoother glass joins": "Плавные стыки стекла",
+  "Smooth shading where glass blocks join, with no creases or color seams": "Плавные тени на стыках стеклянных блоков, без складок и цветных швов",
   "Version {s} from {s}": "Версия {s} от {s}",
   "Version {s}, local copy": "Версия {s}, локальная копия",
   "Version {s}, a newer build is out": "Версия {s}, вышло обновление",

@@ -1,4 +1,7 @@
 window.CHANGELOG = [
+  { v: "2.7.1", at: "2026-10-23T14:31:33+03:00", title: "Smoother glass joins", items: [
+    ["fix", "Smooth shading where glass blocks join, with no creases or color seams"],
+  ] },
   { v: "2.7.0", at: "2026-10-23T14:24:45+03:00", title: "Versioned updates", media: "previews/changelog/2.7.0.webp", items: [
     ["feat", "Changelog in Settings, with a version and time for every update"],
     ["fix", "Merged glass blocks join with thin necks at the corners"],
