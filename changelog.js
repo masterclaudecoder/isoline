@@ -1,4 +1,9 @@
 window.CHANGELOG = [
+  { v: "2.7.2", at: "2026-10-24T00:58:45+03:00", title: "Lighter loading", items: [
+    ["fix", "Opening the site no longer freezes the browser"],
+    ["perf", "Shaders build in the background, and only the ones a design needs"],
+    ["perf", "Studio and Components only draw when you open them"],
+  ] },
   { v: "2.7.1", at: "2026-10-23T14:31:33+03:00", title: "Smoother glass joins", items: [
     ["fix", "Smooth shading where glass blocks join, with no creases or color seams"],
   ] },
