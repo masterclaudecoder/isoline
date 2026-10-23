@@ -1471,8 +1471,8 @@
     const raster = isRaster(st) && TFX, k = 4;
     const { w, h } = previewDims(st, false);
     const once = async () => {
-      const t0 = performance.now();
-      if (raster) { TFX.render(await fxJob(TFX, st, Math.max(32, Math.round(w / k)), Math.max(20, Math.round(h / k)), probeCanvas)); await TFX.sync(); }
+      const jb = raster ? await fxJob(TFX, st, Math.max(32, Math.round(w / k)), Math.max(20, Math.round(h / k)), probeCanvas) : null, t0 = performance.now();
+      if (raster) { TFX.render(jb); await TFX.sync(); }
       else T.buildSVG(st, { res: st.res * 2 });
       return (performance.now() - t0) * (raster ? k * k : 4);
     };
@@ -2790,7 +2790,6 @@
   const thumbCanvas = document.createElement("canvas");
   try { FXR = window.TopoFX.createFX(fxCanvas); } catch (e) { FXR = null; }
   try { TFX = window.TopoFX.createFX(thumbCanvas); } catch (e) { TFX = null; }
-  (window.introDone || Promise.resolve()).then(() => setTimeout(() => { FXR?.warm?.(); TFX?.warm?.(); }, 0));
   let showT = 0;
   let rolling = null;
   let current = { svg: "", raster: false }, raf = 0, anim = 0, painted = null, paintTok = 0, fxWarned = false;
@@ -2865,8 +2864,9 @@
   }
   async function fxJob(R, st, w, h, canvas = rasterCanvas, res) {
     const gpu = st.source === "contours" && R?.floatOK ? T.gpuSpec(st, Math.max(st.res, res ? (res * st.w) / w : 0)) : null;
-    if (gpu || st.source !== "contours") return { ...job(st, w, h, null), contours: gpu };
-    return job(st, w, h, await rasterize(canvas, T.buildSVG(st, { w, h, ...(res ? { res } : {}) }).svg, w, h));
+    const j = gpu || st.source !== "contours" ? { ...job(st, w, h, null), contours: gpu } : job(st, w, h, await rasterize(canvas, T.buildSVG(st, { w, h, ...(res ? { res } : {}) }).svg, w, h));
+    await R?.prepare?.(j);
+    return j;
   }
   let rzScale = 0, lowRes = 0, fitWH = "", glideUntil = 0;
   const room = () => { const cs = getComputedStyle(wrap); return [wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)]; };
@@ -2908,7 +2908,9 @@
       const { w, h } = previewDims(st, draft);
       let image = null;
       if (svg) { image = await rasterize(rasterCanvas, svg, w, h); if (tok !== paintTok) return null; }
-      FXR.render({ ...job(st, w, h, image), contours: gpu, pointer: livePointer(st) });
+      const jb = { ...job(st, w, h, image), contours: gpu, pointer: livePointer(st) };
+      await FXR.prepare(jb); if (tok !== paintTok) return null;
+      FXR.render(jb);
     } else { artSvg.innerHTML = svg; artSvg.firstElementChild?.setAttribute("preserveAspectRatio", "xMidYMid slice"); }
     fxCanvas.hidden = !raster; artSvg.hidden = raster;
     art.classList.toggle("clear", st.source === "contours" && st.transparent);
@@ -2922,8 +2924,10 @@
   window.firstPaint = new Promise((r) => (firstDone = r));
   const firstPainted = () => { bootShared = false; firstDone?.(); firstDone = null; };
   let renderWait = [];
+  const offStudio = () => (window.Shell?.route ? window.Shell.route !== "studio" : !location.hash.startsWith("#/studio"));
   function render(draft = false) {
     cancelAnimationFrame(raf); cancelAnimationFrame(anim); anim = 0;
+    if (offStudio() && isRaster(S) && !bootShared) return Promise.resolve(null);
     return new Promise((resolve) => {
       renderWait.push(resolve);
       raf = requestAnimationFrame(async () => {
