@@ -72,16 +72,18 @@ vec3 glassMat(vec2 uv, vec2 g, float sd, float thick, float frost, float tint, f
   }
   vec3 n = normalize(vec3(-g, 1.0)), r = refract(vec3(0.0, 0.0, -1.0), n, 1.0 / 1.5);
   vec2 off = r.xy / max(-r.z, 0.2) * thick;
-  vec3 c = frostDisp(uv + toUv(off), frost, toUv(off * 0.06), frost > 0.5 ? taps : 1);
+  float edge = clamp(1.0 - n.z * n.z, 0.0, 1.0);
+  vec3 c = frostDisp(uv + toUv(off), frost, toUv(off * (0.06 + 0.12 * min(light, 1.0) * edge)), frost > 0.5 ? taps : 1);
   c = mix(c, gMean, gBlend);
   vec3 L = normalize(vec3(-0.55, 0.65, 0.55));
-  float sp = pow(max(dot(reflect(vec3(0.0, 0.0, -1.0), n), L), 0.0), 28.0), fr = pow(1.0 - n.z, 1.5), edge = clamp(1.0 - n.z * n.z, 0.0, 1.0);
+  float sp = pow(max(dot(reflect(vec3(0.0, 0.0, -1.0), n), L), 0.0), 110.0), fr = pow(1.0 - n.z, 1.5);
   c = mix(c, mix(vec3(luma(c)), c, 0.8) * 0.75 + 0.27, tint);
   c = mix(c, c * 0.55 + 0.5, tint * smoothstep(0.0, 0.7, edge) * 0.7);
   float face = dot(normalize(n.xy + 1e-6), normalize(L.xy)), hair = max(1.0, 0.9 / uK);
-  float sh = dot(n, L) - L.z;
-  c *= 1.0 + light * 0.8 * (sh < 0.0 ? sh * (1.0 - 0.7 * tint) : sh);
-  c += light * (0.7 * sp + 0.12 * fr + 0.55 * exp(min(sd, 0.0) / hair) * (0.25 + 0.75 * max(face, 0.0)));
+  float band = smoothstep(0.04, 0.35, edge) * (1.0 - smoothstep(0.45, 0.95, edge));
+  c *= 1.0 - min(light, 1.2) * edge * (0.22 + 0.25 * max(-face, 0.0)) * (1.0 - 0.6 * tint);
+  c += min(light, 1.5) * band * max(-face, 0.0) * 0.8 * (c + 0.15);
+  c += light * (0.8 * sp + 0.08 * fr + 0.9 * exp(min(sd, 0.0) / (hair * 1.5)) * (0.25 + 0.75 * max(face, 0.0)) + 0.35 * band * smoothstep(0.2, 0.9, face));
   return clamp(c, 0.0, 1.0);
 }
 `;
@@ -194,6 +196,7 @@ uniform vec3 uCol[8]; uniform int uN; uniform sampler2D uTex2; uniform int uHasT
 uniform float uTime; uniform int uMotion; uniform float uMotAmt;
 uniform float uRefr; uniform float uFrost; uniform float uDisp; uniform float uRim; uniform vec3 uTint; uniform float uTintAmt; uniform float uBody;
 uniform int uProj; uniform float uTexSc; uniform float uTexRot; uniform vec2 uTexOff; uniform float uBlend;
+uniform int uMN; uniform vec4 uMO[7]; uniform vec4 uMA[7]; uniform float uMK; uniform float uMZ;
 float gPh = 0.0;
 mat3 rotY(float t) { float c = cos(t), s = sin(t); return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c); }
 mat3 rotX(float t) { float c = cos(t), s = sin(t); return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c); }
@@ -218,21 +221,47 @@ float sdOcta(vec3 p, float s) {
   return length(vec3(q.x, q.y - s + k, q.z - k));
 }
 float smax(float a, float b, float k) { float h = clamp(0.5 - 0.5 * (b - a) / k, 0.0, 1.0); return mix(b, a, h) + k * h * (1.0 - h); }
-float sd(vec3 p) {
+float sdCursor(vec2 p) {
+  vec2 v[4]; v[0] = vec2(-0.606, 0.687); v[1] = vec2(0.704, 0.141); v[2] = vec2(0.229, -0.08); v[3] = vec2(0.091, -0.646);
+  float d = dot(p - v[0], p - v[0]), sg = 1.0;
+  for (int i = 0, j = 3; i < 4; j = i, i++) {
+    vec2 e = v[j] - v[i], w = p - v[i], b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0);
+    d = min(d, dot(b, b));
+    bvec3 c = bvec3(p.y >= v[i].y, p.y < v[j].y, e.x * w.y > e.y * w.x);
+    if (all(c) || all(not(c))) sg = -sg;
+  }
+  return sg * sqrt(d);
+}
+float sdK(vec3 p, int kind, float rip) {
   float d;
-  if (uKind == 0) d = length(p) - 1.0;
-  else if (uKind == 1) d = length(vec2(length(p.xz) - 0.72, p.y)) - 0.3;
-  else if (uKind == 2) { vec3 q = abs(p) - vec3(0.6); d = length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0) - 0.16; }
-  else if (uKind == 3) { vec3 q = p; q.y -= clamp(q.y, -0.55, 0.55); d = length(q) - 0.44; }
-  else if (uKind == 6) {
+  if (kind == 0) d = length(p) - 1.0;
+  else if (kind == 1) d = length(vec2(length(p.xz) - 0.72, p.y)) - 0.3;
+  else if (kind == 2) { vec3 q = abs(p) - vec3(0.6); d = length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0) - 0.16; }
+  else if (kind == 3) { vec3 q = p; q.y -= clamp(q.y, -0.55, 0.55); d = length(q) - 0.44; }
+  else if (kind == 6) {
     vec3 q = vec3(abs(p.x), p.y, abs(p.z));
     float a = 0.894 * q.x + 0.447 * q.y - 0.416, b = 0.894 * q.z + 0.447 * q.y - 0.416, c = -q.y - 0.62;
     d = smax(smax(a, b, 0.06), c, 0.06) - 0.02;
   }
-  else if (uKind == 7) d = sdOcta(p * vec3(1.0, 0.82, 1.0), 1.0) - 0.03;
+  else if (kind == 7) d = sdOcta(p * vec3(1.0, 0.82, 1.0), 1.0) - 0.03;
+  else if (kind == 8) { vec2 w = vec2(sdCursor(p.xy * 0.9) / 0.9, abs(p.z) - 0.1); d = min(max(w.x, w.y), 0.0) + length(max(w, 0.0)) - 0.19; }
   else d = length(p) - 0.95 + 0.14 * sin(2.6 * p.x + gPh) * sin(2.6 * p.y + gPh * 2.0) * sin(2.6 * p.z - gPh);
-  d += uRipple * 0.045 * sin(7.0 * p.x + gPh) * sin(7.0 * p.y - gPh) * sin(7.0 * p.z);
+  d += rip * 0.045 * sin(7.0 * p.x + gPh) * sin(7.0 * p.y - gPh) * sin(7.0 * p.z);
   return d * 0.8;
+}
+float sd(vec3 p) { return sdK(p, uKind, uRipple); }
+mat3 gRi; vec2 gC; float gS, gc, gs; mat3 gMR[7]; vec2 gMC[7]; vec2 gMS[7];
+float sdv(vec3 X) {
+  float d = sd(gRi * X);
+  for (int j = 0; j < 7; j++) {
+    if (j >= uMN) break;
+    vec2 px = gC + mat2(gc, gs, -gs, gc) * vec2(X.x, -X.y) * gS, r = px - gMC[j];
+    vec2 qj = mat2(gMS[j].x, -gMS[j].y, gMS[j].y, gMS[j].x) * r / uMO[j].z; qj.y = -qj.y;
+    float dj = sdK(gMR[j] * vec3(qj, X.z * gS / uMO[j].z), int(uMO[j].w), uMA[j].w) * uMO[j].z / gS;
+    float h = max(uMK - abs(d - dj), 0.0) / max(uMK, 1e-4);
+    d = min(d, dj) - h * h * uMK * 0.25;
+  }
+  return d;
 }
 vec2 toPx(vec2 l) { float c = cos(uRot), s = sin(uRot); return uC + mat2(c, s, -s, c) * vec2(l.x, -l.y) * uSz; }
 vec4 texAt(vec2 px) { return tex(vec2(px.x / uRes.x, 1.0 - px.y / uRes.y)); }
@@ -253,7 +282,17 @@ void main() {
   vec2 sq = (pp - C - vec2(0.06, 0.95) * S) / (S * vec2(1.0, 0.26));
   base.rgb *= 1.0 - uShadow * 0.5 * exp(-dot(sq, sq) * 1.6);
   mat3 R = rotY(spin) * rotX(uTilt), Ri = transpose(R);
-  vec3 ro = vec3(q, 3.0), rd = vec3(0.0, 0.0, -1.0), L = normalize(vec3(-0.6, 0.8, 0.7));
+  gRi = Ri; gC = C; gS = S; gc = c; gs = s;
+  for (int j = 0; j < 7; j++) {
+    if (j >= uMN) break;
+    float Sj = uMO[j].z * (1.0 + 0.08 * uMotAmt * beat);
+    gMC[j] = uMO[j].xy + (uMotion == 3 ? vec2(0.0, 0.04 * uMotAmt * Sj * sin(tw)) : vec2(0.0));
+    gMS[j] = vec2(cos(uMA[j].x), sin(uMA[j].x));
+    gMR[j] = transpose(rotY(uMA[j].z + (uMotion == 1 ? tw : 0.0)) * rotX(uMA[j].y));
+    vec2 sj = (pp - gMC[j] - vec2(0.06, 0.95) * Sj) / (Sj * vec2(1.0, 0.26));
+    base.rgb *= 1.0 - uShadow * 0.5 * exp(-dot(sj, sj) * 1.6);
+  }
+  vec3 ro = vec3(q, 3.0 * uMZ), rd = vec3(0.0, 0.0, -1.0), L = normalize(vec3(-0.6, 0.8, 0.7));
   float px = 1.0 / S;
   if (uKind == 5) {
     vec3 n = R * vec3(0.0, 0.0, 1.0);
@@ -273,11 +312,11 @@ void main() {
   }
   float t = 0.0, md = 1e9, mt = 0.0;
   float steps = uQ2.x > 0.0 ? uQ2.x : 80.0;
-  for (int i = 0; i < 240; i++) { if (float(i) >= steps) break; float d = sd(Ri * (ro + rd * t)); if (d < md) { md = d; mt = t; } if (d < 0.0005 || t > 6.0) break; t += d; }
+  for (int i = 0; i < 240; i++) { if (float(i) >= steps) break; float d = sdv(ro + rd * t); if (d < md) { md = d; mt = t; } if (d < 0.0005 || t > 6.0 * uMZ) break; t += d; }
   float cov = 1.0 - smoothstep(0.0, 1.5 * px, md);
   if (cov <= 0.0) { o = base; return; }
   vec3 pos = ro + rd * mt; vec2 e = vec2(1.0, -1.0) * 0.0015;
-  vec3 n = normalize(e.xyy * sd(Ri * (pos + e.xyy)) + e.yyx * sd(Ri * (pos + e.yyx)) + e.yxy * sd(Ri * (pos + e.yxy)) + e.xxx * sd(Ri * (pos + e.xxx)));
+  vec3 n = normalize(e.xyy * sdv(pos + e.xyy) + e.yyx * sdv(pos + e.yyx) + e.yxy * sdv(pos + e.yxy) + e.xxx * sdv(pos + e.xxx));
   float wrap = dot(n, L) * 0.5 + 0.5, fr = pow(1.0 - clamp(dot(n, -rd), 0.0, 1.0), 3.0), sp = pow(clamp(dot(reflect(rd, n), L), 0.0, 1.0), 32.0);
   vec3 col;
   if (uMat == 0) {
@@ -293,10 +332,10 @@ void main() {
       float ior = 1.0 + 0.45 * (1.0 - exp(-max(0.05, uRefr)));
       vec3 r1 = refract(rd, n, 1.0 / ior), pin = pos - n * 0.004; float ti = 0.0;
       float lo = 0.0;
-      for (int i = 0; i < 64; i++) { float d = -sd(Ri * (pin + r1 * ti)); if (d < 0.0006) break; lo = ti; ti += max(d, 0.004); }
-      for (int i = 0; i < 5; i++) { float m = 0.5 * (lo + ti); if (-sd(Ri * (pin + r1 * m)) < 0.0006) ti = m; else lo = m; }
+      for (int i = 0; i < 64; i++) { float d = -sdv(pin + r1 * ti); if (d < 0.0006) break; lo = ti; ti += max(d, 0.004); }
+      for (int i = 0; i < 5; i++) { float m = 0.5 * (lo + ti); if (-sdv(pin + r1 * m) < 0.0006) ti = m; else lo = m; }
       vec3 pe = pin + r1 * ti; vec2 e2 = e * 4.0;
-      vec3 n2 = normalize(e2.xyy * sd(Ri * (pe + e2.xyy)) + e2.yyx * sd(Ri * (pe + e2.yyx)) + e2.yxy * sd(Ri * (pe + e2.yxy)) + e2.xxx * sd(Ri * (pe + e2.xxx)));
+      vec3 n2 = normalize(e2.xyy * sdv(pe + e2.xyy) + e2.yyx * sdv(pe + e2.yyx) + e2.yxy * sdv(pe + e2.yxy) + e2.xxx * sdv(pe + e2.xxx));
       float cs = dot(r1, n2), kk = 1.0 - ior * ior * (1.0 - cs * cs);
       float wt = smoothstep(0.0, 0.12, kk); tir = 1.0 - wt;
       vec3 r2 = normalize(mix(reflect(r1, -n2), refract(r1, -n2, ior), wt));
@@ -316,7 +355,9 @@ void main() {
     col = mix(col, vec3(1.0), tir * 0.35);
     col = mix(col, col * uTint, uTintAmt);
     float rim = pow(1.0 - abs(n.z), 4.0), face = clamp(dot(n.xy, vec2(-0.6, 0.8)), 0.0, 1.0);
-    col = mix(col, vec3(1.0), 0.04 + 0.28 * fr) + uRim * rim * (0.25 + 0.75 * face) * 0.7 + uShine * 0.8 * sp;
+    float spg = pow(clamp(dot(reflect(rd, n), L), 0.0, 1.0), 140.0), lip = smoothstep(0.55, 0.9, 1.0 - abs(n.z)) * (1.0 - smoothstep(0.9, 1.0, 1.0 - abs(n.z)));
+    col *= 1.0 - uShine * 0.25 * rim * (1.0 - face);
+    col = mix(col, vec3(1.0), 0.04 + 0.28 * fr) + uRim * rim * (0.25 + 0.75 * face) * 0.7 + uShine * (1.3 * spg + 0.35 * lip * (0.3 + 0.7 * face) + 0.2 * lip * (1.0 - face) * col);
   } else {
     vec3 sp3 = Ri * pos, nl = Ri * n, alb;
     if (uProj == 1) alb = skin(sp3.xy * 0.5 + 0.5);
@@ -875,13 +916,35 @@ void main() {
   o = vec4(acc / 4.0, tex(vUv).a);
 }`,
 
-    mesh: `uniform float uCell; uniform float uGap; uniform float uRad; uniform float uRound; uniform float uThick; uniform float uFrost; uniform float uTint; uniform float uLight; uniform float uFade; uniform float uFadeAng; uniform float uHexT; uniform float uBlend; uniform float uAsp; uniform float uBump;
+    mesh: `uniform float uCell; uniform float uGap; uniform float uRad; uniform float uRound; uniform float uThick; uniform float uFrost; uniform float uTint; uniform float uLight; uniform float uFade; uniform float uFadeAng; uniform float uHexT; uniform float uBlend; uniform float uAsp; uniform float uBump; uniform float uMerge; uniform float uChecker;
 float sdHexT(vec2 p, float r) {
   const vec3 k = vec3(-0.866025404, 0.5, 0.577350269);
   p = abs(p); p -= 2.0 * min(dot(k.xy, p), 0.0) * k.xy; p -= vec2(clamp(p.x, -k.z * r, k.z * r), r);
   return length(p) * sign(p.y);
 }
 float tileSD(vec2 p, vec2 hb, float rad) { return uHexT > 0.5 ? sdHexT(p.yx, hb.x - rad) - rad : sdBox(p, hb, rad); }
+float gCell; vec2 gHb; float gRad;
+bool tileOn(vec2 c) {
+  if (uChecker < 0.5) return true;
+  if (uHexT > 0.5) { float r = floor(c.y / (gCell * 0.8660254) + 0.5), q = floor(c.x / gCell - 0.5 * mod(r, 2.0) + 0.5) - floor(r * 0.5); return mod(q - r, 3.0) > 0.5; }
+  vec2 id = floor(c / gCell); return mod(id.x + id.y, 2.0) < 0.5;
+}
+float smin(float a, float b, float k) { float h = max(k - abs(a - b), 0.0) / k; return min(a, b) - h * h * k * 0.25; }
+float fieldSD(vec2 d, vec2 c0, out vec2 bc) {
+  float gc = max(1.4142136 * (gCell - 2.0 * (gHb.x - gRad)) - 2.0 * gRad, 0.02 * gCell), k = uMerge <= 0.0 ? 0.0 : uHexT > 0.5 ? gCell * (0.05 + 0.3 * uMerge) : 2.0 * gc * (1.0 + 0.6 * uMerge), res = 1e5, bd = 1e5; bc = c0;
+  int nn = uMerge > 0.0 || uChecker > 0.5 ? (uHexT > 0.5 ? 7 : 9) : 1;
+  for (int j = 0; j < 9; j++) {
+    if (j >= nn) break;
+    vec2 o = uHexT > 0.5 ? (j == 0 ? vec2(0.0) : vec2(cos(float(j) * 1.0471976), sin(float(j) * 1.0471976))) : vec2(float(j % 3 - 1), float(j / 3 - 1));
+    if (uHexT < 0.5 && j == 0) o = vec2(0.0); else if (uHexT < 0.5 && j == 4) o = vec2(-1.0);
+    vec2 c = c0 + o * gCell;
+    if (!tileOn(c)) continue;
+    float s = tileSD(d - c, gHb, gRad);
+    if (s < bd) { bd = s; bc = c; }
+    res = k > 0.0 ? smin(res, s, k) : min(res, s);
+  }
+  return res;
+}
 void main() {
   float cell = max(2.0, floor(uCell * uK + 0.5)) / uK;
   vec2 asp = vec2(max(uAsp, 0.2), 1.0), d = dp() / asp, id = floor(d / cell), c = (id + 0.5) * cell;
@@ -893,13 +956,15 @@ void main() {
   float gap = uGap > 0.0 ? max(uGap * cell * 0.04, 1.0 / uK) : 0.0;
   vec2 hb = vec2(cell * 0.5 - gap * 0.5);
   float rad = clamp(uRad, 0.0, 0.5) * (uHexT > 0.5 ? 1.0 : 2.0) * hb.x;
-  float sd = tileSD(p, hb, rad);
-  vec2 n = normalize(vec2(tileSD(p + vec2(0.5, 0.0), hb, rad) - tileSD(p - vec2(0.5, 0.0), hb, rad), tileSD(p + vec2(0.0, 0.5), hb, rad) - tileSD(p - vec2(0.0, 0.5), hb, rad)) + 1e-6);
+  gCell = cell; gHb = hb; gRad = rad;
+  vec2 bc, tc; float sd = fieldSD(d, c, bc);
+  vec2 n = normalize(vec2(fieldSD(d + vec2(0.5, 0.0), c, tc) - fieldSD(d - vec2(0.5, 0.0), c, tc), fieldSD(d + vec2(0.0, 0.5), c, tc) - fieldSD(d - vec2(0.0, 0.5), c, tc)) + 1e-6);
+  c = bc;
   vec2 g = -n * glassSlope(-sd, max(0.5 / uK, uRound * hb.x));
   gBlend = uBlend; gBump = uBump; if (uBlend > 0.0) gMean = meanAt(toUv(c * asp), hb * asp * 0.5);
   vec3 inside = glassMat(vUv, g, sd, uThick * hb.x, uFrost * cell * 0.15, uTint, uLight, 16);
   vec4 base = tex(vUv);
-  float shadow = 0.22 * min(uLight, 1.0) * (1.0 - 0.6 * uTint) * exp(-max(tileSD(p + vec2(0.0, cell * 0.02), hb, rad), 0.0) / (cell * 0.05));
+  float shadow = 0.22 * min(uLight, 1.0) * (1.0 - 0.6 * uTint) * exp(-max(fieldSD(d + vec2(0.0, cell * 0.02), c, tc), 0.0) / (cell * 0.05));
   vec3 outside = base.rgb * (1.0 - shadow);
   float aa = 0.6 / uK;
   vec2 fd = vec2(cos(uFadeAng), sin(uFadeAng)), cu = toUv(c * asp) - 0.5;
@@ -1751,8 +1816,8 @@ void main() {
   const hex3 = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
   const rad = (d) => (d * Math.PI) / 180;
 
-  const OBJ_KINDS = ["sphere", "torus", "cube", "capsule", "blob", "image", "pyramid", "diamond"];
-  const INTS = new Set(["uGStage", "uPStage", "uPath", "uKind", "uMat", "uProj", "uHasTex", "uType", "uN", "uNoise", "uMotion", "uPattern", "uOct", "uNPts", "uUser", "uNFeat", "uFirst", "uMode", "uNInk", "uHasH"]);
+  const OBJ_KINDS = ["sphere", "torus", "cube", "capsule", "blob", "image", "pyramid", "diamond", "cursor"];
+  const INTS = new Set(["uGStage", "uPStage", "uPath", "uKind", "uMat", "uProj", "uHasTex", "uType", "uN", "uNoise", "uMotion", "uPattern", "uOct", "uNPts", "uUser", "uNFeat", "uFirst", "uMode", "uNInk", "uHasH", "uMN"]);
   function createFX(canvas) {
     const gl = canvas.getContext("webgl2", { premultipliedAlpha: false, preserveDrawingBuffer: true, antialias: false, alpha: true });
     if (!gl) return null;
@@ -1876,7 +1941,7 @@ void main() {
         else if (u === "uTex2") { gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, v); gl.uniform1i(l, 2); }
         else if (u === "uMip") { gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, v); gl.uniform1i(l, 4); }
         else if (u === "uDes") { gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, v); gl.uniform1i(l, 3); }
-        else if ((u === "uPts" || u === "uFeat" || u === "uP" || u === "uV") && v.length) gl.uniform4fv(l, v.flat());
+        else if ((u === "uPts" || u === "uFeat" || u === "uP" || u === "uV" || u === "uMO" || u === "uMA") && v.length) gl.uniform4fv(l, v.flat());
         else if (u === "uInk" && v.length) gl.uniform3fv(l, v.flat());
         else if (typeof v === "number") gl.uniform1f(l, v);
         else if (v.length === 3 && typeof v[0] === "number") gl.uniform3fv(l, v);
@@ -1988,7 +2053,7 @@ void main() {
       switch (id) {
         case "liquify": return { uAmt: e.amount, uScale: e.scale };
         case "glass": return { uWidth: e.width, uAngle: rad(e.angle), uRound: e.round ?? 1, uThick: e.thick ?? 0.6, uFrost: e.frost ?? 0.2, uTint: e.tint || 0, uLight: e.light ?? 0.5, uBlend: e.blend || 0, uBump: e.texture || 0 };
-        case "mesh": return { uCell: e.cell, uGap: e.gap ?? 1, uRad: e.radius ?? 0.25, uRound: e.round ?? 0.4, uThick: e.thick ?? 0.6, uFrost: e.frost ?? 0.3, uTint: e.tint || 0, uLight: e.light ?? 0.6, uFade: e.fade || 0, uFadeAng: rad(e.fadeAngle ?? 45), uHexT: e.layout === "hex" ? 1 : 0, uBlend: e.blend || 0, uBump: e.texture || 0, uAsp: e.stretch ?? 1 };
+        case "mesh": return { uCell: e.cell, uGap: e.gap ?? 1, uRad: e.radius ?? 0.25, uRound: e.round ?? 0.4, uThick: e.thick ?? 0.6, uFrost: e.frost ?? 0.3, uTint: e.tint || 0, uLight: e.light ?? 0.6, uFade: e.fade || 0, uFadeAng: rad(e.fadeAngle ?? 45), uHexT: e.layout === "hex" ? 1 : 0, uBlend: e.blend || 0, uBump: e.texture || 0, uAsp: e.stretch ?? 1, uMerge: e.merge || 0, uChecker: e.checker ? 1 : 0 };
         case "pixel": return { uSize: e.size, uBevel: e.bevel };
         case "halftone": return { uSize: e.size, uAngle: rad(e.angle), uMono: e.mono ? 1 : 0, uInk: ink, uPaper: paper, uShape: Math.max(0, ["circle", "square", "triangle", "star"].indexOf(e.shape)), uHex: e.grid === "hex" ? 1 : 0, uTurn: e.turn ? 1 : 0, uTone: e.tone ? 1 : 0, uEven: e.even ? 1 : 0, uMerge: e.merge === false ? 0 : 1, uClassic: e.classic ? 1 : 0 };
         case "ascii": {
@@ -2158,7 +2223,10 @@ void main() {
         draw("copy", input, targets.list[2].f, {}, w, h, k, job.seed); des = targets.list[2].t;
       }
       const drawObjects = (list) => {
+        const mg = list.filter((o) => (o.merge || 0) > 0 && o.kind !== "image");
         for (const ob of list) {
+          if (mg.length > 1 && mg.includes(ob) && ob !== mg[0]) continue;
+          const grp = mg.length > 1 && ob === mg[0] ? mg.slice(1, 8) : [], s0 = Math.max(1, ob.size * sz * 0.5);
           const out = targets.list[ping], tx = ob.tex ? objTex(ob.texKey, ob.tex) : null, sp = ob.speed ?? 1, t = (job.time || 0) * sp;
           draw("object", input, out.f, {
             uKind: OBJ_KINDS.indexOf(ob.kind), uC: [ob.x * w, ob.y * h], uSz: Math.max(1, ob.size * sz * 0.5), uRot: rad(ob.rot || 0), uTilt: rad(ob.tilt || 0), uSpin: rad(ob.spin || 0),
@@ -2167,6 +2235,8 @@ void main() {
             uRefr: ob.refract ?? 1, uBody: ob.body ? 1 : 0, uFrost: ob.frost || 0, uDisp: ob.disp ?? 0.3, uRim: ob.rim ?? 0.5, uTint: hex3(ob.tint || "#ffffff"), uTintAmt: ob.tintAmt || 0,
             uCol: cols, uN: cols.length, uTex2: tx || srcTex, uHasTex: tx ? 1 : 0, uDes: des,
             uTime: t - Math.floor(t), uMotion: ob.anim === false || !sp ? 0 : ["still", "drift", "flow", "breathe", "pulse"].indexOf(job.motion || "still"), uMotAmt: job.motionAmt ?? 0.5,
+            uMN: grp.length, uMK: grp.length ? (mg.reduce((a, o) => a + o.merge, 0) / mg.length) * 0.9 : 0, uMZ: Math.max(1, ...grp.map((o) => Math.max(1, o.size * sz * 0.5) / s0)),
+            ...(grp.length ? { uMO: grp.map((o) => [o.x * w, o.y * h, Math.max(1, o.size * sz * 0.5), OBJ_KINDS.indexOf(o.kind)]), uMA: grp.map((o) => [rad(o.rot || 0), rad(o.tilt || 0), rad(o.spin || 0), o.ripple || 0]) } : {}),
           }, w, h, k, job.seed);
           input = out.t; ping = 1 - ping;
         }
