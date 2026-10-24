@@ -1471,8 +1471,9 @@
     const raster = isRaster(st) && TFX, k = 4;
     const { w, h } = previewDims(st, false);
     const once = async () => {
-      const jb = raster ? await fxJob(TFX, st, Math.max(32, Math.round(w / k)), Math.max(20, Math.round(h / k)), probeCanvas) : null, t0 = performance.now();
-      if (raster) { TFX.render(jb); await TFX.sync(); }
+      const jb = raster ? await fxJob(TFX, st, Math.max(32, Math.round(w / k)), Math.max(20, Math.round(h / k)), probeCanvas) : null;
+      let t0 = performance.now();
+      if (raster) { for (let i = 0; i < 400; i++) { t0 = performance.now(); if (TFX.render(jb, { soft: true }) !== false) break; await new Promise((r) => setTimeout(r, 40)); } await TFX.sync(); }
       else T.buildSVG(st, { res: st.res * 2 });
       return (performance.now() - t0) * (raster ? k * k : 4);
     };
@@ -1863,8 +1864,8 @@
     async function drawFrame(i) {
       const st = motionState(S, motionT(endless() ? i / fps / S.motion.dur : S.motion.mode === "once" ? Math.min(1, i / Math.max(1, frames - 1)) : (i / fps / S.motion.dur) % 1));
       if ((isRaster(st) || (st.source === "contours" && FXR?.floatOK && T.gpuSpec(st, st.res))) && FXR) {
-        FXR.render(await fxJob(FXR, st, W, H));
-        fctx.clearRect(0, 0, W, H); fctx.drawImage(fxCanvas, 0, 0, W, H);
+        const fr = await fxGo(FXR, await fxJob(FXR, st, W, H), undefined, () => grab(fxCanvas));
+        fctx.clearRect(0, 0, W, H); fctx.drawImage(fr, 0, 0, W, H);
       } else await rasterize(frameCanvas, T.buildSVG(st, { w: W, h: H }).svg, W, H);
       return fctx;
     }
@@ -2528,7 +2529,7 @@
     await step(on, "Drawing the pattern", 0.1);
     const jb = await fxJob(FXR, S, w, h);
     await step(on, S.fxOrder.length ? `Applying ${S.fxOrder.length === 1 ? "the effect" : S.fxOrder.length + " effects"}` : "Rendering", 0.35);
-    FXR.render(jb);
+    await fxGo(FXR, jb);
     await step(on, "Compressing the PNG", 0.65);
     const blob = await new Promise((r) => fxCanvas.toBlob(r, "image/png"));
     render(false);
@@ -2791,6 +2792,11 @@
   try { FXR = window.TopoFX.createFX(fxCanvas); } catch (e) { FXR = null; }
   try { TFX = window.TopoFX.createFX(thumbCanvas); } catch (e) { TFX = null; }
   (window.introDone || Promise.resolve()).then(() => setTimeout(() => (TFX?.warm?.() || Promise.resolve()).then(() => FXR?.warm?.()), 1500));
+  let gpuToast = 0;
+  for (const R of [FXR, TFX]) if (R) {
+    R.onLost = () => { window.perfEvent?.("gpu", "Graphics context lost", {}); if (Date.now() - gpuToast > 30000) { gpuToast = Date.now(); toast("The graphics card restarted. Redrawing when it is back"); } };
+    R.onRestored = () => { window.perfEvent?.("gpu", "Graphics context restored", {}); if (R === FXR) { painted = null; if (window.Shell?.route === "studio") render(); } else { for (const t of document.querySelectorAll(".tile-th, .th")) t._thk = ""; schedulePreviews(0); } setTimeout(() => R.warm(), 5000); };
+  }
   let showT = 0;
   let rolling = null;
   let current = { svg: "", raster: false }, raf = 0, anim = 0, painted = null, paintTok = 0, fxWarned = false;
@@ -2856,12 +2862,22 @@
         const p = PRESETS.find((x) => x[1] === name); if (!p) return;
         const st = { ...resolveLook(p[2]), objects: [] }, W = 512, H = 320, c = document.createElement("canvas");
         c.width = W; c.height = H;
-        if (isRaster(st)) { TFX.render(await fxJob(TFX, st, W, H, document.createElement("canvas"))); c.getContext("2d").drawImage(thumbCanvas, 0, 0); }
+        if (isRaster(st)) { const g = await fxGo(TFX, await fxJob(TFX, st, W, H, document.createElement("canvas")), undefined, () => grab(thumbCanvas)); c.getContext("2d").drawImage(g, 0, 0); }
         else await rasterize(c, T.buildSVG({ ...st, w: W, h: H }, { w: W, h: H }).svg, W, H);
         presetTexs.set(name, c); render(); schedulePreviews();
       }, 0);
     }
     return null;
+  }
+  const grab = (src) => { const c = document.createElement("canvas"); c.width = src.width; c.height = src.height; c.getContext("2d").drawImage(src, 0, 0); return c; };
+  async function fxGo(R, jb, live = () => true, read) {
+    const t0 = performance.now();
+    while (R.render(jb, { soft: true }) === false) {
+      if (!live()) return false;
+      if (performance.now() - t0 > 15000) { R.render(jb); break; }
+      await new Promise((r) => setTimeout(r, 40));
+    }
+    return read ? read() : true;
   }
   async function fxJob(R, st, w, h, canvas = rasterCanvas, res) {
     const gpu = st.source === "contours" && R?.floatOK ? T.gpuSpec(st, Math.max(st.res, res ? (res * st.w) / w : 0)) : null;
@@ -2908,7 +2924,7 @@
       const { w, h } = previewDims(st, draft);
       let image = null;
       if (svg) { image = await rasterize(rasterCanvas, svg, w, h); if (tok !== paintTok) return null; }
-      FXR.render({ ...job(st, w, h, image), contours: gpu, pointer: livePointer(st) });
+      if (!(await fxGo(FXR, { ...job(st, w, h, image), contours: gpu, pointer: livePointer(st) }, () => tok === paintTok))) return null;
     } else { artSvg.innerHTML = svg; artSvg.firstElementChild?.setAttribute("preserveAspectRatio", "xMidYMid slice"); }
     fxCanvas.hidden = !raster; artSvg.hidden = raster;
     art.classList.toggle("clear", st.source === "contours" && st.transparent);
@@ -3020,9 +3036,9 @@
       return swapIn(slot, n);
     }
     const k = lq ? 1 / 6 : TH_DPR, W = Math.max(16, Math.round(w * k)), H = Math.max(10, Math.round(h * k));
-    TFX.render(await fxJob(TFX, s, W, H, thumbRaster, 2.5));
-    if (lq) { const n = soften(thumbCanvas, W, H, w, h); n.classList.add("lqip"); return swapIn(slot, n); }
-    return putCanvas(slot, thumbCanvas, W, H);
+    const g = await fxGo(TFX, await fxJob(TFX, s, W, H, thumbRaster, 2.5), undefined, () => grab(thumbCanvas));
+    if (lq) { const n = soften(g, W, H, w, h); n.classList.add("lqip"); return swapIn(slot, n); }
+    return putCanvas(slot, g, W, H);
   }
   function soften(src, sw, sh, w, h) {
     const c = document.createElement("canvas"); c.width = w; c.height = h;
@@ -3097,12 +3113,12 @@
       const sw = fxCanvas.width, sh = Math.min(fxCanvas.height, sw * 0.625);
       x.drawImage(fxCanvas, 0, (fxCanvas.height - sh) / 2, sw, sh, 0, 0, W, H);
     } else if (S.source === "gradient" || S.objects.length) {
-      TFX.render(await fxJob(TFX, { ...S, fxOrder: [], h: Math.round(S.w * 0.625) }, W, H, document.createElement("canvas"), 2.5));
-      x.drawImage(thumbCanvas, 0, 0, W, H);
+      const g = await fxGo(TFX, await fxJob(TFX, { ...S, fxOrder: [], h: Math.round(S.w * 0.625) }, W, H, document.createElement("canvas"), 2.5), undefined, () => grab(thumbCanvas));
+      x.drawImage(g, 0, 0, W, H);
     } else await rasterize(baseCanvas, T.buildSVG({ ...S, h: Math.round(S.w * 0.625) }, { w: W, h: H, res: 2.5 }).svg, W, H);
   }
-  const fxThumb = (id, W, H) => { TFX.render({ w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: { [id]: { ...S.fx[id], on: true } }, order: [id], ink: S.ink, paper: S.paper, pointer: demoPointer() }); return thumbCanvas; };
-  const fxUpTo = (id, W, H) => { TFX.render({ w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: { ...S.fx, [id]: { ...S.fx[id], hidden: false } }, order: S.fxOrder.slice(0, S.fxOrder.indexOf(id) + 1), ink: S.ink, paper: S.paper }); return thumbCanvas; };
+  const fxThumb = (id, W, H) => fxGo(TFX, { w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: { [id]: { ...S.fx[id], on: true } }, order: [id], ink: S.ink, paper: S.paper, pointer: demoPointer() }, undefined, () => grab(thumbCanvas));
+  const fxUpTo = (id, W, H) => fxGo(TFX, { w: W, h: H, k: W / S.w, seed: S.seed, image: baseCanvas, grad: null, fx: { ...S.fx, [id]: { ...S.fx[id], hidden: false } }, order: S.fxOrder.slice(0, S.fxOrder.indexOf(id) + 1), ink: S.ink, paper: S.paper }, undefined, () => grab(thumbCanvas));
   function baseOf(st) {
     const b = clone(noFx(st));
     for (const key of LAYERS.shape) if (key !== "source" && key !== "grad.type" && key !== "pattern" && key !== "grad.image") setPath(b, key, clone(getPath(DEFAULTS, key)));
@@ -3121,7 +3137,7 @@
     if (gen() === "contours") tileJob("lines", lightLines(noFx(S)));
     if (TFX && S.fxOrder.length) jobs.push(async () => {
       await effectBase(128, 80, false);
-      for (const id of S.fxOrder) { const el = $("slotList").querySelector(`[data-th="fx:${id}"]`); if (!el) continue; putCanvas(el, fxUpTo(id, 128, 80), 128, 80); }
+      for (const id of S.fxOrder) { const el = $("slotList").querySelector(`[data-th="fx:${id}"]`); if (!el) continue; putCanvas(el, await fxUpTo(id, 128, 80), 128, 80); }
     });
     const p = panelOf(P.slot);
     const quick = [], lq = slowThumbs();
@@ -3149,7 +3165,7 @@
     if (p === "lines" && gen() === "contours") for (const m of Object.keys(modeCards)) card(slotOf(modeCards[m]), () => lightLines(readable({ ...noFx(S), mode: m })), 130);
     if (p === "addfx" && TFX) {
       jobs.push(() => effectBase(260, 163));
-      for (const id of FX_IDS) { const el = slotOf(fxCards[id]), f = () => putCanvas(el, fxThumb(id, 260, 163), 260, 163); f.at = () => el; jobs.push(f); }
+      for (const id of FX_IDS) { const el = slotOf(fxCards[id]), f = async () => putCanvas(el, await fxThumb(id, 260, 163), 260, 163); f.at = () => el; jobs.push(f); }
     }
     jobs.push(motionThumb);
     enqueue([...quick, ...jobs]);
@@ -3172,7 +3188,7 @@
     const k = frames.length, st = { ...motionState(base, motionT(k / N, M)), h: Math.round(S.w * 0.625) };
     const f = document.createElement("canvas"); f.width = W; f.height = H;
     if (!isRaster(st) || !TFX) await rasterize(f, thumbSVG(st, w, h), W, H);
-    else { TFX.render(await fxJob(TFX, st, W, H, thumbRaster, 2.5)); f.getContext("2d").drawImage(thumbCanvas, 0, 0); }
+    else { const g = await fxGo(TFX, await fxJob(TFX, st, W, H, thumbRaster, 2.5), undefined, () => grab(thumbCanvas)); f.getContext("2d").drawImage(g, 0, 0); }
     if (tok !== motionTok) return;
     frames.push(f);
     if (k === 0) { const c = document.createElement("canvas"); c.width = W; c.height = H; c.getContext("2d").drawImage(f, 0, 0); swapIn(el, c); }
@@ -3481,7 +3497,7 @@
     const { width: w, height: h } = c, st = { ...motionState(st0, motionT(t, st0.motion)), w: st0.w, h: st0.h };
     const sc = Math.max(w / st.w, h / st.h), dw = Math.round(st.w * sc), dh = Math.round(st.h * sc);
     let src;
-    if (isRaster(st) && TFX) { TFX.render(await fxJob(TFX, st, dw, dh, document.createElement("canvas"), 2.5)); src = thumbCanvas; }
+    if (isRaster(st) && TFX) src = await fxGo(TFX, await fxJob(TFX, st, dw, dh, document.createElement("canvas"), 2.5), undefined, () => grab(thumbCanvas));
     else src = await rasterize(document.createElement("canvas"), T.buildSVG(st, { w: dw, h: dh, res: 2.5 }).svg, dw, dh);
     c.getContext("2d").drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
   }
@@ -3567,7 +3583,7 @@
       const x = c.getContext("2d"), sc = Math.max(w / st.w, h / st.h), dw = Math.round(st.w * sc), dh = Math.round(st.h * sc);
       let src;
       if (isRaster(st) && TFX) {
-        TFX.render(await fxJob(TFX, st, dw, dh, document.createElement("canvas"))); src = thumbCanvas;
+        src = await fxGo(TFX, await fxJob(TFX, st, dw, dh, document.createElement("canvas")), undefined, () => grab(thumbCanvas));
       } else src = await rasterize(document.createElement("canvas"), (!look && current.svg && current.of === JSON.stringify(S) && current.svg) || T.buildSVG(st).svg, dw, dh);
       x.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
       return c;

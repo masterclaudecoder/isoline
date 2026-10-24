@@ -1349,7 +1349,7 @@ void main() {
   o = moved ? vec4(now.xy, mod(floor(s.b * 255.0 + 0.5) + 1.0, 256.0) / 255.0, 1.0) : s;
 }`,
 
-    dither: `uniform float uMat; uniform float uLevels; uniform float uMono; uniform float uPix; uniform vec3 uInk; uniform vec3 uPaper; uniform float uPal; uniform vec3 uCol[8]; uniform int uN; uniform float uGap;
+    dither: `uniform int uMat; uniform float uLevels; uniform float uMono; uniform float uPix; uniform vec3 uInk; uniform vec3 uPaper; uniform float uPal; uniform vec3 uCol[8]; uniform int uN; uniform float uGap;
 float b2(vec2 a) { a = floor(mod(a, 2.0)); return fract(dot(a, vec2(0.5, a.y * 0.75))); }
 float b4(vec2 a) { return b2(0.5 * a) * 0.25 + b2(a); }
 float b8(vec2 a) { return b4(0.5 * a) * 0.25 + b2(a); }
@@ -1357,7 +1357,7 @@ void main() {
   float cell = max(1.0, floor(uPix * uK + 0.5));
   vec2 d = floor(vUv * uRes / cell);
   vec4 c = tex((d + 0.5) * cell / uRes);
-  float th = (uMat < 3.0 ? b2(d) : uMat < 6.0 ? b4(d) : b8(d)) - 0.5;
+  float th = (uMat < 3 ? b2(d) : uMat < 6 ? b4(d) : b8(d)) - 0.5;
   float L = max(uLevels - 1.0, 1.0);
   if (uPal > 0.5) {
     vec3 p1 = uCol[0], p2 = uCol[0]; float f = 0.0, best = 1e9;
@@ -1833,8 +1833,29 @@ void main() {
   const OBJ_KINDS = ["sphere", "torus", "cube", "capsule", "blob", "image", "pyramid", "diamond", "cursor"];
   const INTS = new Set(["uGStage", "uPStage", "uPath", "uKind", "uMat", "uProj", "uHasTex", "uType", "uN", "uNoise", "uMotion", "uPattern", "uOct", "uNPts", "uUser", "uNFeat", "uFirst", "uMode", "uNInk", "uHasH", "uMN"]);
   function createFX(canvas) {
+    let inst = buildFX(canvas), lost = false;
+    if (!inst) return null;
+    const api = { onLost: null, onRestored: null };
+    canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); if (!lost) { lost = true; api.onLost?.(); } });
+    canvas.addEventListener("webglcontextrestored", () => { try { inst = buildFX(canvas) || inst; lost = inst.gl.isContextLost(); } catch (e) { return; } if (!lost) api.onRestored?.(); });
+    const gone = () => { if (!lost && inst.gl.isContextLost()) { lost = true; api.onLost?.(); } return lost; };
+    const safe = (f, dflt) => (...a) => {
+      if (gone()) return dflt();
+      try { return inst[f](...a); } catch (e) { if (gone()) return dflt(); throw e; }
+    };
+    Object.assign(api, {
+      render: safe("render", () => undefined),
+      warm: safe("warm", () => Promise.resolve()),
+      ready: safe("ready", () => true),
+      sync: safe("sync", () => Promise.resolve()),
+    });
+    Object.defineProperties(api, { maxSize: { get: () => inst.maxSize }, floatOK: { get: () => inst.floatOK }, lost: { get: () => gone() } });
+    return api;
+  }
+
+  function buildFX(canvas) {
     const gl = canvas.getContext("webgl2", { premultipliedAlpha: false, preserveDrawingBuffer: true, antialias: false, alpha: true });
-    if (!gl) return null;
+    if (!gl || gl.isContextLost()) return null;
     const maxSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
@@ -1895,10 +1916,13 @@ void main() {
     };
     const srcTex = newTex(), atlasTex = newTex();
     let targets = null;
+    const targetSets = new Map();
 
     function ensureTargets(w, h) {
       if (targets && targets.w === w && targets.h === h) return;
-      if (targets) targets.list.forEach(({ t, f }) => { gl.deleteTexture(t); gl.deleteFramebuffer(f); });
+      const key = w + "x" + h, hit = targetSets.get(key);
+      if (hit) { targetSets.delete(key); targetSets.set(key, hit); targets = hit; return; }
+      if (targetSets.size >= 4) { const [old, set] = targetSets.entries().next().value; targetSets.delete(old); set.list.forEach(({ t, f }) => { gl.deleteTexture(t); gl.deleteFramebuffer(f); }); }
       const list = [0, 1, 2].map(() => {
         const t = newTex();
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -1908,6 +1932,7 @@ void main() {
         return { t, f };
       });
       targets = { w, h, list };
+      targetSets.set(key, targets);
     }
 
     const FONTS = {
@@ -1949,6 +1974,7 @@ void main() {
     }
 
     function draw(name, input, output, uniforms, w, h, k, seed) {
+      if (soft) { const pr = start(name); if (!pr.checked && !gl.getProgramParameter(pr.p, par.COMPLETION_STATUS_KHR)) { pending = true; return; } }
       const { p, loc } = program(name);
       gl.useProgram(p);
       gl.bindFramebuffer(gl.FRAMEBUFFER, output);
@@ -1991,9 +2017,10 @@ void main() {
     const permTex = gl.createTexture(), fbos = new Map();
     let permSeed = null, rangeKey = "";
     function floatTarget(role, w, h, fmt) {
-      const key = role, have = fbos.get(key);
-      if (have && have.w === w && have.h === h) return have;
-      if (have) { gl.deleteTexture(have.t); gl.deleteFramebuffer(have.f); }
+      const key = role + "|" + w + "x" + h, have = fbos.get(key);
+      if (have) { fbos.delete(key); fbos.set(key, have); return have; }
+      const mine = [...fbos.keys()].filter((k) => k.startsWith(role + "|"));
+      if (mine.length >= 3) { const old = fbos.get(mine[0]); gl.deleteTexture(old.t); gl.deleteFramebuffer(old.f); fbos.delete(mine[0]); }
       const t = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, t);
       const filt = fmt === "half" || fmt === "rgba" || fmt === "map" ? gl.LINEAR : gl.NEAREST;
@@ -2193,10 +2220,13 @@ void main() {
       return F.d[0];
     }
 
-    function render(job) {
+    let soft = false, pending = false;
+    function render(job, opts) {
+      soft = !!(opts?.soft && par); pending = false;
+      try { return renderJob(job); } finally { soft = false; }
+    }
+    function renderJob(job) {
       const w = Math.min(maxSize, Math.max(1, Math.round(job.w))), h = Math.min(maxSize, Math.max(1, Math.round(job.h)));
-      if (canvas.width !== w) canvas.width = w;
-      if (canvas.height !== h) canvas.height = h;
       ensureTargets(w, h);
       const k = job.k * (w / job.w);
       let input, ping = 0;
@@ -2306,8 +2336,11 @@ void main() {
         input = out.t; ping = 1 - ping;
       }
       drawObjects((job.objects || []).filter((o) => o.layer === "over"));
+      if (pending) return false;
+      if (canvas.width !== w) canvas.width = w;
+      if (canvas.height !== h) canvas.height = h;
       draw("copy", input, null, {}, w, h, k, job.seed);
-      return { w, h };
+      return pending ? false : { w, h };
     }
 
     let mipT = null, memFlip = false;
@@ -2340,7 +2373,7 @@ void main() {
         poll();
       });
     }
-    return { render, maxSize, warm, ready, floatOK, sync };
+    return { gl, render, maxSize, warm, ready, floatOK, sync };
   }
 
   const Q = { rays: 0, taps: 0, bloom: 0, frost: 0, steps: 0, phys: 0 };

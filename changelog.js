@@ -1,4 +1,10 @@
 window.CHANGELOG = [
+  { v: "2.7.4", at: "2026-10-24T17:51:41+03:00", title: "Steady drawing", items: [
+    ["fix", "The app recovers when the graphics card restarts, with no errors or blank previews"],
+    ["fix", "Dither matrix now changes the pattern"],
+    ["perf", "Effects and previews wait for their shaders in the background instead of freezing the app"],
+    ["perf", "Previews reuse their drawing buffers instead of rebuilding them each time"],
+  ] },
   { v: "2.7.3", at: "2026-10-24T03:54:51+03:00", title: "No more stalls", items: [
     ["fix", "Rolls, effects and menus no longer freeze the app"],
     ["perf", "Effects get ready in the background, one at a time"],
