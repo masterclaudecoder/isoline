@@ -2790,6 +2790,7 @@
   const thumbCanvas = document.createElement("canvas");
   try { FXR = window.TopoFX.createFX(fxCanvas); } catch (e) { FXR = null; }
   try { TFX = window.TopoFX.createFX(thumbCanvas); } catch (e) { TFX = null; }
+  (window.introDone || Promise.resolve()).then(() => setTimeout(() => (TFX?.warm?.() || Promise.resolve()).then(() => FXR?.warm?.()), 1500));
   let showT = 0;
   let rolling = null;
   let current = { svg: "", raster: false }, raf = 0, anim = 0, painted = null, paintTok = 0, fxWarned = false;
@@ -2864,9 +2865,8 @@
   }
   async function fxJob(R, st, w, h, canvas = rasterCanvas, res) {
     const gpu = st.source === "contours" && R?.floatOK ? T.gpuSpec(st, Math.max(st.res, res ? (res * st.w) / w : 0)) : null;
-    const j = gpu || st.source !== "contours" ? { ...job(st, w, h, null), contours: gpu } : job(st, w, h, await rasterize(canvas, T.buildSVG(st, { w, h, ...(res ? { res } : {}) }).svg, w, h));
-    await R?.prepare?.(j);
-    return j;
+    if (gpu || st.source !== "contours") return { ...job(st, w, h, null), contours: gpu };
+    return job(st, w, h, await rasterize(canvas, T.buildSVG(st, { w, h, ...(res ? { res } : {}) }).svg, w, h));
   }
   let rzScale = 0, lowRes = 0, fitWH = "", glideUntil = 0;
   const room = () => { const cs = getComputedStyle(wrap); return [wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), wrap.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)]; };
@@ -2908,9 +2908,7 @@
       const { w, h } = previewDims(st, draft);
       let image = null;
       if (svg) { image = await rasterize(rasterCanvas, svg, w, h); if (tok !== paintTok) return null; }
-      const jb = { ...job(st, w, h, image), contours: gpu, pointer: livePointer(st) };
-      await FXR.prepare(jb); if (tok !== paintTok) return null;
-      FXR.render(jb);
+      FXR.render({ ...job(st, w, h, image), contours: gpu, pointer: livePointer(st) });
     } else { artSvg.innerHTML = svg; artSvg.firstElementChild?.setAttribute("preserveAspectRatio", "xMidYMid slice"); }
     fxCanvas.hidden = !raster; artSvg.hidden = raster;
     art.classList.toggle("clear", st.source === "contours" && st.transparent);

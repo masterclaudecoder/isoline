@@ -1845,8 +1845,7 @@ void main() {
     function start(name) {
       if (progs[name]) return progs[name];
       const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
-      const gt = /^gradient(\d+)$/.exec(name), src = gt ? SHADERS.gradient.replace("uniform int uType;", `const int uType = ${gt[1]};`) : SHADERS[name];
-      const p = gl.createProgram(), vs = sh(gl.VERTEX_SHADER, VS), fs = sh(gl.FRAGMENT_SHADER, HEAD + src);
+      const p = gl.createProgram(), vs = sh(gl.VERTEX_SHADER, VS), fs = sh(gl.FRAGMENT_SHADER, HEAD + SHADERS[name]);
       gl.attachShader(p, vs); gl.attachShader(p, fs);
       gl.bindAttribLocation(p, 0, "aPos");
       gl.linkProgram(p);
@@ -1864,18 +1863,25 @@ void main() {
       }
       return pr;
     }
-    const warm = () => { if (par) for (const name of Object.keys(SHADERS)) start(name); };
-    if (par) for (const name of ["copy", "grain"]) if (SHADERS[name]) start(name);
+    if (par) for (const name of ["copy", "gradient", "grain"]) if (SHADERS[name]) start(name);
     const ready = () => !par || Object.values(progs).every((pr) => pr.checked || gl.getProgramParameter(pr.p, par.COMPLETION_STATUS_KHR));
-    let dry = null;
-    const done = (names) => [...names].every((n) => progs[n]?.checked || (progs[n] && gl.getProgramParameter(progs[n].p, par.COMPLETION_STATUS_KHR)));
-    function prepare(job) {
+    const idle = (f) => (root.requestIdleCallback ? root.requestIdleCallback(f, { timeout: 400 }) : setTimeout(f, 60));
+    let warming = null;
+    function warm() {
       if (!par) return Promise.resolve();
-      dry = new Set();
-      try { render(job); } catch (e) {} finally { var names = dry; dry = null; }
-      if (done(names)) return Promise.resolve();
-      const t0 = performance.now();
-      return new Promise((ok) => { const poll = () => (done(names) || performance.now() - t0 > 30000 ? ok() : setTimeout(poll, 30)); poll(); });
+      if (warming) return warming;
+      const names = Object.keys(SHADERS).filter((n) => !progs[n]);
+      return (warming = new Promise((ok) => {
+        const next = () => {
+          if (gl.isContextLost()) return ok();
+          if (!ready()) return setTimeout(next, 60);
+          const n = names.shift();
+          if (!n) return ok();
+          if (!progs[n]) start(n);
+          idle(next);
+        };
+        idle(next);
+      }));
     }
 
     const newTex = () => {
@@ -1943,8 +1949,6 @@ void main() {
     }
 
     function draw(name, input, output, uniforms, w, h, k, seed) {
-      if (name === "gradient" && uniforms.uType >= 0) name = "gradient" + uniforms.uType;
-      if (dry) { dry.add(name); start(name); return; }
       const { p, loc } = program(name);
       gl.useProgram(p);
       gl.bindFramebuffer(gl.FRAMEBUFFER, output);
@@ -2191,8 +2195,8 @@ void main() {
 
     function render(job) {
       const w = Math.min(maxSize, Math.max(1, Math.round(job.w))), h = Math.min(maxSize, Math.max(1, Math.round(job.h)));
-      if (!dry && canvas.width !== w) canvas.width = w;
-      if (!dry && canvas.height !== h) canvas.height = h;
+      if (canvas.width !== w) canvas.width = w;
+      if (canvas.height !== h) canvas.height = h;
       ensureTargets(w, h);
       const k = job.k * (w / job.w);
       let input, ping = 0;
@@ -2336,7 +2340,7 @@ void main() {
         poll();
       });
     }
-    return { render, prepare, maxSize, warm, ready, floatOK, sync };
+    return { render, maxSize, warm, ready, floatOK, sync };
   }
 
   const Q = { rays: 0, taps: 0, bloom: 0, frost: 0, steps: 0, phys: 0 };

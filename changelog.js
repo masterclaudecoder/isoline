@@ -1,4 +1,8 @@
 window.CHANGELOG = [
+  { v: "2.7.3", at: "2026-10-24T03:54:51+03:00", title: "No more stalls", items: [
+    ["fix", "Rolls, effects and menus no longer freeze the app"],
+    ["perf", "Effects get ready in the background, one at a time"],
+  ] },
   { v: "2.7.2", at: "2026-10-24T00:58:45+03:00", title: "Lighter loading", items: [
     ["fix", "Opening the site no longer freezes the browser"],
     ["perf", "Shaders build in the background, and only the ones a design needs"],
